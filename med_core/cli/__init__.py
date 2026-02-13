@@ -7,8 +7,8 @@ Provides command-line interfaces for:
 - med-preprocess: Preprocess medical images
 """
 
-from med_core.cli.train import train
 from med_core.cli.evaluate import evaluate
 from med_core.cli.preprocess import preprocess
+from med_core.cli.train import train
 
 __all__ = ["train", "evaluate", "preprocess"]

@@ -33,7 +33,7 @@ class MultimodalTrainer(BaseTrainer):
 
         # Mixed precision scaler
         self.use_amp = self.config.training.mixed_precision
-        self.amp_device = 'cuda' if self.device.type == 'cuda' else 'cpu'
+        self.amp_device = "cuda" if self.device.type == "cuda" else "cpu"
         self.scaler = GradScaler(self.amp_device, enabled=self.use_amp)
 
         # Loss function
@@ -51,7 +51,9 @@ class MultimodalTrainer(BaseTrainer):
         # Attention supervision settings
         self.use_attention_supervision = self.config.training.use_attention_supervision
         self.attention_loss_weight = self.config.training.attention_loss_weight
-        self.attention_supervision_method = self.config.training.attention_supervision_method
+        self.attention_supervision_method = (
+            self.config.training.attention_supervision_method
+        )
 
         # Validate attention supervision configuration
         if self.use_attention_supervision:
@@ -127,9 +129,7 @@ class MultimodalTrainer(BaseTrainer):
             for param in self.model.classifier.parameters():
                 param.requires_grad = True
 
-    def _run_epoch(
-        self, loader: Any, training: bool = True
-    ) -> dict[str, float]:
+    def _run_epoch(self, loader: Any, training: bool = True) -> dict[str, float]:
         """
         Run a single epoch (Overridden for AMP support).
         """
@@ -137,6 +137,7 @@ class MultimodalTrainer(BaseTrainer):
         num_batches = len(loader)
 
         from tqdm import tqdm
+
         pbar = tqdm(
             loader,
             desc=f"Epoch {self.current_epoch} [{'Train' if training else 'Val'}]",
@@ -215,7 +216,10 @@ class MultimodalTrainer(BaseTrainer):
 
         with autocast(self.amp_device, enabled=self.use_amp):
             # Forward pass with optional intermediate outputs
-            if self.use_attention_supervision and self.config.model.vision.enable_attention_supervision:
+            if (
+                self.use_attention_supervision
+                and self.config.model.vision.enable_attention_supervision
+            ):
                 # Need to get intermediate outputs from vision backbone
                 # This requires the model to support return_intermediates
                 outputs = self._forward_with_attention(images, tabular)
@@ -245,14 +249,16 @@ class MultimodalTrainer(BaseTrainer):
                     aux_outputs["attention_weights"],
                     aux_outputs.get("feature_maps"),
                     labels,
-                    masks
+                    masks,
                 )
                 if attention_loss is not None:
                     loss += self.attention_loss_weight * attention_loss
 
         return {"loss": loss}
 
-    def _forward_with_attention(self, images: torch.Tensor, tabular: torch.Tensor) -> dict[str, torch.Tensor]:
+    def _forward_with_attention(
+        self, images: torch.Tensor, tabular: torch.Tensor
+    ) -> dict[str, torch.Tensor]:
         """
         Forward pass that extracts attention weights from vision backbone.
 
@@ -261,7 +267,9 @@ class MultimodalTrainer(BaseTrainer):
         """
         # Check if model has vision_backbone attribute
         if not hasattr(self.model, "vision_backbone"):
-            logger.warning("Model does not have vision_backbone attribute. Falling back to standard forward.")
+            logger.warning(
+                "Model does not have vision_backbone attribute. Falling back to standard forward."
+            )
             return self.model(images, tabular)
 
         # Extract vision features with intermediates
@@ -285,10 +293,12 @@ class MultimodalTrainer(BaseTrainer):
 
         # Fusion
         if hasattr(self.model, "fusion_module"):
-            fused_features, fusion_aux = self.model.fusion_module(vision_features, tabular_features)
+            fused_features, fusion_aux = self.model.fusion_module(
+                vision_features, tabular_features
+            )
         else:
             fused_features = torch.cat([vision_features, tabular_features], dim=1)
-            fusion_aux = {}
+            fusion_aux = {}  # noqa: F841
 
         # Classification
         if hasattr(self.model, "classifier"):
@@ -304,9 +314,15 @@ class MultimodalTrainer(BaseTrainer):
         }
 
         # Add auxiliary outputs if available
-        if hasattr(self.model, "vision_classifier") and self.config.model.use_auxiliary_heads:
+        if (
+            hasattr(self.model, "vision_classifier")
+            and self.config.model.use_auxiliary_heads
+        ):
             outputs["vision_logits"] = self.model.vision_classifier(vision_features)
-        if hasattr(self.model, "tabular_classifier") and self.config.model.use_auxiliary_heads:
+        if (
+            hasattr(self.model, "tabular_classifier")
+            and self.config.model.use_auxiliary_heads
+        ):
             outputs["tabular_logits"] = self.model.tabular_classifier(tabular_features)
 
         return outputs
@@ -336,7 +352,9 @@ class MultimodalTrainer(BaseTrainer):
         if self.attention_supervision_method == "mask":
             # Mask-based supervision: requires ground truth masks
             if masks is None or attention_weights is None:
-                logger.warning("Mask-based attention supervision requires masks in dataset. Skipping.")
+                logger.warning(
+                    "Mask-based attention supervision requires masks in dataset. Skipping."
+                )
                 return None
 
             # Resize masks to match attention_weights size
@@ -345,25 +363,29 @@ class MultimodalTrainer(BaseTrainer):
                     masks.float(),
                     size=attention_weights.shape[-2:],
                     mode="bilinear",
-                    align_corners=False
+                    align_corners=False,
                 )
 
             # Binary cross-entropy loss between attention and masks
             loss = torch.nn.functional.binary_cross_entropy(
-                attention_weights,
-                masks,
-                reduction="mean"
+                attention_weights, masks, reduction="mean"
             )
             return loss
 
         elif self.attention_supervision_method == "cam":
             # CAM-based supervision: generate CAM from feature_maps
             if feature_maps is None:
-                logger.warning("CAM-based attention supervision requires feature_maps. Skipping.")
+                logger.warning(
+                    "CAM-based attention supervision requires feature_maps. Skipping."
+                )
                 return None
 
-            if not hasattr(self.model, "classifier") or not hasattr(self.model.classifier, "weight"):
-                logger.warning("CAM requires classifier with weight attribute. Skipping.")
+            if not hasattr(self.model, "classifier") or not hasattr(
+                self.model.classifier, "weight"
+            ):
+                logger.warning(
+                    "CAM requires classifier with weight attribute. Skipping."
+                )
                 return None
 
             # Generate CAM
@@ -378,20 +400,20 @@ class MultimodalTrainer(BaseTrainer):
                     cam,
                     size=attention_weights.shape[-2:],
                     mode="bilinear",
-                    align_corners=False
+                    align_corners=False,
                 )
 
             # MSE loss between attention and CAM
             loss = torch.nn.functional.mse_loss(
-                attention_weights,
-                cam,
-                reduction="mean"
+                attention_weights, cam, reduction="mean"
             )
             return loss
 
         return None
 
-    def _generate_cam(self, feature_maps: torch.Tensor, labels: torch.Tensor) -> torch.Tensor | None:
+    def _generate_cam(
+        self, feature_maps: torch.Tensor, labels: torch.Tensor
+    ) -> torch.Tensor | None:
         """
         Generate Class Activation Map (CAM) from feature maps.
 
@@ -404,7 +426,9 @@ class MultimodalTrainer(BaseTrainer):
         """
         try:
             # Get classifier weights for the predicted classes
-            classifier_weight = self.model.classifier.weight  # (num_classes, feature_dim)
+            classifier_weight = (
+                self.model.classifier.weight
+            )  # (num_classes, feature_dim)
 
             # Note: feature_maps are before pooling, but classifier expects pooled features
             # We need to match dimensions. Typically, classifier input = pooled feature_maps
@@ -420,7 +444,9 @@ class MultimodalTrainer(BaseTrainer):
             # But classifier expects pooled features, so dimensions might not match
 
             # Simple approach: use global average pooling on feature_maps
-            pooled_features = torch.nn.functional.adaptive_avg_pool2d(feature_maps, 1)  # (B, C, 1, 1)
+            pooled_features = torch.nn.functional.adaptive_avg_pool2d(
+                feature_maps, 1
+            )  # (B, C, 1, 1)
             pooled_features = pooled_features.view(batch_size, -1)  # (B, C)
 
             # Check dimension match
@@ -435,7 +461,7 @@ class MultimodalTrainer(BaseTrainer):
             # class_weights: (B, C)
             # feature_maps: (B, C, H, W)
             # CAM: (B, 1, H, W)
-            cam = torch.einsum('bc,bchw->bhw', class_weights, feature_maps)  # (B, H, W)
+            cam = torch.einsum("bc,bchw->bhw", class_weights, feature_maps)  # (B, H, W)
             cam = cam.unsqueeze(1)  # (B, 1, H, W)
 
             # Apply ReLU (only positive contributions)

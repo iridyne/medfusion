@@ -6,10 +6,10 @@ allow modalities to attend to each other without explicit cross-modal
 attention mechanisms.
 """
 
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional
 
 
 class SelfAttentionFusion(nn.Module):

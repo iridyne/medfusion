@@ -7,9 +7,9 @@ import torch
 import torch.nn as nn
 
 from med_core.extractors.multi_region import (
-    MultiRegionExtractor,
-    HierarchicalRegionExtractor,
     AdaptiveRegionExtractor,
+    HierarchicalRegionExtractor,
+    MultiRegionExtractor,
     MultiScaleRegionExtractor,
 )
 

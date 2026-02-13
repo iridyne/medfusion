@@ -3,7 +3,6 @@ Tests for metrics calculation utilities.
 """
 
 import numpy as np
-import pytest
 
 from med_core.shared.model_utils import calculate_binary_metrics
 

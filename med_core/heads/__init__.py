@@ -3,16 +3,16 @@ Task-specific heads for medical imaging models.
 """
 
 from .classification import (
+    AttentionClassificationHead,
     ClassificationHead,
+    EnsembleClassificationHead,
     MultiLabelClassificationHead,
     OrdinalClassificationHead,
-    AttentionClassificationHead,
-    EnsembleClassificationHead,
 )
 from .survival import (
     CoxSurvivalHead,
-    DiscreteTimeSurvivalHead,
     DeepSurvivalHead,
+    DiscreteTimeSurvivalHead,
     MultiTaskSurvivalHead,
     RankingSurvivalHead,
 )

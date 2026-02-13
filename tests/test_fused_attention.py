@@ -6,8 +6,8 @@ import pytest
 import torch
 
 from med_core.fusion.fused_attention import (
-    FusedAttentionFusion,
     CrossModalAttention,
+    FusedAttentionFusion,
     MultimodalFusedAttention,
 )
 

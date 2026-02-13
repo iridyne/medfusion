@@ -6,10 +6,9 @@ import pytest
 import torch
 
 from med_core.backbones.swin_2d import (
-    SwinTransformer2DBackbone,
-    swin2d_tiny,
-    swin2d_small,
     swin2d_base,
+    swin2d_small,
+    swin2d_tiny,
 )
 
 

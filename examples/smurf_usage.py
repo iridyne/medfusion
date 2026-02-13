@@ -6,6 +6,7 @@ Radiology-Pathology Fusion) model for multimodal medical imaging analysis.
 """
 
 import torch
+
 from med_core.models import smurf_small, smurf_with_mil_small
 
 
@@ -95,7 +96,7 @@ def example_mil():
 
     # Show attention weights for first sample
     attention = features['attention_weights'][0].squeeze()
-    print(f"\nAttention weights for first sample:")
+    print("\nAttention weights for first sample:")
     for i, weight in enumerate(attention):
         print(f"  Patch {i}: {weight.item():.4f}")
     print()

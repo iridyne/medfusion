@@ -12,8 +12,9 @@ Key Features:
 - Type-safe implementation with Python 3.12+ hints
 """
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Literal, Optional
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -48,11 +49,11 @@ class MedicalDataset(Dataset):
         image_dir: str | Path,
         image_column: str = "image_path",
         label_column: str = "label",
-        feature_columns: Optional[list[str]] = None,
-        transform: Optional[Callable] = None,
+        feature_columns: list[str] | None = None,
+        transform: Callable | None = None,
         intensity_norm: Literal["minmax", "zscore", "percentile", "none"] = "percentile",
         percentile_range: tuple[float, float] = (1.0, 99.0),
-        target_size: Optional[tuple[int, int]] = None,
+        target_size: tuple[int, int] | None = None,
     ):
         """
         Initialize medical dataset.

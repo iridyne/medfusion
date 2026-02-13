@@ -6,17 +6,14 @@ It uses synthetic data for testing purposes.
 """
 
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-# Test if imports work
-print("Testing imports...")
-from med_core.backbones import create_multiview_vision_backbone
 from med_core.configs import create_ct_multiview_config
-from med_core.datasets.multiview_types import MultiViewConfig, ViewDict
 from med_core.fusion import create_multiview_fusion_model
 from med_core.trainers import create_multiview_trainer
 
+# Test if imports work
+print("Testing imports...")
 print("✓ All imports successful")
 
 
@@ -59,9 +56,9 @@ class SyntheticMultiViewDataset(Dataset):
 def test_multiview_pipeline():
     """Test the complete multi-view pipeline."""
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Multi-View Multimodal Framework Integration Test")
-    print("="*60)
+    print("=" * 60)
 
     # 1. Configuration
     print("\n[1/6] Creating configuration...")
@@ -116,7 +113,9 @@ def test_multiview_pipeline():
         view_names=config.data.view_names,
         vision_kwargs={"pretrained": False},
     )
-    print(f"✓ Model created with {sum(p.numel() for p in model.parameters()):,} parameters")
+    print(
+        f"✓ Model created with {sum(p.numel() for p in model.parameters()):,} parameters"
+    )
 
     # 4. Test forward pass
     print("\n[4/6] Testing forward pass...")
@@ -130,14 +129,16 @@ def test_multiview_pipeline():
     with torch.no_grad():
         outputs = model(batch_images, batch_tabular)
 
-    print(f"✓ Forward pass successful")
+    print("✓ Forward pass successful")
     print(f"  - Logits shape: {outputs['logits'].shape}")
     print(f"  - Vision features shape: {outputs['vision_features'].shape}")
     print(f"  - Tabular features shape: {outputs['tabular_features'].shape}")
     print(f"  - Fused features shape: {outputs['fused_features'].shape}")
 
     if "view_aggregation_aux" in outputs:
-        print(f"  - View aggregation info available: {list(outputs['view_aggregation_aux'].keys())}")
+        print(
+            f"  - View aggregation info available: {list(outputs['view_aggregation_aux'].keys())}"
+        )
 
     # 5. Trainer
     print("\n[5/6] Creating trainer...")
@@ -151,7 +152,7 @@ def test_multiview_pipeline():
         config=config,
         device=device,
     )
-    print(f"✓ Trainer created")
+    print("✓ Trainer created")
 
     # 6. Training (just 1 epoch for testing)
     print("\n[6/6] Running training test (1 epoch)...")
@@ -162,7 +163,7 @@ def test_multiview_pipeline():
 
         trainer.train()
 
-        print(f"✓ Training completed successfully")
+        print("✓ Training completed successfully")
 
         # Restore original epochs
         config.training.num_epochs = original_epochs
@@ -171,9 +172,9 @@ def test_multiview_pipeline():
         print(f"✗ Training failed: {e}")
         raise
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("✓ All tests passed!")
-    print("="*60)
+    print("=" * 60)
 
     return model, trainer
 
@@ -181,9 +182,9 @@ def test_multiview_pipeline():
 def test_single_view_backward_compatibility():
     """Test that single-view inputs still work (backward compatibility)."""
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Backward Compatibility (Single-View)")
-    print("="*60)
+    print("=" * 60)
 
     from med_core.backbones import ResNetBackbone, create_tabular_backbone
     from med_core.fusion import GatedFusion, MultiModalFusionModel
@@ -219,11 +220,11 @@ def test_single_view_backward_compatibility():
     with torch.no_grad():
         outputs = model(single_image, tabular)
 
-    print(f"✓ Single-view forward pass successful")
+    print("✓ Single-view forward pass successful")
     print(f"  - Logits shape: {outputs['logits'].shape}")
 
     print("\n✓ Backward compatibility maintained!")
-    print("="*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":
@@ -237,6 +238,8 @@ if __name__ == "__main__":
     print("\nMulti-view framework is ready to use!")
     print("\nNext steps:")
     print("  1. Prepare your multi-view dataset")
-    print("  2. Create a config using create_ct_multiview_config() or create_temporal_multiview_config()")
+    print(
+        "  2. Create a config using create_ct_multiview_config() or create_temporal_multiview_config()"
+    )
     print("  3. Build your model using create_multiview_fusion_model()")
     print("  4. Train using create_multiview_trainer()")

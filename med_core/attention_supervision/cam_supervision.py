@@ -5,7 +5,6 @@
 """
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from med_core.attention_supervision.base import (
@@ -39,11 +38,12 @@ def generate_cam(
         torch.Size([2, 16, 16])
     """
     B, C, H, W = feature_maps.shape
-    num_classes = classifier_weights.size(0)
 
     if predicted_class is None:
         # 计算每个类别的全局平均池化
-        pooled = F.adaptive_avg_pool2d(feature_maps, 1).squeeze(-1).squeeze(-1)  # (B, C)
+        pooled = (
+            F.adaptive_avg_pool2d(feature_maps, 1).squeeze(-1).squeeze(-1)
+        )  # (B, C)
         logits = F.linear(pooled, classifier_weights)  # (B, num_classes)
         predicted_class = logits.argmax(dim=1)  # (B,)
 
@@ -164,7 +164,7 @@ class CAMSelfSupervision(BaseAttentionSupervision):
             cam = F.interpolate(
                 cam.unsqueeze(1),
                 size=attention_norm.shape[-2:],
-                mode='bilinear',
+                mode="bilinear",
                 align_corners=False,
             ).squeeze(1)
 
@@ -188,7 +188,7 @@ class CAMSelfSupervision(BaseAttentionSupervision):
             alignment_loss = F.kl_div(
                 torch.log(attention_flat + 1e-8),
                 cam_flat_norm,
-                reduction='batchmean',
+                reduction="batchmean",
             )
             components["alignment"] = alignment_loss
         else:
@@ -196,8 +196,8 @@ class CAMSelfSupervision(BaseAttentionSupervision):
 
         # 总损失
         total_loss = (
-            self.consistency_weight * consistency_loss +
-            self.alignment_weight * alignment_loss
+            self.consistency_weight * consistency_loss
+            + self.alignment_weight * alignment_loss
         )
 
         return AttentionLoss(
@@ -322,7 +322,7 @@ class GradCAMSupervision(BaseAttentionSupervision):
             gradcam = F.interpolate(
                 gradcam.unsqueeze(1),
                 size=attention_norm.shape[-2:],
-                mode='bilinear',
+                mode="bilinear",
                 align_corners=False,
             ).squeeze(1)
 
@@ -338,7 +338,7 @@ class GradCAMSupervision(BaseAttentionSupervision):
         alignment_loss = F.kl_div(
             torch.log(attention_flat + 1e-8),
             gradcam_flat_norm,
-            reduction='batchmean',
+            reduction="batchmean",
         )
 
         total_loss = self.alignment_weight * alignment_loss

@@ -6,8 +6,8 @@ import pytest
 import torch
 
 from med_core.fusion.kronecker import (
-    KroneckerFusion,
     CompactKroneckerFusion,
+    KroneckerFusion,
     MultimodalKroneckerFusion,
 )
 

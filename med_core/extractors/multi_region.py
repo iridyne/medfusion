@@ -5,8 +5,6 @@ This module provides extractors that can process multiple regions of interest
 (ROIs) from medical images, such as tumor regions, surrounding tissue, etc.
 """
 
-from typing import List, Optional
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,7 +33,7 @@ class MultiRegionExtractor(nn.Module):
         self,
         backbone: nn.Module,
         num_regions: int = 1,
-        region_pooling: str = 'adaptive',
+        region_pooling: str = "adaptive",
         output_size: tuple = (4, 4, 4),
     ):
         super().__init__()
@@ -48,7 +46,7 @@ class MultiRegionExtractor(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        region_masks: Optional[torch.Tensor] = None,
+        region_masks: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Forward pass.
@@ -61,11 +59,8 @@ class MultiRegionExtractor(nn.Module):
         Returns:
             Region features [B, num_regions, feature_dim]
         """
-        batch_size = x.size(0)
-        is_3d = x.dim() == 5
-
         # Extract features from backbone
-        if hasattr(self.backbone, 'forward_features'):
+        if hasattr(self.backbone, "forward_features"):
             # Get intermediate features
             features = self.backbone.forward_features(x)
         else:
@@ -154,19 +149,19 @@ class MultiRegionExtractor(nn.Module):
             target_size = features.shape[2:]
             if masks.shape[2:] != target_size:
                 masks = F.interpolate(
-                    masks, size=target_size, mode='trilinear', align_corners=False
+                    masks, size=target_size, mode="trilinear", align_corners=False
                 )
         else:
             target_size = features.shape[2:]
             if masks.shape[2:] != target_size:
                 masks = F.interpolate(
-                    masks, size=target_size, mode='bilinear', align_corners=False
+                    masks, size=target_size, mode="bilinear", align_corners=False
                 )
 
         # Extract features for each region
         region_features = []
         for i in range(self.num_regions):
-            mask = masks[:, i:i+1, ...]  # [B, 1, ...]
+            mask = masks[:, i : i + 1, ...]  # [B, 1, ...]
             # Apply mask
             masked_features = features * mask
             # Pool
@@ -203,8 +198,8 @@ class HierarchicalRegionExtractor(nn.Module):
     def __init__(
         self,
         backbone: nn.Module,
-        region_names: List[str],
-        aggregation: str = 'concat',
+        region_names: list[str],
+        aggregation: str = "concat",
         attention_dim: int = 128,
     ):
         super().__init__()
@@ -215,7 +210,7 @@ class HierarchicalRegionExtractor(nn.Module):
         self.aggregation = aggregation
 
         # Get feature dimension from backbone
-        if hasattr(backbone, 'backbone_output_dim'):
+        if hasattr(backbone, "backbone_output_dim"):
             self.feature_dim = backbone.backbone_output_dim
         else:
             # Try to infer from a dummy forward pass
@@ -228,15 +223,15 @@ class HierarchicalRegionExtractor(nn.Module):
                     self.feature_dim = 512  # Default
 
         # Aggregation module
-        if aggregation == 'attention':
+        if aggregation == "attention":
             self.attention = nn.Sequential(
                 nn.Linear(self.feature_dim, attention_dim),
                 nn.Tanh(),
                 nn.Linear(attention_dim, 1),
             )
-        elif aggregation == 'concat':
+        elif aggregation == "concat":
             self.output_dim = self.feature_dim * self.num_regions
-        elif aggregation == 'mean':
+        elif aggregation == "mean":
             self.output_dim = self.feature_dim
         else:
             raise ValueError(f"Unknown aggregation: {aggregation}")
@@ -272,16 +267,18 @@ class HierarchicalRegionExtractor(nn.Module):
             region_features.append(features)
 
         # Stack region features
-        region_features = torch.stack(region_features, dim=1)  # [B, num_regions, feature_dim]
+        region_features = torch.stack(
+            region_features, dim=1
+        )  # [B, num_regions, feature_dim]
 
         # Aggregate
-        if self.aggregation == 'concat':
+        if self.aggregation == "concat":
             # Concatenate all region features
             aggregated = region_features.view(region_features.size(0), -1)
-        elif self.aggregation == 'mean':
+        elif self.aggregation == "mean":
             # Average pooling
             aggregated = region_features.mean(dim=1)
-        elif self.aggregation == 'attention':
+        elif self.aggregation == "attention":
             # Attention-based aggregation
             attention_logits = self.attention(region_features)  # [B, num_regions, 1]
             attention_weights = F.softmax(attention_logits, dim=1)
@@ -354,7 +351,9 @@ class AdaptiveRegionExtractor(nn.Module):
 
         # Propose region coordinates
         region_coords = self.region_proposal(global_features)  # [B, num_regions * 3]
-        region_coords = region_coords.view(-1, self.num_regions, 3)  # [B, num_regions, 3]
+        region_coords = region_coords.view(
+            -1, self.num_regions, 3
+        )  # [B, num_regions, 3]
         region_coords = torch.sigmoid(region_coords)  # Normalize to [0, 1]
 
         # Extract features from proposed regions
@@ -389,21 +388,23 @@ class MultiScaleRegionExtractor(nn.Module):
     def __init__(
         self,
         backbone: nn.Module,
-        scales: List[float] = [1.0, 0.5, 0.25],
+        scales: list[float] | None = None,
         num_regions_per_scale: int = 3,
     ):
         super().__init__()
 
         self.backbone = backbone
-        self.scales = scales
+        self.scales = scales if scales is not None else [1.0, 0.5, 0.25]
         self.num_regions_per_scale = num_regions_per_scale
-        self.total_regions = len(scales) * num_regions_per_scale
+        self.total_regions = len(self.scales) * num_regions_per_scale
 
         # Region extractors for each scale
-        self.region_extractors = nn.ModuleList([
-            MultiRegionExtractor(backbone, num_regions=num_regions_per_scale)
-            for _ in scales
-        ])
+        self.region_extractors = nn.ModuleList(
+            [
+                MultiRegionExtractor(backbone, num_regions=num_regions_per_scale)
+                for _ in scales
+            ]
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -423,10 +424,14 @@ class MultiScaleRegionExtractor(nn.Module):
                 is_3d = x.dim() == 5
                 if is_3d:
                     size = tuple(int(s * scale) for s in x.shape[2:])
-                    x_scaled = F.interpolate(x, size=size, mode='trilinear', align_corners=False)
+                    x_scaled = F.interpolate(
+                        x, size=size, mode="trilinear", align_corners=False
+                    )
                 else:
                     size = tuple(int(s * scale) for s in x.shape[2:])
-                    x_scaled = F.interpolate(x, size=size, mode='bilinear', align_corners=False)
+                    x_scaled = F.interpolate(
+                        x, size=size, mode="bilinear", align_corners=False
+                    )
             else:
                 x_scaled = x
 

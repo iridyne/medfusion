@@ -7,20 +7,20 @@ and is compatible with the timm library.
 """
 
 import logging
-from typing import Literal, Optional
+from typing import Literal
 
 import torch
 import torch.nn as nn
 from einops import rearrange
 
 from .base import BaseVisionBackbone
-
-logger = logging.getLogger(__name__)
 from .swin_components import (
     PatchEmbed2D,
     PatchMerging2D,
     SwinTransformerBlock2D,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SwinTransformer2D(nn.Module):
@@ -152,7 +152,7 @@ class BasicLayer2D(nn.Module):
         drop: float = 0.0,
         attn_drop: float = 0.0,
         drop_path: list[float] = None,
-        downsample: Optional[nn.Module] = None,
+        downsample: nn.Module | None = None,
     ):
         super().__init__()
         self.dim = dim
@@ -169,7 +169,9 @@ class BasicLayer2D(nn.Module):
                     dim=dim,
                     num_heads=num_heads,
                     window_size=window_size,
-                    shift_size=[0, 0] if (i % 2 == 0) else [ws // 2 for ws in window_size],
+                    shift_size=[0, 0]
+                    if (i % 2 == 0)
+                    else [ws // 2 for ws in window_size],
                     mlp_ratio=mlp_ratio,
                     qkv_bias=qkv_bias,
                     drop=drop,
@@ -250,7 +252,9 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         super().__init__()
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         config = self.VARIANTS[variant]
         self.variant = variant
@@ -277,7 +281,9 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         self._pool = nn.AdaptiveAvgPool2d(1)
 
         # Dimension reduction
-        self.dim_reduction = nn.Conv2d(self._backbone_out_dim, feature_dim, kernel_size=1)
+        self.dim_reduction = nn.Conv2d(
+            self._backbone_out_dim, feature_dim, kernel_size=1
+        )
 
         # Projection head
         self._projection = nn.Sequential(

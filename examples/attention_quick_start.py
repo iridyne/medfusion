@@ -4,15 +4,13 @@
 这是一个最简化的示例，展示如何在 3 步内启用注意力监督训练。
 """
 
-import torch
-
-from med_core.configs import ExperimentConfig, TrainingConfig, VisionConfig
+from med_core.configs import ExperimentConfig
 from med_core.fusion import create_fusion_model
-from med_core.trainers import create_trainer
 
 # ============================================================================
 # 方法 1: 使用 CAM 自监督（推荐，无需额外标注）
 # ============================================================================
+
 
 def quick_start_cam():
     """3 步启用 CAM 注意力监督"""
@@ -35,7 +33,7 @@ def quick_start_cam():
     print(f"  - 损失权重: {config.training.attention_loss_weight}")
 
     # 步骤 2: 创建模型（与普通模型相同）
-    model = create_fusion_model(
+    _model = create_fusion_model(
         vision_backbone_name="resnet50",
         vision_config={
             "attention_type": "cbam",
@@ -65,6 +63,7 @@ def quick_start_cam():
 # 方法 2: 使用掩码监督（精度更高，需要标注）
 # ============================================================================
 
+
 def quick_start_mask():
     """3 步启用掩码注意力监督"""
 
@@ -84,7 +83,7 @@ def quick_start_mask():
     print(f"  - 监督方法: {config.training.attention_supervision_method}")
 
     # 步骤 2: 创建模型（与普通模型相同）
-    model = create_fusion_model(
+    _model = create_fusion_model(
         vision_backbone_name="resnet50",
         vision_config={
             "attention_type": "cbam",
@@ -120,6 +119,7 @@ def quick_start_mask():
 # ============================================================================
 # 配置对比
 # ============================================================================
+
 
 def show_config_comparison():
     """展示不同配置的对比"""
@@ -167,6 +167,7 @@ def show_config_comparison():
 # 常见问题
 # ============================================================================
 
+
 def show_faq():
     """常见问题解答"""
 
@@ -177,23 +178,23 @@ def show_faq():
     faqs = [
         {
             "Q": "为什么必须使用 CBAM？",
-            "A": "只有 CBAM 有空间注意力权重可以返回。SE 和 ECA 只做通道注意力。"
+            "A": "只有 CBAM 有空间注意力权重可以返回。SE 和 ECA 只做通道注意力。",
         },
         {
             "Q": "CAM 和掩码监督哪个更好？",
-            "A": "掩码监督精度更高但需要标注。CAM 无需标注但精度稍低。建议先用 CAM，有标注再用掩码。"
+            "A": "掩码监督精度更高但需要标注。CAM 无需标注但精度稍低。建议先用 CAM，有标注再用掩码。",
         },
         {
             "Q": "注意力损失权重设置多少合适？",
-            "A": "建议 0.05-0.2。CAM 可以稍低（0.05-0.1），掩码可以稍高（0.1-0.2）。"
+            "A": "建议 0.05-0.2。CAM 可以稍低（0.05-0.1），掩码可以稍高（0.1-0.2）。",
         },
         {
             "Q": "对性能有影响吗？",
-            "A": "训练时增加约 5-10% 内存。推理时如果不调用 return_intermediates，零开销。"
+            "A": "训练时增加约 5-10% 内存。推理时如果不调用 return_intermediates，零开销。",
         },
         {
             "Q": "可以用于 Transformer 吗？",
-            "A": "不可以。ViT/Swin/MaxViT 不支持外部注意力模块。"
+            "A": "不可以。ViT/Swin/MaxViT 不支持外部注意力模块。",
         },
     ]
 
@@ -205,6 +206,7 @@ def show_faq():
 # ============================================================================
 # 主函数
 # ============================================================================
+
 
 def main():
     """运行快速开始示例"""

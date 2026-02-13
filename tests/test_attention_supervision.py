@@ -23,8 +23,6 @@ from med_core.configs.base_config import (
     TrainingConfig,
     VisionConfig,
 )
-from med_core.fusion import create_fusion_model
-from med_core.trainers import create_trainer
 
 
 class TestAttentionModules:
@@ -57,11 +55,7 @@ class TestAttentionModules:
 
     def test_cbam_spatial_only(self):
         """Test CBAM with only spatial attention."""
-        cbam = CBAM(
-            in_channels=64,
-            use_spatial=True,
-            return_attention_weights=True
-        )
+        cbam = CBAM(in_channels=64, use_spatial=True, return_attention_weights=True)
         x = torch.randn(2, 64, 28, 28)
 
         output, weights_dict = cbam(x)
@@ -71,9 +65,7 @@ class TestAttentionModules:
     def test_create_attention_module_with_weights(self):
         """Test attention module factory with weight return."""
         attention = create_attention_module(
-            attention_type="cbam",
-            in_channels=64,
-            return_attention_weights=True
+            attention_type="cbam", in_channels=64, return_attention_weights=True
         )
         x = torch.randn(2, 64, 28, 28)
 
@@ -94,7 +86,7 @@ class TestVisionBackboneAttention:
             pretrained=False,
             feature_dim=128,
             attention_type="cbam",
-            enable_attention_supervision=False
+            enable_attention_supervision=False,
         )
         x = torch.randn(2, 3, 224, 224)
 
@@ -111,7 +103,7 @@ class TestVisionBackboneAttention:
             pretrained=False,
             feature_dim=128,
             attention_type="cbam",
-            enable_attention_supervision=True
+            enable_attention_supervision=True,
         )
         x = torch.randn(2, 3, 224, 224)
 
@@ -133,7 +125,7 @@ class TestVisionBackboneAttention:
             pretrained=False,
             feature_dim=128,
             attention_type="cbam",
-            enable_attention_supervision=True
+            enable_attention_supervision=True,
         )
         x = torch.randn(2, 3, 224, 224)
 
@@ -154,7 +146,7 @@ class TestVisionBackboneAttention:
             pretrained=False,
             feature_dim=128,
             attention_type=None,
-            enable_attention_supervision=True
+            enable_attention_supervision=True,
         )
         x = torch.randn(2, 3, 224, 224)
 
@@ -193,10 +185,7 @@ class TestCAMGeneration:
 
         # Upsample to input size
         upsampled_cam = nn.functional.interpolate(
-            cam,
-            size=(224, 224),
-            mode="bilinear",
-            align_corners=False
+            cam, size=(224, 224), mode="bilinear", align_corners=False
         )
 
         assert upsampled_cam.shape == (batch_size, 1, 224, 224)
@@ -219,8 +208,16 @@ class TestCAMGeneration:
         cam = torch.relu(cam)
 
         # Normalize
-        cam_min = cam.view(batch_size, -1).min(dim=1, keepdim=True)[0].view(batch_size, 1, 1, 1)
-        cam_max = cam.view(batch_size, -1).max(dim=1, keepdim=True)[0].view(batch_size, 1, 1, 1)
+        cam_min = (
+            cam.view(batch_size, -1)
+            .min(dim=1, keepdim=True)[0]
+            .view(batch_size, 1, 1, 1)
+        )
+        cam_max = (
+            cam.view(batch_size, -1)
+            .max(dim=1, keepdim=True)[0]
+            .view(batch_size, 1, 1, 1)
+        )
         cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
 
         return cam
@@ -272,7 +269,7 @@ class TestAttentionLoss:
             attention_weights,
             size=masks.shape[2:],
             mode="bilinear",
-            align_corners=False
+            align_corners=False,
         )
 
         loss = nn.functional.binary_cross_entropy(attention_resized, masks)
@@ -397,7 +394,7 @@ class TestEndToEndAttentionSupervision:
             pretrained=False,
             feature_dim=128,
             attention_type="cbam",
-            enable_attention_supervision=True
+            enable_attention_supervision=True,
         )
 
         # Forward pass
@@ -410,7 +407,7 @@ class TestEndToEndAttentionSupervision:
         assert "attention_weights" in output
 
         features = output["features"]
-        feature_maps = output["feature_maps"]
+        _feature_maps = output["feature_maps"]
         attention_weights = output["attention_weights"]
 
         # Simulate classifier
@@ -439,7 +436,7 @@ class TestEndToEndAttentionSupervision:
             pretrained=False,
             feature_dim=128,
             attention_type="cbam",
-            enable_attention_supervision=True
+            enable_attention_supervision=True,
         )
         classifier = nn.Linear(128, 2)
 
@@ -457,8 +454,7 @@ class TestEndToEndAttentionSupervision:
 
         # Check gradients exist
         has_gradients = any(
-            p.grad is not None and p.grad.abs().sum() > 0
-            for p in backbone.parameters()
+            p.grad is not None and p.grad.abs().sum() > 0 for p in backbone.parameters()
         )
         assert has_gradients
 

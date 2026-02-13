@@ -7,22 +7,19 @@
 2. 基于 CAM 的自监督（自动生成类激活图）
 """
 
-from pathlib import Path
-
 import numpy as np
 import torch
-import torch.nn as nn
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
-from med_core.backbones import create_vision_backbone
-from med_core.configs import DataConfig, ExperimentConfig, TrainingConfig, VisionConfig
+from med_core.configs import ExperimentConfig, TrainingConfig, VisionConfig
 from med_core.fusion import create_fusion_model
 from med_core.trainers import create_trainer
 
 # ============================================================================
 # 示例 1: 基于掩码的注意力监督（有人工标注）
 # ============================================================================
+
 
 class MedicalDatasetWithMasks(Dataset):
     """
@@ -47,12 +44,12 @@ class MedicalDatasetWithMasks(Dataset):
 
     def __getitem__(self, idx):
         # 加载图像
-        image = Image.open(self.image_paths[idx]).convert('RGB')
+        image = Image.open(self.image_paths[idx]).convert("RGB")
         if self.transform:
             image = self.transform(image)
 
         # 加载掩码
-        mask = Image.open(self.mask_paths[idx]).convert('L')  # 灰度图
+        mask = Image.open(self.mask_paths[idx]).convert("L")  # 灰度图
         mask = torch.from_numpy(np.array(mask)).float() / 255.0  # 归一化到 [0, 1]
         mask = mask.unsqueeze(0)  # (1, H, W)
 
@@ -61,8 +58,8 @@ class MedicalDatasetWithMasks(Dataset):
             mask = torch.nn.functional.interpolate(
                 mask.unsqueeze(0),
                 size=image.shape[-2:],
-                mode='bilinear',
-                align_corners=False
+                mode="bilinear",
+                align_corners=False,
             ).squeeze(0)
 
         # 表格数据
@@ -114,18 +111,21 @@ def example_mask_based_supervision():
 
     # 创建数据集
     from torchvision import transforms
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+
+    transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
 
     train_dataset = MedicalDatasetWithMasks(
         image_paths[:80],
         tabular_data[:80],
         labels[:80],
         mask_paths[:80],
-        transform=transform
+        transform=transform,
     )
 
     val_dataset = MedicalDatasetWithMasks(
@@ -133,7 +133,7 @@ def example_mask_based_supervision():
         tabular_data[80:],
         labels[80:],
         mask_paths[80:],
-        transform=transform
+        transform=transform,
     )
 
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
@@ -153,7 +153,7 @@ def example_mask_based_supervision():
     )
 
     # 4. 创建训练器
-    trainer = create_trainer(
+    _trainer = create_trainer(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -163,9 +163,9 @@ def example_mask_based_supervision():
 
     # 5. 训练
     print("\n开始训练（使用掩码监督）...")
-    print(f"- 注意力监督方法: mask")
+    print("- 注意力监督方法: mask")
     print(f"- 注意力损失权重: {config.training.attention_loss_weight}")
-    print(f"- 数据集包含病灶掩码标注")
+    print("- 数据集包含病灶掩码标注")
 
     # trainer.train()  # 取消注释以实际训练
 
@@ -175,6 +175,7 @@ def example_mask_based_supervision():
 # ============================================================================
 # 示例 2: 基于 CAM 的自监督（无需人工标注）
 # ============================================================================
+
 
 class MedicalDatasetWithoutMasks(Dataset):
     """
@@ -197,7 +198,7 @@ class MedicalDatasetWithoutMasks(Dataset):
 
     def __getitem__(self, idx):
         # 加载图像
-        image = Image.open(self.image_paths[idx]).convert('RGB')
+        image = Image.open(self.image_paths[idx]).convert("RGB")
         if self.transform:
             image = self.transform(image)
 
@@ -248,24 +249,21 @@ def example_cam_based_supervision():
     labels = np.random.randint(0, 2, num_samples)
 
     from torchvision import transforms
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ])
+
+    transform = transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
+    )
 
     train_dataset = MedicalDatasetWithoutMasks(
-        image_paths[:80],
-        tabular_data[:80],
-        labels[:80],
-        transform=transform
+        image_paths[:80], tabular_data[:80], labels[:80], transform=transform
     )
 
     val_dataset = MedicalDatasetWithoutMasks(
-        image_paths[80:],
-        tabular_data[80:],
-        labels[80:],
-        transform=transform
+        image_paths[80:], tabular_data[80:], labels[80:], transform=transform
     )
 
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4)
@@ -285,7 +283,7 @@ def example_cam_based_supervision():
     )
 
     # 4. 创建训练器
-    trainer = create_trainer(
+    _trainer = create_trainer(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
@@ -295,9 +293,9 @@ def example_cam_based_supervision():
 
     # 5. 训练
     print("\n开始训练（使用 CAM 自监督）...")
-    print(f"- 注意力监督方法: cam")
+    print("- 注意力监督方法: cam")
     print(f"- 注意力损失权重: {config.training.attention_loss_weight}")
-    print(f"- 无需人工标注掩码，自动生成 CAM")
+    print("- 无需人工标注掩码，自动生成 CAM")
 
     # trainer.train()  # 取消注释以实际训练
 
@@ -307,6 +305,7 @@ def example_cam_based_supervision():
 # ============================================================================
 # 示例 3: 可视化注意力权重
 # ============================================================================
+
 
 def visualize_attention_weights(model, image, tabular, save_path="attention_viz.png"):
     """可视化模型的注意力权重"""
@@ -331,14 +330,14 @@ def visualize_attention_weights(model, image, tabular, save_path="attention_viz.
                     img = (img - img.min()) / (img.max() - img.min())
                     axes[0].imshow(img)
                     axes[0].set_title("Original Image")
-                    axes[0].axis('off')
+                    axes[0].axis("off")
 
                     # 注意力热力图
                     attn = attention_weights[0, 0].cpu().numpy()
                     axes[1].imshow(img)
-                    axes[1].imshow(attn, alpha=0.5, cmap='jet')
+                    axes[1].imshow(attn, alpha=0.5, cmap="jet")
                     axes[1].set_title("Attention Heatmap")
-                    axes[1].axis('off')
+                    axes[1].axis("off")
 
                     plt.tight_layout()
                     plt.savefig(save_path)
@@ -354,6 +353,7 @@ def visualize_attention_weights(model, image, tabular, save_path="attention_viz.
 # ============================================================================
 # 示例 4: 对比实验（有监督 vs 无监督）
 # ============================================================================
+
 
 def compare_with_without_supervision():
     """对比有无注意力监督的训练效果"""
@@ -398,6 +398,7 @@ def compare_with_without_supervision():
 # ============================================================================
 # 主函数
 # ============================================================================
+
 
 def main():
     """运行所有示例"""

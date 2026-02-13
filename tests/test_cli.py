@@ -2,7 +2,6 @@
 Tests for CLI module structure and imports.
 """
 
-import pytest
 
 
 def test_cli_imports():
@@ -16,9 +15,9 @@ def test_cli_imports():
 
 def test_cli_submodule_imports():
     """Test that CLI submodules can be imported directly."""
-    from med_core.cli.train import train
     from med_core.cli.evaluate import evaluate
     from med_core.cli.preprocess import preprocess
+    from med_core.cli.train import train
 
     assert callable(train)
     assert callable(evaluate)
@@ -27,7 +26,7 @@ def test_cli_submodule_imports():
 
 def test_cli_backward_compatibility():
     """Test that old import path still works."""
-    from med_core.cli import train, evaluate, preprocess
+    from med_core.cli import evaluate, preprocess, train
 
     # Verify functions are accessible
     assert train.__module__ == "med_core.cli.train"

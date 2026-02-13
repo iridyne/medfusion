@@ -8,8 +8,8 @@ import torch
 from med_core.models.smurf import (
     SMuRFModel,
     SMuRFWithMIL,
-    smurf_small,
     smurf_base,
+    smurf_small,
     smurf_with_mil_small,
 )
 

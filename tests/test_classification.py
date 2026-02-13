@@ -6,11 +6,11 @@ import pytest
 import torch
 
 from med_core.heads.classification import (
+    AttentionClassificationHead,
     ClassificationHead,
+    EnsembleClassificationHead,
     MultiLabelClassificationHead,
     OrdinalClassificationHead,
-    AttentionClassificationHead,
-    EnsembleClassificationHead,
 )
 
 
@@ -28,9 +28,7 @@ class TestClassificationHead:
 
     def test_with_hidden_layers(self):
         """Test with hidden layers."""
-        head = ClassificationHead(
-            input_dim=512, num_classes=4, hidden_dims=[256, 128]
-        )
+        head = ClassificationHead(input_dim=512, num_classes=4, hidden_dims=[256, 128])
         features = torch.randn(8, 512)
 
         logits = head(features)
@@ -211,9 +209,7 @@ class TestAttentionClassificationHead:
         assert logits.shape == (8, 4)
         assert attention_weights.shape == (8, 10, 1)
         # Attention weights should sum to 1
-        assert torch.allclose(
-            attention_weights.sum(dim=1), torch.ones(8, 1), atol=1e-5
-        )
+        assert torch.allclose(attention_weights.sum(dim=1), torch.ones(8, 1), atol=1e-5)
 
     def test_gradient_flow(self):
         """Test gradient flow."""
@@ -232,9 +228,7 @@ class TestEnsembleClassificationHead:
 
     def test_basic_ensemble(self):
         """Test basic ensemble classification."""
-        head = EnsembleClassificationHead(
-            input_dim=512, num_classes=4, num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=512, num_classes=4, num_heads=3)
         features = torch.randn(8, 512)
 
         logits = head(features)
@@ -243,9 +237,7 @@ class TestEnsembleClassificationHead:
 
     def test_return_individual_predictions(self):
         """Test returning individual head predictions."""
-        head = EnsembleClassificationHead(
-            input_dim=512, num_classes=4, num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=512, num_classes=4, num_heads=3)
         features = torch.randn(8, 512)
 
         logits, individual = head(features, return_individual=True)
@@ -279,9 +271,7 @@ class TestEnsembleClassificationHead:
 
     def test_gradient_flow(self):
         """Test gradient flow."""
-        head = EnsembleClassificationHead(
-            input_dim=128, num_classes=4, num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=128, num_classes=4, num_heads=3)
         features = torch.randn(4, 128, requires_grad=True)
 
         logits = head(features)
@@ -340,8 +330,8 @@ class TestIntegration:
 
         # Training mode
         head.train()
-        logits_train1 = head(features)
-        logits_train2 = head(features)
+        _logits_train1 = head(features)
+        _logits_train2 = head(features)
 
         # Eval mode
         head.eval()

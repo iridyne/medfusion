@@ -3,9 +3,9 @@ Feature extractors for medical imaging.
 """
 
 from .multi_region import (
-    MultiRegionExtractor,
-    HierarchicalRegionExtractor,
     AdaptiveRegionExtractor,
+    HierarchicalRegionExtractor,
+    MultiRegionExtractor,
     MultiScaleRegionExtractor,
 )
 

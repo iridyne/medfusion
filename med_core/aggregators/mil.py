@@ -6,10 +6,11 @@ features from multiple instances (e.g., multiple pathology patches,
 multiple regions of interest).
 """
 
+from typing import Literal
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Literal
 
 
 class MeanPoolingAggregator(nn.Module):
@@ -236,7 +237,7 @@ class DeepSetsAggregator(nn.Module):
         self,
         input_dim: int,
         hidden_dim: int = 256,
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         dropout: float = 0.1,
     ):
         super().__init__()
@@ -385,7 +386,7 @@ class MILAggregator(nn.Module):
         strategy: Literal['mean', 'max', 'attention', 'gated', 'deepsets', 'transformer'] = 'attention',
         attention_dim: int = 128,
         hidden_dim: int = 256,
-        output_dim: Optional[int] = None,
+        output_dim: int | None = None,
         num_heads: int = 8,
         num_layers: int = 2,
         dropout: float = 0.1,

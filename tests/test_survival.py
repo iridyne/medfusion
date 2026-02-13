@@ -7,8 +7,8 @@ import torch
 
 from med_core.heads.survival import (
     CoxSurvivalHead,
-    DiscreteTimeSurvivalHead,
     DeepSurvivalHead,
+    DiscreteTimeSurvivalHead,
     MultiTaskSurvivalHead,
     RankingSurvivalHead,
 )
@@ -189,9 +189,7 @@ class TestMultiTaskSurvivalHead:
 
     def test_basic_forward(self):
         """Test basic forward pass."""
-        head = MultiTaskSurvivalHead(
-            input_dim=512, num_classes=4, num_time_bins=10
-        )
+        head = MultiTaskSurvivalHead(input_dim=512, num_classes=4, num_time_bins=10)
         features = torch.randn(8, 512)
 
         class_logits, survival_hazards = head(features)
@@ -201,9 +199,7 @@ class TestMultiTaskSurvivalHead:
 
     def test_predict_survival(self):
         """Test survival probability prediction."""
-        head = MultiTaskSurvivalHead(
-            input_dim=512, num_classes=4, num_time_bins=10
-        )
+        head = MultiTaskSurvivalHead(input_dim=512, num_classes=4, num_time_bins=10)
         features = torch.randn(8, 512)
 
         survival_probs = head.predict_survival(features)
@@ -226,9 +222,7 @@ class TestMultiTaskSurvivalHead:
 
     def test_gradient_flow(self):
         """Test gradient flow."""
-        head = MultiTaskSurvivalHead(
-            input_dim=128, num_classes=4, num_time_bins=10
-        )
+        head = MultiTaskSurvivalHead(input_dim=128, num_classes=4, num_time_bins=10)
         features = torch.randn(4, 128, requires_grad=True)
 
         class_logits, survival_hazards = head(features)
@@ -345,7 +339,7 @@ class TestIntegration:
 
         # Training mode
         head.train()
-        hazards_train = head(features)
+        _hazards_train = head(features)
 
         # Eval mode
         head.eval()
@@ -358,9 +352,7 @@ class TestIntegration:
 
     def test_combined_classification_survival(self):
         """Test using multi-task head for combined prediction."""
-        head = MultiTaskSurvivalHead(
-            input_dim=512, num_classes=4, num_time_bins=10
-        )
+        head = MultiTaskSurvivalHead(input_dim=512, num_classes=4, num_time_bins=10)
         features = torch.randn(8, 512)
 
         # Get both predictions

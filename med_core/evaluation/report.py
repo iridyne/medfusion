@@ -8,8 +8,6 @@ This module now uses a modular architecture with separate components
 for metrics calculation, visualization, and report generation.
 """
 
-from pathlib import Path
-from typing import Any
 
 from med_core.evaluation.report_generator import (
     ReportGenerator,

@@ -19,7 +19,7 @@ Usage:
 """
 
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -51,9 +51,11 @@ class MedicalDataNormalizer:
     def _load_dictionary(self) -> dict:
         """Load data dictionary from YAML file."""
         if not self.dictionary_path.exists():
-            raise FileNotFoundError(f"Data dictionary not found: {self.dictionary_path}")
+            raise FileNotFoundError(
+                f"Data dictionary not found: {self.dictionary_path}"
+            )
 
-        with open(self.dictionary_path, 'r', encoding='utf-8') as f:
+        with open(self.dictionary_path, encoding="utf-8") as f:
             return yaml.safe_load(f)
 
     def _build_field_mapping(self) -> dict[str, str]:
@@ -67,7 +69,7 @@ class MedicalDataNormalizer:
 
         # Iterate through all categories in the dictionary
         for category_name, category_data in self.dictionary.items():
-            if category_name in ['version', 'last_updated']:
+            if category_name in ["version", "last_updated"]:
                 continue
 
             if not isinstance(category_data, dict):
@@ -82,7 +84,7 @@ class MedicalDataNormalizer:
                 mapping[standard_name] = standard_name
 
                 # Add all aliases
-                aliases = field_info.get('aliases', [])
+                aliases = field_info.get("aliases", [])
                 for alias in aliases:
                     mapping[alias] = standard_name
 
@@ -112,7 +114,7 @@ class MedicalDataNormalizer:
 
         raise ValueError(f"Unknown field name: {field_name}")
 
-    def get_field_info(self, standard_name: str) -> Optional[dict]:
+    def get_field_info(self, standard_name: str) -> dict | None:
         """
         Get field information from the dictionary.
 
@@ -128,11 +130,8 @@ class MedicalDataNormalizer:
         return None
 
     def validate_value(
-        self,
-        value: Any,
-        field_name: str,
-        raise_error: bool = False
-    ) -> tuple[bool, Optional[str]]:
+        self, value: Any, field_name: str, raise_error: bool = False
+    ) -> tuple[bool, str | None]:
         """
         Validate a value against field constraints.
 
@@ -152,10 +151,10 @@ class MedicalDataNormalizer:
             return True, None
 
         # Check numeric range
-        if 'valid_range' in field_info:
+        if "valid_range" in field_info:
             try:
                 value_float = float(value)
-                min_val, max_val = field_info['valid_range']
+                min_val, max_val = field_info["valid_range"]
                 if not (min_val <= value_float <= max_val):
                     msg = f"{field_name} value {value} outside valid range [{min_val}, {max_val}]"
                     if raise_error:
@@ -165,8 +164,8 @@ class MedicalDataNormalizer:
                 pass
 
         # Check categorical values
-        if 'valid_values' in field_info:
-            valid_values = field_info['valid_values']
+        if "valid_values" in field_info:
+            valid_values = field_info["valid_values"]
             if value not in valid_values:
                 # Try string conversion
                 if str(value) not in [str(v) for v in valid_values]:
@@ -195,35 +194,35 @@ class MedicalDataNormalizer:
         if field_info is None:
             return value
 
-        field_type = field_info.get('type', 'text')
+        field_type = field_info.get("type", "text")
 
         try:
-            if field_type == 'numeric':
+            if field_type == "numeric":
                 return float(value)
 
-            elif field_type == 'binary':
+            elif field_type == "binary":
                 # Handle various binary representations
                 if isinstance(value, (bool, int, float)):
                     return int(bool(value))
 
                 value_str = str(value).lower()
-                if value_str in ['yes', 'true', '是', '1', '1.0']:
+                if value_str in ["yes", "true", "是", "1", "1.0"]:
                     return 1
-                elif value_str in ['no', 'false', '否', '0', '0.0']:
+                elif value_str in ["no", "false", "否", "0", "0.0"]:
                     return 0
                 else:
                     return int(value)
 
-            elif field_type == 'categorical':
+            elif field_type == "categorical":
                 # Handle categorical encoding if defined
-                if 'encoding' in field_info:
-                    encoding = field_info['encoding']
+                if "encoding" in field_info:
+                    encoding = field_info["encoding"]
                     for standard_value, aliases in encoding.items():
                         if value in aliases or str(value) in [str(a) for a in aliases]:
                             return standard_value
                 return str(value)
 
-            elif field_type == 'text':
+            elif field_type == "text":
                 return str(value)
 
             else:
@@ -236,8 +235,8 @@ class MedicalDataNormalizer:
         self,
         df: pd.DataFrame,
         validate: bool = True,
-        handle_missing: Literal['drop', 'fill_mean', 'fill_median', 'keep'] = 'keep',
-        verbose: bool = True
+        handle_missing: Literal["drop", "fill_mean", "fill_median", "keep"] = "keep",
+        verbose: bool = True,
     ) -> pd.DataFrame:
         """
         Normalize a complete dataframe using the data dictionary.
@@ -268,7 +267,9 @@ class MedicalDataNormalizer:
                 unmapped_columns.append(col)
 
         if unmapped_columns and verbose:
-            print(f"  Warning: {len(unmapped_columns)} columns not found in dictionary:")
+            print(
+                f"  Warning: {len(unmapped_columns)} columns not found in dictionary:"
+            )
             for col in unmapped_columns[:5]:
                 print(f"    - {col}")
             if len(unmapped_columns) > 5:
@@ -285,7 +286,7 @@ class MedicalDataNormalizer:
                 continue
 
             df_normalized[col] = df_normalized[col].apply(
-                lambda x: self.convert_value(x, col)
+                lambda x, c=col: self.convert_value(x, c)
             )
 
         # Step 3: Validate values
@@ -315,16 +316,16 @@ class MedicalDataNormalizer:
         if verbose:
             print(f"Step 4: Handling missing values (strategy: {handle_missing})...")
 
-        if handle_missing == 'drop':
+        if handle_missing == "drop":
             df_normalized = df_normalized.dropna()
 
-        elif handle_missing == 'fill_mean':
+        elif handle_missing == "fill_mean":
             numeric_cols = df_normalized.select_dtypes(include=[np.number]).columns
             df_normalized[numeric_cols] = df_normalized[numeric_cols].fillna(
                 df_normalized[numeric_cols].mean()
             )
 
-        elif handle_missing == 'fill_median':
+        elif handle_missing == "fill_median":
             numeric_cols = df_normalized.select_dtypes(include=[np.number]).columns
             df_normalized[numeric_cols] = df_normalized[numeric_cols].fillna(
                 df_normalized[numeric_cols].median()
@@ -333,7 +334,7 @@ class MedicalDataNormalizer:
         # keep: do nothing
 
         if verbose:
-            print(f"\nNormalization complete!")
+            print("\nNormalization complete!")
             print(f"  Input shape: {df.shape}")
             print(f"  Output shape: {df_normalized.shape}")
             print(f"  Mapped columns: {len(column_mapping)}")
@@ -359,22 +360,34 @@ class MedicalDataNormalizer:
                 continue
 
             col_stats = {
-                'type': field_info.get('type', 'unknown'),
-                'missing_count': int(df[col].isna().sum()),
-                'missing_rate': float(df[col].isna().mean()),
+                "type": field_info.get("type", "unknown"),
+                "missing_count": int(df[col].isna().sum()),
+                "missing_rate": float(df[col].isna().mean()),
             }
 
-            if field_info.get('type') == 'numeric':
-                col_stats.update({
-                    'mean': float(df[col].mean()) if not df[col].isna().all() else None,
-                    'std': float(df[col].std()) if not df[col].isna().all() else None,
-                    'min': float(df[col].min()) if not df[col].isna().all() else None,
-                    'max': float(df[col].max()) if not df[col].isna().all() else None,
-                })
+            if field_info.get("type") == "numeric":
+                col_stats.update(
+                    {
+                        "mean": float(df[col].mean())
+                        if not df[col].isna().all()
+                        else None,
+                        "std": float(df[col].std())
+                        if not df[col].isna().all()
+                        else None,
+                        "min": float(df[col].min())
+                        if not df[col].isna().all()
+                        else None,
+                        "max": float(df[col].max())
+                        if not df[col].isna().all()
+                        else None,
+                    }
+                )
 
-            elif field_info.get('type') in ['categorical', 'binary']:
+            elif field_info.get("type") in ["categorical", "binary"]:
                 value_counts = df[col].value_counts().to_dict()
-                col_stats['value_counts'] = {str(k): int(v) for k, v in value_counts.items()}
+                col_stats["value_counts"] = {
+                    str(k): int(v) for k, v in value_counts.items()
+                }
 
             stats[col] = col_stats
 
@@ -390,34 +403,31 @@ if __name__ == "__main__":
 
     # Create sample data with various field name formats
     sample_data = {
-        '年龄': [45, 52, 38, 61, 29],
-        'Gender': ['男', 'F', '女', 'M', '男'],
-        'BMI': [24.5, 28.3, 22.1, 31.2, 19.8],
-        '收缩压': [120, 145, 110, 160, 105],
-        'DBP': [80, 95, 70, 100, 68],
-        '血糖': [5.2, 7.8, 4.9, 9.1, 5.0],
-        'Hypertension': ['否', 'yes', 'no', '是', 'no'],
+        "年龄": [45, 52, 38, 61, 29],
+        "Gender": ["男", "F", "女", "M", "男"],
+        "BMI": [24.5, 28.3, 22.1, 31.2, 19.8],
+        "收缩压": [120, 145, 110, 160, 105],
+        "DBP": [80, 95, 70, 100, 68],
+        "血糖": [5.2, 7.8, 4.9, 9.1, 5.0],
+        "Hypertension": ["否", "yes", "no", "是", "no"],
     }
 
     df = pd.DataFrame(sample_data)
 
     print("Original DataFrame:")
     print(df)
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
 
     # Normalize the dataframe
     df_normalized = normalizer.normalize_dataframe(
-        df,
-        validate=True,
-        handle_missing='keep',
-        verbose=True
+        df, validate=True, handle_missing="keep", verbose=True
     )
 
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
     print("Normalized DataFrame:")
     print(df_normalized)
 
-    print("\n" + "="*80 + "\n")
+    print("\n" + "=" * 80 + "\n")
     print("Statistics:")
     stats = normalizer.get_statistics(df_normalized)
     for field, field_stats in stats.items():

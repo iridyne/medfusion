@@ -6,10 +6,10 @@ for different medical imaging tasks, including multi-class classification,
 multi-label classification, and ordinal classification.
 """
 
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional
 
 
 class ClassificationHead(nn.Module):
@@ -34,7 +34,7 @@ class ClassificationHead(nn.Module):
         self,
         input_dim: int,
         num_classes: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         use_batch_norm: bool = False,
         activation: str = "relu",
@@ -109,7 +109,7 @@ class MultiLabelClassificationHead(nn.Module):
         self,
         input_dim: int,
         num_labels: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         use_independent_classifiers: bool = False,
     ):
@@ -199,7 +199,7 @@ class OrdinalClassificationHead(nn.Module):
         self,
         input_dim: int,
         num_classes: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
     ):
         super().__init__()
@@ -392,7 +392,7 @@ class EnsembleClassificationHead(nn.Module):
         input_dim: int,
         num_classes: int,
         num_heads: int = 3,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         aggregation: str = "mean",
     ):

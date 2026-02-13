@@ -6,7 +6,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from med_core.backbones import create_vision_backbone, create_tabular_backbone
+from med_core.backbones import create_tabular_backbone, create_vision_backbone
 from med_core.fusion import create_fusion_module
 
 

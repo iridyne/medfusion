@@ -6,13 +6,13 @@ import pytest
 import torch
 
 from med_core.aggregators.mil import (
-    MeanPoolingAggregator,
-    MaxPoolingAggregator,
     AttentionAggregator,
-    GatedAttentionAggregator,
     DeepSetsAggregator,
-    TransformerAggregator,
+    GatedAttentionAggregator,
+    MaxPoolingAggregator,
+    MeanPoolingAggregator,
     MILAggregator,
+    TransformerAggregator,
 )
 
 

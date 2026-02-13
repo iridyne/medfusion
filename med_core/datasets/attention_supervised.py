@@ -174,7 +174,9 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
 
     def has_masks(self) -> bool:
         """检查数据集是否有分割掩码"""
-        return self.mask_paths is not None and any(p is not None for p in self.mask_paths)
+        return self.mask_paths is not None and any(
+            p is not None for p in self.mask_paths
+        )
 
     def has_bboxes(self) -> bool:
         """检查数据集是否有边界框"""
@@ -207,11 +209,13 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
         stats = super().get_statistics()
 
         # 添加标注统计
-        stats.update({
-            "has_masks": self.has_masks(),
-            "has_bboxes": self.has_bboxes(),
-            "has_keypoints": self.has_keypoints(),
-        })
+        stats.update(
+            {
+                "has_masks": self.has_masks(),
+                "has_bboxes": self.has_bboxes(),
+                "has_keypoints": self.has_keypoints(),
+            }
+        )
 
         if self.has_masks():
             stats["mask_coverage"] = self.get_mask_coverage()
@@ -302,11 +306,11 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         """
         try:
             import pydicom
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "pydicom is required to load DICOM files. "
                 "Install it with: pip install pydicom"
-            )
+            ) from e
 
         # 读取 DICOM
         dcm = pydicom.dcmread(path)
@@ -338,11 +342,11 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         """
         try:
             import nibabel as nib
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "nibabel is required to load NIfTI files. "
                 "Install it with: pip install nibabel"
-            )
+            ) from e
 
         # 读取 NIfTI
         nii = nib.load(path)

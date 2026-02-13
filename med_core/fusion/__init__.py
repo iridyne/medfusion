@@ -17,9 +17,26 @@ from med_core.fusion.base import (
     MultiModalFusionModel,
     create_fusion_model,
 )
+from med_core.fusion.fused_attention import (
+    CrossModalAttention,
+    FusedAttentionFusion,
+    MultimodalFusedAttention,
+)
+from med_core.fusion.kronecker import (
+    CompactKroneckerFusion,
+    KroneckerFusion,
+    MultimodalKroneckerFusion,
+)
 from med_core.fusion.multiview_model import (
     MultiViewMultiModalFusionModel,
     create_multiview_fusion_model,
+)
+from med_core.fusion.self_attention import (
+    AdditiveAttentionFusion,
+    BilinearAttentionFusion,
+    GatedAttentionFusion,
+    MultimodalSelfAttentionFusion,
+    SelfAttentionFusion,
 )
 from med_core.fusion.strategies import (
     AttentionFusion,
@@ -28,23 +45,6 @@ from med_core.fusion.strategies import (
     CrossAttentionFusion,
     GatedFusion,
     create_fusion_module,
-)
-from med_core.fusion.kronecker import (
-    KroneckerFusion,
-    CompactKroneckerFusion,
-    MultimodalKroneckerFusion,
-)
-from med_core.fusion.fused_attention import (
-    FusedAttentionFusion,
-    CrossModalAttention,
-    MultimodalFusedAttention,
-)
-from med_core.fusion.self_attention import (
-    SelfAttentionFusion,
-    AdditiveAttentionFusion,
-    BilinearAttentionFusion,
-    GatedAttentionFusion,
-    MultimodalSelfAttentionFusion,
 )
 
 __all__ = [

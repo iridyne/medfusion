@@ -6,10 +6,10 @@ for predicting patient survival outcomes, including Cox proportional
 hazards models and discrete-time survival analysis.
 """
 
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple
 
 
 class CoxSurvivalHead(nn.Module):
@@ -34,7 +34,7 @@ class CoxSurvivalHead(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         use_batch_norm: bool = False,
     ):
@@ -103,7 +103,7 @@ class DiscreteTimeSurvivalHead(nn.Module):
         self,
         input_dim: int,
         num_time_bins: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
     ):
         super().__init__()
@@ -346,7 +346,7 @@ class MultiTaskSurvivalHead(nn.Module):
 
     def forward(
         self, x: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
 
@@ -406,7 +406,7 @@ class RankingSurvivalHead(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        hidden_dims: Optional[list[int]] = None,
+        hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
     ):
         super().__init__()

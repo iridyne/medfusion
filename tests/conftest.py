@@ -7,7 +7,6 @@ Provides common test fixtures and utilities used across all test modules.
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pytest
 import torch
 

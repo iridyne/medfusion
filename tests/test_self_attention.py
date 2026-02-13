@@ -6,11 +6,11 @@ import pytest
 import torch
 
 from med_core.fusion.self_attention import (
-    SelfAttentionFusion,
     AdditiveAttentionFusion,
     BilinearAttentionFusion,
     GatedAttentionFusion,
     MultimodalSelfAttentionFusion,
+    SelfAttentionFusion,
 )
 
 
