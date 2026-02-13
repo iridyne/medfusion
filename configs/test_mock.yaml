@@ -1,0 +1,125 @@
+# 模拟数据测试配置
+project_name: "med-framework-test"
+experiment_name: "mock_data_test"
+description: "使用模拟生成数据测试框架"
+tags: ["test", "mock", "validation"]
+
+# 全局设置
+seed: 42
+deterministic: true
+device: "auto"
+
+# 数据配置
+data:
+  # 路径
+  data_root: "data/mock"
+  csv_path: "data/mock/metadata.csv"
+  image_dir: "data/mock"
+
+  # 列映射
+  image_path_column: "image_path"
+  target_column: "diagnosis"
+  patient_id_column: "patient_id"
+
+  # 特征
+  numerical_features:
+    - "age"
+  categorical_features:
+    - "gender"
+
+  # 数据划分（小数据集，调整比例）
+  train_ratio: 0.6
+  val_ratio: 0.2
+  test_ratio: 0.2
+  random_seed: 42
+
+  # 图像处理
+  image_size: 224
+  image_channels: 3
+
+  # 数据加载器（10 个样本使用小批量）
+  batch_size: 2
+  num_workers: 0
+  pin_memory: false
+
+  # 数据增强
+  augmentation_strength: "light"
+
+# 模型架构
+model:
+  num_classes: 2
+  use_auxiliary_heads: false
+
+  # 视觉骨干网络
+  vision:
+    backbone: "resnet18"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 64
+    dropout: 0.3
+    attention_type: "none"
+
+  # 表格骨干网络
+  tabular:
+    hidden_dims: [32]
+    output_dim: 16
+    dropout: 0.2
+    use_batch_norm: true
+    activation: "relu"
+
+  # 融合模块
+  fusion:
+    fusion_type: "concatenate"
+    hidden_dim: 48
+    dropout: 0.3
+    initial_image_weight: 0.5
+    initial_tabular_weight: 0.5
+
+# 训练配置
+training:
+  num_epochs: 3
+  mixed_precision: false
+  gradient_clip: 1.0
+  label_smoothing: 0.0
+
+  # 渐进式训练（禁用以快速测试）
+  use_progressive_training: false
+  stage1_epochs: 1
+  stage2_epochs: 1
+  stage3_epochs: 1
+
+  # 早停
+  early_stopping: false
+  patience: 5
+  monitor: "val_loss"
+  mode: "min"
+
+  # 检查点保存
+  save_top_k: 1
+  save_last: true
+
+  # 优化器
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.001
+    weight_decay: 0.0001
+
+    # 差异化学习率（为简化而禁用）
+    use_differential_lr: false
+    lr_backbone: 0.0001
+    lr_tabular: 0.001
+    lr_fusion: 0.0005
+
+  # 学习率调度器
+  scheduler:
+    scheduler: "none"
+    warmup_epochs: 0
+    min_lr: 0.00001
+
+# 日志配置
+logging:
+  output_dir: "outputs/test_mock"
+  use_tensorboard: true
+  use_wandb: false
+  log_every_n_steps: 1
+  save_visualizations: false

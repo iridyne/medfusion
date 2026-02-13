@@ -1,0 +1,388 @@
+# Medical Data Dictionary and Feature Mapping
+# 医疗数据字典与特征映射表
+#
+# Purpose: Standardize field names across different data sources
+# Usage: Load this YAML in data preprocessing scripts for automatic field normalization
+#
+# Structure:
+#   standard_name:
+#     aliases: [list of alternative names]
+#     type: data type (numeric, categorical, binary, text)
+#     unit: measurement unit (if applicable)
+#     description: field description
+#     valid_range: [min, max] or list of valid values
+
+version: "1.0.0"
+last_updated: "2026-01-28"
+
+# ============================================================================
+# Patient Demographics / 患者基本信息
+# ============================================================================
+demographics:
+  patient_id:
+    aliases: ["患者ID", "PatientID", "病历号", "MRN", "patient_no", "pid"]
+    type: "text"
+    description: "Unique patient identifier"
+
+  age:
+    aliases: ["年龄", "Age", "患者年龄", "age_years", "AGE"]
+    type: "numeric"
+    unit: "years"
+    valid_range: [0, 120]
+    description: "Patient age in years"
+
+  gender:
+    aliases: ["性别", "Gender", "Sex", "sex", "GENDER"]
+    type: "categorical"
+    valid_values: ["male", "female", "男", "女", "M", "F", "0", "1"]
+    encoding:
+      male: [0, "male", "男", "M"]
+      female: [1, "female", "女", "F"]
+    description: "Patient biological sex"
+
+  ethnicity:
+    aliases: ["民族", "Ethnicity", "Race", "race"]
+    type: "categorical"
+    description: "Patient ethnicity"
+
+  height:
+    aliases: ["身高", "Height", "height_cm", "HT"]
+    type: "numeric"
+    unit: "cm"
+    valid_range: [50, 250]
+    description: "Patient height in centimeters"
+
+  weight:
+    aliases: ["体重", "Weight", "weight_kg", "WT"]
+    type: "numeric"
+    unit: "kg"
+    valid_range: [2, 300]
+    description: "Patient weight in kilograms"
+
+  bmi:
+    aliases: ["BMI", "体质指数", "体重指数", "肥胖程度", "body_mass_index"]
+    type: "numeric"
+    unit: "kg/m²"
+    valid_range: [10, 60]
+    description: "Body Mass Index"
+    formula: "weight / (height/100)^2"
+
+# ============================================================================
+# Vital Signs / 生命体征
+# ============================================================================
+vital_signs:
+  systolic_bp:
+    aliases: ["收缩压", "SBP", "高压", "systolic", "sys_bp", "血压收缩压"]
+    type: "numeric"
+    unit: "mmHg"
+    valid_range: [60, 250]
+    description: "Systolic blood pressure"
+
+  diastolic_bp:
+    aliases: ["舒张压", "DBP", "低压", "diastolic", "dia_bp", "血压舒张压"]
+    type: "numeric"
+    unit: "mmHg"
+    valid_range: [40, 150]
+    description: "Diastolic blood pressure"
+
+  heart_rate:
+    aliases: ["心率", "HR", "pulse", "脉搏", "heart_beat", "HR_bpm"]
+    type: "numeric"
+    unit: "bpm"
+    valid_range: [30, 220]
+    description: "Heart rate in beats per minute"
+
+  respiratory_rate:
+    aliases: ["呼吸频率", "RR", "resp_rate", "breathing_rate"]
+    type: "numeric"
+    unit: "breaths/min"
+    valid_range: [8, 60]
+    description: "Respiratory rate"
+
+  temperature:
+    aliases: ["体温", "Temp", "temperature_c", "T", "体温℃"]
+    type: "numeric"
+    unit: "°C"
+    valid_range: [35, 42]
+    description: "Body temperature in Celsius"
+
+  oxygen_saturation:
+    aliases: ["血氧饱和度", "SpO2", "O2_sat", "oxygen_sat", "氧饱和度"]
+    type: "numeric"
+    unit: "%"
+    valid_range: [70, 100]
+    description: "Oxygen saturation percentage"
+
+# ============================================================================
+# Laboratory Tests / 实验室检查
+# ============================================================================
+laboratory:
+  glucose:
+    aliases: ["血糖", "Glucose", "GLU", "blood_glucose", "空腹血糖", "FBG"]
+    type: "numeric"
+    unit: "mmol/L"
+    valid_range: [2, 30]
+    description: "Blood glucose level"
+
+  hba1c:
+    aliases: ["糖化血红蛋白", "HbA1c", "A1C", "glycated_hemoglobin"]
+    type: "numeric"
+    unit: "%"
+    valid_range: [4, 15]
+    description: "Glycated hemoglobin"
+
+  total_cholesterol:
+    aliases: ["总胆固醇", "TC", "CHOL", "cholesterol", "胆固醇"]
+    type: "numeric"
+    unit: "mmol/L"
+    valid_range: [2, 15]
+    description: "Total cholesterol"
+
+  ldl_cholesterol:
+    aliases: ["低密度脂蛋白", "LDL", "LDL-C", "坏胆固醇"]
+    type: "numeric"
+    unit: "mmol/L"
+    valid_range: [0.5, 10]
+    description: "Low-density lipoprotein cholesterol"
+
+  hdl_cholesterol:
+    aliases: ["高密度脂蛋白", "HDL", "HDL-C", "好胆固醇"]
+    type: "numeric"
+    unit: "mmol/L"
+    valid_range: [0.5, 5]
+    description: "High-density lipoprotein cholesterol"
+
+  triglycerides:
+    aliases: ["甘油三酯", "TG", "TRIG", "triglyceride"]
+    type: "numeric"
+    unit: "mmol/L"
+    valid_range: [0.3, 20]
+    description: "Triglycerides"
+
+  creatinine:
+    aliases: ["肌酐", "Cr", "CREA", "creatinine_serum"]
+    type: "numeric"
+    unit: "μmol/L"
+    valid_range: [20, 1000]
+    description: "Serum creatinine"
+
+  egfr:
+    aliases: ["肾小球滤过率", "eGFR", "GFR", "estimated_gfr"]
+    type: "numeric"
+    unit: "mL/min/1.73m²"
+    valid_range: [5, 150]
+    description: "Estimated glomerular filtration rate"
+
+  alt:
+    aliases: ["谷丙转氨酶", "ALT", "SGPT", "GPT"]
+    type: "numeric"
+    unit: "U/L"
+    valid_range: [5, 500]
+    description: "Alanine aminotransferase"
+
+  ast:
+    aliases: ["谷草转氨酶", "AST", "SGOT", "GOT"]
+    type: "numeric"
+    unit: "U/L"
+    valid_range: [5, 500]
+    description: "Aspartate aminotransferase"
+
+  hemoglobin:
+    aliases: ["血红蛋白", "Hb", "HGB", "hemoglobin"]
+    type: "numeric"
+    unit: "g/L"
+    valid_range: [60, 200]
+    description: "Hemoglobin concentration"
+
+  wbc:
+    aliases: ["白细胞", "WBC", "white_blood_cell", "白细胞计数"]
+    type: "numeric"
+    unit: "10^9/L"
+    valid_range: [1, 50]
+    description: "White blood cell count"
+
+  platelet:
+    aliases: ["血小板", "PLT", "platelet_count", "血小板计数"]
+    type: "numeric"
+    unit: "10^9/L"
+    valid_range: [20, 1000]
+    description: "Platelet count"
+
+# ============================================================================
+# Medical History / 病史
+# ============================================================================
+medical_history:
+  hypertension:
+    aliases: ["高血压", "HBP", "Hypertension", "HTN", "高血压病史"]
+    type: "binary"
+    valid_values: [0, 1, "yes", "no", "是", "否"]
+    description: "History of hypertension"
+
+  diabetes:
+    aliases: ["糖尿病", "DM", "Diabetes", "diabetes_mellitus", "糖尿病史"]
+    type: "binary"
+    valid_values: [0, 1, "yes", "no", "是", "否"]
+    description: "History of diabetes mellitus"
+
+  coronary_disease:
+    aliases: ["冠心病", "CAD", "CHD", "coronary_artery_disease", "冠状动脉疾病"]
+    type: "binary"
+    valid_values: [0, 1, "yes", "no", "是", "否"]
+    description: "History of coronary artery disease"
+
+  stroke:
+    aliases: ["脑卒中", "CVA", "Stroke", "cerebrovascular_accident", "中风"]
+    type: "binary"
+    valid_values: [0, 1, "yes", "no", "是", "否"]
+    description: "History of stroke"
+
+  smoking:
+    aliases: ["吸烟", "Smoking", "smoker", "吸烟史", "smoking_status"]
+    type: "categorical"
+    valid_values: ["never", "former", "current", "从不", "曾经", "目前", 0, 1, 2]
+    encoding:
+      never: [0, "never", "从不"]
+      former: [1, "former", "曾经"]
+      current: [2, "current", "目前"]
+    description: "Smoking status"
+
+  alcohol:
+    aliases: ["饮酒", "Alcohol", "drinking", "饮酒史", "alcohol_use"]
+    type: "categorical"
+    valid_values: ["never", "occasional", "regular", "从不", "偶尔", "经常", 0, 1, 2]
+    description: "Alcohol consumption status"
+
+# ============================================================================
+# Imaging Data / 影像数据
+# ============================================================================
+imaging:
+  image_path:
+    aliases: ["影像路径", "ImagePath", "image_file", "img_path", "dicom_path"]
+    type: "text"
+    description: "Path to medical image file"
+
+  image_modality:
+    aliases: ["影像模态", "Modality", "imaging_type", "检查类型"]
+    type: "categorical"
+    valid_values: ["CT", "MRI", "X-ray", "Ultrasound", "PET", "SPECT"]
+    description: "Medical imaging modality"
+
+  image_view:
+    aliases: ["影像视图", "View", "view_position", "体位"]
+    type: "categorical"
+    valid_values: ["axial", "coronal", "sagittal", "横断位", "冠状位", "矢状位"]
+    description: "Image view or orientation"
+
+  study_date:
+    aliases: ["检查日期", "StudyDate", "exam_date", "scan_date"]
+    type: "date"
+    description: "Date of imaging study"
+
+  series_number:
+    aliases: ["序列号", "SeriesNumber", "series_no"]
+    type: "numeric"
+    description: "Imaging series number"
+
+# ============================================================================
+# Diagnosis and Labels / 诊断与标签
+# ============================================================================
+diagnosis:
+  diagnosis:
+    aliases: ["诊断", "Diagnosis", "disease", "疾病", "label"]
+    type: "categorical"
+    description: "Primary diagnosis or disease label"
+
+  diagnosis_code:
+    aliases: ["诊断编码", "ICD", "diagnosis_icd", "疾病编码"]
+    type: "text"
+    description: "ICD diagnosis code"
+
+  severity:
+    aliases: ["严重程度", "Severity", "grade", "分级"]
+    type: "categorical"
+    valid_values: ["mild", "moderate", "severe", "轻度", "中度", "重度", 1, 2, 3]
+    description: "Disease severity level"
+
+  stage:
+    aliases: ["分期", "Stage", "staging", "病期"]
+    type: "categorical"
+    description: "Disease stage"
+
+  outcome:
+    aliases: ["结局", "Outcome", "prognosis", "预后"]
+    type: "categorical"
+    valid_values: ["cured", "improved", "stable", "worsened", "death"]
+    description: "Treatment outcome"
+
+# ============================================================================
+# Treatment / 治疗
+# ============================================================================
+treatment:
+  medication:
+    aliases: ["用药", "Medication", "drug", "药物"]
+    type: "text"
+    description: "Medication name"
+
+  surgery:
+    aliases: ["手术", "Surgery", "operation", "手术史"]
+    type: "binary"
+    valid_values: [0, 1, "yes", "no", "是", "否"]
+    description: "History of surgery"
+
+  treatment_duration:
+    aliases: ["治疗时长", "TreatmentDuration", "therapy_duration"]
+    type: "numeric"
+    unit: "days"
+    description: "Duration of treatment in days"
+
+# ============================================================================
+# Metadata / 元数据
+# ============================================================================
+metadata:
+  hospital:
+    aliases: ["医院", "Hospital", "institution", "医疗机构"]
+    type: "text"
+    description: "Hospital or institution name"
+
+  department:
+    aliases: ["科室", "Department", "dept", "临床科室"]
+    type: "text"
+    description: "Clinical department"
+
+  admission_date:
+    aliases: ["入院日期", "AdmissionDate", "admit_date"]
+    type: "date"
+    description: "Hospital admission date"
+
+  discharge_date:
+    aliases: ["出院日期", "DischargeDate", "discharge"]
+    type: "date"
+    description: "Hospital discharge date"
+
+  data_source:
+    aliases: ["数据来源", "DataSource", "source", "来源"]
+    type: "text"
+    description: "Source of the data"
+
+# ============================================================================
+# Data Quality Flags / 数据质量标记
+# ============================================================================
+quality:
+  missing_rate:
+    aliases: ["缺失率", "MissingRate", "null_rate"]
+    type: "numeric"
+    unit: "%"
+    valid_range: [0, 100]
+    description: "Percentage of missing values"
+
+  outlier_flag:
+    aliases: ["异常值标记", "OutlierFlag", "is_outlier"]
+    type: "binary"
+    valid_values: [0, 1, true, false]
+    description: "Flag indicating outlier status"
+
+  data_quality:
+    aliases: ["数据质量", "DataQuality", "quality_score"]
+    type: "categorical"
+    valid_values: ["high", "medium", "low", "高", "中", "低"]
+    description: "Overall data quality assessment"

@@ -1,0 +1,213 @@
+# 医学多模态配置模板
+# 此配置文件定义了训练医学多模态模型的所有参数
+
+# 项目元数据
+project_name: "medical-multimodal"
+experiment_name: "dicom_clinical_fusion"
+description: "医学影像和临床数据融合用于疾病分类"
+tags: ["medical", "multimodal", "dicom"]
+
+# 随机种子
+seed: 42
+deterministic: true
+
+# 设备配置
+device: "auto" # "auto", "cuda", "cpu", "mps"
+
+# ============================================================================
+# 数据配置
+# ============================================================================
+data:
+  # 路径
+  csv_path: "data/clinical_data.csv"
+  image_dir: "data/medical_images"
+
+  # 列映射
+  image_column: "image_path"
+  label_column: "diagnosis"
+  feature_columns: # 临床特征（null = 自动检测）
+    - "age"
+    - "gender"
+    - "bmi"
+    - "blood_pressure"
+    - "glucose_level"
+
+  # 图像处理
+  target_size: [224, 224] # [H, W]
+  intensity_normalization: "percentile" # "minmax", "zscore", "percentile", "none"
+  percentile_range: [1.0, 99.0] # 用于百分位归一化
+
+  # 数据划分
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  stratify: true
+
+  # 数据加载器
+  batch_size: 16
+  num_workers: 4
+  pin_memory: true
+  shuffle_train: true
+
+# ============================================================================
+# 模型架构
+# ============================================================================
+model:
+  num_classes: 2
+
+  # 视觉分支
+  vision:
+    backbone: "resnet18" # "resnet18", "resnet50", "mobilenet_v2"
+    pretrained: true
+    freeze_layers: 0 # 要冻结的初始层数（0 = 不冻结）
+    in_channels: 1 # 灰度 DICOM 为 1，RGB 为 3
+    feature_dim: 512
+
+  # 表格分支
+  tabular:
+    hidden_dims: null # 如果为 null 则自动生成: [max(64, num_features*2), max(32, num_features)]
+    output_dim: 128
+    dropout: 0.3
+
+  # 融合模块
+  fusion:
+    hidden_dim: 256
+    num_heads: 4 # 用于基于注意力的融合
+
+  # 分类器
+  dropout: 0.3
+
+# ============================================================================
+# 训练配置
+# ============================================================================
+training:
+  # 训练轮数
+  num_epochs: 100
+
+  # 自动混合精度
+  use_amp: true
+
+  # 梯度裁剪
+  gradient_clip: 1.0
+
+  # 损失函数
+  loss: "cross_entropy" # "cross_entropy", "focal_loss"
+  label_smoothing: 0.0
+  class_weights: null # [1.0, 1.0] 或 null 表示自动计算
+
+  # 优化器
+  optimizer:
+    type: "adamw" # "adam", "adamw", "sgd"
+    learning_rate: 0.0001
+    weight_decay: 0.01
+    momentum: 0.9 # 用于 SGD
+    betas: [0.9, 0.999] # 用于 Adam/AdamW
+
+  # 学习率调度器
+  scheduler:
+    type: "cosine" # "cosine", "step", "plateau", "none"
+    warmup_epochs: 5
+    min_lr: 0.000001
+    # 用于 StepLR
+    step_size: 30
+    gamma: 0.1
+    # 用于 ReduceLROnPlateau
+    patience: 10
+    factor: 0.5
+
+  # 早停
+  early_stopping:
+    enabled: true
+    patience: 20
+    monitor: "val_auc_roc" # "val_loss", "val_auc_roc", "val_f1"
+    mode: "max" # "min" 或 "max"
+
+  # 检查点保存
+  checkpoint:
+    save_best: true
+    save_last: true
+    save_every_n_epochs: null # null 或整数
+
+# ============================================================================
+# 日志配置
+# ============================================================================
+logging:
+  # 目录
+  log_dir: "logs"
+  checkpoint_dir: "checkpoints"
+
+  # TensorBoard
+  use_tensorboard: true
+
+  # 要跟踪的指标
+  metrics:
+    - "loss"
+    - "auc_roc"
+    - "f1_score"
+    - "sensitivity"
+    - "specificity"
+    - "accuracy"
+
+  # 日志记录频率
+  log_every_n_steps: 10
+
+  # 保存指标历史
+  save_json: true
+
+# ============================================================================
+# 可解释性配置
+# ============================================================================
+interpretability:
+  # 启用 Captum 集成的钩子
+  enable_hooks: false
+
+  # Grad-CAM 可视化
+  gradcam:
+    enabled: false
+    num_samples: 10
+    save_dir: "visualizations/gradcam"
+
+# ============================================================================
+# 评估配置
+# ============================================================================
+evaluation:
+  # 测试时增强
+  tta: false
+  tta_transforms: 5
+
+  # 置信度阈值
+  confidence_threshold: 0.5
+
+  # 生成报告
+  generate_report: true
+  report_dir: "evaluation_results"
+
+  # 混淆矩阵
+  plot_confusion_matrix: true
+
+  # ROC 曲线
+  plot_roc_curve: true
+
+  # 保存预测结果
+  save_predictions: true
+
+# ============================================================================
+# 医学专用配置
+# ============================================================================
+medical:
+  # DICOM 处理
+  dicom:
+    apply_window: false # 应用窗位/窗宽调整
+    window_center: null
+    window_width: null
+
+  # 质量控制
+  quality_control:
+    check_image_quality: false
+    min_image_size: [128, 128]
+    max_image_size: [2048, 2048]
+
+  # 临床验证
+  clinical_validation:
+    check_feature_ranges: false
+    feature_ranges: {} # 例如: {"age": [0, 120], "bmi": [10, 60]}
