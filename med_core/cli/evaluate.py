@@ -194,4 +194,4 @@ def evaluate() -> None:
         config=config.to_dict(),
     )
 
-    print(f"Evaluation complete. Report saved to {report_path}")
+    logging.info(f"Evaluation complete. Report saved to {report_path}")

@@ -6,6 +6,7 @@ pathology whole slide images (WSI). It supports ImageNet pretrained weights
 and is compatible with the timm library.
 """
 
+import logging
 from typing import Literal, Optional
 
 import torch
@@ -13,6 +14,8 @@ import torch.nn as nn
 from einops import rearrange
 
 from .base import BaseVisionBackbone
+
+logger = logging.getLogger(__name__)
 from .swin_components import (
     PatchEmbed2D,
     PatchMerging2D,
@@ -391,12 +394,12 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
 
             # Load into our model
             self._backbone.load_state_dict(backbone_state_dict, strict=False)
-            print(f"Loaded pretrained weights for {model_name}")
+            logger.info(f"Loaded pretrained weights for {model_name}")
 
         except ImportError:
-            print("timm not installed, skipping pretrained weights")
+            logger.warning("timm not installed, skipping pretrained weights")
         except Exception as e:
-            print(f"Failed to load pretrained weights: {e}")
+            logger.error(f"Failed to load pretrained weights: {e}")
 
     def freeze_backbone(self):
         """Freeze backbone parameters."""

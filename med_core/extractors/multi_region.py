@@ -5,10 +5,11 @@ This module provides extractors that can process multiple regions of interest
 (ROIs) from medical images, such as tumor regions, surrounding tissue, etc.
 """
 
+from typing import List, Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List
 
 
 class MultiRegionExtractor(nn.Module):
@@ -223,7 +224,7 @@ class HierarchicalRegionExtractor(nn.Module):
                 try:
                     dummy_output = backbone(dummy_input)
                     self.feature_dim = dummy_output.shape[-1]
-                except:
+                except Exception:
                     self.feature_dim = 512  # Default
 
         # Aggregation module
