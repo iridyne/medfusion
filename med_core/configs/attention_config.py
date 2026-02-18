@@ -1,11 +1,35 @@
 """
 注意力监督配置
 
-定义注意力监督相关的配置类。
+⚠️ DEPRECATED: 此模块已弃用，将在未来版本中移除。
+请使用 `med_core.configs.ExperimentConfig` 替代，它现在包含了所有注意力监督配置选项。
+
+迁移示例:
+    # 旧方法（已弃用）:
+    from med_core.configs.attention_config import ExperimentConfigWithAttention
+    config = ExperimentConfigWithAttention(...)
+
+    # 新方法（推荐）:
+    from med_core.configs import ExperimentConfig
+    config = ExperimentConfig()
+    config.training.use_attention_supervision = True
+    config.training.attention_supervision_method = "mask"
+
+此模块仅为向后兼容而保留。
 """
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Literal
+
+# 发出弃用警告
+warnings.warn(
+    "med_core.configs.attention_config is deprecated. "
+    "Use med_core.configs.ExperimentConfig instead. "
+    "This module will be removed in version 0.2.0.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 @dataclass
@@ -254,6 +278,7 @@ class ExperimentConfigWithAttention:
 
 
 # 预设配置工厂函数
+
 
 def create_mask_supervised_config(
     loss_weight: float = 0.1,
