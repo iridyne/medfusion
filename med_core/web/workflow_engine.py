@@ -12,7 +12,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .checkpoint_manager import CheckpointManager
 from .node_executors import ExecutorFactory, NodeExecutionError
+from .resource_monitor import ResourceMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -92,13 +94,33 @@ class WorkflowExecutionError(Exception):
 class WorkflowEngine:
     """工作流执行引擎"""
 
-    def __init__(self, data_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        data_dir: Optional[Path] = None,
+        enable_checkpoints: bool = True,
+        enable_monitoring: bool = True,
+    ):
         self.nodes: Dict[str, Node] = {}
         self.edges: List[Edge] = []
         self.adjacency_list: Dict[str, List[str]] = defaultdict(list)
         self.reverse_adjacency_list: Dict[str, List[str]] = defaultdict(list)
         self.data_dir = data_dir or Path.cwd() / "data"
         self.executor_factory = ExecutorFactory
+
+        # 检查点管理
+        self.enable_checkpoints = enable_checkpoints
+        self.checkpoint_manager = None
+        if enable_checkpoints:
+            checkpoint_dir = self.data_dir / "checkpoints"
+            self.checkpoint_manager = CheckpointManager(checkpoint_dir)
+            logger.info("Checkpoint manager enabled")
+
+        # 资源监控
+        self.enable_monitoring = enable_monitoring
+        self.resource_monitor = None
+        if enable_monitoring:
+            self.resource_monitor = ResourceMonitor(interval=2.0, history_size=300)
+            logger.info("Resource monitor enabled")
 </text>
 
 <old_text line=401>
@@ -310,13 +332,16 @@ class WorkflowEngine:
         return result
 
     async def execute(
-        self, progress_callback: Optional[callable] = None
+        self,
+        progress_callback: Optional[callable] = None,
+        workflow_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         执行工作流
 
         Args:
             progress_callback: 进度回调函数，接收 (node_id, status, progress) 参数
+            workflow_id: 工作流 ID，用于检查点保存
 
         Returns:
             执行结果字典
@@ -326,65 +351,83 @@ class WorkflowEngine:
         """
         logger.info("Starting workflow execution...")
 
-        # 验证工作流
-        is_valid, errors = self.validate()
-        if not is_valid:
-            raise WorkflowExecutionError(f"工作流验证失败: {errors}")
+        # 启动资源监控
+        if self.resource_monitor:
+            await self.resource_monitor.start()
 
-        # 获取执行顺序
-        execution_order = self._topological_sort()
-        logger.info(f"Execution order: {execution_order}")
+        try:
+            # 验证工作流
+            is_valid, errors = self.validate()
+            if not is_valid:
+                raise WorkflowExecutionError(f"工作流验证失败: {errors}")
 
-        # 执行节点
-        results = {}
-        for i, node_id in enumerate(execution_order):
-            node = self.nodes[node_id]
-            logger.info(f"Executing node {node_id} ({node.type})...")
+            # 获取执行顺序
+            execution_order = self._topological_sort()
+            logger.info(f"Execution order: {execution_order}")
 
-            try:
-                # 更新状态
-                node.status = NodeStatus.RUNNING
-                if progress_callback:
-                    await progress_callback(
-                        node_id, NodeStatus.RUNNING, (i + 1) / len(execution_order)
-                    )
+            # 执行节点
+            results = {}
+            for i, node_id in enumerate(execution_order):
+                node = self.nodes[node_id]
+                logger.info(f"Executing node {node_id} ({node.type})...")
 
-                # 收集输入数据
-                inputs = self._collect_inputs(node)
+                try:
+                    # 更新状态
+                    node.status = NodeStatus.RUNNING
+                    if progress_callback:
+                        await progress_callback(
+                            node_id, NodeStatus.RUNNING, (i + 1) / len(execution_order)
+                        )
 
-                # 执行节点
-                result = await self._execute_node(node, inputs)
-                node.result = result
-                node.status = NodeStatus.COMPLETED
+                    # 收集输入数据
+                    inputs = self._collect_inputs(node)
 
-                # 更新输出端口的值
-                for port_id, port in node.outputs.items():
-                    if isinstance(result, dict) and port_id in result:
-                        port.value = result[port_id]
-                    else:
-                        port.value = result
+                    # 执行节点
+                    result = await self._execute_node(node, inputs)
+                    node.result = result
+                    node.status = NodeStatus.COMPLETED
 
-                results[node_id] = result
+                    # 更新输出端口的值
+                    for port_id, port in node.outputs.items():
+                        if isinstance(result, dict) and port_id in result:
+                            port.value = result[port_id]
+                        else:
+                            port.value = result
 
-                if progress_callback:
-                    await progress_callback(
-                        node_id, NodeStatus.COMPLETED, (i + 1) / len(execution_order)
-                    )
+                    results[node_id] = result
 
-                logger.info(f"Node {node_id} completed successfully")
+                    if progress_callback:
+                        await progress_callback(
+                            node_id, NodeStatus.COMPLETED, (i + 1) / len(execution_order)
+                        )
 
-            except Exception as e:
-                node.status = NodeStatus.FAILED
-                node.error = str(e)
-                logger.error(f"Node {node_id} failed: {e}")
+                    logger.info(f"Node {node_id} completed successfully")
 
-                if progress_callback:
-                    await progress_callback(node_id, NodeStatus.FAILED, None)
+                    # 保存检查点（每个节点完成后）
+                    if self.checkpoint_manager and workflow_id:
+                        await self._save_checkpoint(workflow_id, results)
 
-                raise WorkflowExecutionError(f"节点 {node_id} 执行失败: {e}") from e
+                except Exception as e:
+                    node.status = NodeStatus.FAILED
+                    node.error = str(e)
+                    logger.error(f"Node {node_id} failed: {e}")
 
-        logger.info("Workflow execution completed successfully")
-        return results
+                    if progress_callback:
+                        await progress_callback(node_id, NodeStatus.FAILED, None)
+
+                    # 保存失败状态的检查点
+                    if self.checkpoint_manager and workflow_id:
+                        await self._save_checkpoint(workflow_id, results, failed=True)
+
+                    raise WorkflowExecutionError(f"节点 {node_id} 执行失败: {e}") from e
+
+            logger.info("Workflow execution completed successfully")
+            return results
+
+        finally:
+            # 停止资源监控
+            if self.resource_monitor:
+                await self.resource_monitor.stop()
 
     def _collect_inputs(self, node: Node) -> Dict[str, Any]:
         """收集节点的输入数据"""
@@ -470,9 +513,44 @@ class WorkflowEngine:
             logger.error(f"Evaluation node execution failed: {e}")
             raise WorkflowExecutionError(f"评估节点执行失败: {e}") from e
 
+    async def _save_checkpoint(
+        self, workflow_id: str, results: Dict[str, Any], failed: bool = False
+    ) -> None:
+        """保存检查点"""
+        try:
+            execution_state = {
+                node_id: {"status": node.status.value, "error": node.error, "result": node.result}
+                for node_id, node in self.nodes.items()
+            }
+
+            metadata = {
+                "failed": failed,
+                "completed_nodes": sum(
+                    1 for node in self.nodes.values() if node.status == NodeStatus.COMPLETED
+                ),
+                "total_nodes": len(self.nodes),
+            }
+
+            # 在线程池中执行保存操作
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                self.checkpoint_manager.save_checkpoint,
+                workflow_id,
+                {node_id: {"id": node_id, "type": node.type, "data": node.data, "position": node.position} for node_id, node in self.nodes.items()},
+                [{"id": edge.id, "source": edge.source, "target": edge.target, "sourceHandle": edge.source_handle, "targetHandle": edge.target_handle} for edge in self.edges],
+                execution_state,
+                metadata,
+            )
+
+            logger.info(f"Checkpoint saved for workflow {workflow_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint: {e}")
+
     def get_status(self) -> Dict[str, Any]:
         """获取工作流执行状态"""
-        return {
+        status = {
             "nodes": {
                 node_id: {
                     "status": node.status.value,
@@ -488,3 +566,15 @@ class WorkflowEngine:
                 1 for node in self.nodes.values() if node.status == NodeStatus.FAILED
             ),
         }
+
+        # 添加资源监控信息
+        if self.resource_monitor:
+            status["resources"] = self.resource_monitor.get_current_status()
+
+        return status
+
+    def get_resource_statistics(self, duration: Optional[float] = None) -> Dict[str, Any]:
+        """获取资源统计信息"""
+        if not self.resource_monitor:
+            return {}
+        return self.resource_monitor.get_statistics(duration)

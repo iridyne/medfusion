@@ -141,7 +141,7 @@ async def _execute_workflow_background(workflow_id: str, engine: WorkflowEngine)
     """后台执行工作流"""
     try:
         logger.info(f"Starting background execution for workflow {workflow_id}")
-        await engine.execute()
+        await engine.execute(workflow_id=workflow_id)
         logger.info(f"Workflow {workflow_id} completed successfully")
     except Exception as e:
         logger.error(f"Workflow {workflow_id} execution failed: {e}")
@@ -284,3 +284,121 @@ async def list_workflows():
         )
 
     return {"workflows": workflows, "total": len(workflows)}
+
+
+@router.get("/{workflow_id}/resources")
+async def get_workflow_resources(workflow_id: str, duration: Optional[int] = None):
+    """
+    获取工作流执行期间的资源使用统计
+
+    Args:
+        workflow_id: 工作流 ID
+        duration: 可选的时间范围（秒）
+
+    Returns:
+        资源统计信息
+    """
+    if workflow_id not in active_workflows:
+        raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
+
+    engine = active_workflows[workflow_id]
+
+    # 获取当前状态
+    current_status = (
+        engine.resource_monitor.get_current_status() if engine.resource_monitor else {}
+    )
+
+    # 获取统计信息
+    statistics = engine.get_resource_statistics(duration)
+
+    # 获取历史记录
+    history = (
+        engine.resource_monitor.get_history(duration) if engine.resource_monitor else []
+    )
+
+    return {
+        "workflow_id": workflow_id,
+        "current": current_status,
+        "statistics": statistics,
+        "history": history,
+    }
+
+
+@router.get("/{workflow_id}/checkpoints")
+async def list_workflow_checkpoints(workflow_id: str):
+    """
+    列出工作流的所有检查点
+
+    Args:
+        workflow_id: 工作流 ID
+
+    Returns:
+        检查点列表
+    """
+    if workflow_id not in active_workflows:
+        raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
+
+    engine = active_workflows[workflow_id]
+
+    if not engine.checkpoint_manager:
+        raise HTTPException(status_code=400, detail="检查点功能未启用")
+
+    checkpoints = engine.checkpoint_manager.list_checkpoints(workflow_id)
+
+    return {
+        "workflow_id": workflow_id,
+        "checkpoints": checkpoints,
+        "total": len(checkpoints),
+    }
+
+
+@router.post("/{workflow_id}/resume")
+async def resume_workflow(workflow_id: str, checkpoint_path: Optional[str] = None):
+    """
+    从检查点恢复工作流执行
+
+    Args:
+        workflow_id: 工作流 ID
+        checkpoint_path: 可选的检查点路径，如果不提供则使用最新的
+
+    Returns:
+        恢复结果
+    """
+    # 检查工作流是否已存在
+    if workflow_id in active_workflows:
+        raise HTTPException(status_code=400, detail=f"工作流 {workflow_id} 已在运行中")
+
+    try:
+        # 创建新引擎
+        engine = WorkflowEngine(data_dir=settings.data_dir)
+
+        if not engine.checkpoint_manager:
+            raise HTTPException(status_code=400, detail="检查点功能未启用")
+
+        # 恢复工作流
+        from pathlib import Path
+
+        cp_path = Path(checkpoint_path) if checkpoint_path else None
+        restored_data = engine.checkpoint_manager.resume_workflow(workflow_id, cp_path)
+
+        # 加载工作流
+        engine.load_workflow(restored_data["workflow"])
+
+        # 保存到活动工作流
+        active_workflows[workflow_id] = engine
+
+        # 在后台继续执行
+        asyncio.create_task(_execute_workflow_background(workflow_id, engine))
+
+        return {
+            "workflow_id": workflow_id,
+            "status": "resumed",
+            "message": f"工作流 {workflow_id} 已从检查点恢复并继续执行",
+            "checkpoint": str(cp_path) if cp_path else "latest",
+        }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to resume workflow: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
