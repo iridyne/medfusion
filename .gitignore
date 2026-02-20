@@ -76,6 +76,8 @@ Thumbs.db
 *.tmp
 *.bak
 *.cache
+backups/
+continue.md
 
 # uv
 .uv/
