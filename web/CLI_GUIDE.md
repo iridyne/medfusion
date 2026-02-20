@@ -23,9 +23,9 @@
 
 ### 新方式 ✅
 ```bash
-medfusion-web start   # 一个命令搞定
-medfusion-web stop    # 简洁直观
-medfusion-web status  # 查看状态
+web start   # 一个命令搞定
+web stop    # 简洁直观
+web status  # 查看状态
 ```
 
 **优势**：
@@ -42,26 +42,26 @@ medfusion-web status  # 查看状态
 
 ```bash
 # 进入后端目录
-cd medfusion-web/backend
+cd web/backend
 
 # 开发模式安装（可编辑）
 pip install -e .
 
 # 验证安装
-medfusion-web --version
+web --version
 ```
 
 ### 方式 2: 正式安装
 
 ```bash
-cd medfusion-web/backend
+cd web/backend
 pip install .
 ```
 
 ### 方式 3: 使用 uv（推荐）
 
 ```bash
-cd medfusion-web/backend
+cd web/backend
 uv pip install -e .
 ```
 
@@ -72,7 +72,7 @@ uv pip install -e .
 ### 1. 初始化环境（首次使用）
 
 ```bash
-medfusion-web init
+web init
 ```
 
 这会自动：
@@ -84,10 +84,10 @@ medfusion-web init
 
 ```bash
 # 启动完整服务（前端 + 后端）
-medfusion-web start
+web start
 
 # 或者后台运行
-medfusion-web start --daemon
+web start --daemon
 ```
 
 ### 3. 访问界面
@@ -100,14 +100,14 @@ medfusion-web start --daemon
 ### 4. 停止服务
 
 ```bash
-medfusion-web stop
+web stop
 ```
 
 ---
 
 ## 📚 命令参考
 
-### `medfusion-web start`
+### `web start`
 
 启动完整的 Web UI 服务（前端 + 后端）
 
@@ -123,21 +123,21 @@ medfusion-web stop
 **示例**：
 ```bash
 # 默认启动
-medfusion-web start
+web start
 
 # 后台运行
-medfusion-web start --daemon
+web start --daemon
 
 # 开发模式（热重载）
-medfusion-web start --reload
+web start --reload
 
 # 自定义端口
-medfusion-web start --backend-port 8080 --frontend-port 3000
+web start --backend-port 8080 --frontend-port 3000
 ```
 
 ---
 
-### `medfusion-web start-backend`
+### `web start-backend`
 
 只启动后端 API 服务
 
@@ -152,18 +152,18 @@ medfusion-web start --backend-port 8080 --frontend-port 3000
 **示例**：
 ```bash
 # 前台运行（开发调试）
-medfusion-web start-backend
+web start-backend
 
 # 后台运行
-medfusion-web start-backend --daemon
+web start-backend --daemon
 
 # 开发模式
-medfusion-web start-backend --reload
+web start-backend --reload
 ```
 
 ---
 
-### `medfusion-web start-frontend`
+### `web start-frontend`
 
 只启动前端开发服务器
 
@@ -176,18 +176,18 @@ medfusion-web start-backend --reload
 **示例**：
 ```bash
 # 前台运行
-medfusion-web start-frontend
+web start-frontend
 
 # 后台运行
-medfusion-web start-frontend --daemon
+web start-frontend --daemon
 
 # 自定义端口
-medfusion-web start-frontend --port 3000
+web start-frontend --port 3000
 ```
 
 ---
 
-### `medfusion-web stop`
+### `web stop`
 
 停止 Web UI 服务
 
@@ -199,24 +199,24 @@ medfusion-web start-frontend --port 3000
 **示例**：
 ```bash
 # 停止所有服务
-medfusion-web stop
+web stop
 
 # 只停止后端
-medfusion-web stop --service backend
+web stop --service backend
 
 # 只停止前端
-medfusion-web stop --service frontend
+web stop --service frontend
 ```
 
 ---
 
-### `medfusion-web status`
+### `web status`
 
 查看服务状态
 
 **示例**：
 ```bash
-medfusion-web status
+web status
 ```
 
 **输出示例**：
@@ -232,7 +232,7 @@ medfusion-web status
 
 ---
 
-### `medfusion-web logs`
+### `web logs`
 
 查看服务日志
 
@@ -246,21 +246,21 @@ medfusion-web status
 **示例**：
 ```bash
 # 查看所有日志（最近 50 行）
-medfusion-web logs
+web logs
 
 # 实时跟踪日志
-medfusion-web logs -f
+web logs -f
 
 # 只查看后端日志
-medfusion-web logs --service backend
+web logs --service backend
 
 # 查看最近 100 行
-medfusion-web logs -n 100
+web logs -n 100
 ```
 
 ---
 
-### `medfusion-web init`
+### `web init`
 
 初始化 Web UI 环境
 
@@ -271,7 +271,7 @@ medfusion-web logs -n 100
 
 **示例**：
 ```bash
-medfusion-web init
+web init
 ```
 
 ---
@@ -282,33 +282,33 @@ medfusion-web init
 
 ```bash
 # 启动后端（热重载）
-medfusion-web start-backend --reload
+web start-backend --reload
 
 # 在另一个终端启动前端
-medfusion-web start-frontend
+web start-frontend
 
 # 实时查看日志
-medfusion-web logs -f
+web logs -f
 ```
 
 ### 场景 2: 生产部署
 
 ```bash
 # 后台运行所有服务
-medfusion-web start --daemon
+web start --daemon
 
 # 查看状态
-medfusion-web status
+web status
 
 # 查看日志
-medfusion-web logs -n 100
+web logs -n 100
 ```
 
 ### 场景 3: 快速演示
 
 ```bash
 # 一键启动（前台运行）
-medfusion-web start
+web start
 
 # 访问 http://localhost:5173
 # 按 Ctrl+C 停止
@@ -318,7 +318,7 @@ medfusion-web start
 
 ```bash
 # 只启动后端
-medfusion-web start-backend --daemon
+web start-backend --daemon
 
 # 访问 API 文档
 # http://localhost:8000/docs
@@ -330,13 +330,13 @@ medfusion-web start-backend --daemon
 
 | 操作 | 旧方式（Shell 脚本） | 新方式（CLI 命令） |
 |------|---------------------|-------------------|
-| 启动服务 | `./start-webui.sh` | `medfusion-web start` |
-| 停止服务 | `./stop-webui.sh` | `medfusion-web stop` |
-| 查看状态 | ❌ 不支持 | `medfusion-web status` |
-| 查看日志 | `tail -f logs/*.log` | `medfusion-web logs -f` |
-| 初始化 | 手动执行多个命令 | `medfusion-web init` |
-| 只启动后端 | ❌ 不支持 | `medfusion-web start-backend` |
-| 只启动前端 | ❌ 不支持 | `medfusion-web start-frontend` |
+| 启动服务 | `./start-webui.sh` | `web start` |
+| 停止服务 | `./stop-webui.sh` | `web stop` |
+| 查看状态 | ❌ 不支持 | `web status` |
+| 查看日志 | `tail -f logs/*.log` | `web logs -f` |
+| 初始化 | 手动执行多个命令 | `web init` |
+| 只启动后端 | ❌ 不支持 | `web start-backend` |
+| 只启动前端 | ❌ 不支持 | `web start-frontend` |
 | 跨平台 | ❌ 仅 Linux/macOS | ✅ Windows/Linux/macOS |
 
 ---
@@ -350,10 +350,10 @@ medfusion-web start-backend --daemon
 pip install -e .
 
 # 启动时使用热重载
-medfusion-web start --reload
+web start --reload
 
 # 实时查看日志
-medfusion-web logs -f
+web logs -f
 ```
 
 ### 2. 生产环境
@@ -363,13 +363,13 @@ medfusion-web logs -f
 pip install .
 
 # 后台运行
-medfusion-web start --daemon
+web start --daemon
 
 # 定期检查状态
-medfusion-web status
+web status
 
 # 查看日志排查问题
-medfusion-web logs -n 200
+web logs -n 200
 ```
 
 ### 3. 自定义配置
@@ -380,7 +380,7 @@ export BACKEND_PORT=8080
 export FRONTEND_PORT=3000
 
 # 或者使用命令行参数
-medfusion-web start --backend-port 8080 --frontend-port 3000
+web start --backend-port 8080 --frontend-port 3000
 ```
 
 ---
@@ -390,8 +390,8 @@ medfusion-web start --backend-port 8080 --frontend-port 3000
 ### 问题 1: 命令未找到
 
 ```bash
-$ medfusion-web
-bash: medfusion-web: command not found
+$ web
+bash: web: command not found
 ```
 
 **解决**：
@@ -415,20 +415,20 @@ python -m app.cli
 lsof -ti:8000 | xargs kill -9
 
 # 方式 2: 使用其他端口
-medfusion-web start --backend-port 8080
+web start --backend-port 8080
 ```
 
 ### 问题 3: 服务无法启动
 
 ```bash
 # 查看详细日志
-medfusion-web logs
+web logs
 
 # 检查依赖是否安装
 pip list | grep fastapi
 
 # 重新初始化
-medfusion-web init
+web init
 ```
 
 ---
@@ -452,7 +452,7 @@ streamlit run app.py
 
 ### MedFusion Web UI
 ```bash
-medfusion-web start
+web start
 ```
 
 **一致的体验** ✨
@@ -477,13 +477,13 @@ medfusion-web start
 pip install -e backend/
 
 # 启动
-medfusion-web start --daemon
+web start --daemon
 
 # 查看状态
-medfusion-web status
+web status
 
 # 停止
-medfusion-web stop
+web stop
 ```
 
 **Shell 脚本保留**：
@@ -505,10 +505,10 @@ medfusion-web stop
 
 ### 推荐使用
 
-✅ **日常开发**: `medfusion-web start --reload`  
-✅ **生产部署**: `medfusion-web start --daemon`  
-✅ **快速演示**: `medfusion-web start`  
-✅ **问题排查**: `medfusion-web logs -f`
+✅ **日常开发**: `web start --reload`  
+✅ **生产部署**: `web start --daemon`  
+✅ **快速演示**: `web start`  
+✅ **问题排查**: `web logs -f`
 
 ---
 

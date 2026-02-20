@@ -3,12 +3,12 @@
 提供简洁的命令行接口来管理 Web UI 服务。
 
 使用方式:
-    medfusion-web start          # 启动前后端服务
-    medfusion-web start-backend  # 只启动后端
-    medfusion-web start-frontend # 只启动前端
-    medfusion-web stop           # 停止所有服务
-    medfusion-web status         # 查看服务状态
-    medfusion-web logs           # 查看日志
+    web start          # 启动前后端服务
+    web start-backend  # 只启动后端
+    web start-frontend # 只启动前端
+    web stop           # 停止所有服务
+    web status         # 查看服务状态
+    web logs           # 查看日志
 """
 
 import subprocess
@@ -87,7 +87,7 @@ def check_port(port: int) -> bool:
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="medfusion-web")
+@click.version_option(version="0.1.0", prog_name="web")
 def cli():
     """MedFusion Web UI 命令行工具
 
@@ -275,9 +275,9 @@ def start(
         click.echo(f"  📚 API 文档: http://{backend_host}:{backend_port}/docs")
         click.echo()
         click.echo(click.style("管理命令:", fg="cyan"))
-        click.echo("  medfusion-web status  # 查看服务状态")
-        click.echo("  medfusion-web logs    # 查看日志")
-        click.echo("  medfusion-web stop    # 停止服务")
+        click.echo("  web status  # 查看服务状态")
+        click.echo("  web logs    # 查看日志")
+        click.echo("  web stop    # 停止服务")
         click.echo()
 
 
@@ -421,7 +421,7 @@ def init():
     click.echo(click.style("=" * 60, fg="cyan"))
     click.echo()
     click.echo("现在可以运行以下命令启动服务：")
-    click.echo(click.style("  medfusion-web start", fg="cyan", bold=True))
+    click.echo(click.style("  web start", fg="cyan", bold=True))
     click.echo()
 
 

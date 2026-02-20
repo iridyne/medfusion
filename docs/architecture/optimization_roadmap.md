@@ -121,12 +121,12 @@
 
 **后端核心功能已完成** ✅ (2026-02-20)
 - 新增文件:
-  - `medfusion-web/backend/app/core/workflow_engine.py` - 工作流执行引擎
-  - `medfusion-web/backend/app/services/training_service.py` - 真实训练服务
-  - `medfusion-web/test_backend.py` - 后端功能测试
+  - `web/backend/app/core/workflow_engine.py` - 工作流执行引擎
+  - `web/backend/app/services/training_service.py` - 真实训练服务
+  - `web/test_backend.py` - 后端功能测试
 - 更新文件:
-  - `medfusion-web/backend/app/api/workflows.py` - WebSocket 支持
-  - `medfusion-web/backend/app/api/training.py` - 训练控制 API
+  - `web/backend/app/api/workflows.py` - WebSocket 支持
+  - `web/backend/app/api/training.py` - 训练控制 API
 
 #### 前端功能
 - [ ] **工作流编辑器增强**

@@ -10,7 +10,7 @@
 ### 1. 启动后端服务
 
 ```bash
-cd medfusion-web/backend
+cd web/backend
 
 # 安装依赖
 pip install -r requirements.txt
@@ -27,7 +27,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### 2. 启动前端服务
 
 ```bash
-cd medfusion-web/frontend
+cd web/frontend
 
 # 安装依赖（首次运行）
 npm install

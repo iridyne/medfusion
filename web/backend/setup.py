@@ -5,11 +5,11 @@
     pip install .                       # 正式安装
 
 安装后可以使用以下命令:
-    medfusion-web start                 # 启动服务
-    medfusion-web stop                  # 停止服务
-    medfusion-web status                # 查看状态
-    medfusion-web logs                  # 查看日志
-    medfusion-web init                  # 初始化环境
+    web start                 # 启动服务
+    web stop                  # 停止服务
+    web status                # 查看状态
+    web logs                  # 查看日志
+    web init                  # 初始化环境
 """
 
 from pathlib import Path
@@ -32,7 +32,7 @@ if requirements_file.exists():
         ]
 
 setup(
-    name="medfusion-web",
+    name="web",
     version="0.1.0",
     description="MedFusion 医学深度学习框架 Web 界面",
     long_description=long_description,
@@ -68,7 +68,7 @@ setup(
     # CLI 命令入口点
     entry_points={
         "console_scripts": [
-            "medfusion-web=app.cli:cli",
+            "web=app.cli:cli",
         ],
     },
     # 分类信息

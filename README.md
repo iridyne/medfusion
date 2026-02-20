@@ -4,6 +4,27 @@
 
 MedFusion 是一个高度抽象、可插拔、模块化的医学多模态深度学习研究框架。它将模型架构、数据加载和训练逻辑解耦，使研究人员能够通过最少的代码修改在不同的骨干网络（如 ResNet vs. ViT）、融合策略和数据集之间切换。
 
+## 📁 项目结构
+
+```
+medfusion/
+├── med_core/          # 核心 Python 库（可独立使用）
+│   ├── models/        # 模型架构（29 种视觉骨干 + 5 种融合策略）
+│   ├── datasets/      # 数据加载器
+│   ├── trainers/      # 训练逻辑
+│   └── configs/       # 配置系统
+├── med_core_rs/       # Rust 性能加速模块（通过 PyO3 集成）
+├── web/               # 可选的 Web UI（FastAPI + React）
+│   ├── backend/       # FastAPI 后端服务
+│   └── frontend/      # React 前端界面
+├── docs/              # 核心库文档
+├── configs/           # 训练配置示例
+└── examples/          # 使用示例
+```
+
+**核心库** (`med_core`) 可以独立使用，通过 CLI 或 Python API 进行训练和评估。
+**Web UI** (`web/`) 是可选组件，提供可视化工作流编辑和训练监控界面。
+
 ## 🚀 核心特性
 
 *   **解耦架构**：完全分离的骨干网络、数据加载器、训练器和配置。

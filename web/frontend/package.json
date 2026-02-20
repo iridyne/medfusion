@@ -1,5 +1,5 @@
 {
-  "name": "medfusion-web-frontend",
+  "name": "web-frontend",
   "version": "0.1.0",
   "type": "module",
   "scripts": {

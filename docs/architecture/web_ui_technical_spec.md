@@ -546,8 +546,8 @@ volumes:
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/your-org/medfusion-web.git
-cd medfusion-web
+git clone https://github.com/your-org/web.git
+cd web
 
 # 2. 启动所有服务
 docker-compose up -d

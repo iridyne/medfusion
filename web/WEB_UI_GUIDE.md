@@ -18,7 +18,7 @@
 ### 一键启动（推荐）
 
 ```bash
-cd medfusion-web
+cd web
 ./start-webui.sh
 ```
 
@@ -326,7 +326,7 @@ pip install -r requirements.txt
 ### 项目结构
 
 ```
-medfusion-web/
+web/
 ├── backend/                 # 后端服务
 │   ├── app/
 │   │   ├── api/            # API 路由

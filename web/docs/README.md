@@ -23,7 +23,7 @@ docs/
 
 ## 📚 核心文档
 
-以下核心文档位于项目根目录（`medfusion-web/`）：
+以下核心文档位于项目根目录（`web/`）：
 
 - **[README.md](../README.md)** - 项目主文档，包含项目介绍、功能特性、技术栈
 - **[QUICKSTART.md](../QUICKSTART.md)** - 快速开始指南，5 分钟上手

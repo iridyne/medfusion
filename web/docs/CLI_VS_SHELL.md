@@ -93,11 +93,11 @@ logs-webui.sh       # 日志脚本
 
 **CLI 命令**：
 ```bash
-medfusion-web start
-medfusion-web stop
-medfusion-web restart
-medfusion-web status
-medfusion-web logs
+web start
+web stop
+web restart
+web status
+web logs
 ```
 
 一个 Python 文件搞定所有功能！
@@ -111,7 +111,7 @@ medfusion-web logs
 ./stop-webui.sh
 
 # 需要知道脚本位置
-cd /path/to/medfusion-web
+cd /path/to/web
 ./start-webui.sh
 
 # 没有帮助信息
@@ -121,15 +121,15 @@ cd /path/to/medfusion-web
 **CLI 命令**：
 ```bash
 # 统一的命令前缀
-medfusion-web start
-medfusion-web stop
+web start
+web stop
 
 # 全局可用，不需要 cd
-medfusion-web start
+web start
 
 # 内置帮助
-medfusion-web --help
-medfusion-web start --help
+web --help
+web start --help
 ```
 
 #### 5. 功能扩展困难 ❌
@@ -153,9 +153,9 @@ medfusion-web start --help
 ### 新方式：使用 CLI 命令
 
 ```bash
-medfusion-web start
-medfusion-web stop
-medfusion-web status
+web start
+web stop
+web status
 ```
 
 ### 核心优势
@@ -167,50 +167,50 @@ medfusion-web status
 tensorboard --logdir=./logs
 mlflow ui
 streamlit run app.py
-medfusion-web start  # 一致的体验！
+web start  # 一致的体验！
 ```
 
 #### 2. 跨平台兼容 ✅
 
 **Windows**:
 ```powershell
-PS> medfusion-web start
+PS> web start
 ✅ 完美运行
 ```
 
 **Linux/macOS**:
 ```bash
-$ medfusion-web start
+$ web start
 ✅ 完美运行
 ```
 
 #### 3. 统一的命令接口 ✅
 
 ```bash
-# 所有命令都以 medfusion-web 开头
-medfusion-web init
-medfusion-web start
-medfusion-web stop
-medfusion-web status
-medfusion-web logs
+# 所有命令都以 web 开头
+web init
+web start
+web stop
+web status
+web logs
 
 # 一致的参数风格
-medfusion-web start --daemon
-medfusion-web start --reload
-medfusion-web logs -f
+web start --daemon
+web start --reload
+web logs -f
 ```
 
 #### 4. 内置帮助系统 ✅
 
 ```bash
 # 查看所有命令
-medfusion-web --help
+web --help
 
 # 查看特定命令的帮助
-medfusion-web start --help
+web start --help
 
 # 输出示例：
-Usage: medfusion-web start [OPTIONS]
+Usage: web start [OPTIONS]
 
   启动完整的 Web UI 服务（前端 + 后端）
 
@@ -250,7 +250,7 @@ def new_command(option):
 **Shell 脚本方式**：
 ```bash
 # 需要 cd 到项目目录
-cd /path/to/medfusion-web
+cd /path/to/web
 
 # 需要记住脚本名称
 ./start-webui.sh
@@ -262,7 +262,7 @@ cd /path/to/medfusion-web
 **CLI 命令方式**：
 ```bash
 # 全局可用，不需要 cd
-medfusion-web start
+web start
 
 # 简洁的输出
 🚀 启动 MedFusion Web UI
@@ -284,7 +284,7 @@ ps aux | grep npm
 
 **CLI 命令方式**：
 ```bash
-medfusion-web status
+web status
 
 # 输出：
 📊 服务状态
@@ -306,10 +306,10 @@ tail -f logs/backend.log logs/frontend.log
 **CLI 命令方式**：
 ```bash
 # 简单直观
-medfusion-web logs -f
+web logs -f
 
 # 只看后端日志
-medfusion-web logs --service backend -f
+web logs --service backend -f
 ```
 
 ### 场景 4: 开发调试
@@ -329,11 +329,11 @@ npm run dev
 **CLI 命令方式**：
 ```bash
 # 一个命令搞定
-medfusion-web start --reload
+web start --reload
 
 # 或者分别启动
-medfusion-web start-backend --reload
-medfusion-web start-frontend
+web start-backend --reload
+web start-frontend
 ```
 
 ---
@@ -445,12 +445,12 @@ Shell 脚本仍然有用，但作为**备选方案**：
 # start-webui.sh (兼容版本)
 
 echo "⚠️  建议使用新的 CLI 命令："
-echo "   medfusion-web start"
+echo "   web start"
 echo ""
 echo "继续使用旧方式启动..."
 
 # 调用新命令
-medfusion-web start "$@"
+web start "$@"
 ```
 
 ---
@@ -461,23 +461,23 @@ medfusion-web start "$@"
 
 ✅ **日常开发**
 ```bash
-medfusion-web start --reload
+web start --reload
 ```
 
 ✅ **生产部署**
 ```bash
-medfusion-web start --daemon
+web start --daemon
 ```
 
 ✅ **快速演示**
 ```bash
-medfusion-web start
+web start
 ```
 
 ✅ **问题排查**
 ```bash
-medfusion-web status
-medfusion-web logs -f
+web status
+web logs -f
 ```
 
 ### Shell 脚本作为补充

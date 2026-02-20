@@ -462,7 +462,7 @@ POST   /api/experiments/{id}/compare # 对比实验
 ## 📦 项目结构
 
 ```
-medfusion-web/
+web/
 ├── frontend/                    # 前端项目
 │   ├── src/
 │   │   ├── components/          # React 组件
