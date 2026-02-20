@@ -52,12 +52,6 @@ dependencies = [
 [project.optional-dependencies]
 wandb = ["wandb>=0.15.0"]
 lightning = ["pytorch-lightning>=2.0.0"]
-dev = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.1.0",
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
-]
 
 [project.scripts]
 med-train = "med_core.cli:train"
@@ -129,4 +123,6 @@ ignore_missing_imports = true
 dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
 ]
