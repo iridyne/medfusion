@@ -91,3 +91,6 @@ med_core_rs/*.pyd
 # Caches
 .ruff_cache/
 .mypy_cache/
+
+# Documentation build
+docs/_build/

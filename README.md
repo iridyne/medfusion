@@ -144,7 +144,7 @@ model:
 或使用预设配置：
 
 ```python
-from medfusion.configs import create_ct_multiview_config
+from med_core.configs import create_ct_multiview_config
 
 config = create_ct_multiview_config(
     view_names=["axial", "coronal", "sagittal"],
@@ -179,21 +179,33 @@ training:
 - 多视图速查表：`docs/MULTIVIEW_TYPES_SUMMARY.md`
 - 注意力机制指南：`docs/ATTENTION_MECHANISM_GUIDE.md`
 
-## 📂 项目结构
+## 📂 详细目录结构
 
 ```
 medfusion/
-├── medfusion/              # 核心框架包
-│   ├── backbones/          # 视觉和表格骨干网络
-│   ├── configs/            # 配置逻辑
+├── med_core/               # 核心框架包
+│   ├── models/             # 模型架构
+│   │   ├── backbones/      # 视觉和表格骨干网络
+│   │   ├── fusion/         # 融合策略
+│   │   └── builder.py      # 模型构建器
 │   ├── datasets/           # 医学数据集和变换
-│   ├── evaluation/         # 指标、可视化、报告
-│   ├── fusion/             # 融合策略
+│   ├── trainers/           # 训练循环
+│   ├── configs/            # 配置逻辑
 │   ├── preprocessing/      # 图像清理流程
-│   └── trainers/           # 训练循环
+│   ├── evaluation/         # 指标、可视化、报告
+│   ├── aggregators/        # 多视图聚合器
+│   └── utils/              # 工具函数
+├── med_core_rs/            # Rust 性能加速模块
+│   ├── src/                # Rust 源代码
+│   └── benches/            # 性能基准测试
+├── web/                    # Web UI（可选）
+│   ├── backend/            # FastAPI 后端
+│   └── frontend/           # React 前端
 ├── configs/                # YAML 配置模板
 ├── examples/               # 演示脚本
-└── tests/                  # 单元测试
+├── tests/                  # 单元测试
+├── docs/                   # 文档
+└── scripts/                # 辅助脚本
 ```
 
 ## 🐍 Python API 使用
@@ -203,8 +215,8 @@ medfusion/
 ### 基础用法
 
 ```python
-from medfusion.backbones import create_vision_backbone, create_tabular_backbone
-from medfusion.fusion import create_fusion_module, MultiModalFusionModel
+from med_core.models.backbones import create_vision_backbone, create_tabular_backbone
+from med_core.fusion import create_fusion_module, MultiModalFusionModel
 
 # 1. 定义组件
 vision = create_vision_backbone("resnet50", pretrained=True)
@@ -225,10 +237,10 @@ model = MultiModalFusionModel(
 ### 多视图用法 ⭐ NEW
 
 ```python
-from medfusion.configs import create_ct_multiview_config
-from medfusion.datasets import MedicalMultiViewDataset
-from medfusion.fusion import create_multiview_fusion_model
-from medfusion.trainers import create_multiview_trainer
+from med_core.configs import create_ct_multiview_config
+from med_core.datasets import MedicalMultiViewDataset
+from med_core.fusion import create_multiview_fusion_model
+from med_core.trainers import create_multiview_trainer
 
 # 1. 配置
 config = create_ct_multiview_config(
@@ -268,7 +280,7 @@ trainer.train()
 ### 注意力监督用法 ⭐ NEW
 
 ```python
-from medfusion.configs import ExperimentConfig
+from med_core.configs import ExperimentConfig
 
 # 配置注意力监督
 config = ExperimentConfig()
@@ -375,6 +387,6 @@ MedFusion 适用于以下医学影像任务：
 
 ---
 
-**版本：** 0.1.0  
-**最后更新：** 2026-02-13  
+**版本：** 0.2.0
+**最后更新：** 2026-02-20
 **维护者：** Medical AI Research Team
