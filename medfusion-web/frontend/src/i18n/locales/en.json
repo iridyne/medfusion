@@ -1,0 +1,224 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "upload": "Upload",
+    "download": "Download",
+    "refresh": "Refresh",
+    "close": "Close",
+    "submit": "Submit",
+    "reset": "Reset",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "view": "View",
+    "detail": "Detail",
+    "status": "Status",
+    "name": "Name",
+    "description": "Description",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At"
+  },
+  "nav": {
+    "workflow": "Workflow Editor",
+    "training": "Training Monitor",
+    "models": "Model Library",
+    "system": "System Monitor",
+    "settings": "Settings"
+  },
+  "workflow": {
+    "title": "Workflow Editor",
+    "newWorkflow": "New Workflow",
+    "saveWorkflow": "Save Workflow",
+    "loadWorkflow": "Load Workflow",
+    "executeWorkflow": "Execute Workflow",
+    "clearWorkflow": "Clear Workflow",
+    "nodePalette": "Node Palette",
+    "nodeConfig": "Node Configuration",
+    "nodes": {
+      "dataLoader": "Data Loader",
+      "model": "Model",
+      "training": "Training",
+      "evaluation": "Evaluation",
+      "export": "Export"
+    },
+    "config": {
+      "dataPath": "Data Path",
+      "batchSize": "Batch Size",
+      "numWorkers": "Number of Workers",
+      "backbone": "Backbone",
+      "numClasses": "Number of Classes",
+      "pretrained": "Pretrained",
+      "optimizer": "Optimizer",
+      "learningRate": "Learning Rate",
+      "epochs": "Epochs",
+      "useMixedPrecision": "Mixed Precision",
+      "gradientCheckpointing": "Gradient Checkpointing",
+      "outputPath": "Output Path",
+      "format": "Format"
+    },
+    "messages": {
+      "workflowSaved": "Workflow saved",
+      "workflowLoaded": "Workflow loaded",
+      "workflowExecuting": "Workflow executing...",
+      "workflowCompleted": "Workflow completed",
+      "workflowFailed": "Workflow failed",
+      "confirmClear": "Are you sure you want to clear the workflow?"
+    }
+  },
+  "training": {
+    "title": "Training Monitor",
+    "startTraining": "Start Training",
+    "pauseTraining": "Pause Training",
+    "resumeTraining": "Resume Training",
+    "stopTraining": "Stop Training",
+    "jobList": "Training Jobs",
+    "currentJob": "Current Job",
+    "metrics": "Training Metrics",
+    "lossChart": "Loss Chart",
+    "accuracyChart": "Accuracy Chart",
+    "learningRateChart": "Learning Rate Chart",
+    "status": {
+      "running": "Running",
+      "paused": "Paused",
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "fields": {
+      "jobName": "Job Name",
+      "progress": "Progress",
+      "epoch": "Current Epoch",
+      "totalEpochs": "Total Epochs",
+      "loss": "Loss",
+      "accuracy": "Accuracy",
+      "trainLoss": "Train Loss",
+      "valLoss": "Val Loss",
+      "trainAcc": "Train Accuracy",
+      "valAcc": "Val Accuracy",
+      "learningRate": "Learning Rate",
+      "startTime": "Start Time",
+      "duration": "Duration",
+      "eta": "ETA"
+    },
+    "messages": {
+      "trainingStarted": "Training started",
+      "trainingPaused": "Training paused",
+      "trainingResumed": "Training resumed",
+      "trainingStopped": "Training stopped",
+      "trainingCompleted": "Training completed",
+      "trainingFailed": "Training failed",
+      "wsConnected": "Real-time connection established",
+      "wsDisconnected": "Real-time connection disconnected",
+      "confirmStop": "Are you sure you want to stop training? This action cannot be undone."
+    }
+  },
+  "models": {
+    "title": "Model Library",
+    "uploadModel": "Upload Model",
+    "downloadModel": "Download Model",
+    "deleteModel": "Delete Model",
+    "modelDetail": "Model Details",
+    "statistics": {
+      "totalModels": "Total Models",
+      "totalParams": "Total Parameters",
+      "totalSize": "Total Size",
+      "avgAccuracy": "Avg Accuracy"
+    },
+    "fields": {
+      "modelName": "Model Name",
+      "backbone": "Backbone",
+      "numClasses": "Number of Classes",
+      "params": "Parameters",
+      "accuracy": "Accuracy",
+      "size": "File Size",
+      "format": "Format",
+      "createdAt": "Created At",
+      "description": "Description"
+    },
+    "filters": {
+      "searchPlaceholder": "Search model name or description",
+      "allBackbones": "All Backbones",
+      "allFormats": "All Formats"
+    },
+    "formats": {
+      "pytorch": "PyTorch",
+      "onnx": "ONNX",
+      "torchscript": "TorchScript"
+    },
+    "messages": {
+      "modelUploaded": "Model uploaded",
+      "modelDownloading": "Downloading model",
+      "modelDeleted": "Model deleted",
+      "confirmDelete": "Are you sure you want to delete this model? This action cannot be undone.",
+      "uploadInProgress": "Upload feature in development"
+    }
+  },
+  "system": {
+    "title": "System Monitor",
+    "resources": "System Resources",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "gpu": "GPU",
+    "disk": "Disk",
+    "network": "Network",
+    "usage": "Usage",
+    "available": "Available",
+    "total": "Total",
+    "temperature": "Temperature",
+    "processes": "Processes",
+    "logs": "Logs",
+    "refresh": "Refresh",
+    "autoRefresh": "Auto Refresh"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "advanced": "Advanced",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Auto"
+    },
+    "languages": {
+      "zh": "简体中文",
+      "en": "English"
+    },
+    "messages": {
+      "settingsSaved": "Settings saved",
+      "languageChanged": "Language changed",
+      "themeChanged": "Theme changed"
+    }
+  },
+  "errors": {
+    "networkError": "Network error",
+    "serverError": "Server error",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "validationError": "Validation error",
+    "unknownError": "Unknown error",
+    "tryAgain": "Please try again"
+  }
+}
