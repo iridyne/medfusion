@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # MedFusion training service
+  medfusion-train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medfusion:latest
+    container_name: medfusion-train
+    volumes:
+      # Mount data directory
+      - ./data:/app/data:ro
+      # Mount outputs directory
+      - ./outputs:/app/outputs
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Mount custom configs
+      - ./configs:/app/configs:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MEDCORE_LOG_LEVEL=INFO
+      - MEDCORE_USE_WANDB=false
+    command: python -m med_core.cli train --config /app/configs/default.yaml
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # MedFusion evaluation service
+  medfusion-eval:
+    image: medfusion:latest
+    container_name: medfusion-eval
+    volumes:
+      - ./data:/app/data:ro
+      - ./outputs:/app/outputs:ro
+      - ./evaluation_results:/app/evaluation_results
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    command: python -m med_core.cli evaluate --checkpoint /app/outputs/best_model.pth
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - eval
+
+  # TensorBoard service
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: medfusion-tensorboard
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./outputs:/logs:ro
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Jupyter notebook service for experimentation
+  jupyter:
+    image: medfusion:latest
+    container_name: medfusion-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/app/data
+      - ./outputs:/app/outputs
+      - ./notebooks:/app/notebooks
+      - ./examples:/app/examples:ro
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - dev
+
+  # Development service with hot reload
+  medfusion-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medfusion:latest
+    container_name: medfusion-dev
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude venv from mount
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MEDCORE_LOG_LEVEL=DEBUG
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - dev
+
+volumes:
+  data:
+  outputs:
+  logs:
+  notebooks:
+
+networks:
+  default:
+    name: medfusion-network
