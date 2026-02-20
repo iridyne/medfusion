@@ -9,7 +9,10 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+
+from med_core.web.report_generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -557,37 +560,99 @@ async def get_roc_curve(experiment_id: str):
 @router.post("/report", response_model=ReportResponse)
 async def generate_report(request: ReportRequest):
     """
-    Generate experiment comparison report (Word or PDF)
+    Generate comparison report (Word or PDF)
     """
     try:
         experiments = get_mock_experiments()
         selected = [exp for exp in experiments if exp.id in request.experiment_ids]
 
         if not selected:
-            raise HTTPException(status_code=404, detail="No experiments found")
+            raise HTTPException(
+                status_code=404, detail="No experiments found with provided IDs"
+            )
 
-        # Generate report (mock implementation)
+        # Prepare data for report generation
+        experiments_data = [exp.model_dump() for exp in selected]
+
+        # Mock comparison data (in real implementation, compute from actual data)
+        comparison_data = {
+            "statistical_tests": {
+                "t_test": {"p_value": 0.032, "statistic": 2.45},
+                "wilcoxon": {"p_value": 0.028, "statistic": 15.0},
+            }
+        }
+
+        # Generate report using ReportGenerator
+        report_generator = ReportGenerator(
+            output_dir=Path.home() / ".medfusion" / "reports"
+        )
+
         report_id = str(uuid4())
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # In real implementation, use python-docx for Word or reportlab for PDF
-        download_url = f"/api/experiments/reports/{report_id}/download"
+        if request.format == "word":
+            filename = f"report_{report_id}_{timestamp}.docx"
+            report_path = report_generator.generate_word_report(
+                experiments=experiments_data,
+                comparison_data=comparison_data,
+                output_filename=filename,
+            )
+        else:  # pdf
+            filename = f"report_{report_id}_{timestamp}.pdf"
+            report_path = report_generator.generate_pdf_report(
+                experiments=experiments_data,
+                comparison_data=comparison_data,
+                output_filename=filename,
+            )
+
+        download_url = f"/api/experiments/reports/{report_path.name}"
 
         logger.info(
-            f"Generated {request.format} report for {len(selected)} experiments"
+            f"Generated {request.format} report for {len(selected)} experiments: {report_path}"
         )
 
         return ReportResponse(
             report_id=report_id,
             download_url=download_url,
             format=request.format,
-            created_at=timestamp,
+            created_at=datetime.now().isoformat(),
         )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to generate report: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/reports/{filename}")
+async def download_report(filename: str):
+    """
+    Download a generated report file
+    """
+    try:
+        report_path = Path.home() / ".medfusion" / "reports" / filename
+
+        if not report_path.exists():
+            raise HTTPException(status_code=404, detail="Report not found")
+
+        # Determine media type based on extension
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            if filename.endswith(".docx")
+            else "application/pdf"
+        )
+
+        return FileResponse(
+            path=str(report_path),
+            media_type=media_type,
+            filename=filename,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download report: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
