@@ -43,15 +43,22 @@ dependencies = [
     "einops>=0.7.0",
     "timm>=0.9.0",
     "sqlalchemy>=2.0.46",
-    "fastapi>=0.129.0",
-    "uvicorn>=0.41.0",
-    "pydantic-settings>=2.13.1",
-    "python-dotenv>=1.2.1",
+    "click>=8.1.0",
 ]
 
 [project.optional-dependencies]
 wandb = ["wandb>=0.15.0"]
 lightning = ["pytorch-lightning>=2.0.0"]
+web = [
+    "fastapi>=0.129.0",
+    "uvicorn[standard]>=0.41.0",
+    "pydantic-settings>=2.13.1",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.9",
+    "websockets>=11.0",
+    "rich>=13.0.0",
+    "psutil>=5.9.0",
+]
 docs = [
     "sphinx>=7.0.0",
     "furo>=2024.1.29",
@@ -62,6 +69,7 @@ docs = [
 ]
 
 [project.scripts]
+medfusion = "med_core.cli:main"
 med-train = "med_core.cli:train"
 med-evaluate = "med_core.cli:evaluate"
 med-preprocess = "med_core.cli:preprocess"
