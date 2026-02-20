@@ -15,6 +15,13 @@ from med_core.utils.device import (
     get_device_info,
     move_to_device,
 )
+from med_core.utils.gradient_checkpointing import (
+    CheckpointedSequential,
+    apply_gradient_checkpointing,
+    checkpoint_sequential,
+    create_checkpoint_wrapper,
+    estimate_memory_savings,
+)
 from med_core.utils.logging import (
     get_logger,
     setup_logging,
@@ -36,4 +43,10 @@ __all__ = [
     "load_checkpoint",
     "find_best_checkpoint",
     "cleanup_checkpoints",
+    # Gradient checkpointing utilities
+    "apply_gradient_checkpointing",
+    "checkpoint_sequential",
+    "create_checkpoint_wrapper",
+    "CheckpointedSequential",
+    "estimate_memory_savings",
 ]

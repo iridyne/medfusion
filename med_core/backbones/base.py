@@ -58,6 +58,7 @@ class BaseVisionBackbone(BaseBackbone):
     - Partial/full freezing strategies
     - Optional attention mechanisms
     - Optional attention supervision (returns intermediate features)
+    - Gradient checkpointing for memory efficiency
     """
 
     def __init__(
@@ -71,6 +72,7 @@ class BaseVisionBackbone(BaseBackbone):
         self.freeze = freeze
         self.feature_dim = feature_dim
         self.enable_attention_supervision = False  # Set by subclasses
+        self._gradient_checkpointing_enabled = False
         self._backbone: nn.Module | None = None
         self._attention: nn.Module | None = None
         self._projection: nn.Module | None = None
@@ -120,6 +122,34 @@ class BaseVisionBackbone(BaseBackbone):
     def set_attention(self, attention_module: nn.Module | None) -> None:
         """Set the attention module."""
         self._attention = attention_module
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for memory-efficient training.
+
+        Gradient checkpointing trades compute for memory by recomputing
+        intermediate activations during backward pass instead of storing them.
+
+        Args:
+            segments: Number of segments to split the backbone into.
+                     None means automatic (typically one checkpoint per major block).
+
+        Example:
+            >>> backbone = ResNetBackbone("resnet50")
+            >>> backbone.enable_gradient_checkpointing()
+            >>> # Training will use less memory but take slightly longer
+        """
+        self._gradient_checkpointing_enabled = True
+        self._checkpoint_segments = segments
+        # Subclasses should implement the actual checkpointing logic
+
+    def disable_gradient_checkpointing(self) -> None:
+        """Disable gradient checkpointing."""
+        self._gradient_checkpointing_enabled = False
+
+    def is_gradient_checkpointing_enabled(self) -> bool:
+        """Check if gradient checkpointing is enabled."""
+        return self._gradient_checkpointing_enabled
 
     @abstractmethod
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:

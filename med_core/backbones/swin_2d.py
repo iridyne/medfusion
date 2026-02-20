@@ -312,6 +312,64 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         """Return the raw backbone output dimension before projection."""
         return self._backbone_out_dim
 
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for Swin Transformer backbone.
+
+        Swin Transformer has multiple stages (typically 4), each containing
+        multiple transformer blocks. We checkpoint each stage by default.
+
+        Args:
+            segments: Number of segments (None = number of stages, typically 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        # Swin has multiple stages in self._backbone.layers
+        if segments is None:
+            segments = len(self._backbone.layers)
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Store original components
+        patch_embed = self._backbone.patch_embed
+        pos_drop = self._backbone.pos_drop
+        layers = list(self._backbone.layers)
+        norm = self._backbone.norm
+        
+        # Create a new forward function
+        def checkpointed_forward(x: torch.Tensor, normalize: bool = True) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                x = patch_embed(x)
+                x = pos_drop(x)
+                for layer in layers:
+                    x = layer(x)
+                if normalize:
+                    x = norm(x)
+                return x
+            
+            # Patch embedding
+            x = patch_embed(x)
+            x = pos_drop(x)
+            
+            # Apply checkpointing to transformer stages
+            if len(layers) > 0:
+                x = checkpoint_sequential(
+                    layers,
+                    segments=min(segments, len(layers)),
+                    input=x,
+                    use_reentrant=False,
+                )
+            
+            # Final normalization
+            if normalize:
+                x = norm(x)
+            
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
+
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         """
         Extract features from input.

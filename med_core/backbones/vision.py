@@ -91,6 +91,56 @@ class ResNetBackbone(BaseVisionBackbone):
     def backbone_output_dim(self) -> int:
         return self._backbone_out_dim
 
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for ResNet backbone.
+
+        ResNet is divided into 4 main stages (layer1-4), plus initial conv/bn/relu.
+        By default, we checkpoint each of the 4 main stages.
+
+        Args:
+            segments: Number of segments (None = 4 for ResNet's 4 stages)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        # ResNet structure: [conv1, bn1, relu, maxpool, layer1, layer2, layer3, layer4]
+        # We'll checkpoint the 4 main layers (layer1-4)
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Store original layers
+        original_layers = list(self._backbone.children())
+        
+        # Create a new forward function
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # First few layers (conv1, bn1, relu, maxpool) - run normally
+            stem_layers = original_layers[:4]
+            for layer in stem_layers:
+                x = layer(x)
+            
+            # Main stages (layer1-4) - use checkpointing
+            main_layers = original_layers[4:]
+            if len(main_layers) > 0:
+                x = checkpoint_sequential(
+                    main_layers,
+                    segments=min(segments, len(main_layers)),
+                    input=x,
+                    use_reentrant=False,
+                )
+            
+            return x
+        
+        # Replace the forward method
+        self._backbone.forward = checkpointed_forward
+
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         return self._backbone(x)
 
@@ -221,6 +271,45 @@ class MobileNetBackbone(BaseVisionBackbone):
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         return self._backbone(x)
 
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for MobileNet.
+        
+        MobileNet uses a sequential architecture with inverted residual blocks,
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers
+        original_layers = list(self._backbone.children())
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=segments,
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
+
 
 class EfficientNetBackbone(BaseVisionBackbone):
     """
@@ -294,6 +383,45 @@ class EfficientNetBackbone(BaseVisionBackbone):
 
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         return self._backbone(x)
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for EfficientNet.
+        
+        EfficientNet uses a sequential architecture with multiple blocks,
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers
+        original_layers = list(self._backbone.children())
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=segments,
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
 
 
 class ViTBackbone(BaseVisionBackbone):
@@ -370,6 +498,72 @@ class ViTBackbone(BaseVisionBackbone):
             for block in encoder_blocks[-unfreeze_last_n:]:
                 for param in block.parameters():
                     param.requires_grad = True
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for Vision Transformer.
+        
+        ViT uses transformer encoder blocks, making it suitable for
+        gradient checkpointing on the encoder layers.
+        
+        Args:
+            segments: Number of checkpoint segments (default: number of encoder layers)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        # Get encoder layers
+        encoder_layers = list(self._backbone.encoder.layers)
+        
+        if segments is None:
+            segments = len(encoder_layers)
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original components
+        conv_proj = self._backbone.conv_proj
+        encoder_dropout = self._backbone.encoder.dropout
+        encoder_ln = self._backbone.encoder.ln
+        
+        # Store original class token and position embedding
+        class_token = self._backbone.class_token
+        encoder_pos_embedding = self._backbone.encoder.pos_embedding
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            # Reshape and permute the input tensor
+            x = self._backbone._process_input(x)
+            n = x.shape[0]
+            
+            # Expand the class token to the full batch
+            batch_class_token = class_token.expand(n, -1, -1)
+            x = torch.cat([batch_class_token, x], dim=1)
+            
+            # Add positional embedding
+            x = x + encoder_pos_embedding
+            x = encoder_dropout(x)
+            
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass through encoder layers
+                for layer in encoder_layers:
+                    x = layer(x)
+            else:
+                # Use gradient checkpointing for encoder layers
+                x = checkpoint_sequential(
+                    encoder_layers,
+                    segments=min(segments, len(encoder_layers)),
+                    input=x,
+                    use_reentrant=False,
+                )
+            
+            # Apply layer normalization
+            x = encoder_ln(x)
+            
+            # Extract class token
+            x = x[:, 0]
+            
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
 
 
 class SwinBackbone(BaseVisionBackbone):
@@ -531,6 +725,45 @@ class ConvNeXtBackbone(BaseVisionBackbone):
 
         return features
 
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for ConvNeXt.
+        
+        ConvNeXt has a stage-based architecture (typically 4 stages),
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers (ConvNeXt stages)
+        original_layers = list(self._backbone.children())
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=min(segments, len(original_layers)),
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
+
 
 class MaxViTBackbone(BaseVisionBackbone):
     """
@@ -596,6 +829,54 @@ class MaxViTBackbone(BaseVisionBackbone):
         features = self.extract_features(x)
         features = self._projection(features)
         return features
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for MaxViT.
+        
+        MaxViT uses a stage-based architecture with multi-axis attention blocks,
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers (stem + stages)
+        original_layers = list(self._backbone.children())[:-1]  # Exclude classifier
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=min(segments, len(original_layers)),
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Store original forward for later use
+        original_forward = self._backbone.forward
+        
+        # Replace forward method
+        def new_forward(x: torch.Tensor) -> torch.Tensor:
+            x = checkpointed_forward(x)
+            # Apply final pooling and flatten
+            x = x.mean([-2, -1])  # Global average pooling
+            return x
+        
+        self._backbone.forward = new_forward
 
 
 class EfficientNetV2Backbone(BaseVisionBackbone):
@@ -676,6 +957,45 @@ class EfficientNetV2Backbone(BaseVisionBackbone):
 
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         return self._backbone(x)
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for EfficientNetV2.
+        
+        EfficientNetV2 uses a sequential architecture similar to EfficientNet,
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers
+        original_layers = list(self._backbone.children())
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=segments,
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
 
 
 class RegNetBackbone(BaseVisionBackbone):
@@ -802,6 +1122,45 @@ class RegNetBackbone(BaseVisionBackbone):
         features = self._projection(features)
 
         return features
+
+    def enable_gradient_checkpointing(self, segments: int | None = None) -> None:
+        """
+        Enable gradient checkpointing for RegNet.
+        
+        RegNet uses a stage-based architecture with design-space optimized blocks,
+        making it suitable for gradient checkpointing.
+        
+        Args:
+            segments: Number of checkpoint segments (default: 4)
+        """
+        super().enable_gradient_checkpointing(segments)
+        
+        if segments is None:
+            segments = 4
+        
+        from med_core.utils.gradient_checkpointing import checkpoint_sequential
+        
+        # Capture original layers (RegNet stages)
+        original_layers = list(self._backbone.children())
+        
+        def checkpointed_forward(x: torch.Tensor) -> torch.Tensor:
+            if not self.training or not self._gradient_checkpointing_enabled:
+                # Normal forward pass
+                for layer in original_layers:
+                    x = layer(x)
+                return x
+            
+            # Use gradient checkpointing
+            x = checkpoint_sequential(
+                original_layers,
+                segments=min(segments, len(original_layers)),
+                input=x,
+                use_reentrant=False,
+            )
+            return x
+        
+        # Replace forward method
+        self._backbone.forward = checkpointed_forward
 
 
 # Factory function for creating vision backbones
