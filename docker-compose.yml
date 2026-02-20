@@ -1,27 +1,44 @@
-version: '3.8'
+# MedFusion Docker Compose 配置
+# 支持 Web UI 一体化部署（CPU/GPU）
+
+version: "3.8"
 
 services:
-  # MedFusion training service
-  medfusion-train:
+  # ============================================================================
+  # 主服务：MedFusion Web UI（GPU 版本）
+  # ============================================================================
+  medfusion-web:
     build:
       context: .
       dockerfile: Dockerfile
-    image: medfusion:latest
-    container_name: medfusion-train
+    image: medfusion/medfusion:latest
+    container_name: medfusion-web
+    ports:
+      - "8000:8000"
     volumes:
-      # Mount data directory
+      # 数据目录（只读）
       - ./data:/app/data:ro
-      # Mount outputs directory
+      # 输出目录（读写）
       - ./outputs:/app/outputs
-      # Mount logs directory
+      # 日志目录（读写）
       - ./logs:/app/logs
-      # Mount custom configs
+      # 模型检查点目录（读写）
+      - ./checkpoints:/app/checkpoints
+      # 配置文件（只读）
       - ./configs:/app/configs:ro
     environment:
+      # CUDA 配置
       - CUDA_VISIBLE_DEVICES=0
+      # MedFusion 配置
+      - MEDCORE_DATA_DIR=/app/data
+      - MEDCORE_OUTPUT_DIR=/app/outputs
+      - MEDCORE_LOG_DIR=/app/logs
+      - MEDCORE_CHECKPOINT_DIR=/app/checkpoints
       - MEDCORE_LOG_LEVEL=INFO
-      - MEDCORE_USE_WANDB=false
-    command: python -m med_core.cli train --config /app/configs/default.yaml
+      # Web UI 配置
+      - MEDCORE_WEB_HOST=0.0.0.0
+      - MEDCORE_WEB_PORT=8000
+      - MEDCORE_WEB_RELOAD=false
     deploy:
       resources:
         reservations:
@@ -30,78 +47,73 @@ services:
               count: 1
               capabilities: [gpu]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
-  # MedFusion evaluation service
-  medfusion-eval:
-    image: medfusion:latest
-    container_name: medfusion-eval
+  # ============================================================================
+  # CPU 版本：MedFusion Web UI（无 GPU）
+  # 使用方式：docker-compose --profile cpu up
+  # ============================================================================
+  medfusion-web-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medfusion/medfusion:latest
+    container_name: medfusion-web-cpu
+    ports:
+      - "8000:8000"
     volumes:
       - ./data:/app/data:ro
-      - ./outputs:/app/outputs:ro
-      - ./evaluation_results:/app/evaluation_results
+      - ./outputs:/app/outputs
+      - ./logs:/app/logs
+      - ./checkpoints:/app/checkpoints
+      - ./configs:/app/configs:ro
     environment:
-      - CUDA_VISIBLE_DEVICES=0
-    command: python -m med_core.cli evaluate --checkpoint /app/outputs/best_model.pth
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    profiles:
-      - eval
-
-  # TensorBoard service
-  tensorboard:
-    image: tensorflow/tensorflow:latest
-    container_name: medfusion-tensorboard
-    ports:
-      - "6006:6006"
-    volumes:
-      - ./outputs:/logs:ro
-    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+      - MEDCORE_DATA_DIR=/app/data
+      - MEDCORE_OUTPUT_DIR=/app/outputs
+      - MEDCORE_LOG_DIR=/app/logs
+      - MEDCORE_CHECKPOINT_DIR=/app/checkpoints
+      - MEDCORE_LOG_LEVEL=INFO
+      - MEDCORE_WEB_HOST=0.0.0.0
+      - MEDCORE_WEB_PORT=8000
+      - MEDCORE_WEB_RELOAD=false
     restart: unless-stopped
     profiles:
-      - monitoring
+      - cpu
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
-  # Jupyter notebook service for experimentation
-  jupyter:
-    image: medfusion:latest
-    container_name: medfusion-jupyter
-    ports:
-      - "8888:8888"
-    volumes:
-      - ./data:/app/data
-      - ./outputs:/app/outputs
-      - ./notebooks:/app/notebooks
-      - ./examples:/app/examples:ro
-    environment:
-      - JUPYTER_ENABLE_LAB=yes
-    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    profiles:
-      - dev
-
-  # Development service with hot reload
+  # ============================================================================
+  # 开发模式：交互式容器
+  # 使用方式：docker-compose --profile dev up -d medfusion-dev
+  #          docker exec -it medfusion-dev bash
+  # ============================================================================
   medfusion-dev:
     build:
       context: .
       dockerfile: Dockerfile
-    image: medfusion:latest
+    image: medfusion/medfusion:latest
     container_name: medfusion-dev
+    ports:
+      - "8000:8000"
     volumes:
+      # 挂载整个项目目录（开发模式）
       - .:/app
-      - /app/.venv  # Exclude venv from mount
+      # 排除虚拟环境
+      - /app/.venv
+      - /app/web/frontend/node_modules
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - MEDCORE_LOG_LEVEL=DEBUG
+      - MEDCORE_WEB_RELOAD=true
     command: /bin/bash
     stdin_open: true
     tty: true
@@ -115,12 +127,23 @@ services:
     profiles:
       - dev
 
+# ============================================================================
+# 数据卷定义
+# ============================================================================
 volumes:
   data:
+    driver: local
   outputs:
+    driver: local
   logs:
-  notebooks:
+    driver: local
+  checkpoints:
+    driver: local
 
+# ============================================================================
+# 网络配置
+# ============================================================================
 networks:
   default:
     name: medfusion-network
+    driver: bridge

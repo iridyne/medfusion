@@ -1,67 +1,81 @@
-# MedFusion Docker Image
-# Multi-stage build for optimized image size
+# MedFusion Docker Image - Web UI 一体化容器
+# 包含完整的 MedFusion 框架 + FastAPI 后端 + React 前端
 
-# Stage 1: Builder
+# ============================================================================
+# Stage 1: Builder - 构建 Python 依赖
+# ============================================================================
 FROM python:3.11-slim as builder
 
-# Set working directory
 WORKDIR /build
 
-# Install system dependencies
+# 安装构建依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY pyproject.toml ./
-COPY README.md ./
+# 安装 uv（快速依赖管理）
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.cargo/bin:$PATH"
 
-# Install uv for fast dependency management
-RUN pip install --no-cache-dir uv
+# 复制依赖文件
+COPY pyproject.toml README.md ./
 
-# Create virtual environment and install dependencies
+# 创建虚拟环境并安装依赖（包含 web 可选依赖）
 RUN uv venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install -e .
+RUN uv pip install -e ".[web]"
 
-# Stage 2: Runtime
+# ============================================================================
+# Stage 2: Runtime - 运行时环境
+# ============================================================================
 FROM python:3.11-slim
 
-# Set working directory
+LABEL maintainer="Medical AI Research Team"
+LABEL description="MedFusion - Medical Multimodal Fusion Framework with Web UI"
+LABEL version="0.3.0"
+
 WORKDIR /app
 
-# Install runtime dependencies
+# 安装运行时依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy virtual environment from builder
+# 复制虚拟环境
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy application code
+# 复制应用代码
 COPY med_core ./med_core
 COPY configs ./configs
 COPY scripts ./scripts
 COPY examples ./examples
 
-# Create directories for data and outputs
-RUN mkdir -p /app/data /app/outputs /app/logs
+# 创建数据目录（用于挂载）
+RUN mkdir -p \
+    /app/data \
+    /app/outputs \
+    /app/logs \
+    /app/checkpoints \
+    && chmod -R 777 /app/data /app/outputs /app/logs /app/checkpoints
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV MEDCORE_DATA_DIR=/app/data
-ENV MEDCORE_OUTPUT_DIR=/app/outputs
-ENV MEDCORE_LOG_DIR=/app/logs
+# 设置环境变量
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    MEDCORE_DATA_DIR=/app/data \
+    MEDCORE_OUTPUT_DIR=/app/outputs \
+    MEDCORE_LOG_DIR=/app/logs \
+    MEDCORE_CHECKPOINT_DIR=/app/checkpoints
 
-# Expose port for potential API server
+# 暴露 Web UI 端口
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import med_core; print('OK')" || exit 1
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Default command
-CMD ["python", "-m", "med_core.cli", "--help"]
+# 默认启动 Web UI 服务器
+CMD ["uvicorn", "med_core.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
