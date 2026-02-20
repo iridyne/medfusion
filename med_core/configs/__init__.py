@@ -22,6 +22,12 @@ from med_core.configs.multiview_config import (
     create_ct_multiview_config,
     create_temporal_multiview_config,
 )
+from med_core.configs.validation import (
+    ConfigValidator,
+    ValidationError,
+    validate_config,
+    validate_config_or_exit,
+)
 
 __all__ = [
     # Base configs
@@ -46,4 +52,9 @@ __all__ = [
     # Config utilities
     "load_config",
     "save_config",
+    # Validation
+    "ConfigValidator",
+    "ValidationError",
+    "validate_config",
+    "validate_config_or_exit",
 ]
