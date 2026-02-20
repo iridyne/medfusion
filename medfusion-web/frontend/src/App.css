@@ -1,0 +1,9 @@
+.app-layout {
+  height: 100vh;
+}
+
+.app-content {
+  padding: 24px;
+  background: #f0f2f5;
+  overflow: auto;
+}
