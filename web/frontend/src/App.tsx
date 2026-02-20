@@ -5,6 +5,7 @@ import zhCN from "antd/locale/zh_CN";
 import enUS from "antd/locale/en_US";
 import { useTranslation } from "react-i18next";
 import WorkflowEditor from "./pages/WorkflowEditor";
+import ConfigGenerator from "./pages/ConfigGenerator";
 import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
 import Preprocessing from "./pages/Preprocessing";
@@ -60,6 +61,7 @@ function App() {
             <Routes>
               <Route path="/" element={<WorkflowEditor />} />
               <Route path="/workflow" element={<WorkflowEditor />} />
+              <Route path="/config" element={<ConfigGenerator />} />
               <Route path="/training" element={<TrainingMonitor />} />
               <Route path="/models" element={<ModelLibrary />} />
               <Route path="/preprocessing" element={<Preprocessing />} />

@@ -9,6 +9,7 @@ import {
   FileImageOutlined,
   DashboardOutlined,
   SettingOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -24,6 +25,11 @@ export default function Sidebar() {
       key: "/workflow",
       icon: <AppstoreOutlined />,
       label: t("nav.workflow"),
+    },
+    {
+      key: "/config",
+      icon: <ToolOutlined />,
+      label: "配置生成器",
     },
     {
       key: "/training",
