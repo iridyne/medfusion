@@ -347,11 +347,44 @@ pytest --cov=med_core  # 测试覆盖率
 - ✅ 将临时分析文档移出根目录
 - ✅ 添加 `.analysis_archive/` 到 `.gitignore`
 - ✅ 创建 `AGENTS.md` 记忆系统
+- ✅ 清理 `docs/` 目录结构
+- ✅ 创建 `docs/.archive/` 归档临时文档
+- ✅ 从 Git 跟踪中移除 12 个临时分析文档
 
 ### 经验总结
-1. **文档管理**: 临时分析文档应该放在独立目录并忽略版本控制
-2. **项目结构**: 保持根目录整洁，只保留核心文档
-3. **记忆系统**: 使用 `AGENTS.md` 持久化项目知识和经验
+
+#### 1. 文档管理最佳实践
+**问题**: 临时分析文档会污染项目目录结构
+
+**解决方案**:
+- 根目录: 创建 `.analysis_archive/` 存放项目级临时文档
+- docs 目录: 创建 `docs/.archive/` 存放文档级临时文档
+- 将归档目录添加到 `.gitignore`
+- 在归档目录中添加 README.md 说明用途
+
+**实施步骤**:
+```bash
+# 根目录清理
+mkdir -p .analysis_archive
+echo ".analysis_archive/" >> .gitignore
+mv *_ANALYSIS.md *_SUMMARY.md .analysis_archive/
+
+# docs 目录清理
+mkdir -p docs/.archive
+echo ".archive/" >> docs/.gitignore
+mv docs/*_2026-*.md docs/.archive/
+```
+
+#### 2. 项目结构原则
+- **根目录**: 只保留核心文档 (README.md, CHANGELOG.md, AGENTS.md)
+- **docs 目录**: 保持清晰的分类结构 (api/, guides/, reference/, architecture/, reviews/)
+- **临时文档**: 统一归档到 `.archive/` 目录，不纳入版本控制
+
+#### 3. 记忆系统
+- 使用 `AGENTS.md` 持久化项目知识和经验
+- 记录常见问题和解决方案
+- 记录最佳实践和开发经验
+- 定期更新，保持知识库的时效性
 
 ---
 
