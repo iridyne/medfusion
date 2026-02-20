@@ -195,16 +195,6 @@ async def execute_workflow(request: WorkflowExecuteRequest):
     return result
 
 
-@router.delete("/{workflow_id}")
-async def delete_workflow(workflow_id: str):
-    """删除工作流"""
-    # TODO: 从数据库删除
-    return {
-        "status": "deleted",
-        "id": workflow_id,
-    }
-
-
 @router.websocket("/ws/execute")
 async def execute_workflow_ws(websocket: WebSocket):
     """通过 WebSocket 执行工作流，实时推送进度"""
