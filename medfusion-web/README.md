@@ -33,7 +33,44 @@
 
 ## 快速开始
 
-### 使用 Docker (推荐)
+### 方式 1: CLI 命令（推荐）⭐
+
+最简单的方式，类似 `tensorboard`, `mlflow ui` 的使用体验。
+
+```bash
+# 1. 安装 CLI 工具
+cd backend
+pip install -e .
+
+# 2. 初始化环境（首次使用）
+medfusion-web init
+
+# 3. 启动服务
+medfusion-web start
+
+# 4. 访问应用
+# 前端: http://localhost:5173
+# 后端 API: http://localhost:8000
+# API 文档: http://localhost:8000/docs
+
+# 5. 停止服务
+medfusion-web stop
+```
+
+**更多 CLI 命令**：
+```bash
+medfusion-web status          # 查看服务状态
+medfusion-web logs            # 查看日志
+medfusion-web logs -f         # 实时跟踪日志
+medfusion-web start --daemon  # 后台运行
+medfusion-web start --reload  # 开发模式（热重载）
+```
+
+📖 详细文档：[CLI_GUIDE.md](CLI_GUIDE.md)
+
+---
+
+### 方式 2: 使用 Docker
 
 ```bash
 # 启动所有服务
@@ -45,7 +82,9 @@ docker-compose up -d
 # API 文档: http://localhost:8000/docs
 ```
 
-### 本地开发
+---
+
+### 方式 3: 本地开发
 
 #### 后端
 
