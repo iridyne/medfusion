@@ -1,0 +1,55 @@
+{
+  "data_loading": {
+    "no_cache": {
+      "duration": 0.10789012908935547,
+      "throughput": 926.8688511548559
+    },
+    "with_cache": {
+      "duration": 0.010581016540527344,
+      "throughput": 9450.887787291573
+    },
+    "speedup": 10.196575033799009
+  },
+  "fusion_strategies": {
+    "Concatenate": {
+      "duration": 0.0004475116729736328,
+      "throughput": 22345785.828449655
+    },
+    "Gated": {
+      "duration": 0.001001596450805664,
+      "throughput": 9984060.937871935
+    },
+    "Attention": {
+      "duration": 0.0012087821960449219,
+      "throughput": 8272788.954635109
+    }
+  },
+  "aggregators": {
+    "Mean": {
+      "duration": 0.009620428085327148,
+      "throughput": 103945.4784268048
+    },
+    "Max": {
+      "duration": 0.007843494415283203,
+      "throughput": 127494.19417593775
+    },
+    "Attention": {
+      "duration": 0.05501723289489746,
+      "throughput": 18176.123141459273
+    }
+  },
+  "preprocessing": {
+    "Resize": {
+      "duration": 0.14954829216003418,
+      "throughput": 6686.803209560447
+    },
+    "Normalize": {
+      "duration": 1.0520637035369873,
+      "throughput": 950.5127841955276
+    },
+    "Augment": {
+      "duration": 0.10935258865356445,
+      "throughput": 9144.730932415874
+    }
+  }
+}
