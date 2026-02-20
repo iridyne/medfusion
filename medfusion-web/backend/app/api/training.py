@@ -5,12 +5,14 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 import asyncio
 import json
+import logging
 
 from app.services.training_service import TrainingService
 from app.core.database import get_db
 from app.crud import TrainingJobCRUD
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class TrainingConfig(BaseModel):
@@ -265,9 +267,9 @@ async def training_websocket(websocket: WebSocket, job_id: str):
                 await websocket.send_json({"type": "heartbeat"})
             
     except WebSocketDisconnect:
-        print(f"WebSocket disconnected for job {job_id}")
+        logger.info(f"WebSocket disconnected for job {job_id}")
     except Exception as e:
-        print(f"WebSocket error for job {job_id}: {e}")
+        logger.error(f"WebSocket error for job {job_id}: {e}")
     finally:
         try:
             await websocket.close()

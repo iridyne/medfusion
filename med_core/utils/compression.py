@@ -4,12 +4,15 @@
 支持量化和剪枝。
 """
 
+import logging
 from typing import Optional, Union
 from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.quantization as quant
+
+logger = logging.getLogger(__name__)
 
 
 class ModelQuantizer:
@@ -59,11 +62,11 @@ class ModelQuantizer:
             modules,
             dtype=dtype,
         )
-        
-        print(f"✓ Dynamic quantization completed")
-        print(f"  Backend: {self.backend}")
-        print(f"  Dtype: {dtype}")
-        
+
+        logger.info(f"✓ Dynamic quantization completed")
+        logger.info(f"  Backend: {self.backend}")
+        logger.info(f"  Dtype: {dtype}")
+
         return quantized_model
     
     def static_quantize(
@@ -88,18 +91,18 @@ class ModelQuantizer:
         
         # 准备量化
         model_prepared = quant.prepare(model_fused)
-        
+
         # 校准
-        print("Calibrating model...")
+        logger.info("Calibrating model...")
         with torch.no_grad():
             for data, _ in calibration_data:
                 model_prepared(data)
-        
+
         # 转换
         quantized_model = quant.convert(model_prepared)
-        
-        print(f"✓ Static quantization completed")
-        
+
+        logger.info(f"✓ Static quantization completed")
+
         return quantized_model
     
     def _fuse_modules(self) -> nn.Module:
@@ -121,11 +124,11 @@ class ModelQuantizer:
         
         original_size = get_size(original_model)
         quantized_size = get_size(quantized_model)
-        
-        print(f"\nModel Size Comparison:")
-        print(f"  Original: {original_size:.2f} MB")
-        print(f"  Quantized: {quantized_size:.2f} MB")
-        print(f"  Reduction: {(1 - quantized_size/original_size)*100:.1f}%")
+
+        logger.info(f"\nModel Size Comparison:")
+        logger.info(f"  Original: {original_size:.2f} MB")
+        logger.info(f"  Quantized: {quantized_size:.2f} MB")
+        logger.info(f"  Reduction: {(1 - quantized_size/original_size)*100:.1f}%")
 
 
 class ModelPruner:
@@ -183,11 +186,11 @@ class ModelPruner:
         # 移除重参数化
         for module, param_name in parameters_to_prune:
             prune.remove(module, param_name)
-        
-        print(f"✓ Unstructured pruning completed")
-        print(f"  Amount: {amount*100:.1f}%")
-        print(f"  Method: {method}")
-        
+
+        logger.info(f"✓ Unstructured pruning completed")
+        logger.info(f"  Amount: {amount*100:.1f}%")
+        logger.info(f"  Method: {method}")
+
         return self.model
     
     def prune_structured(
@@ -217,11 +220,11 @@ class ModelPruner:
                     dim=dim,
                 )
                 prune.remove(module, 'weight')
-        
-        print(f"✓ Structured pruning completed")
-        print(f"  Amount: {amount*100:.1f}%")
-        print(f"  Dim: {dim}")
-        
+
+        logger.info(f"✓ Structured pruning completed")
+        logger.info(f"  Amount: {amount*100:.1f}%")
+        logger.info(f"  Dim: {dim}")
+
         return self.model
     
     def get_sparsity(self) -> float:
@@ -234,12 +237,12 @@ class ModelPruner:
             zero_params += (param == 0).sum().item()
         
         sparsity = zero_params / total_params
-        
-        print(f"\nModel Sparsity:")
-        print(f"  Total params: {total_params:,}")
-        print(f"  Zero params: {zero_params:,}")
-        print(f"  Sparsity: {sparsity*100:.2f}%")
-        
+
+        logger.info(f"\nModel Sparsity:")
+        logger.info(f"  Total params: {total_params:,}")
+        logger.info(f"  Zero params: {zero_params:,}")
+        logger.info(f"  Sparsity: {sparsity*100:.2f}%")
+
         return sparsity
 
 
@@ -331,22 +334,22 @@ def compress_model(
         >>> compressed_model = compress_model(model, quantize=True, prune=True)
     """
     compressed_model = model
-    
+
     # 剪枝
     if prune:
-        print("Step 1: Pruning...")
+        logger.info("Step 1: Pruning...")
         compressed_model = prune_model(compressed_model, amount=prune_amount)
-    
+
     # 量化
     if quantize:
-        print("\nStep 2: Quantizing...")
+        logger.info("\nStep 2: Quantizing...")
         method = "static" if calibration_data else "dynamic"
         compressed_model = quantize_model(
             compressed_model,
             method=method,
             calibration_data=calibration_data,
         )
-    
-    print("\n✓ Model compression completed!")
-    
+
+    logger.info("\n✓ Model compression completed!")
+
     return compressed_model

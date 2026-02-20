@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -13,6 +14,8 @@ from typing import Any, Callable
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -369,25 +372,25 @@ class BenchmarkSuite:
     def run_all(self) -> list[BenchmarkResult]:
         """
         运行所有基准测试
-        
+
         Returns:
             所有测试结果
         """
         self.results = []
-        
-        print(f"\n{'='*60}")
-        print(f"Running Benchmark Suite: {self.name}")
-        print(f"{'='*60}\n")
-        
+
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Running Benchmark Suite: {self.name}")
+        logger.info(f"{'='*60}\n")
+
         for name, func in self.benchmarks:
-            print(f"Running: {name}...")
+            logger.info(f"Running: {name}...")
             try:
                 result = func()
                 self.results.append(result)
-                print(f"  ✓ {result.throughput:.1f} samples/s\n")
+                logger.info(f"  ✓ {result.throughput:.1f} samples/s\n")
             except Exception as e:
-                print(f"  ✗ Error: {e}\n")
-        
+                logger.error(f"  ✗ Error: {e}\n")
+
         return self.results
     
     def save_results(self, filename: str | None = None) -> Path:
@@ -413,8 +416,8 @@ class BenchmarkSuite:
         
         with open(filepath, "w") as f:
             json.dump(data, f, indent=2)
-        
-        print(f"Results saved to: {filepath}")
+
+        logger.info(f"Results saved to: {filepath}")
         return filepath
     
     def compare_with(self, baseline_file: str | Path) -> dict[str, Any]:
@@ -431,16 +434,16 @@ class BenchmarkSuite:
             baseline_data = json.load(f)
         
         baseline_results = {r["name"]: r for r in baseline_data["results"]}
-        
+
         comparisons = []
-        
-        print(f"\n{'='*60}")
-        print(f"Comparing with baseline: {baseline_file}")
-        print(f"{'='*60}\n")
-        
+
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Comparing with baseline: {baseline_file}")
+        logger.info(f"{'='*60}\n")
+
         for result in self.results:
             if result.name not in baseline_results:
-                print(f"{result.name}: No baseline found")
+                logger.warning(f"{result.name}: No baseline found")
                 continue
             
             baseline = baseline_results[result.name]
@@ -466,31 +469,31 @@ class BenchmarkSuite:
             }
             
             comparisons.append(comparison)
-            
+
             # 打印结果
             status = "❌ REGRESSION" if is_regression else "✓ OK"
-            print(f"{result.name}:")
-            print(f"  Throughput: {throughput_change:+.1f}% {status}")
-            print(f"  Memory: {memory_change:+.1f}%\n")
-        
+            logger.info(f"{result.name}:")
+            logger.info(f"  Throughput: {throughput_change:+.1f}% {status}")
+            logger.info(f"  Memory: {memory_change:+.1f}%\n")
+
         return {
             "baseline": str(baseline_file),
             "comparisons": comparisons,
         }
-    
+
     def print_summary(self) -> None:
         """打印结果摘要"""
         if not self.results:
-            print("No results to display")
+            logger.info("No results to display")
             return
-        
-        print(f"\n{'='*60}")
-        print(f"Benchmark Summary: {self.name}")
-        print(f"{'='*60}\n")
-        
+
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Benchmark Summary: {self.name}")
+        logger.info(f"{'='*60}\n")
+
         for result in self.results:
-            print(result)
-            print()
+            logger.info(result)
+            logger.info("")
 
 
 def create_regression_test(
@@ -526,9 +529,9 @@ def create_regression_test(
             
             baseline = baseline_results[result.name]
             change = (result.throughput - baseline["throughput"]) / baseline["throughput"]
-            
+
             if change < -tolerance:
-                print(f"❌ Regression detected in {result.name}: {change*100:.1f}%")
+                logger.error(f"❌ Regression detected in {result.name}: {change*100:.1f}%")
                 has_regression = True
         
         return not has_regression

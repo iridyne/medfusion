@@ -4,6 +4,7 @@
 支持 DDP (DistributedDataParallel) 和 FSDP (Fully Sharded Data Parallel)。
 """
 
+import logging
 import os
 from typing import Any, Callable, Optional
 
@@ -14,6 +15,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import ShardingStrategy
 from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+
+logger = logging.getLogger(__name__)
 
 
 def setup_distributed(
@@ -54,10 +57,10 @@ def setup_distributed(
         # 设置当前设备
         torch.cuda.set_device(local_rank)
         
-        print(f"Initialized distributed training: rank={rank}, "
-              f"local_rank={local_rank}, world_size={world_size}")
+        logger.info(f"Initialized distributed training: rank={rank}, "
+                    f"local_rank={local_rank}, world_size={world_size}")
     else:
-        print("Running in single-process mode")
+        logger.info("Running in single-process mode")
     
     return rank, local_rank, world_size
 
@@ -71,7 +74,7 @@ def cleanup_distributed():
     """
     if dist.is_initialized():
         dist.destroy_process_group()
-        print("Destroyed process group")
+        logger.info("Destroyed process group")
 
 
 def is_main_process() -> bool:
@@ -204,10 +207,10 @@ class DDPWrapper:
                 output_device=output_device,
                 find_unused_parameters=find_unused_parameters,
             )
-            
-            print(f"Wrapped model with DDP on device {local_rank}")
+
+            logger.info(f"Wrapped model with DDP on device {local_rank}")
         else:
-            print("DDP not initialized, using single-process model")
+            logger.info("DDP not initialized, using single-process model")
     
     def __call__(self, *args, **kwargs):
         """前向传播"""
@@ -292,11 +295,11 @@ class FSDPWrapper:
                 auto_wrap_policy=auto_wrap_policy,
                 device_id=local_rank,
             )
-            
-            print(f"Wrapped model with FSDP (strategy={sharding_strategy}) "
-                  f"on device {local_rank}")
+
+            logger.info(f"Wrapped model with FSDP (strategy={sharding_strategy}) "
+                        f"on device {local_rank}")
         else:
-            print("FSDP not initialized, using single-process model")
+            logger.info("FSDP not initialized, using single-process model")
     
     def __call__(self, *args, **kwargs):
         """前向传播"""
@@ -420,7 +423,7 @@ def save_checkpoint(
     }
     
     torch.save(checkpoint, filepath)
-    print(f"Saved checkpoint to {filepath}")
+    logger.info(f"Saved checkpoint to {filepath}")
 
 
 def load_checkpoint(
@@ -469,7 +472,7 @@ def load_checkpoint(
     # 加载优化器状态
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-    
-    print(f"Loaded checkpoint from {filepath}")
-    
+
+    logger.info(f"Loaded checkpoint from {filepath}")
+
     return checkpoint

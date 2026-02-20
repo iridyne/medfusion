@@ -5,10 +5,13 @@ Provides comprehensive validation for experiment configurations with
 clear error messages and suggestions.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from med_core.configs.base_config import ExperimentConfig
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -403,13 +406,12 @@ def validate_config_or_exit(config: ExperimentConfig) -> None:
 
     errors = validate_config(config)
     if errors:
-        print("❌ Configuration validation failed:\n")
+        logger.error("Configuration validation failed:\n")
         for error in errors:
-            print(f"  [{error.error_code}] {error.path}")
-            print(f"    ❌ {error.message}")
+            logger.error(f"  [{error.error_code}] {error.path}")
+            logger.error(f"    ❌ {error.message}")
             if error.suggestion:
-                print(f"    💡 Suggestion: {error.suggestion}")
-            print()
+                logger.info(f"    💡 Suggestion: {error.suggestion}")
         sys.exit(1)
     else:
-        print("✅ Configuration validation passed")
+        logger.info("✅ Configuration validation passed")

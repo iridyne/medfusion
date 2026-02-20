@@ -4,11 +4,14 @@
 使用 Optuna 进行超参数优化。
 """
 
+import logging
 from typing import Any, Callable, Optional, Union
 
 import torch
 import torch.nn as nn
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class HyperparameterTuner:
@@ -78,11 +81,11 @@ class HyperparameterTuner:
         Returns:
             最佳参数字典
         """
-        print(f"Starting hyperparameter optimization: {self.study_name}")
-        print(f"  Direction: {self.direction}")
-        print(f"  Trials: {n_trials}")
-        print(f"  Jobs: {n_jobs}")
-        
+        logger.info(f"Starting hyperparameter optimization: {self.study_name}")
+        logger.info(f"  Direction: {self.direction}")
+        logger.info(f"  Trials: {n_trials}")
+        logger.info(f"  Jobs: {n_jobs}")
+
         self.study.optimize(
             self.objective_fn,
             n_trials=n_trials,
@@ -90,11 +93,11 @@ class HyperparameterTuner:
             n_jobs=n_jobs,
             show_progress_bar=show_progress_bar,
         )
-        
-        print(f"\n✓ Optimization completed!")
-        print(f"  Best value: {self.study.best_value:.4f}")
-        print(f"  Best params: {self.study.best_params}")
-        
+
+        logger.info(f"\n✓ Optimization completed!")
+        logger.info(f"  Best value: {self.study.best_value:.4f}")
+        logger.info(f"  Best params: {self.study.best_params}")
+
         return self.study.best_params
     
     def get_best_trial(self):
@@ -110,46 +113,46 @@ class HyperparameterTuner:
         try:
             import optuna.visualization as vis
         except ImportError:
-            print("Optuna visualization not available")
+            logger.warning("Optuna visualization not available")
             return
-        
+
         fig = vis.plot_optimization_history(self.study)
-        
+
         if save_path:
             fig.write_html(save_path)
-            print(f"Saved optimization history to {save_path}")
+            logger.info(f"Saved optimization history to {save_path}")
         else:
             fig.show()
-    
+
     def plot_param_importances(self, save_path: Optional[str] = None):
         """绘制参数重要性"""
         try:
             import optuna.visualization as vis
         except ImportError:
-            print("Optuna visualization not available")
+            logger.warning("Optuna visualization not available")
             return
-        
+
         fig = vis.plot_param_importances(self.study)
-        
+
         if save_path:
             fig.write_html(save_path)
-            print(f"Saved parameter importances to {save_path}")
+            logger.info(f"Saved parameter importances to {save_path}")
         else:
             fig.show()
-    
+
     def plot_parallel_coordinate(self, save_path: Optional[str] = None):
         """绘制平行坐标图"""
         try:
             import optuna.visualization as vis
         except ImportError:
-            print("Optuna visualization not available")
+            logger.warning("Optuna visualization not available")
             return
-        
+
         fig = vis.plot_parallel_coordinate(self.study)
-        
+
         if save_path:
             fig.write_html(save_path)
-            print(f"Saved parallel coordinate plot to {save_path}")
+            logger.info(f"Saved parallel coordinate plot to {save_path}")
         else:
             fig.show()
 

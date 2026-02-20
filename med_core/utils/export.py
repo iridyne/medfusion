@@ -4,12 +4,15 @@
 支持将 PyTorch 模型导出为 ONNX 和 TorchScript 格式。
 """
 
+import logging
 import warnings
 from pathlib import Path
 from typing import Any, Optional, Union
 
 import torch
 import torch.nn as nn
+
+logger = logging.getLogger(__name__)
 
 
 class ModelExporter:
@@ -91,11 +94,11 @@ class ModelExporter:
                 input_names[0]: {0: "batch_size"},
                 output_names[0]: {0: "batch_size"},
             }
-        
-        print(f"Exporting model to ONNX: {output_path}")
-        print(f"  Input shape: {dummy_input.shape}")
-        print(f"  Opset version: {opset_version}")
-        
+
+        logger.info(f"Exporting model to ONNX: {output_path}")
+        logger.info(f"  Input shape: {dummy_input.shape}")
+        logger.info(f"  Opset version: {opset_version}")
+
         # 导出
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -111,9 +114,9 @@ class ModelExporter:
                 verbose=verbose,
                 **kwargs,
             )
-        
-        print(f"✓ Model exported to {output_path}")
-        print(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
+
+        logger.info(f"✓ Model exported to {output_path}")
+        logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
     
     def export_torchscript(
         self,
@@ -136,15 +139,15 @@ class ModelExporter:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        print(f"Exporting model to TorchScript: {output_path}")
-        print(f"  Method: {method}")
-        print(f"  Optimize: {optimize}")
-        
+
+        logger.info(f"Exporting model to TorchScript: {output_path}")
+        logger.info(f"  Method: {method}")
+        logger.info(f"  Optimize: {optimize}")
+
         if method == "trace":
             # 使用 trace 方法
             dummy_input = torch.randn(1, *self.input_shape).to(self.device)
-            print(f"  Input shape: {dummy_input.shape}")
+            logger.info(f"  Input shape: {dummy_input.shape}")
             
             traced_model = torch.jit.trace(self.model, dummy_input, **kwargs)
             
@@ -164,9 +167,9 @@ class ModelExporter:
             
         else:
             raise ValueError(f"Unknown method: {method}. Use 'trace' or 'script'.")
-        
-        print(f"✓ Model exported to {output_path}")
-        print(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
+
+        logger.info(f"✓ Model exported to {output_path}")
+        logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
     
     def verify_onnx(
         self,
@@ -193,20 +196,20 @@ class ModelExporter:
             import onnx
             import onnxruntime as ort
         except ImportError:
-            print("⚠ ONNX or ONNXRuntime not installed. Skipping verification.")
+            logger.warning("⚠ ONNX or ONNXRuntime not installed. Skipping verification.")
             return False
-        
-        print(f"Verifying ONNX model: {onnx_path}")
-        
+
+        logger.info(f"Verifying ONNX model: {onnx_path}")
+
         # 加载 ONNX 模型
         onnx_model = onnx.load(str(onnx_path))
-        
+
         # 检查模型
         try:
             onnx.checker.check_model(onnx_model)
-            print("  ✓ ONNX model is valid")
+            logger.info("  ✓ ONNX model is valid")
         except Exception as e:
-            print(f"  ✗ ONNX model check failed: {e}")
+            logger.error(f"  ✗ ONNX model check failed: {e}")
             return False
         
         # 创建测试输入
@@ -228,14 +231,14 @@ class ModelExporter:
         
         # 比较输出
         import numpy as np
-        
+
         if np.allclose(pytorch_output, ort_output, rtol=rtol, atol=atol):
             max_diff = np.abs(pytorch_output - ort_output).max()
-            print(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
+            logger.info(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
             return True
         else:
             max_diff = np.abs(pytorch_output - ort_output).max()
-            print(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
+            logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
             return False
     
     def verify_torchscript(
@@ -259,38 +262,38 @@ class ModelExporter:
             >>> exporter.export_torchscript("model.pt")
             >>> exporter.verify_torchscript("model.pt")
         """
-        print(f"Verifying TorchScript model: {torchscript_path}")
-        
+        logger.info(f"Verifying TorchScript model: {torchscript_path}")
+
         # 加载 TorchScript 模型
         loaded_model = torch.jit.load(str(torchscript_path))
         loaded_model.eval()
         loaded_model.to(self.device)
-        
+
         # 创建测试输入
         dummy_input = torch.randn(1, *self.input_shape).to(self.device)
-        
+
         # 原始模型输出
         with torch.no_grad():
             original_output = self.model(dummy_input)
-        
+
         if isinstance(original_output, tuple):
             original_output = original_output[0]
-        
+
         # TorchScript 模型输出
         with torch.no_grad():
             loaded_output = loaded_model(dummy_input)
-        
+
         if isinstance(loaded_output, tuple):
             loaded_output = loaded_output[0]
-        
+
         # 比较输出
         if torch.allclose(original_output, loaded_output, rtol=rtol, atol=atol):
             max_diff = (original_output - loaded_output).abs().max().item()
-            print(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
+            logger.info(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
             return True
         else:
             max_diff = (original_output - loaded_output).abs().max().item()
-            print(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
+            logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
             return False
 
 
@@ -400,10 +403,10 @@ class MultiModalExporter(ModelExporter):
         if dynamic_axes is None:
             dynamic_axes = {name: {0: "batch_size"} for name in input_names}
             dynamic_axes[output_names[0]] = {0: "batch_size"}
-        
-        print(f"Exporting multimodal model to ONNX: {output_path}")
+
+        logger.info(f"Exporting multimodal model to ONNX: {output_path}")
         for name, dummy_input in zip(input_names, dummy_inputs):
-            print(f"  {name}: {dummy_input.shape}")
+            logger.info(f"  {name}: {dummy_input.shape}")
         
         # 导出
         with warnings.catch_warnings():
@@ -420,9 +423,9 @@ class MultiModalExporter(ModelExporter):
                 verbose=verbose,
                 **kwargs,
             )
-        
-        print(f"✓ Model exported to {output_path}")
-        print(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
+
+        logger.info(f"✓ Model exported to {output_path}")
+        logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
     
     def export_torchscript(
         self,
@@ -434,14 +437,14 @@ class MultiModalExporter(ModelExporter):
         """导出为 TorchScript 格式"""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        print(f"Exporting multimodal model to TorchScript: {output_path}")
-        print(f"  Method: {method}")
-        
+
+        logger.info(f"Exporting multimodal model to TorchScript: {output_path}")
+        logger.info(f"  Method: {method}")
+
         if method == "trace":
             dummy_inputs = self._create_dummy_inputs()
             for name, dummy_input in zip(self.input_shapes.keys(), dummy_inputs):
-                print(f"  {name}: {dummy_input.shape}")
+                logger.info(f"  {name}: {dummy_input.shape}")
             
             traced_model = torch.jit.trace(self.model, dummy_inputs, **kwargs)
             
@@ -460,6 +463,6 @@ class MultiModalExporter(ModelExporter):
             
         else:
             raise ValueError(f"Unknown method: {method}")
-        
-        print(f"✓ Model exported to {output_path}")
-        print(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
+
+        logger.info(f"✓ Model exported to {output_path}")
+        logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
