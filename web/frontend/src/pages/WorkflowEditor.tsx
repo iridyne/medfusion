@@ -19,7 +19,7 @@ import {
   DeleteOutlined,
   ClearOutlined,
 } from '@ant-design/icons'
-import { executeWorkflow } from '@/api/workflow'
+import { validateWorkflow, executeWorkflow, getWorkflowStatus } from '@/api/workflow'
 import { nodeTypes } from '@/components/nodes'
 import NodePalette from '@/components/NodePalette'
 import NodeConfigPanel from '@/components/NodeConfigPanel'
@@ -37,6 +37,51 @@ export default function WorkflowEditor() {
   const [configPanelOpen, setConfigPanelOpen] = useState(false)
   const [workflowName, setWorkflowName] = useState('未命名工作流')
   const [nameModalOpen, setNameModalOpen] = useState(false)
+  const [executing, setExecuting] = useState(false)
+  const [executionProgress, setExecutionProgress] = useState<Record<string, any>>({})
+</text>
+
+<old_text line=113>
+  const handleExecute = async () => {
+    if (nodes.length === 0) {
+      message.warning('工作流为空，请先添加节点')
+      return
+    }
+
+    try {
+      message.loading('执行工作流中...', 0)
+
+      const workflow = {
+        name: workflowName,
+        nodes: nodes.map((node) => ({
+          id: node.id,
+          type: node.type || 'default',
+          position: node.position,
+          data: node.data,
+        })),
+        edges: edges.map((edge) => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle,
+        })),
+      }
+
+      const result = await executeWorkflow(workflow)
+      message.destroy()
+
+      if (result.status === 'success') {
+        message.success('工作流执行成功！')
+      } else {
+        message.error(`执行失败: ${result.error}`)
+      }
+    } catch (error) {
+      message.destroy()
+      message.error('执行工作流失败')
+      console.error(error)
+    }
+  }
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -114,10 +159,9 @@ export default function WorkflowEditor() {
     }
 
     try {
-      message.loading('执行工作流中...', 0)
+      setExecuting(true)
 
-      const workflow = {
-        name: workflowName,
+      const workflowData = {
         nodes: nodes.map((node) => ({
           id: node.id,
           type: node.type || 'default',
@@ -133,17 +177,89 @@ export default function WorkflowEditor() {
         })),
       }
 
-      const result = await executeWorkflow(workflow)
-      message.destroy()
+      // 步骤 1: 验证工作流
+      message.loading('验证工作流...', 0)
+      const validation = await validateWorkflow(workflowData)
 
-      if (result.status === 'success') {
-        message.success('工作流执行成功！')
-      } else {
-        message.error(`执行失败: ${result.error}`)
+      if (!validation.valid) {
+        message.destroy()
+        Modal.error({
+          title: '工作流验证失败',
+          content: (
+            <div>
+              <p>请修复以下错误：</p>
+              <ul>
+                {validation.errors.map((error: string, index: number) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+        })
+        setExecuting(false)
+        return
       }
-    } catch (error) {
+
+      // 步骤 2: 执行工作流
       message.destroy()
-      message.error('执行工作流失败')
+      message.loading('启动工作流执行...', 0)
+
+      const result = await executeWorkflow({
+        workflow: workflowData,
+        name: workflowName,
+      })
+
+      message.destroy()
+      message.success('工作流已启动')
+
+      // 步骤 3: 监控执行进度
+      const workflowId = result.workflow_id
+      const pollInterval = setInterval(async () => {
+        try {
+          const status = await getWorkflowStatus(workflowId)
+          setExecutionProgress(status.status)
+
+          // 更新节点状态
+          setNodes((nds) =>
+            nds.map((node) => {
+              const nodeStatus = status.status.nodes[node.id]
+              if (nodeStatus) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    status: nodeStatus.status,
+                    error: nodeStatus.error,
+                  },
+                }
+              }
+              return node
+            })
+          )
+
+          // 检查是否完成
+          if (status.status.completed + status.status.failed === status.status.total) {
+            clearInterval(pollInterval)
+            setExecuting(false)
+
+            if (status.status.failed > 0) {
+              message.error('工作流执行失败，部分节点出错')
+            } else {
+              message.success('工作流执行成功！')
+            }
+          }
+        } catch (error) {
+          console.error('Failed to poll workflow status:', error)
+          clearInterval(pollInterval)
+          setExecuting(false)
+          message.error('获取执行状态失败')
+        }
+      }, 2000) // 每 2 秒轮询一次
+
+    } catch (error: any) {
+      message.destroy()
+      setExecuting(false)
+      message.error(error.message || '执行工作流失败')
       console.error(error)
     }
   }
@@ -194,8 +310,10 @@ export default function WorkflowEditor() {
             type="primary"
             icon={<PlayCircleOutlined />}
             onClick={handleExecute}
+            loading={executing}
+            disabled={executing}
           >
-            执行
+            {executing ? '执行中...' : '执行'}
           </Button>
         </Space>
       </div>
