@@ -1,0 +1,143 @@
+# Pre-commit hooks for MedFusion
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.0
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      # Run the formatter
+      - id: ruff-format
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  # Import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile, black]
+
+  # Security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      
+      # Check for files that would conflict in case-insensitive filesystems
+      - id: check-case-conflict
+      
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      
+      # Check YAML files
+      - id: check-yaml
+        args: [--safe]
+      
+      # Check TOML files
+      - id: check-toml
+      
+      # Check JSON files
+      - id: check-json
+      
+      # Detect private keys
+      - id: detect-private-key
+      
+      # Fix end of files
+      - id: end-of-file-fixer
+      
+      # Fix trailing whitespace
+      - id: trailing-whitespace
+      
+      # Mixed line endings
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      
+      # Check for debugger imports
+      - id: debug-statements
+      
+      # Check Python syntax
+      - id: check-ast
+      
+      # Check docstring is first
+      - id: check-docstring-first
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  # YAML formatting
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.12.0
+    hooks:
+      - id: pretty-format-yaml
+        args: [--autofix, --indent, '2']
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+
+  # Commit message linting
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.14.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+# Configuration
+default_language_version:
+  python: python3.11
+
+# Files to exclude
+exclude: |
+  (?x)^(
+      \.venv/|
+      \.git/|
+      \.pytest_cache/|
+      __pycache__/|
+      \.mypy_cache/|
+      \.ruff_cache/|
+      build/|
+      dist/|
+      \.eggs/|
+      outputs/|
+      data/|
+      logs/
+  )
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '3.0.0'

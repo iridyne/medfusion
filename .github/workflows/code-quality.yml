@@ -1,0 +1,219 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  # Job 1: Linting with Ruff
+  ruff:
+    name: Ruff Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install ruff
+      run: pip install ruff
+    
+    - name: Run ruff check
+      run: |
+        ruff check med_core/ tests/ examples/ scripts/ \
+          --output-format=github \
+          --select=E,F,W,C,N,D,UP,S,B,A,COM,C4,DTZ,T10,EM,ISC,ICN,G,PIE,T20,PYI,PT,Q,RSE,RET,SLF,SIM,TID,TCH,ARG,PTH,ERA,PD,PGH,PL,TRY,NPY,RUF
+    
+    - name: Run ruff format check
+      run: ruff format --check med_core/ tests/ examples/ scripts/
+
+  # Job 2: Type Checking with mypy
+  mypy:
+    name: Type Checking
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+        uv pip install mypy
+    
+    - name: Run mypy
+      run: |
+        source .venv/bin/activate
+        mypy med_core/ \
+          --ignore-missing-imports \
+          --disallow-untyped-defs \
+          --disallow-incomplete-defs \
+          --check-untyped-defs \
+          --warn-redundant-casts \
+          --warn-unused-ignores \
+          --warn-return-any \
+          --strict-optional
+      continue-on-error: true
+
+  # Job 3: Code Complexity
+  complexity:
+    name: Code Complexity
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install tools
+      run: pip install radon xenon
+    
+    - name: Check cyclomatic complexity
+      run: |
+        radon cc med_core/ -a -nb
+        xenon --max-absolute B --max-modules A --max-average A med_core/
+      continue-on-error: true
+    
+    - name: Check maintainability index
+      run: radon mi med_core/ -nb
+      continue-on-error: true
+
+  # Job 4: Documentation Quality
+  doc-quality:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install tools
+      run: pip install pydocstyle interrogate
+    
+    - name: Check docstring coverage
+      run: |
+        interrogate med_core/ \
+          --verbose \
+          --fail-under=70 \
+          --ignore-init-method \
+          --ignore-magic \
+          --ignore-module \
+          --ignore-private
+      continue-on-error: true
+    
+    - name: Check docstring style
+      run: pydocstyle med_core/ --convention=google
+      continue-on-error: true
+
+  # Job 5: Import Order
+  import-order:
+    name: Import Order
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install isort
+      run: pip install isort
+    
+    - name: Check import order
+      run: isort --check-only --diff med_core/ tests/ examples/ scripts/
+
+  # Job 6: Dead Code Detection
+  dead-code:
+    name: Dead Code Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install vulture
+      run: pip install vulture
+    
+    - name: Check for dead code
+      run: vulture med_core/ --min-confidence 80
+      continue-on-error: true
+
+  # Job 7: Code Duplication
+  duplication:
+    name: Code Duplication
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install PMD CPD
+      run: |
+        wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F6.55.0/pmd-bin-6.55.0.zip
+        unzip pmd-bin-6.55.0.zip
+    
+    - name: Run CPD
+      run: |
+        ./pmd-bin-6.55.0/bin/run.sh cpd \
+          --minimum-tokens 50 \
+          --language python \
+          --files med_core/ \
+          --format text
+      continue-on-error: true
+
+  # Job 8: Summary Report
+  summary:
+    name: Quality Summary
+    runs-on: ubuntu-latest
+    needs: [ruff, mypy, complexity, doc-quality, import-order, dead-code, duplication]
+    if: always()
+    
+    steps:
+    - name: Generate summary
+      run: |
+        echo "## Code Quality Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Ruff Linting | ${{ needs.ruff.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Type Checking | ${{ needs.mypy.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Complexity | ${{ needs.complexity.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Documentation | ${{ needs.doc-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Import Order | ${{ needs.import-order.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Dead Code | ${{ needs.dead-code.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Duplication | ${{ needs.duplication.result }} |" >> $GITHUB_STEP_SUMMARY

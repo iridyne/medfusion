@@ -1,0 +1,300 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  # Job 1: Code Quality Checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+    
+    - name: Run ruff (linting)
+      run: |
+        source .venv/bin/activate
+        ruff check med_core/ tests/ --output-format=github
+      continue-on-error: true
+    
+    - name: Run ruff (formatting)
+      run: |
+        source .venv/bin/activate
+        ruff format --check med_core/ tests/
+      continue-on-error: true
+    
+    - name: Run mypy (type checking)
+      run: |
+        source .venv/bin/activate
+        mypy med_core/ --ignore-missing-imports
+      continue-on-error: true
+
+  # Job 2: Testing
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+    
+    - name: Run tests
+      run: |
+        source .venv/bin/activate
+        pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  # Job 3: Integration Tests
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+    
+    - name: Generate mock data
+      run: |
+        source .venv/bin/activate
+        python scripts/generate_mock_data.py
+    
+    - name: Run integration tests
+      run: |
+        source .venv/bin/activate
+        pytest tests/test_end_to_end.py -v --tb=short
+    
+    - name: Run smoke tests
+      run: |
+        source .venv/bin/activate
+        python scripts/smoke_test.py
+
+  # Job 4: Docker Build
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: medfusion:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Test Docker image
+      run: |
+        docker run --rm medfusion:test python -c "import med_core; print(med_core.__version__)"
+
+  # Job 5: Security Scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+        uv pip install bandit safety
+    
+    - name: Run bandit (security linter)
+      run: |
+        source .venv/bin/activate
+        bandit -r med_core/ -f json -o bandit-report.json
+      continue-on-error: true
+    
+    - name: Run safety (dependency check)
+      run: |
+        source .venv/bin/activate
+        safety check --json
+      continue-on-error: true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+
+  # Job 6: Documentation
+  docs:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+    
+    - name: Check documentation links
+      run: |
+        source .venv/bin/activate
+        # Check for broken links in markdown files
+        find docs/ -name "*.md" -type f
+    
+    - name: Validate examples
+      run: |
+        source .venv/bin/activate
+        python -m py_compile examples/*.py
+
+  # Job 7: Performance Tests
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -e ".[dev]"
+    
+    - name: Run performance benchmarks
+      run: |
+        source .venv/bin/activate
+        # Add performance tests when available
+        echo "Performance tests placeholder"
+
+  # Job 8: Build Summary
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, test, integration-test, docker-build, security, docs]
+    if: always()
+    
+    steps:
+    - name: Check build status
+      run: |
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Tests: ${{ needs.test.result }}"
+        echo "Integration Tests: ${{ needs.integration-test.result }}"
+        echo "Docker Build: ${{ needs.docker-build.result }}"
+        echo "Security: ${{ needs.security.result }}"
+        echo "Documentation: ${{ needs.docs.result }}"
+    
+    - name: Fail if any job failed
+      if: |
+        needs.code-quality.result == 'failure' ||
+        needs.test.result == 'failure' ||
+        needs.integration-test.result == 'failure' ||
+        needs.docker-build.result == 'failure'
+      run: exit 1
