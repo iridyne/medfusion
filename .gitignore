@@ -96,3 +96,4 @@ med_core_rs/*.pyd
 
 # Documentation build
 docs/_build/
+web/frontend/package-lock.json
