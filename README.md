@@ -94,6 +94,30 @@ uv run medfusion-evaluate \
     --split test
 ```
 
+### 4. Web UI（可选）
+
+启动可视化 Web 界面进行训练监控和模型管理。
+
+```bash
+# 快速启动（推荐）
+./start-webui.sh
+
+# 或手动启动
+uv run uvicorn med_core.web.app:app --host 127.0.0.1 --port 8000
+```
+
+访问 http://127.0.0.1:8000 查看 Web 界面。
+
+**主要功能：**
+- 🎯 实时训练监控（损失曲线、准确率、学习率）
+- 📊 模型管理（浏览、上传、下载模型）
+- 🔄 可视化工作流编辑器（开发中）
+- 📁 数据集管理和预处理
+- 💻 系统资源监控（GPU、内存、CPU）
+- 🌐 完整的 RESTful API
+
+**详细文档：** 参见 `docs/WEB_UI_QUICKSTART.md`
+
 ## ⚙️ 配置
 
 框架由 YAML 配置文件驱动。完整示例请参见 `configs/default.yaml`。
@@ -354,6 +378,7 @@ MedFusion 提供丰富的预构建组件：
 ## 📖 文档资源
 
 - **快速开始指南**：`docs/quick-start-guide.md`
+- **项目路线图**：`ROADMAP.md` - 查看 MedFusion 的未来发展规划
 - **多视图完整指南**：`docs/MULTIVIEW_TYPES_GUIDE.md`
 - **多视图速查表**：`docs/MULTIVIEW_TYPES_SUMMARY.md`
 - **注意力机制指南**：`docs/ATTENTION_MECHANISM_GUIDE.md`
@@ -372,6 +397,19 @@ MedFusion 适用于以下医学影像任务：
 - ✅ **多模态融合**：影像 + 临床数据
 - ✅ **时间序列分析**：疾病进展追踪
 - ✅ **可解释性研究**：注意力可视化、Grad-CAM
+
+## 🗺️ 项目路线图
+
+MedFusion 正在持续发展中。查看 [ROADMAP.md](ROADMAP.md) 了解详细的版本规划和功能路线图。
+
+**当前版本：** v0.3.0  
+**下一版本：** v0.4.0 (2026-Q2) - 性能优化和易用性提升
+
+主要发展方向：
+- 🚀 **性能优化**：分布式训练、混合精度、模型压缩
+- 🎨 **易用性提升**：AutoML、预训练模型库、一键部署
+- 🔬 **研究支持**：3D 医学影像、联邦学习、可解释性增强
+- 🌐 **生态系统**：插件系统、社区贡献、论文复现
 
 ## 🤝 贡献
 
