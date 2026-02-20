@@ -6,15 +6,20 @@
 """
 
 import time
+from collections.abc import Callable
+
 import numpy as np
-from typing import Callable
 
 # Import Rust implementation
 try:
     from med_core_rs import (
-        normalize_intensity_minmax as rust_minmax,
-        normalize_intensity_percentile as rust_percentile,
         normalize_intensity_batch as rust_batch,
+    )
+    from med_core_rs import (
+        normalize_intensity_minmax as rust_minmax,
+    )
+    from med_core_rs import (
+        normalize_intensity_percentile as rust_percentile,
     )
     RUST_AVAILABLE = True
 except ImportError:
@@ -71,7 +76,7 @@ def compare_single_image():
         image = np.random.rand(size, size).astype(np.float32) * 255
 
         # MinMax
-        print(f"\n  MinMax 归一化:")
+        print("\n  MinMax 归一化:")
         numpy_mean, numpy_std = benchmark_function(numpy_normalize_minmax, image)
         print(f"    NumPy:  {numpy_mean*1000:6.2f} ± {numpy_std*1000:4.2f} ms")
 
@@ -82,7 +87,7 @@ def compare_single_image():
             print(f"    🚀 加速: {speedup:.2f}x")
 
         # Percentile
-        print(f"\n  Percentile 归一化:")
+        print("\n  Percentile 归一化:")
         numpy_mean, numpy_std = benchmark_function(numpy_normalize_percentile, image, 1.0, 99.0)
         print(f"    NumPy:  {numpy_mean*1000:6.2f} ± {numpy_std*1000:4.2f} ms")
 

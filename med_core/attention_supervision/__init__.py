@@ -10,6 +10,22 @@
 4. SE/ECA/Transformer 注意力（v0.2.0 新增）
 """
 
+from med_core.attention_supervision.advanced_attention import (
+    CBAM,
+    ECAAttention,
+    MultiHeadSelfAttention,
+    SEAttention,
+    SpatialAttention,
+    TransformerAttention2D,
+    create_attention_module,
+)
+from med_core.attention_supervision.advanced_supervision import (
+    ChannelAttentionSupervision,
+    HybridAttentionSupervision,
+    SpatialAttentionSupervision,
+    TransformerAttentionSupervision,
+    create_attention_supervision,
+)
 from med_core.attention_supervision.base import (
     AttentionLoss,
     BaseAttentionSupervision,
@@ -25,22 +41,6 @@ from med_core.attention_supervision.mask_supervision import (
 from med_core.attention_supervision.mil_supervision import (
     MultiInstanceLearning,
     extract_patches,
-)
-from med_core.attention_supervision.advanced_attention import (
-    SEAttention,
-    ECAAttention,
-    SpatialAttention,
-    CBAM,
-    MultiHeadSelfAttention,
-    TransformerAttention2D,
-    create_attention_module,
-)
-from med_core.attention_supervision.advanced_supervision import (
-    ChannelAttentionSupervision,
-    SpatialAttentionSupervision,
-    TransformerAttentionSupervision,
-    HybridAttentionSupervision,
-    create_attention_supervision,
 )
 
 __all__ = [

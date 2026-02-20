@@ -4,18 +4,19 @@
 
 这个示例展示了如何在真实的训练代码中集成 Rust 加速模块。
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'target/release'))
 
-import numpy as np
 import time
-from typing import List, Tuple
+
+import numpy as np
 
 # 模拟 PyTorch (如果没有安装)
 try:
     import torch
-    from torch.utils.data import Dataset, DataLoader
+    from torch.utils.data import DataLoader
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -52,7 +53,7 @@ class MedicalImageDataset:
 # 2. 定义 Collate 函数 (关键优化点)
 # ============================================================================
 
-def collate_fn_numpy(batch: List[Tuple[np.ndarray, int]]):
+def collate_fn_numpy(batch: list[tuple[np.ndarray, int]]):
     """传统的 NumPy collate 函数"""
     images, labels = zip(*batch)
     images = np.stack(images)
@@ -70,7 +71,7 @@ def collate_fn_numpy(batch: List[Tuple[np.ndarray, int]]):
     else:
         return normalized, np.array(labels)
 
-def collate_fn_rust(batch: List[Tuple[np.ndarray, int]]):
+def collate_fn_rust(batch: list[tuple[np.ndarray, int]]):
     """🚀 使用 Rust 加速的 collate 函数"""
     images, labels = zip(*batch)
     images = np.stack(images)
@@ -124,7 +125,7 @@ def benchmark_dataloader(collate_fn, name: str, n_batches: int = 50):
         dataloader = SimpleDataLoader(dataset, batch_size=32, collate_fn=collate_fn)
 
     # 预热
-    for i, (images, labels) in enumerate(dataloader):
+    for i, (_images, _labels) in enumerate(dataloader):
         if i >= 2:
             break
 
@@ -132,7 +133,7 @@ def benchmark_dataloader(collate_fn, name: str, n_batches: int = 50):
     times = []
     start_total = time.time()
 
-    for i, (images, labels) in enumerate(dataloader):
+    for i, (images, _labels) in enumerate(dataloader):
         if i >= n_batches:
             break
 
@@ -253,7 +254,7 @@ print("="*70)
 print(f"NumPy epoch 时间: {numpy_epoch_time:.2f} 秒")
 print(f"Rust epoch 时间:  {rust_epoch_time:.2f} 秒")
 print(f"加速比: {train_speedup:.2f}x")
-print(f"\n💡 对于 100 epochs 训练:")
+print("\n💡 对于 100 epochs 训练:")
 print(f"  NumPy: {numpy_epoch_time * 100 / 60:.1f} 分钟")
 print(f"  Rust:  {rust_epoch_time * 100 / 60:.1f} 分钟")
 print(f"  节省: {(numpy_epoch_time - rust_epoch_time) * 100 / 60:.1f} 分钟")

@@ -11,13 +11,10 @@
     medfusion-web logs           # 查看日志
 """
 
-import os
-import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
 
 import click
 import psutil
@@ -36,7 +33,7 @@ def ensure_dirs():
     PID_DIR.mkdir(exist_ok=True)
 
 
-def get_pid(service: str) -> Optional[int]:
+def get_pid(service: str) -> int | None:
     """获取服务的 PID"""
     pid_file = PID_DIR / f"{service}.pid"
     if pid_file.exists():
@@ -157,7 +154,7 @@ def start_backend(host: str, port: int, reload: bool, daemon: bool):
             click.echo(f"   日志文件: {log_file}")
         else:
             # 前台运行
-            click.echo(click.style(f"✅ 后端服务启动中...", fg="green"))
+            click.echo(click.style("✅ 后端服务启动中...", fg="green"))
             click.echo(f"   API 地址: http://{host}:{port}")
             click.echo(f"   API 文档: http://{host}:{port}/docs")
             click.echo(click.style("\n按 Ctrl+C 停止服务\n", fg="yellow"))
@@ -216,7 +213,7 @@ def start_frontend(port: int, daemon: bool):
             click.echo(f"   日志文件: {log_file}")
         else:
             # 前台运行
-            click.echo(click.style(f"✅ 前端服务启动中...", fg="green"))
+            click.echo(click.style("✅ 前端服务启动中...", fg="green"))
             click.echo(f"   访问地址: http://localhost:{port}")
             click.echo(click.style("\n按 Ctrl+C 停止服务\n", fg="yellow"))
 
@@ -342,11 +339,11 @@ def status():
 
     # 检查端口
     if check_port(8000):
-        click.echo(f"  后端端口 8000: ", nl=False)
+        click.echo("  后端端口 8000: ", nl=False)
         click.echo(click.style("✅ 可访问", fg="green"))
 
     if check_port(5173):
-        click.echo(f"  前端端口 5173: ", nl=False)
+        click.echo("  前端端口 5173: ", nl=False)
         click.echo(click.style("✅ 可访问", fg="green"))
 
 

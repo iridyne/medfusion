@@ -1,12 +1,12 @@
 """数据库连接和会话管理"""
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 from app.models.database import Base
-
 
 # 创建数据库引擎
 engine = create_engine(

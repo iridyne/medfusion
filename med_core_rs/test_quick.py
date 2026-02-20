@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """快速测试 Rust 模块是否正常工作"""
 
-import numpy as np
 import time
+
+import numpy as np
 
 print("🧪 测试 Rust 加速模块")
 print("=" * 60)
@@ -10,10 +11,10 @@ print("=" * 60)
 # 测试导入
 try:
     from med_core_rs import (
+        center_crop_rust,
+        normalize_intensity_batch,
         normalize_intensity_minmax,
         normalize_intensity_percentile,
-        normalize_intensity_batch,
-        center_crop_rust,
     )
     print("✅ 模块导入成功！")
 except ImportError as e:

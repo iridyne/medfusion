@@ -7,7 +7,6 @@ clear error messages and suggestions.
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 from med_core.configs.base_config import ExperimentConfig
 

@@ -1,6 +1,5 @@
 """Tests for enhanced exception system."""
 
-import pytest
 
 from med_core.exceptions import (
     AttentionSupervisionError,
@@ -63,7 +62,7 @@ class TestBackboneNotFoundError:
         """Test backbone not found error."""
         available = ["resnet18", "resnet50", "efficientnet_b0"]
         error = BackboneNotFoundError("invalid_backbone", available)
-        
+
         assert error.error_code == "E311"
         assert "invalid_backbone" in error.base_message
         assert "resnet18" in str(error)
@@ -77,7 +76,7 @@ class TestFusionNotFoundError:
         """Test fusion not found error."""
         available = ["concatenate", "gated", "attention"]
         error = FusionNotFoundError("invalid_fusion", available)
-        
+
         assert error.error_code == "E321"
         assert "invalid_fusion" in error.base_message
         assert "concatenate" in str(error)
@@ -89,7 +88,7 @@ class TestDatasetNotFoundError:
     def test_dataset_not_found(self):
         """Test dataset not found error."""
         error = DatasetNotFoundError("/path/to/dataset.csv")
-        
+
         assert error.error_code == "E201"
         assert "/path/to/dataset.csv" in error.base_message
         assert "Check that the path exists" in str(error)
@@ -102,7 +101,7 @@ class TestMissingColumnError:
         """Test missing column error."""
         available = ["col1", "col2", "col3"]
         error = MissingColumnError("missing_col", available)
-        
+
         assert error.error_code == "E202"
         assert "missing_col" in error.base_message
         assert "col1, col2, col3" in str(error)
@@ -118,7 +117,7 @@ class TestDimensionMismatchError:
             actual=(32, 3, 256, 256),
             tensor_name="input_image"
         )
-        
+
         assert error.error_code == "E701"
         assert error.expected == (32, 3, 224, 224)
         assert error.actual == (32, 3, 256, 256)
@@ -132,7 +131,7 @@ class TestMissingDependencyError:
     def test_missing_dependency_default(self):
         """Test missing dependency with default install command."""
         error = MissingDependencyError("torch")
-        
+
         assert error.error_code == "E800"
         assert error.package == "torch"
         assert "pip install torch" in str(error)
@@ -140,7 +139,7 @@ class TestMissingDependencyError:
     def test_missing_dependency_custom_install(self):
         """Test missing dependency with custom install command."""
         error = MissingDependencyError("torch", "conda install pytorch")
-        
+
         assert "conda install pytorch" in str(error)
 
 
@@ -155,7 +154,7 @@ class TestTrainingError:
             step=500,
             suggestion="Reduce learning rate"
         )
-        
+
         assert error.error_code == "E400"
         assert error.context["epoch"] == 10
         assert error.context["step"] == 500
@@ -168,7 +167,7 @@ class TestCheckpointNotFoundError:
     def test_checkpoint_not_found(self):
         """Test checkpoint not found error."""
         error = CheckpointNotFoundError("/path/to/checkpoint.pth")
-        
+
         assert error.error_code == "E411"
         assert "/path/to/checkpoint.pth" in error.base_message
 
@@ -183,7 +182,7 @@ class TestAttentionSupervisionError:
             attention_type="se",
             suggestion="Use CBAM attention instead"
         )
-        
+
         assert error.error_code == "E900"
         assert error.context["attention_type"] == "se"
         assert "Use CBAM" in str(error)
@@ -200,7 +199,7 @@ class TestMultiViewError:
             num_views=2,
             suggestion="Provide all required views"
         )
-        
+
         assert error.error_code == "E1000"
         assert error.context["view_name"] == "coronal"
         assert error.context["num_views"] == 2
@@ -216,7 +215,7 @@ class TestIncompatibleConfigError:
             conflicting_options=["use_attention_supervision", "attention_type=se"],
             suggestion="Use CBAM attention for supervision"
         )
-        
+
         assert error.error_code == "E101"
         assert "use_attention_supervision" in error.context["conflicting_options"]
 
@@ -230,9 +229,9 @@ class TestFormatErrorReport:
             "resnet999",
             ["resnet18", "resnet50"]
         )
-        
+
         report = format_error_report(error)
-        
+
         assert "❌ Error [E311]" in report
         assert "📋 Context:" in report
         assert "💡 Suggestion:" in report
@@ -241,18 +240,18 @@ class TestFormatErrorReport:
     def test_format_standard_error(self):
         """Test formatting standard Python error."""
         error = ValueError("Invalid value")
-        
+
         report = format_error_report(error)
-        
+
         assert "❌ Error:" in report
         assert "Invalid value" in report
 
     def test_format_error_without_suggestion(self):
         """Test formatting error without suggestion."""
         error = MedCoreError("Test error", error_code="E999")
-        
+
         report = format_error_report(error)
-        
+
         assert "❌ Error [E999]" in report
         assert "💡 Suggestion:" not in report
 
@@ -269,7 +268,7 @@ class TestErrorHierarchy:
             TrainingError("test"),
             CheckpointNotFoundError("/path"),
         ]
-        
+
         for error in errors:
             assert isinstance(error, MedCoreError)
             assert isinstance(error, Exception)
@@ -277,7 +276,7 @@ class TestErrorHierarchy:
     def test_specific_inheritance(self):
         """Test specific inheritance relationships."""
         error = BackboneNotFoundError("test", [])
-        
+
         assert isinstance(error, BackboneNotFoundError)
         assert isinstance(error, MedCoreError)
         assert isinstance(error, Exception)
@@ -303,13 +302,13 @@ class TestErrorCodes:
             AttentionSupervisionError("test"),  # E900
             MultiViewError("test"),  # E1000
         ]
-        
+
         codes = [e.error_code for e in errors]
         assert len(codes) == len(set(codes)), "Error codes must be unique"
 
     def test_error_codes_format(self):
         """Test that error codes follow format."""
         error = BackboneNotFoundError("test", [])
-        
+
         assert error.error_code.startswith("E")
         assert error.error_code[1:].isdigit()

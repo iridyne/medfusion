@@ -1,12 +1,13 @@
 """工作流 API"""
-from fastapi import APIRouter, HTTPException, WebSocket, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 
-from app.core.node_registry import node_registry
 from app.core.database import get_db
-from app.crud import WorkflowCRUD, WorkflowExecutionCRUD
+from app.core.node_registry import node_registry
+from app.crud import WorkflowCRUD
 
 router = APIRouter()
 
@@ -15,8 +16,8 @@ class Node(BaseModel):
     """节点模型"""
     id: str
     type: str
-    position: Dict[str, float]
-    data: Dict[str, Any]
+    position: dict[str, float]
+    data: dict[str, Any]
 
 
 class Edge(BaseModel):
@@ -24,17 +25,17 @@ class Edge(BaseModel):
     id: str
     source: str
     target: str
-    sourceHandle: Optional[str] = None
-    targetHandle: Optional[str] = None
+    sourceHandle: str | None = None
+    targetHandle: str | None = None
 
 
 class Workflow(BaseModel):
     """工作流模型"""
-    id: Optional[str] = None
+    id: str | None = None
     name: str
-    description: Optional[str] = ""
-    nodes: List[Node]
-    edges: List[Edge]
+    description: str | None = ""
+    nodes: list[Node]
+    edges: list[Edge]
 
 
 class WorkflowExecuteRequest(BaseModel):
@@ -65,7 +66,7 @@ async def create_workflow(workflow: Workflow, db: Session = Depends(get_db)):
     existing = WorkflowCRUD.get_by_name(db, workflow.name)
     if existing:
         raise HTTPException(status_code=400, detail=f"Workflow with name '{workflow.name}' already exists")
-    
+
     # 保存到数据库
     db_workflow = WorkflowCRUD.create(
         db=db,
@@ -74,7 +75,7 @@ async def create_workflow(workflow: Workflow, db: Session = Depends(get_db)):
         nodes=[node.dict() for node in workflow.nodes],
         edges=[edge.dict() for edge in workflow.edges],
     )
-    
+
     return {
         "id": db_workflow.id,
         "name": db_workflow.name,
@@ -92,7 +93,7 @@ async def list_workflows(
 ):
     """列出所有工作流"""
     workflows = WorkflowCRUD.list(db, skip=skip, limit=limit)
-    
+
     return {
         "workflows": [
             {
@@ -114,10 +115,10 @@ async def list_workflows(
 async def get_workflow(workflow_id: int, db: Session = Depends(get_db)):
     """获取工作流详情"""
     workflow = WorkflowCRUD.get(db, workflow_id)
-    
+
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    
+
     return {
         "id": workflow.id,
         "name": workflow.name,
@@ -146,10 +147,10 @@ async def update_workflow(
         nodes=[node.dict() for node in workflow.nodes],
         edges=[edge.dict() for edge in workflow.edges],
     )
-    
+
     if not db_workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    
+
     return {
         "id": db_workflow.id,
         "name": db_workflow.name,
@@ -163,35 +164,35 @@ async def update_workflow(
 async def delete_workflow(workflow_id: int, db: Session = Depends(get_db)):
     """删除工作流"""
     success = WorkflowCRUD.delete(db, workflow_id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Workflow not found")
-    
+
     return {"status": "deleted", "id": workflow_id}
 
 
 @router.post("/execute")
 async def execute_workflow(request: WorkflowExecuteRequest):
     """执行工作流
-    
+
     使用工作流引擎执行，支持：
     - 依赖关系解析
     - 并行执行
     - 错误处理
     """
     from app.core.workflow_engine import WorkflowEngine
-    
+
     workflow_dict = {
         "nodes": [node.dict() for node in request.workflow.nodes],
         "edges": [edge.dict() for edge in request.workflow.edges],
     }
-    
+
     # 创建执行引擎
     engine = WorkflowEngine(workflow_dict)
-    
+
     # 执行工作流
     result = await engine.execute()
-    
+
     return result
 
 
@@ -199,21 +200,21 @@ async def execute_workflow(request: WorkflowExecuteRequest):
 async def execute_workflow_ws(websocket: WebSocket):
     """通过 WebSocket 执行工作流，实时推送进度"""
     from app.core.workflow_engine import WorkflowEngine
-    
+
     await websocket.accept()
-    
+
     try:
         # 接收工作流定义
         data = await websocket.receive_json()
-        
+
         workflow_dict = {
             "nodes": data.get("nodes", []),
             "edges": data.get("edges", []),
         }
-        
+
         # 创建执行引擎
         engine = WorkflowEngine(workflow_dict)
-        
+
         # 定义进度回调
         async def progress_callback(node_id, status, execution, progress):
             await websocket.send_json({
@@ -228,27 +229,27 @@ async def execute_workflow_ws(websocket: WebSocket):
                     "duration": execution.duration if execution else None,
                 },
             })
-        
+
         # 发送开始消息
         await websocket.send_json({
             "type": "workflow_started",
             "total_nodes": len(workflow_dict["nodes"]),
         })
-        
+
         # 执行工作流
         result = await engine.execute(progress_callback=progress_callback)
-        
+
         # 发送完成消息
         await websocket.send_json({
             "type": "workflow_completed",
             "result": result,
         })
-        
+
     except Exception as e:
         await websocket.send_json({
             "type": "workflow_error",
             "error": str(e),
         })
-    
+
     finally:
         await websocket.close()

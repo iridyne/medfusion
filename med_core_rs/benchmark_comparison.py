@@ -6,15 +6,20 @@ Usage:
 """
 
 import time
+from collections.abc import Callable
+
 import numpy as np
-from typing import Callable, Tuple
 
 # Import both implementations
 try:
     from med_core_rs import (
-        normalize_intensity_minmax as rust_minmax,
-        normalize_intensity_percentile as rust_percentile,
         normalize_intensity_batch as rust_batch,
+    )
+    from med_core_rs import (
+        normalize_intensity_minmax as rust_minmax,
+    )
+    from med_core_rs import (
+        normalize_intensity_percentile as rust_percentile,
     )
     RUST_AVAILABLE = True
 except ImportError:

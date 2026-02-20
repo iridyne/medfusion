@@ -3,8 +3,7 @@
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -39,7 +38,7 @@ class PreprocessingTaskCreate(BaseModel):
     """创建预处理任务请求"""
 
     name: str = Field(..., min_length=1, max_length=255, description="任务名称")
-    description: Optional[str] = Field(None, description="任务描述")
+    description: str | None = Field(None, description="任务描述")
     input_dir: str = Field(..., min_length=1, description="输入目录路径")
     output_dir: str = Field(..., min_length=1, description="输出目录路径")
     config: PreprocessingConfig = Field(..., description="预处理配置")
@@ -51,7 +50,7 @@ class PreprocessingTaskResponse(BaseModel):
     id: int
     task_id: str
     name: str
-    description: Optional[str]
+    description: str | None
     input_dir: str
     output_dir: str
     config: dict
@@ -60,11 +59,11 @@ class PreprocessingTaskResponse(BaseModel):
     total_images: int
     processed_images: int
     failed_images: int
-    error: Optional[str]
+    error: str | None
     created_at: datetime
-    started_at: Optional[datetime]
-    completed_at: Optional[datetime]
-    duration: Optional[float]
+    started_at: datetime | None
+    completed_at: datetime | None
+    duration: float | None
 
     class Config:
         from_attributes = True
@@ -73,7 +72,7 @@ class PreprocessingTaskResponse(BaseModel):
 class PreprocessingTaskListResponse(BaseModel):
     """预处理任务列表响应"""
 
-    tasks: List[PreprocessingTaskResponse]
+    tasks: list[PreprocessingTaskResponse]
     total: int
     skip: int
     limit: int
@@ -126,7 +125,7 @@ async def start_preprocessing(
                         db,
                         task.id,
                         status="running",
-                        started_at=datetime.now(timezone.utc),
+                        started_at=datetime.now(UTC),
                         total_images=data["total_images"],
                     )
                 elif data["type"] == "progress":
@@ -144,7 +143,7 @@ async def start_preprocessing(
                         task.id,
                         status="completed",
                         progress=1.0,
-                        completed_at=datetime.now(timezone.utc),
+                        completed_at=datetime.now(UTC),
                         duration=result["duration"],
                         result=result,
                     )
@@ -153,7 +152,7 @@ async def start_preprocessing(
                         db,
                         task.id,
                         status="cancelled",
-                        completed_at=datetime.now(timezone.utc),
+                        completed_at=datetime.now(UTC),
                     )
             except Exception as e:
                 logger.error(f"Error in progress callback: {e}")
@@ -183,7 +182,7 @@ async def start_preprocessing(
                         task.id,
                         status="failed",
                         error=error,
-                        completed_at=datetime.now(timezone.utc),
+                        completed_at=datetime.now(UTC),
                     )
             except Exception as e:
                 logger.error(f"Error in task done callback: {e}")
@@ -195,12 +194,12 @@ async def start_preprocessing(
         return task
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Failed to start preprocessing: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to start preprocessing: {e}"
-        )
+        ) from e
 
 
 @router.get("/status/{task_id}", response_model=PreprocessingTaskResponse)
@@ -219,7 +218,7 @@ async def get_preprocessing_status(
 async def list_preprocessing_tasks(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
+    status: str | None = None,
     sort_by: str = "created_at",
     order: str = "desc",
     db: Session = Depends(get_db),
@@ -345,7 +344,7 @@ async def preprocessing_websocket(
                     "processed_images": task.processed_images,
                     "failed_images": task.failed_images,
                     "total_images": task.total_images,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -376,10 +375,10 @@ async def preprocessing_websocket(
                     "message": str(e),
                 }
             )
-        except:
+        except Exception:
             pass
     finally:
         try:
             await websocket.close()
-        except:
+        except Exception:
             pass

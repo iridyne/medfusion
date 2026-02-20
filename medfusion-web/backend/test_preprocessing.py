@@ -4,7 +4,6 @@
 """
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -12,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.crud.preprocessing import PreprocessingTaskCRUD
-from app.models.database import Base, PreprocessingTask
+from app.models.database import Base
 from app.services.preprocessing_service import preprocessing_service
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -97,7 +96,7 @@ def test_crud_operations():
         # 8. 获取统计信息
         print("\n8. 获取统计信息...")
         stats = PreprocessingTaskCRUD.get_statistics(db)
-        print(f"✅ 统计信息:")
+        print("✅ 统计信息:")
         print(f"   - 总任务数: {stats['total_tasks']}")
         print(f"   - 状态分布: {stats['status_counts']}")
         print(f"   - 已处理图像: {stats['total_processed_images']}")
@@ -106,7 +105,7 @@ def test_crud_operations():
         print("\n9. 删除任务...")
         success = PreprocessingTaskCRUD.delete(db, task.id)
         assert success
-        print(f"✅ 删除成功")
+        print("✅ 删除成功")
 
         print("\n" + "=" * 60)
         print("✅ 所有 CRUD 测试通过!")
@@ -173,7 +172,7 @@ async def test_preprocessing_service():
             progress_callback=progress_callback,
         )
 
-        print(f"\n✅ 预处理完成!")
+        print("\n✅ 预处理完成!")
         print(f"   - 状态: {result['status']}")
         print(f"   - 总图像数: {result['total_images']}")
         print(f"   - 已处理: {result['processed_images']}")
@@ -262,11 +261,11 @@ async def test_cancellation():
         print("\n3. 取消任务...")
         success = preprocessing_service.cancel_task(task_id)
         assert success
-        print(f"✅ 取消请求已发送")
+        print("✅ 取消请求已发送")
 
         # 等待任务完成
         result = await task
-        print(f"\n✅ 任务已取消!")
+        print("\n✅ 任务已取消!")
         print(f"   - 状态: {result['status']}")
         print(f"   - 已处理: {result['processed_images']}/{result['total_images']}")
 

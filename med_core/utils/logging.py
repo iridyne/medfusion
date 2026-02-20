@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 # Context variables for structured logging
-log_context: ContextVar[dict[str, Any]] = ContextVar("log_context", default={})
+log_context: ContextVar[dict[str, Any] | None] = ContextVar("log_context", default=None)
 
 
 class ContextFilter(logging.Filter):
@@ -22,8 +22,9 @@ class ContextFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         """Add context to log record."""
         context = log_context.get()
-        for key, value in context.items():
-            setattr(record, key, value)
+        if context:
+            for key, value in context.items():
+                setattr(record, key, value)
         return True
 
 
@@ -130,12 +131,12 @@ def setup_logging(
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(getattr(logging, level.upper()))
     console_handler.addFilter(context_filter)
-    
+
     if use_colors and sys.stdout.isatty():
         console_formatter = ColoredFormatter(format_string)
     else:
         console_formatter = logging.Formatter(format_string)
-    
+
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
@@ -146,12 +147,12 @@ def setup_logging(
         file_handler = logging.FileHandler(log_path)
         file_handler.setLevel(getattr(logging, level.upper()))
         file_handler.addFilter(context_filter)
-        
+
         if use_json:
             file_formatter = JSONFormatter()
         else:
             file_formatter = logging.Formatter(format_string)
-        
+
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
@@ -174,7 +175,7 @@ def get_logger(name: str) -> logging.Logger:
 class LogContext:
     """
     Context manager for adding structured context to logs.
-    
+
     Usage:
         with LogContext(experiment="exp1", epoch=5):
             logger.info("Training started")
@@ -202,7 +203,7 @@ class LogContext:
 class PerformanceLogger:
     """
     Context manager for logging performance metrics.
-    
+
     Usage:
         with PerformanceLogger("data_loading"):
             load_data()
@@ -219,7 +220,7 @@ class PerformanceLogger:
     ):
         """
         Initialize performance logger.
-        
+
         Args:
             operation: Name of the operation being timed
             logger: Logger to use (default: root logger)
@@ -242,13 +243,13 @@ class PerformanceLogger:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Stop timing and log performance."""
         elapsed = time.perf_counter() - self.start_time
-        
+
         message = f"{self.operation} completed in {elapsed:.4f}s"
-        
+
         extra = {"operation": self.operation, "elapsed_time": elapsed}
         if self.log_args:
             extra.update(self.kwargs)
-        
+
         if exc_type is not None:
             extra["error"] = str(exc_val)
             self.logger.error(f"{self.operation} failed after {elapsed:.4f}s", extra=extra)
@@ -259,7 +260,7 @@ class PerformanceLogger:
 def log_function_call(logger: logging.Logger | None = None, level: int = logging.DEBUG):
     """
     Decorator to log function calls with arguments and execution time.
-    
+
     Usage:
         @log_function_call()
         def my_function(arg1, arg2):
@@ -269,13 +270,13 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
         nonlocal logger
         if logger is None:
             logger = logging.getLogger(func.__module__)
-        
+
         def wrapper(*args, **kwargs):
             func_name = func.__qualname__
-            
+
             # Log function call
             logger.log(level, f"Calling {func_name}")
-            
+
             # Execute with performance tracking
             start_time = time.perf_counter()
             try:
@@ -295,7 +296,7 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
                     exc_info=True
                 )
                 raise
-        
+
         return wrapper
     return decorator
 
@@ -303,7 +304,7 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
 class MetricsLogger:
     """
     Logger for tracking metrics over time.
-    
+
     Usage:
         metrics = MetricsLogger("training")
         metrics.log("loss", 0.5, step=100)
@@ -313,7 +314,7 @@ class MetricsLogger:
     def __init__(self, name: str, logger: logging.Logger | None = None):
         """
         Initialize metrics logger.
-        
+
         Args:
             name: Name of the metrics group
             logger: Logger to use (default: root logger)
@@ -325,7 +326,7 @@ class MetricsLogger:
     def log(self, metric_name: str, value: float, step: int | None = None, **kwargs):
         """
         Log a metric value.
-        
+
         Args:
             metric_name: Name of the metric
             value: Metric value
@@ -337,18 +338,18 @@ class MetricsLogger:
             "metric_name": metric_name,
             "value": value,
         }
-        
+
         if step is not None:
             extra["step"] = step
-        
+
         extra.update(kwargs)
-        
+
         message = f"{self.name}.{metric_name}={value}"
         if step is not None:
             message += f" (step={step})"
-        
+
         self.logger.info(message, extra=extra)
-        
+
         # Store for later retrieval
         if metric_name not in self.metrics:
             self.metrics[metric_name] = []
@@ -357,10 +358,10 @@ class MetricsLogger:
     def get_metrics(self, metric_name: str | None = None) -> dict | list:
         """
         Get logged metrics.
-        
+
         Args:
             metric_name: Specific metric to retrieve (None for all)
-            
+
         Returns:
             Metrics data
         """
@@ -371,7 +372,7 @@ class MetricsLogger:
     def summary(self) -> dict[str, dict[str, float]]:
         """
         Get summary statistics for all metrics.
-        
+
         Returns:
             Dictionary with min, max, mean for each metric
         """

@@ -2,12 +2,12 @@
 
 实现 JWT token 认证
 """
-from datetime import datetime, timedelta, timezone
-from typing import Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
+from datetime import UTC, datetime, timedelta
+
 import bcrypt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 from pydantic import BaseModel
 
 # JWT 配置
@@ -21,25 +21,25 @@ security = HTTPBearer()
 
 class TokenData(BaseModel):
     """Token 数据模型"""
-    username: Optional[str] = None
-    user_id: Optional[int] = None
+    username: str | None = None
+    user_id: int | None = None
 
 
 class User(BaseModel):
     """用户模型"""
     id: int
     username: str
-    email: Optional[str] = None
+    email: str | None = None
     disabled: bool = False
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码
-    
+
     Args:
         plain_password: 明文密码
         hashed_password: 哈希后的密码
-        
+
     Returns:
         bool: 密码是否匹配
     """
@@ -51,32 +51,32 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """生成密码哈希
-    
+
     Args:
         password: 明文密码
-        
+
     Returns:
         str: 哈希后的密码
-        
+
     注意：bcrypt 限制密码最大长度为 72 字节
     """
     # bcrypt 限制密码长度为 72 字节
     password_bytes = password.encode('utf-8')
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
-    
+
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(password_bytes, salt)
     return hashed.decode('utf-8')
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """创建访问 token"""
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = datetime.now(UTC) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -95,12 +95,12 @@ def decode_access_token(token: str) -> TokenData:
                 headers={"WWW-Authenticate": "Bearer"},
             )
         return TokenData(username=username, user_id=user_id)
-    except JWTError:
+    except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="无效的认证凭证",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
 
 async def get_current_user(
@@ -125,8 +125,8 @@ async def get_current_active_user(
 class OptionalAuth:
     """可选认证"""
     async def __call__(
-        self, credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
-    ) -> Optional[TokenData]:
+        self, credentials: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False))
+    ) -> TokenData | None:
         if credentials is None:
             return None
         try:

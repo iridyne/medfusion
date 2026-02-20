@@ -7,7 +7,7 @@
 import logging
 import warnings
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -18,21 +18,21 @@ logger = logging.getLogger(__name__)
 class ModelExporter:
     """
     模型导出器
-    
+
     支持导出为 ONNX 和 TorchScript 格式。
-    
+
     Args:
         model: PyTorch 模型
         input_shape: 输入形状（不包括 batch 维度）
         device: 设备
-        
+
     Example:
         >>> model = MyModel()
         >>> exporter = ModelExporter(model, input_shape=(3, 224, 224))
         >>> exporter.export_onnx("model.onnx")
         >>> exporter.export_torchscript("model.pt")
     """
-    
+
     def __init__(
         self,
         model: nn.Module,
@@ -42,23 +42,23 @@ class ModelExporter:
         self.model = model.to(device)
         self.input_shape = input_shape
         self.device = device
-        
+
         # 设置为评估模式
         self.model.eval()
-    
+
     def export_onnx(
         self,
-        output_path: Union[str, Path],
+        output_path: str | Path,
         opset_version: int = 11,
-        input_names: Optional[list[str]] = None,
-        output_names: Optional[list[str]] = None,
-        dynamic_axes: Optional[dict[str, dict[int, str]]] = None,
+        input_names: list[str] | None = None,
+        output_names: list[str] | None = None,
+        dynamic_axes: dict[str, dict[int, str]] | None = None,
         verbose: bool = False,
         **kwargs,
     ) -> None:
         """
         导出为 ONNX 格式
-        
+
         Args:
             output_path: 输出路径
             opset_version: ONNX opset 版本
@@ -67,7 +67,7 @@ class ModelExporter:
             dynamic_axes: 动态轴配置
             verbose: 是否打印详细信息
             **kwargs: 传递给 torch.onnx.export 的额外参数
-            
+
         Example:
             >>> exporter.export_onnx(
             ...     "model.onnx",
@@ -78,16 +78,16 @@ class ModelExporter:
         """
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 创建示例输入
         dummy_input = torch.randn(1, *self.input_shape).to(self.device)
-        
+
         # 默认输入输出名称
         if input_names is None:
             input_names = ["input"]
         if output_names is None:
             output_names = ["output"]
-        
+
         # 默认动态轴（batch 维度）
         if dynamic_axes is None:
             dynamic_axes = {
@@ -102,7 +102,7 @@ class ModelExporter:
         # 导出
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            
+
             torch.onnx.export(
                 self.model,
                 dummy_input,
@@ -117,23 +117,23 @@ class ModelExporter:
 
         logger.info(f"✓ Model exported to {output_path}")
         logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
-    
+
     def export_torchscript(
         self,
-        output_path: Union[str, Path],
+        output_path: str | Path,
         method: str = "trace",
         optimize: bool = True,
         **kwargs,
     ) -> None:
         """
         导出为 TorchScript 格式
-        
+
         Args:
             output_path: 输出路径
             method: 导出方法 ("trace" 或 "script")
             optimize: 是否优化
             **kwargs: 传递给 torch.jit.trace/script 的额外参数
-            
+
         Example:
             >>> exporter.export_torchscript("model.pt", method="trace")
         """
@@ -148,46 +148,46 @@ class ModelExporter:
             # 使用 trace 方法
             dummy_input = torch.randn(1, *self.input_shape).to(self.device)
             logger.info(f"  Input shape: {dummy_input.shape}")
-            
+
             traced_model = torch.jit.trace(self.model, dummy_input, **kwargs)
-            
+
             if optimize:
                 traced_model = torch.jit.optimize_for_inference(traced_model)
-            
+
             traced_model.save(str(output_path))
-            
+
         elif method == "script":
             # 使用 script 方法
             scripted_model = torch.jit.script(self.model, **kwargs)
-            
+
             if optimize:
                 scripted_model = torch.jit.optimize_for_inference(scripted_model)
-            
+
             scripted_model.save(str(output_path))
-            
+
         else:
             raise ValueError(f"Unknown method: {method}. Use 'trace' or 'script'.")
 
         logger.info(f"✓ Model exported to {output_path}")
         logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
-    
+
     def verify_onnx(
         self,
-        onnx_path: Union[str, Path],
+        onnx_path: str | Path,
         rtol: float = 1e-3,
         atol: float = 1e-5,
     ) -> bool:
         """
         验证 ONNX 模型
-        
+
         Args:
             onnx_path: ONNX 模型路径
             rtol: 相对容差
             atol: 绝对容差
-            
+
         Returns:
             是否验证通过
-            
+
         Example:
             >>> exporter.export_onnx("model.onnx")
             >>> exporter.verify_onnx("model.onnx")
@@ -211,24 +211,24 @@ class ModelExporter:
         except Exception as e:
             logger.error(f"  ✗ ONNX model check failed: {e}")
             return False
-        
+
         # 创建测试输入
         dummy_input = torch.randn(1, *self.input_shape).to(self.device)
-        
+
         # PyTorch 输出
         with torch.no_grad():
             pytorch_output = self.model(dummy_input)
-        
+
         if isinstance(pytorch_output, tuple):
             pytorch_output = pytorch_output[0]
-        
+
         pytorch_output = pytorch_output.cpu().numpy()
-        
+
         # ONNX Runtime 输出
         ort_session = ort.InferenceSession(str(onnx_path))
         ort_inputs = {ort_session.get_inputs()[0].name: dummy_input.cpu().numpy()}
         ort_output = ort_session.run(None, ort_inputs)[0]
-        
+
         # 比较输出
         import numpy as np
 
@@ -240,24 +240,24 @@ class ModelExporter:
             max_diff = np.abs(pytorch_output - ort_output).max()
             logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
             return False
-    
+
     def verify_torchscript(
         self,
-        torchscript_path: Union[str, Path],
+        torchscript_path: str | Path,
         rtol: float = 1e-3,
         atol: float = 1e-5,
     ) -> bool:
         """
         验证 TorchScript 模型
-        
+
         Args:
             torchscript_path: TorchScript 模型路径
             rtol: 相对容差
             atol: 绝对容差
-            
+
         Returns:
             是否验证通过
-            
+
         Example:
             >>> exporter.export_torchscript("model.pt")
             >>> exporter.verify_torchscript("model.pt")
@@ -299,7 +299,7 @@ class ModelExporter:
 
 def export_model(
     model: nn.Module,
-    output_path: Union[str, Path],
+    output_path: str | Path,
     input_shape: tuple[int, ...],
     format: str = "onnx",
     verify: bool = True,
@@ -307,7 +307,7 @@ def export_model(
 ) -> None:
     """
     导出模型的便捷函数
-    
+
     Args:
         model: PyTorch 模型
         output_path: 输出路径
@@ -315,13 +315,13 @@ def export_model(
         format: 导出格式 ("onnx" 或 "torchscript")
         verify: 是否验证导出的模型
         **kwargs: 传递给导出函数的额外参数
-        
+
     Example:
         >>> model = MyModel()
         >>> export_model(model, "model.onnx", (3, 224, 224))
     """
     exporter = ModelExporter(model, input_shape)
-    
+
     if format == "onnx":
         exporter.export_onnx(output_path, **kwargs)
         if verify:
@@ -337,14 +337,14 @@ def export_model(
 class MultiModalExporter(ModelExporter):
     """
     多模态模型导出器
-    
+
     支持多个输入的模型导出。
-    
+
     Args:
         model: PyTorch 模型
         input_shapes: 输入形状字典
         device: 设备
-        
+
     Example:
         >>> model = MultiModalModel()
         >>> exporter = MultiModalExporter(
@@ -356,7 +356,7 @@ class MultiModalExporter(ModelExporter):
         ... )
         >>> exporter.export_onnx("model.onnx")
     """
-    
+
     def __init__(
         self,
         model: nn.Module,
@@ -367,38 +367,38 @@ class MultiModalExporter(ModelExporter):
         self.input_shapes = input_shapes
         self.device = device
         self.model.eval()
-    
+
     def _create_dummy_inputs(self) -> tuple[Any, ...]:
         """创建示例输入"""
         dummy_inputs = []
-        for name, shape in self.input_shapes.items():
+        for _name, shape in self.input_shapes.items():
             dummy_input = torch.randn(1, *shape).to(self.device)
             dummy_inputs.append(dummy_input)
         return tuple(dummy_inputs)
-    
+
     def export_onnx(
         self,
-        output_path: Union[str, Path],
+        output_path: str | Path,
         opset_version: int = 11,
-        input_names: Optional[list[str]] = None,
-        output_names: Optional[list[str]] = None,
-        dynamic_axes: Optional[dict[str, dict[int, str]]] = None,
+        input_names: list[str] | None = None,
+        output_names: list[str] | None = None,
+        dynamic_axes: dict[str, dict[int, str]] | None = None,
         verbose: bool = False,
         **kwargs,
     ) -> None:
         """导出为 ONNX 格式"""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # 创建示例输入
         dummy_inputs = self._create_dummy_inputs()
-        
+
         # 默认输入输出名称
         if input_names is None:
             input_names = list(self.input_shapes.keys())
         if output_names is None:
             output_names = ["output"]
-        
+
         # 默认动态轴
         if dynamic_axes is None:
             dynamic_axes = {name: {0: "batch_size"} for name in input_names}
@@ -407,11 +407,11 @@ class MultiModalExporter(ModelExporter):
         logger.info(f"Exporting multimodal model to ONNX: {output_path}")
         for name, dummy_input in zip(input_names, dummy_inputs):
             logger.info(f"  {name}: {dummy_input.shape}")
-        
+
         # 导出
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            
+
             torch.onnx.export(
                 self.model,
                 dummy_inputs,
@@ -426,10 +426,10 @@ class MultiModalExporter(ModelExporter):
 
         logger.info(f"✓ Model exported to {output_path}")
         logger.info(f"  File size: {output_path.stat().st_size / 1024 / 1024:.2f} MB")
-    
+
     def export_torchscript(
         self,
-        output_path: Union[str, Path],
+        output_path: str | Path,
         method: str = "trace",
         optimize: bool = True,
         **kwargs,
@@ -445,22 +445,22 @@ class MultiModalExporter(ModelExporter):
             dummy_inputs = self._create_dummy_inputs()
             for name, dummy_input in zip(self.input_shapes.keys(), dummy_inputs):
                 logger.info(f"  {name}: {dummy_input.shape}")
-            
+
             traced_model = torch.jit.trace(self.model, dummy_inputs, **kwargs)
-            
+
             if optimize:
                 traced_model = torch.jit.optimize_for_inference(traced_model)
-            
+
             traced_model.save(str(output_path))
-            
+
         elif method == "script":
             scripted_model = torch.jit.script(self.model, **kwargs)
-            
+
             if optimize:
                 scripted_model = torch.jit.optimize_for_inference(scripted_model)
-            
+
             scripted_model.save(str(output_path))
-            
+
         else:
             raise ValueError(f"Unknown method: {method}")
 

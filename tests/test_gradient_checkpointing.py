@@ -12,11 +12,10 @@ import pytest
 import torch
 import torch.nn as nn
 
-from med_core.backbones.vision import ResNetBackbone
 from med_core.backbones.swin_2d import SwinTransformer2DBackbone
+from med_core.backbones.vision import ResNetBackbone
 from med_core.utils.gradient_checkpointing import (
     CheckpointedSequential,
-    apply_gradient_checkpointing,
     checkpoint_sequential,
     create_checkpoint_wrapper,
     estimate_memory_savings,
@@ -236,7 +235,7 @@ class TestMemorySavings:
         assert stats["savings"] >= 0
         assert stats["savings_percent"] >= 0
 
-        print(f"\nResNet50 Memory Savings:")
+        print("\nResNet50 Memory Savings:")
         print(f"  Without checkpoint: {stats['without_checkpoint']:.2f} MB")
         print(f"  With checkpoint: {stats['with_checkpoint']:.2f} MB")
         print(f"  Savings: {stats['savings']:.2f} MB ({stats['savings_percent']:.1f}%)")

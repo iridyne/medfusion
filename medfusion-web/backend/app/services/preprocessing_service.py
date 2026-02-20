@@ -5,10 +5,10 @@
 
 import asyncio
 import logging
-import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from med_core.preprocessing import ImagePreprocessor
 
@@ -23,8 +23,8 @@ class PreprocessingService:
 
     def __init__(self):
         """初始化预处理服务"""
-        self._tasks: Dict[str, asyncio.Task] = {}
-        self._should_cancel: Dict[str, bool] = {}
+        self._tasks: dict[str, asyncio.Task] = {}
+        self._should_cancel: dict[str, bool] = {}
         logger.info("PreprocessingService initialized")
 
     async def start_preprocessing(
@@ -32,9 +32,9 @@ class PreprocessingService:
         task_id: str,
         input_dir: str,
         output_dir: str,
-        config: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        config: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """启动预处理任务
 
         Args:
@@ -100,7 +100,7 @@ class PreprocessingService:
                     "type": "started",
                     "task_id": task_id,
                     "total_images": total_images,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -116,7 +116,7 @@ class PreprocessingService:
         except Exception as e:
             error_msg = f"Failed to create preprocessor: {e}"
             logger.error(error_msg)
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from e
 
         # 初始化计数器
         processed_images = 0
@@ -125,7 +125,7 @@ class PreprocessingService:
         processed_files = []
 
         # 处理图像
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         for i, image_path in enumerate(image_paths):
             # 检查是否取消
@@ -138,7 +138,7 @@ class PreprocessingService:
                             "task_id": task_id,
                             "processed_images": processed_images,
                             "failed_images": failed_images,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                         }
                     )
 
@@ -188,7 +188,7 @@ class PreprocessingService:
                             "processed_images": processed_images,
                             "failed_images": failed_images,
                             "current_file": image_path.name,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": datetime.now(UTC).isoformat(),
                         }
                     )
 
@@ -196,7 +196,7 @@ class PreprocessingService:
             await asyncio.sleep(0)
 
         # 计算处理时间
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
         duration = (end_time - start_time).total_seconds()
 
         logger.info(f"Task {task_id} completed in {duration:.2f}s")
@@ -220,7 +220,7 @@ class PreprocessingService:
                     "type": "completed",
                     "task_id": task_id,
                     "result": result,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -247,7 +247,7 @@ class PreprocessingService:
         logger.warning(f"Task {task_id} not found for cancellation")
         return False
 
-    def get_task_status(self, task_id: str) -> Optional[str]:
+    def get_task_status(self, task_id: str) -> str | None:
         """获取任务状态
 
         Args:

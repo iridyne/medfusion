@@ -1,15 +1,16 @@
 """训练 API"""
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Dict, Any, Optional
-from sqlalchemy.orm import Session
 import asyncio
 import json
 import logging
+from typing import Any
 
-from app.services.training_service import TrainingService
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
 from app.core.database import get_db
 from app.crud import TrainingJobCRUD
+from app.services.training_service import TrainingService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -17,22 +18,22 @@ logger = logging.getLogger(__name__)
 
 class TrainingConfig(BaseModel):
     """训练配置"""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    model_config: Dict[str, Any]
-    data_config: Dict[str, Any]
-    training_config: Dict[str, Any]
+    name: str | None = None
+    description: str | None = None
+    model_config: dict[str, Any]
+    data_config: dict[str, Any]
+    training_config: dict[str, Any]
 
 
 # 全局训练任务字典（内存中的运行时服务）
-training_jobs: Dict[str, TrainingService] = {}
+training_jobs: dict[str, TrainingService] = {}
 
 
 @router.post("/start")
 async def start_training(config: TrainingConfig, db: Session = Depends(get_db)):
     """开始训练"""
     job_id = f"job_{len(training_jobs) + 1:04d}"
-    
+
     # 保存到数据库
     db_job = TrainingJobCRUD.create(
         db=db,
@@ -43,31 +44,31 @@ async def start_training(config: TrainingConfig, db: Session = Depends(get_db)):
         data_config=config.data_config,
         training_config=config.training_config,
     )
-    
+
     # 创建训练服务
     service = TrainingService(job_id, config.dict())
     training_jobs[job_id] = service
-    
+
     # 更新状态为 initializing
     TrainingJobCRUD.update_status(db, job_id, "initializing")
-    
+
     # 在后台运行训练，带数据库更新回调
     async def run_with_db_updates():
         try:
             # 更新状态为 running
             TrainingJobCRUD.update_status(db, job_id, "running")
-            
+
             # 运行训练
             await service.run(progress_callback=lambda data: update_db_progress(db, job_id, data))
-            
+
             # 更新状态为 completed
             TrainingJobCRUD.update_status(db, job_id, "completed")
         except Exception as e:
             # 更新状态为 failed
             TrainingJobCRUD.update_status(db, job_id, "failed", error=str(e))
-    
+
     asyncio.create_task(run_with_db_updates())
-    
+
     return {
         "job_id": job_id,
         "status": "started",
@@ -75,7 +76,7 @@ async def start_training(config: TrainingConfig, db: Session = Depends(get_db)):
     }
 
 
-async def update_db_progress(db: Session, job_id: str, data: Dict[str, Any]):
+async def update_db_progress(db: Session, job_id: str, data: dict[str, Any]):
     """更新数据库中的训练进度"""
     if data.get("type") == "epoch_completed":
         TrainingJobCRUD.update_progress(
@@ -92,21 +93,21 @@ async def get_training_status(job_id: str, db: Session = Depends(get_db)):
     """获取训练状态"""
     # 先从数据库获取
     db_job = TrainingJobCRUD.get(db, job_id)
-    
+
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     # 如果任务在运行中，从内存获取最新状态
     if job_id in training_jobs:
         service = training_jobs[job_id]
         runtime_status = service.get_status()
-        
+
         return {
             **runtime_status,
             "database_id": db_job.id,
             "created_at": db_job.created_at.isoformat(),
         }
-    
+
     # 否则返回数据库中的状态
     return {
         "job_id": db_job.job_id,
@@ -126,12 +127,12 @@ async def get_training_status(job_id: str, db: Session = Depends(get_db)):
 async def list_training_jobs(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[str] = None,
+    status: str | None = None,
     db: Session = Depends(get_db)
 ):
     """列出所有训练任务"""
     jobs = TrainingJobCRUD.list(db, skip=skip, limit=limit, status=status)
-    
+
     return {
         "jobs": [
             {
@@ -159,13 +160,13 @@ async def stop_training(job_id: str, db: Session = Depends(get_db)):
     """停止训练"""
     if job_id not in training_jobs:
         raise HTTPException(status_code=404, detail="Job not found or not running")
-    
+
     service = training_jobs[job_id]
     service.stop()
-    
+
     # 更新数据库状态
     TrainingJobCRUD.update_status(db, job_id, "stopped")
-    
+
     return {
         "job_id": job_id,
         "status": "stopped",
@@ -177,13 +178,13 @@ async def pause_training(job_id: str, db: Session = Depends(get_db)):
     """暂停训练"""
     if job_id not in training_jobs:
         raise HTTPException(status_code=404, detail="Job not found or not running")
-    
+
     service = training_jobs[job_id]
     service.pause()
-    
+
     # 更新数据库状态
     TrainingJobCRUD.update_status(db, job_id, "paused")
-    
+
     return {
         "job_id": job_id,
         "status": "paused",
@@ -195,13 +196,13 @@ async def resume_training(job_id: str, db: Session = Depends(get_db)):
     """恢复训练"""
     if job_id not in training_jobs:
         raise HTTPException(status_code=404, detail="Job not found or not running")
-    
+
     service = training_jobs[job_id]
     service.resume()
-    
+
     # 更新数据库状态
     TrainingJobCRUD.update_status(db, job_id, "running")
-    
+
     return {
         "job_id": job_id,
         "status": "resumed",
@@ -212,18 +213,18 @@ async def resume_training(job_id: str, db: Session = Depends(get_db)):
 async def training_websocket(websocket: WebSocket, job_id: str):
     """训练 WebSocket 连接，实时推送训练进度"""
     await websocket.accept()
-    
+
     try:
         if job_id in training_jobs:
             service = training_jobs[job_id]
-            
+
             # 定义进度回调
-            async def progress_callback(data: Dict[str, Any]):
+            async def progress_callback(data: dict[str, Any]):
                 try:
                     await websocket.send_json(data)
-                except:
+                except Exception:
                     pass
-            
+
             # 如果任务还未开始，启动它
             if service.status == "pending":
                 await service.run(progress_callback=progress_callback)
@@ -233,7 +234,7 @@ async def training_websocket(websocket: WebSocket, job_id: str):
                     "type": "training_status",
                     **service.get_status()
                 })
-                
+
                 # 持续发送状态更新
                 while service.status in ["initializing", "running", "paused"]:
                     await asyncio.sleep(1)
@@ -246,7 +247,7 @@ async def training_websocket(websocket: WebSocket, job_id: str):
                 "type": "error",
                 "error": "Job not found"
             })
-        
+
         # 保持连接
         while True:
             try:
@@ -254,7 +255,7 @@ async def training_websocket(websocket: WebSocket, job_id: str):
                 # 处理客户端消息（如暂停/恢复命令）
                 message = json.loads(data)
                 command = message.get("command")
-                
+
                 if command == "pause":
                     service.pause()
                 elif command == "resume":
@@ -262,10 +263,10 @@ async def training_websocket(websocket: WebSocket, job_id: str):
                 elif command == "stop":
                     service.stop()
                     break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # 发送心跳
                 await websocket.send_json({"type": "heartbeat"})
-            
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for job {job_id}")
     except Exception as e:
@@ -273,6 +274,6 @@ async def training_websocket(websocket: WebSocket, job_id: str):
     finally:
         try:
             await websocket.close()
-        except:
+        except Exception:
             pass
 

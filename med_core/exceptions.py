@@ -11,7 +11,7 @@ from typing import Any
 class MedCoreError(Exception):
     """
     Base exception class for all Med-Core errors.
-    
+
     All Med-Core exceptions include:
     - error_code: Unique identifier for the error type
     - context: Additional context information
@@ -28,24 +28,24 @@ class MedCoreError(Exception):
         self.error_code = error_code or "E000"
         self.context = context or {}
         self.suggestion = suggestion
-        
+
         # Build comprehensive error message
         full_message = f"[{self.error_code}] {message}"
-        
+
         if context:
             context_str = ", ".join(f"{k}={v}" for k, v in context.items())
             full_message += f"\n  Context: {context_str}"
-        
+
         if suggestion:
             full_message += f"\n  💡 Suggestion: {suggestion}"
-        
+
         super().__init__(full_message)
         self.base_message = message
 
 
 class ConfigurationError(MedCoreError):
     """Raised when there's an error in configuration."""
-    
+
     def __init__(
         self,
         message: str,
@@ -58,7 +58,7 @@ class ConfigurationError(MedCoreError):
             context["config_path"] = config_path
         if invalid_value is not None:
             context["invalid_value"] = invalid_value
-        
+
         super().__init__(
             message=message,
             error_code="E100",
@@ -69,7 +69,7 @@ class ConfigurationError(MedCoreError):
 
 class DatasetError(MedCoreError):
     """Raised when there's an error loading or processing datasets."""
-    
+
     def __init__(
         self,
         message: str,
@@ -82,7 +82,7 @@ class DatasetError(MedCoreError):
             context["dataset_path"] = dataset_path
         if sample_id:
             context["sample_id"] = sample_id
-        
+
         super().__init__(
             message=message,
             error_code="E200",
@@ -93,7 +93,7 @@ class DatasetError(MedCoreError):
 
 class DatasetNotFoundError(DatasetError):
     """Raised when dataset file or directory is not found."""
-    
+
     def __init__(self, path: str):
         super().__init__(
             message=f"Dataset not found: {path}",
@@ -105,7 +105,7 @@ class DatasetNotFoundError(DatasetError):
 
 class MissingColumnError(DatasetError):
     """Raised when required column is missing from dataset."""
-    
+
     def __init__(self, column: str, available_columns: list[str]):
         super().__init__(
             message=f"Required column '{column}' not found in dataset",
@@ -118,7 +118,7 @@ class MissingColumnError(DatasetError):
 
 class ModelError(MedCoreError):
     """Raised when there's an error in model construction or loading."""
-    
+
     def __init__(
         self,
         message: str,
@@ -128,7 +128,7 @@ class ModelError(MedCoreError):
         context = {}
         if model_name:
             context["model_name"] = model_name
-        
+
         super().__init__(
             message=message,
             error_code="E300",
@@ -139,7 +139,7 @@ class ModelError(MedCoreError):
 
 class BackboneError(ModelError):
     """Raised when there's an error with backbone modules."""
-    
+
     def __init__(
         self,
         message: str,
@@ -152,7 +152,7 @@ class BackboneError(ModelError):
 
 class BackboneNotFoundError(BackboneError):
     """Raised when requested backbone is not available."""
-    
+
     def __init__(self, backbone_name: str, available_backbones: list[str]):
         super().__init__(
             message=f"Backbone '{backbone_name}' not found",
@@ -165,7 +165,7 @@ class BackboneNotFoundError(BackboneError):
 
 class FusionError(ModelError):
     """Raised when there's an error with fusion modules."""
-    
+
     def __init__(
         self,
         message: str,
@@ -178,7 +178,7 @@ class FusionError(ModelError):
 
 class FusionNotFoundError(FusionError):
     """Raised when requested fusion strategy is not available."""
-    
+
     def __init__(self, fusion_type: str, available_fusions: list[str]):
         super().__init__(
             message=f"Fusion type '{fusion_type}' not found",
@@ -191,7 +191,7 @@ class FusionNotFoundError(FusionError):
 
 class TrainingError(MedCoreError):
     """Raised when there's an error during training."""
-    
+
     def __init__(
         self,
         message: str,
@@ -204,7 +204,7 @@ class TrainingError(MedCoreError):
             context["epoch"] = epoch
         if step is not None:
             context["step"] = step
-        
+
         super().__init__(
             message=message,
             error_code="E400",
@@ -215,7 +215,7 @@ class TrainingError(MedCoreError):
 
 class CheckpointError(MedCoreError):
     """Raised when there's an error loading or saving checkpoints."""
-    
+
     def __init__(
         self,
         message: str,
@@ -225,7 +225,7 @@ class CheckpointError(MedCoreError):
         context = {}
         if checkpoint_path:
             context["checkpoint_path"] = checkpoint_path
-        
+
         super().__init__(
             message=message,
             error_code="E410",
@@ -236,7 +236,7 @@ class CheckpointError(MedCoreError):
 
 class CheckpointNotFoundError(CheckpointError):
     """Raised when checkpoint file is not found."""
-    
+
     def __init__(self, checkpoint_path: str):
         super().__init__(
             message=f"Checkpoint not found: {checkpoint_path}",
@@ -248,7 +248,7 @@ class CheckpointNotFoundError(CheckpointError):
 
 class PreprocessingError(MedCoreError):
     """Raised when there's an error during image preprocessing."""
-    
+
     def __init__(
         self,
         message: str,
@@ -258,7 +258,7 @@ class PreprocessingError(MedCoreError):
         context = {}
         if image_path:
             context["image_path"] = image_path
-        
+
         super().__init__(
             message=message,
             error_code="E500",
@@ -269,7 +269,7 @@ class PreprocessingError(MedCoreError):
 
 class EvaluationError(MedCoreError):
     """Raised when there's an error during model evaluation."""
-    
+
     def __init__(
         self,
         message: str,
@@ -279,7 +279,7 @@ class EvaluationError(MedCoreError):
         context = {}
         if metric_name:
             context["metric_name"] = metric_name
-        
+
         super().__init__(
             message=message,
             error_code="E600",
@@ -290,7 +290,7 @@ class EvaluationError(MedCoreError):
 
 class InvalidInputError(MedCoreError):
     """Raised when input data is invalid or malformed."""
-    
+
     def __init__(
         self,
         message: str,
@@ -306,7 +306,7 @@ class InvalidInputError(MedCoreError):
             context["expected_type"] = expected_type
         if actual_type:
             context["actual_type"] = actual_type
-        
+
         super().__init__(
             message=message,
             error_code="E700",
@@ -327,14 +327,14 @@ class DimensionMismatchError(InvalidInputError):
     ):
         self.expected = expected
         self.actual = actual
-        
+
         message = f"Dimension mismatch: expected {expected}, got {actual}"
         if tensor_name:
             message = f"{tensor_name}: {message}"
-        
+
         if not suggestion:
             suggestion = f"Reshape input to match expected dimensions {expected}"
-        
+
         super().__init__(
             message=message,
             input_name=tensor_name,
@@ -350,10 +350,10 @@ class MissingDependencyError(MedCoreError):
 
     def __init__(self, package: str, install_cmd: str = ""):
         self.package = package
-        
+
         if not install_cmd:
             install_cmd = f"pip install {package}"
-        
+
         super().__init__(
             message=f"Missing required package: {package}",
             error_code="E800",
@@ -364,7 +364,7 @@ class MissingDependencyError(MedCoreError):
 
 class AttentionSupervisionError(MedCoreError):
     """Raised when there's an error with attention supervision."""
-    
+
     def __init__(
         self,
         message: str,
@@ -374,7 +374,7 @@ class AttentionSupervisionError(MedCoreError):
         context = {}
         if attention_type:
             context["attention_type"] = attention_type
-        
+
         super().__init__(
             message=message,
             error_code="E900",
@@ -385,7 +385,7 @@ class AttentionSupervisionError(MedCoreError):
 
 class MultiViewError(MedCoreError):
     """Raised when there's an error with multi-view processing."""
-    
+
     def __init__(
         self,
         message: str,
@@ -398,7 +398,7 @@ class MultiViewError(MedCoreError):
             context["view_name"] = view_name
         if num_views is not None:
             context["num_views"] = num_views
-        
+
         super().__init__(
             message=message,
             error_code="E1000",
@@ -409,7 +409,7 @@ class MultiViewError(MedCoreError):
 
 class IncompatibleConfigError(ConfigurationError):
     """Raised when configuration options are incompatible."""
-    
+
     def __init__(
         self,
         message: str,
@@ -426,24 +426,24 @@ class IncompatibleConfigError(ConfigurationError):
 def format_error_report(error: Exception) -> str:
     """
     Format an error into a user-friendly report.
-    
+
     Args:
         error: Exception to format
-        
+
     Returns:
         Formatted error report string
     """
     if isinstance(error, MedCoreError):
         report = f"❌ Error [{error.error_code}]: {error.base_message}\n"
-        
+
         if error.context:
             report += "\n📋 Context:\n"
             for key, value in error.context.items():
                 report += f"  • {key}: {value}\n"
-        
+
         if error.suggestion:
             report += f"\n💡 Suggestion: {error.suggestion}\n"
-        
+
         return report
     else:
         return f"❌ Error: {str(error)}\n"

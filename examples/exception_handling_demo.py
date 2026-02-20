@@ -24,10 +24,10 @@ def example_backbone_not_found():
     print("=" * 60)
     print("Example 1: Backbone Not Found")
     print("=" * 60)
-    
+
     try:
         available_backbones = [
-            "resnet18", "resnet50", "efficientnet_b0", 
+            "resnet18", "resnet50", "efficientnet_b0",
             "vit_b_16", "swin_t"
         ]
         raise BackboneNotFoundError("resnet999", available_backbones)
@@ -40,7 +40,7 @@ def example_dimension_mismatch():
     print("=" * 60)
     print("Example 2: Dimension Mismatch")
     print("=" * 60)
-    
+
     try:
         raise DimensionMismatchError(
             expected=(32, 3, 224, 224),
@@ -57,7 +57,7 @@ def example_missing_column():
     print("=" * 60)
     print("Example 3: Missing Column in Dataset")
     print("=" * 60)
-    
+
     try:
         available_columns = [
             "patient_id", "age", "gender", "image_path", "diagnosis"
@@ -72,7 +72,7 @@ def example_training_error():
     print("=" * 60)
     print("Example 4: Training Error")
     print("=" * 60)
-    
+
     try:
         raise TrainingError(
             "Loss became NaN",
@@ -89,7 +89,7 @@ def example_incompatible_config():
     print("=" * 60)
     print("Example 5: Incompatible Configuration")
     print("=" * 60)
-    
+
     try:
         raise IncompatibleConfigError(
             "Attention supervision requires CBAM attention mechanism",
@@ -108,7 +108,7 @@ def example_missing_dependency():
     print("=" * 60)
     print("Example 6: Missing Dependency")
     print("=" * 60)
-    
+
     try:
         raise MissingDependencyError(
             "torch",
@@ -123,7 +123,7 @@ def example_dataset_not_found():
     print("=" * 60)
     print("Example 7: Dataset Not Found")
     print("=" * 60)
-    
+
     try:
         raise DatasetNotFoundError("/data/medical/lung_cancer/metadata.csv")
     except DatasetNotFoundError as e:
@@ -135,7 +135,7 @@ def example_checkpoint_not_found():
     print("=" * 60)
     print("Example 8: Checkpoint Not Found")
     print("=" * 60)
-    
+
     try:
         raise CheckpointNotFoundError("outputs/best_model.pth")
     except CheckpointNotFoundError as e:
@@ -147,7 +147,7 @@ def example_configuration_error():
     print("=" * 60)
     print("Example 9: Configuration Error")
     print("=" * 60)
-    
+
     try:
         raise ConfigurationError(
             "Invalid batch size",
@@ -164,23 +164,23 @@ def example_error_handling_in_function():
     print("=" * 60)
     print("Example 10: Error Handling in Function")
     print("=" * 60)
-    
+
     def load_backbone(name: str):
         """Load a backbone model."""
         available = ["resnet18", "resnet50", "efficientnet_b0"]
-        
+
         if name not in available:
             raise BackboneNotFoundError(name, available)
-        
+
         return f"Loaded {name}"
-    
+
     # Try with valid backbone
     try:
         result = load_backbone("resnet50")
         print(f"✅ Success: {result}\n")
     except BackboneNotFoundError as e:
         print(format_error_report(e))
-    
+
     # Try with invalid backbone
     try:
         result = load_backbone("invalid_model")
@@ -194,7 +194,7 @@ def main():
     print("\n" + "=" * 60)
     print("Enhanced Exception System Examples")
     print("=" * 60 + "\n")
-    
+
     example_backbone_not_found()
     example_dimension_mismatch()
     example_missing_column()
@@ -205,7 +205,7 @@ def main():
     example_checkpoint_not_found()
     example_configuration_error()
     example_error_handling_in_function()
-    
+
     print("=" * 60)
     print("Summary")
     print("=" * 60)

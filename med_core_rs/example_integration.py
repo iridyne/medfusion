@@ -5,16 +5,16 @@ This demonstrates how to seamlessly integrate Rust acceleration into
 existing Python workflows.
 """
 
-import numpy as np
 import time
-from pathlib import Path
+
+import numpy as np
 
 try:
     from med_core_rs import (
+        center_crop_rust,
+        normalize_intensity_batch,
         normalize_intensity_minmax,
         normalize_intensity_percentile,
-        normalize_intensity_batch,
-        center_crop_rust,
     )
     RUST_AVAILABLE = True
     print("✅ Rust acceleration available")
@@ -23,7 +23,6 @@ except ImportError:
     RUST_AVAILABLE = False
     from med_core.shared.data_utils.image_preprocessing import (
         normalize_intensity,
-        center_crop,
     )
 
 
@@ -180,7 +179,7 @@ def demo_integration_with_dataloader():
 
     try:
         import torch
-        from torch.utils.data import Dataset, DataLoader
+        from torch.utils.data import DataLoader, Dataset
     except ImportError:
         print("⚠️  PyTorch not available, skipping demo")
         return
@@ -216,12 +215,12 @@ def demo_integration_with_dataloader():
     dataloader = DataLoader(dataset, batch_size=16, num_workers=4)
 
     print(f"Dataset size: {len(dataset)}")
-    print(f"Batch size: 16")
-    print(f"Num workers: 4")
+    print("Batch size: 16")
+    print("Num workers: 4")
 
     # Benchmark data loading
     start = time.perf_counter()
-    for batch_idx, (images, labels) in enumerate(dataloader):
+    for batch_idx, (images, _labels) in enumerate(dataloader):
         if batch_idx == 0:
             print(f"\nFirst batch shape: {images.shape}")
         pass  # Simulate training

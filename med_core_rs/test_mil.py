@@ -2,12 +2,14 @@
 """
 Test MIL aggregation functions
 """
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'target/release'))
 
-import numpy as np
 import time
+
+import numpy as np
 
 try:
     import med_core_rs
@@ -72,7 +74,7 @@ bags = [np.random.rand(np.random.randint(10, 50), 512).astype(np.float32)
         for _ in range(n_bags)]
 
 print(f"批量大小: {n_bags} bags")
-print(f"特征维度: 512")
+print("特征维度: 512")
 
 # Max pooling
 start = time.time()

@@ -7,15 +7,15 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.core.database import SessionLocal
-from app.crud import WorkflowCRUD, TrainingJobCRUD
+from app.crud import TrainingJobCRUD, WorkflowCRUD
 
 
 def test_workflow_crud():
     """测试工作流 CRUD 操作"""
     print("\n=== 测试工作流 CRUD ===")
-    
+
     db = SessionLocal()
-    
+
     try:
         # 创建工作流
         print("1. 创建工作流...")
@@ -32,19 +32,19 @@ def test_workflow_crud():
             ],
         )
         print(f"   ✅ 创建成功: ID={workflow.id}, Name={workflow.name}")
-        
+
         # 获取工作流
         print("\n2. 获取工作流...")
         retrieved = WorkflowCRUD.get(db, workflow.id)
         print(f"   ✅ 获取成功: {retrieved.name}")
         print(f"      节点数: {len(retrieved.nodes)}")
         print(f"      边数: {len(retrieved.edges)}")
-        
+
         # 列出所有工作流
         print("\n3. 列出所有工作流...")
         workflows = WorkflowCRUD.list(db)
         print(f"   ✅ 找到 {len(workflows)} 个工作流")
-        
+
         # 更新工作流
         print("\n4. 更新工作流...")
         updated = WorkflowCRUD.update(
@@ -56,12 +56,12 @@ def test_workflow_crud():
             edges=retrieved.edges,
         )
         print(f"   ✅ 更新成功: {updated.name}")
-        
+
         # 删除工作流
         print("\n5. 删除工作流...")
         success = WorkflowCRUD.delete(db, workflow.id)
         print(f"   ✅ 删除成功: {success}")
-        
+
     finally:
         db.close()
 
@@ -69,9 +69,9 @@ def test_workflow_crud():
 def test_training_crud():
     """测试训练任务 CRUD 操作"""
     print("\n=== 测试训练任务 CRUD ===")
-    
+
     db = SessionLocal()
-    
+
     try:
         # 创建训练任务
         print("1. 创建训练任务...")
@@ -85,13 +85,13 @@ def test_training_crud():
             training_config={"epochs": 50, "lr": 0.001},
         )
         print(f"   ✅ 创建成功: ID={job.id}, JobID={job.job_id}")
-        
+
         # 更新状态
         print("\n2. 更新训练状态...")
         TrainingJobCRUD.update_status(db, job.job_id, "running")
         updated = TrainingJobCRUD.get(db, job.job_id)
         print(f"   ✅ 状态更新: {updated.status}")
-        
+
         # 更新进度
         print("\n3. 更新训练进度...")
         TrainingJobCRUD.update_progress(
@@ -105,22 +105,22 @@ def test_training_crud():
         print(f"   ✅ 进度更新: {updated.progress * 100}%")
         print(f"      当前 epoch: {updated.current_epoch}/{updated.total_epochs}")
         print(f"      指标: {updated.current_metrics}")
-        
+
         # 列出所有任务
         print("\n4. 列出所有训练任务...")
         jobs = TrainingJobCRUD.list(db)
         print(f"   ✅ 找到 {len(jobs)} 个训练任务")
-        
+
         # 按状态筛选
         print("\n5. 按状态筛选...")
         running_jobs = TrainingJobCRUD.list(db, status="running")
         print(f"   ✅ 找到 {len(running_jobs)} 个运行中的任务")
-        
+
         # 删除任务
         print("\n6. 删除训练任务...")
         success = TrainingJobCRUD.delete(db, job.job_id)
         print(f"   ✅ 删除成功: {success}")
-        
+
     finally:
         db.close()
 
@@ -130,15 +130,15 @@ def main():
     print("=" * 60)
     print("数据库集成测试")
     print("=" * 60)
-    
+
     try:
         test_workflow_crud()
         test_training_crud()
-        
+
         print("\n" + "=" * 60)
         print("✅ 所有测试通过！")
         print("=" * 60)
-        
+
     except Exception as e:
         print(f"\n❌ 测试失败: {e}")
         import traceback

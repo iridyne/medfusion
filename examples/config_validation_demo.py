@@ -15,7 +15,6 @@ from med_core.configs import (
     TrainingConfig,
     VisionConfig,
     validate_config,
-    validate_config_or_exit,
 )
 
 
@@ -24,7 +23,7 @@ def example_valid_config():
     print("=" * 60)
     print("Example 1: Valid Configuration")
     print("=" * 60)
-    
+
     config = ExperimentConfig(
         project_name="lung_cancer_detection",
         experiment_name="resnet50_baseline",
@@ -64,7 +63,7 @@ def example_valid_config():
             use_wandb=False,
         ),
     )
-    
+
     errors = validate_config(config)
     if errors:
         print("❌ Validation failed:")
@@ -80,7 +79,7 @@ def example_invalid_backbone():
     print("=" * 60)
     print("Example 2: Invalid Backbone")
     print("=" * 60)
-    
+
     config = ExperimentConfig(
         project_name="test",
         experiment_name="test",
@@ -103,7 +102,7 @@ def example_invalid_backbone():
         training=TrainingConfig(num_epochs=50),
         logging=LoggingConfig(output_dir="outputs/"),
     )
-    
+
     errors = validate_config(config)
     if errors:
         print("❌ Validation failed:")
@@ -120,7 +119,7 @@ def example_invalid_split_ratios():
     print("=" * 60)
     print("Example 3: Invalid Split Ratios")
     print("=" * 60)
-    
+
     config = ExperimentConfig(
         project_name="test",
         experiment_name="test",
@@ -143,7 +142,7 @@ def example_invalid_split_ratios():
         training=TrainingConfig(num_epochs=50),
         logging=LoggingConfig(output_dir="outputs/"),
     )
-    
+
     errors = validate_config(config)
     if errors:
         print("❌ Validation failed:")
@@ -160,7 +159,7 @@ def example_attention_supervision_without_cbam():
     print("=" * 60)
     print("Example 4: Attention Supervision Without CBAM")
     print("=" * 60)
-    
+
     config = ExperimentConfig(
         project_name="test",
         experiment_name="test",
@@ -188,7 +187,7 @@ def example_attention_supervision_without_cbam():
         ),
         logging=LoggingConfig(output_dir="outputs/"),
     )
-    
+
     errors = validate_config(config)
     if errors:
         print("❌ Validation failed:")
@@ -205,7 +204,7 @@ def example_progressive_training_mismatch():
     print("=" * 60)
     print("Example 5: Progressive Training Epoch Mismatch")
     print("=" * 60)
-    
+
     config = ExperimentConfig(
         project_name="test",
         experiment_name="test",
@@ -231,7 +230,7 @@ def example_progressive_training_mismatch():
         ),
         logging=LoggingConfig(output_dir="outputs/"),
     )
-    
+
     errors = validate_config(config)
     if errors:
         print("❌ Validation failed:")
@@ -248,13 +247,13 @@ def main():
     print("\n" + "=" * 60)
     print("Configuration Validation Examples")
     print("=" * 60 + "\n")
-    
+
     example_valid_config()
     example_invalid_backbone()
     example_invalid_split_ratios()
     example_attention_supervision_without_cbam()
     example_progressive_training_mismatch()
-    
+
     print("=" * 60)
     print("Summary")
     print("=" * 60)

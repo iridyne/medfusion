@@ -176,19 +176,19 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
             segments: Number of segments (None = number of stages, typically 4)
         """
         super().enable_gradient_checkpointing(segments)
-        
+
         # Swin3D has multiple stages in self._backbone.layers
         if segments is None:
             segments = len(self._backbone.layers)
-        
+
         from med_core.utils.gradient_checkpointing import checkpoint_sequential
-        
+
         # Store original components
         patch_embed = self._backbone.patch_embed
         pos_drop = self._backbone.pos_drop
         layers = list(self._backbone.layers)
         norm = self._backbone.norm if hasattr(self._backbone, 'norm') else None
-        
+
         # Create a new forward function
         def checkpointed_forward(x: torch.Tensor, normalize: bool = True) -> list[torch.Tensor]:
             if not self.training or not self._gradient_checkpointing_enabled:
@@ -202,11 +202,11 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
                 if normalize and norm is not None:
                     features = [norm(f) for f in features]
                 return features
-            
+
             # Patch embedding
             x = patch_embed(x)
             x = pos_drop(x)
-            
+
             # Collect features from each stage with checkpointing
             features = []
             for layer in layers:
@@ -217,13 +217,13 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
                     use_reentrant=False,
                 )
                 features.append(x)
-            
+
             # Apply normalization to features if requested
             if normalize and norm is not None:
                 features = [norm(f) for f in features]
-            
+
             return features
-        
+
         # Replace forward method
         self._backbone.forward = checkpointed_forward
 

@@ -1,6 +1,5 @@
 """Tests for configuration validation."""
 
-import pytest
 
 from med_core.configs import (
     DataConfig,
@@ -12,7 +11,6 @@ from med_core.configs import (
     SchedulerConfig,
     TabularConfig,
     TrainingConfig,
-    ValidationError,
     VisionConfig,
     validate_config,
 )

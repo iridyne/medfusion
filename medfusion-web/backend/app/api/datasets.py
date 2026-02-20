@@ -1,11 +1,10 @@
 """数据集 API"""
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
-from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-import os
-import shutil
 from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.crud import DatasetCRUD
@@ -16,28 +15,28 @@ router = APIRouter()
 class DatasetCreate(BaseModel):
     """创建数据集请求"""
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     data_path: str
-    num_samples: Optional[int] = None
-    num_classes: Optional[int] = None
-    train_samples: Optional[int] = None
-    val_samples: Optional[int] = None
-    test_samples: Optional[int] = None
-    class_distribution: Optional[Dict[str, Any]] = None
-    tags: Optional[List[str]] = None
+    num_samples: int | None = None
+    num_classes: int | None = None
+    train_samples: int | None = None
+    val_samples: int | None = None
+    test_samples: int | None = None
+    class_distribution: dict[str, Any] | None = None
+    tags: list[str] | None = None
 
 
 class DatasetUpdate(BaseModel):
     """更新数据集请求"""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    num_samples: Optional[int] = None
-    num_classes: Optional[int] = None
-    train_samples: Optional[int] = None
-    val_samples: Optional[int] = None
-    test_samples: Optional[int] = None
-    class_distribution: Optional[Dict[str, Any]] = None
-    tags: Optional[List[str]] = None
+    name: str | None = None
+    description: str | None = None
+    num_samples: int | None = None
+    num_classes: int | None = None
+    train_samples: int | None = None
+    val_samples: int | None = None
+    test_samples: int | None = None
+    class_distribution: dict[str, Any] | None = None
+    tags: list[str] | None = None
 
 
 # 数据集存储目录
@@ -49,7 +48,7 @@ DATASET_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 async def list_datasets(
     skip: int = 0,
     limit: int = 100,
-    num_classes: Optional[int] = None,
+    num_classes: int | None = None,
     sort_by: str = "created_at",
     order: str = "desc",
     db: Session = Depends(get_db)
@@ -63,7 +62,7 @@ async def list_datasets(
         sort_by=sort_by,
         order=order,
     )
-    
+
     return {
         "datasets": [
             {
@@ -95,7 +94,7 @@ async def search_datasets(
 ):
     """搜索数据集"""
     datasets = DatasetCRUD.search(db=db, keyword=keyword, skip=skip, limit=limit)
-    
+
     return {
         "datasets": [
             {
@@ -116,7 +115,7 @@ async def search_datasets(
 async def get_statistics(db: Session = Depends(get_db)):
     """获取数据集统计信息"""
     stats = DatasetCRUD.get_statistics(db)
-    
+
     return {
         "total_datasets": stats["total_count"],
         "total_samples": stats["total_samples"],
@@ -135,10 +134,10 @@ async def get_class_counts(db: Session = Depends(get_db)):
 async def get_dataset(dataset_id: int, db: Session = Depends(get_db)):
     """获取数据集详情"""
     dataset = DatasetCRUD.get(db, dataset_id)
-    
+
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
-    
+
     return {
         "id": dataset.id,
         "name": dataset.name,
@@ -166,7 +165,7 @@ async def create_dataset(
     existing = DatasetCRUD.get_by_name(db, dataset.name)
     if existing:
         raise HTTPException(status_code=400, detail=f"Dataset with name '{dataset.name}' already exists")
-    
+
     db_dataset = DatasetCRUD.create(
         db=db,
         name=dataset.name,
@@ -180,7 +179,7 @@ async def create_dataset(
         class_distribution=dataset.class_distribution,
         tags=dataset.tags,
     )
-    
+
     return {
         "id": db_dataset.id,
         "name": db_dataset.name,
@@ -201,10 +200,10 @@ async def update_dataset(
         dataset_id=dataset_id,
         **dataset.dict(exclude_unset=True)
     )
-    
+
     if not db_dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
-    
+
     return {
         "id": db_dataset.id,
         "name": db_dataset.name,
@@ -216,16 +215,16 @@ async def update_dataset(
 async def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
     """删除数据集"""
     dataset = DatasetCRUD.get(db, dataset_id)
-    
+
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
-    
+
     # 删除数据库记录
     success = DatasetCRUD.delete(db, dataset_id)
-    
+
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete dataset")
-    
+
     return {
         "status": "deleted",
         "id": dataset_id,
@@ -236,13 +235,13 @@ async def delete_dataset(dataset_id: int, db: Session = Depends(get_db)):
 async def analyze_dataset(dataset_id: int, db: Session = Depends(get_db)):
     """分析数据集（计算统计信息）"""
     dataset = DatasetCRUD.get(db, dataset_id)
-    
+
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")
-    
+
     # 这里可以添加实际的数据集分析逻辑
     # 例如：扫描数据目录，计算样本数、类别分布等
-    
+
     return {
         "status": "analyzed",
         "dataset_id": dataset_id,

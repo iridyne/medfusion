@@ -39,7 +39,7 @@ class TestMeanPoolingAggregator:
         """Test forward pass."""
         aggregator = MeanPoolingAggregator(input_dim=512)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
         assert not torch.isinf(output).any()
@@ -47,16 +47,16 @@ class TestMeanPoolingAggregator:
     def test_mean_computation(self):
         """Test that mean is computed correctly."""
         aggregator = MeanPoolingAggregator(input_dim=3)
-        
+
         # Create simple input
         x = torch.tensor([
             [[1.0, 2.0, 3.0],
              [4.0, 5.0, 6.0]],
         ])
-        
+
         output = aggregator(x)
         expected = torch.tensor([[2.5, 3.5, 4.5]])
-        
+
         assert torch.allclose(output, expected)
 
 
@@ -72,22 +72,22 @@ class TestMaxPoolingAggregator:
         """Test forward pass."""
         aggregator = MaxPoolingAggregator(input_dim=512)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
 
     def test_max_computation(self):
         """Test that max is computed correctly."""
         aggregator = MaxPoolingAggregator(input_dim=3)
-        
+
         x = torch.tensor([
             [[1.0, 5.0, 3.0],
              [4.0, 2.0, 6.0]],
         ])
-        
+
         output = aggregator(x)
         expected = torch.tensor([[4.0, 5.0, 6.0]])
-        
+
         assert torch.allclose(output, expected)
 
 
@@ -108,7 +108,7 @@ class TestAttentionAggregator:
         """Test forward pass."""
         aggregator = AttentionAggregator(input_dim=512)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
 
@@ -116,10 +116,10 @@ class TestAttentionAggregator:
         """Test forward pass with attention weights."""
         aggregator = AttentionAggregator(input_dim=512)
         output, attention = aggregator(batch_features, return_attention=True)
-        
+
         assert output.shape == (4, 512)
         assert attention.shape == (4, 10, 1)
-        
+
         # Check attention weights sum to 1
         attention_sum = attention.sum(dim=1)
         assert torch.allclose(attention_sum, torch.ones_like(attention_sum), atol=1e-5)
@@ -128,7 +128,7 @@ class TestAttentionAggregator:
         """Test that attention weights are positive."""
         aggregator = AttentionAggregator(input_dim=512)
         _, attention = aggregator(batch_features, return_attention=True)
-        
+
         assert (attention >= 0).all()
         assert (attention <= 1).all()
 
@@ -150,7 +150,7 @@ class TestGatedAttentionAggregator:
         """Test forward pass."""
         aggregator = GatedAttentionAggregator(input_dim=512)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
 
@@ -158,10 +158,10 @@ class TestGatedAttentionAggregator:
         """Test forward pass with attention weights."""
         aggregator = GatedAttentionAggregator(input_dim=512)
         output, attention = aggregator(batch_features, return_attention=True)
-        
+
         assert output.shape == (4, 512)
         assert attention.shape == (4, 10, 1)
-        
+
         # Check attention weights sum to 1
         attention_sum = attention.sum(dim=1)
         assert torch.allclose(attention_sum, torch.ones_like(attention_sum), atol=1e-5)
@@ -191,7 +191,7 @@ class TestDeepSetsAggregator:
         """Test forward pass."""
         aggregator = DeepSetsAggregator(input_dim=512, output_dim=256)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 256)
         assert not torch.isnan(output).any()
 
@@ -199,17 +199,17 @@ class TestDeepSetsAggregator:
         """Test that aggregator is permutation invariant."""
         aggregator = DeepSetsAggregator(input_dim=3, hidden_dim=8, output_dim=3)
         aggregator.eval()
-        
+
         x = torch.randn(2, 5, 3)
-        
+
         # Permute instances
         perm = torch.randperm(5)
         x_permuted = x[:, perm, :]
-        
+
         with torch.no_grad():
             output1 = aggregator(x)
             output2 = aggregator(x_permuted)
-        
+
         assert torch.allclose(output1, output2, atol=1e-5)
 
 
@@ -232,7 +232,7 @@ class TestTransformerAggregator:
         """Test forward pass."""
         aggregator = TransformerAggregator(input_dim=512)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
 
@@ -244,13 +244,13 @@ class TestTransformerAggregator:
     def test_different_num_instances(self):
         """Test with different number of instances."""
         aggregator = TransformerAggregator(input_dim=512)
-        
+
         x1 = torch.randn(2, 5, 512)
         x2 = torch.randn(2, 10, 512)
-        
+
         output1 = aggregator(x1)
         output2 = aggregator(x2)
-        
+
         assert output1.shape == (2, 512)
         assert output2.shape == (2, 512)
 
@@ -265,7 +265,7 @@ class TestMILAggregator:
         """Test all aggregation strategies."""
         aggregator = MILAggregator(input_dim=512, strategy=strategy)
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
         assert not torch.isnan(output).any()
 
@@ -282,14 +282,14 @@ class TestMILAggregator:
             output_dim=256
         )
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 256)
 
     def test_attention_return(self, batch_features):
         """Test returning attention weights."""
         aggregator = MILAggregator(input_dim=512, strategy='attention')
         output, attention = aggregator(batch_features, return_attention=True)
-        
+
         assert output.shape == (4, 512)
         assert attention.shape == (4, 10, 1)
 
@@ -297,7 +297,7 @@ class TestMILAggregator:
         """Test returning gated attention weights."""
         aggregator = MILAggregator(input_dim=512, strategy='gated')
         output, attention = aggregator(batch_features, return_attention=True)
-        
+
         assert output.shape == (4, 512)
         assert attention.shape == (4, 10, 1)
 
@@ -305,7 +305,7 @@ class TestMILAggregator:
         """Test that mean strategy doesn't return attention."""
         aggregator = MILAggregator(input_dim=512, strategy='mean')
         output = aggregator(batch_features, return_attention=True)
-        
+
         # Should only return output, not tuple
         assert isinstance(output, torch.Tensor)
         assert output.shape == (4, 512)
@@ -319,7 +319,7 @@ class TestMILAggregator:
             output_dim=128
         )
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 128)
 
     def test_transformer_with_custom_params(self, batch_features):
@@ -331,7 +331,7 @@ class TestMILAggregator:
             num_layers=3
         )
         output = aggregator(batch_features)
-        
+
         assert output.shape == (4, 512)
 
 
@@ -352,17 +352,17 @@ class TestAggregatorGradients:
             aggregator = aggregator_class(input_dim=512, output_dim=512)
         else:
             aggregator = aggregator_class(input_dim=512)
-        
+
         x = torch.randn(2, 5, 512, requires_grad=True)
-        
+
         if aggregator_class in [AttentionAggregator, GatedAttentionAggregator]:
             output = aggregator(x, return_attention=False)
         else:
             output = aggregator(x)
-        
+
         loss = output.sum()
         loss.backward()
-        
+
         assert x.grad is not None
         assert not torch.isnan(x.grad).any()
 
@@ -375,7 +375,7 @@ class TestAggregatorEdgeCases:
         aggregator = MILAggregator(input_dim=512, strategy='attention')
         x = torch.randn(2, 1, 512)
         output = aggregator(x)
-        
+
         assert output.shape == (2, 512)
 
     def test_large_batch(self):
@@ -383,7 +383,7 @@ class TestAggregatorEdgeCases:
         aggregator = MILAggregator(input_dim=512, strategy='mean')
         x = torch.randn(128, 10, 512)
         output = aggregator(x)
-        
+
         assert output.shape == (128, 512)
 
     def test_many_instances(self):
@@ -391,19 +391,19 @@ class TestAggregatorEdgeCases:
         aggregator = MILAggregator(input_dim=512, strategy='attention')
         x = torch.randn(2, 100, 512)
         output = aggregator(x)
-        
+
         assert output.shape == (2, 512)
 
     def test_eval_mode(self):
         """Test in evaluation mode."""
         aggregator = MILAggregator(input_dim=512, strategy='attention')
         aggregator.eval()
-        
+
         x = torch.randn(2, 10, 512)
-        
+
         with torch.no_grad():
             output = aggregator(x)
-        
+
         assert output.shape == (2, 512)
 
 
@@ -413,27 +413,27 @@ class TestAggregatorComparison:
     def test_mean_vs_max(self):
         """Test that mean and max produce different results."""
         x = torch.randn(2, 10, 512)
-        
+
         mean_agg = MeanPoolingAggregator(input_dim=512)
         max_agg = MaxPoolingAggregator(input_dim=512)
-        
+
         mean_output = mean_agg(x)
         max_output = max_agg(x)
-        
+
         # Should be different
         assert not torch.allclose(mean_output, max_output)
 
     def test_attention_learns_weights(self):
         """Test that attention aggregator learns different weights."""
         aggregator = AttentionAggregator(input_dim=512)
-        
+
         # Create two different inputs
         x1 = torch.randn(2, 10, 512)
         x2 = torch.randn(2, 10, 512)
-        
+
         _, attn1 = aggregator(x1, return_attention=True)
         _, attn2 = aggregator(x2, return_attention=True)
-        
+
         # Attention weights should be different for different inputs
         assert not torch.allclose(attn1, attn2)
 

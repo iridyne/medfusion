@@ -6,7 +6,6 @@
 
 import pytest
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from med_core.backbones import create_vision_backbone

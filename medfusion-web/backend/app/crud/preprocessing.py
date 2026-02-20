@@ -1,6 +1,6 @@
 """预处理任务 CRUD 操作"""
 
-from typing import Dict, List, Optional
+import builtins
 
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
@@ -18,9 +18,9 @@ class PreprocessingTaskCRUD:
         name: str,
         input_dir: str,
         output_dir: str,
-        config: Dict,
-        description: Optional[str] = None,
-        created_by: Optional[str] = None,
+        config: dict,
+        description: str | None = None,
+        created_by: str | None = None,
     ) -> PreprocessingTask:
         """创建预处理任务"""
         task = PreprocessingTask(
@@ -43,14 +43,14 @@ class PreprocessingTaskCRUD:
         return task
 
     @staticmethod
-    def get(db: Session, task_id: int) -> Optional[PreprocessingTask]:
+    def get(db: Session, task_id: int) -> PreprocessingTask | None:
         """根据 ID 获取预处理任务"""
         return (
             db.query(PreprocessingTask).filter(PreprocessingTask.id == task_id).first()
         )
 
     @staticmethod
-    def get_by_task_id(db: Session, task_id: str) -> Optional[PreprocessingTask]:
+    def get_by_task_id(db: Session, task_id: str) -> PreprocessingTask | None:
         """根据 task_id 获取预处理任务"""
         return (
             db.query(PreprocessingTask)
@@ -63,10 +63,10 @@ class PreprocessingTaskCRUD:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        status: Optional[str] = None,
+        status: str | None = None,
         sort_by: str = "created_at",
         order: str = "desc",
-    ) -> List[PreprocessingTask]:
+    ) -> list[PreprocessingTask]:
         """列出预处理任务"""
         query = db.query(PreprocessingTask)
 
@@ -88,7 +88,7 @@ class PreprocessingTaskCRUD:
         keyword: str,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[PreprocessingTask]:
+    ) -> builtins.list[PreprocessingTask]:
         """搜索预处理任务"""
         query = db.query(PreprocessingTask).filter(
             (PreprocessingTask.name.contains(keyword))
@@ -101,8 +101,8 @@ class PreprocessingTaskCRUD:
         db: Session,
         task_id: str,
         status: str,
-        error: Optional[str] = None,
-    ) -> Optional[PreprocessingTask]:
+        error: str | None = None,
+    ) -> PreprocessingTask | None:
         """更新任务状态"""
         task = PreprocessingTaskCRUD.get_by_task_id(db, task_id)
         if task:
@@ -120,7 +120,7 @@ class PreprocessingTaskCRUD:
         progress: float,
         processed_images: int,
         failed_images: int = 0,
-    ) -> Optional[PreprocessingTask]:
+    ) -> PreprocessingTask | None:
         """更新任务进度"""
         task = PreprocessingTaskCRUD.get_by_task_id(db, task_id)
         if task:
@@ -136,7 +136,7 @@ class PreprocessingTaskCRUD:
         db: Session,
         task_id: int,
         **kwargs,
-    ) -> Optional[PreprocessingTask]:
+    ) -> PreprocessingTask | None:
         """更新预处理任务"""
         task = PreprocessingTaskCRUD.get(db, task_id)
         if task:
@@ -158,7 +158,7 @@ class PreprocessingTaskCRUD:
         return False
 
     @staticmethod
-    def get_statistics(db: Session) -> Dict:
+    def get_statistics(db: Session) -> dict:
         """获取预处理任务统计信息"""
         total_tasks = db.query(func.count(PreprocessingTask.id)).scalar()
 
@@ -186,7 +186,7 @@ class PreprocessingTaskCRUD:
         }
 
     @staticmethod
-    def count(db: Session, status: Optional[str] = None) -> int:
+    def count(db: Session, status: str | None = None) -> int:
         """统计任务数量"""
         query = db.query(func.count(PreprocessingTask.id))
         if status:

@@ -5,7 +5,6 @@
 """
 
 import logging
-from typing import Optional, Union
 from pathlib import Path
 
 import torch
@@ -18,18 +17,18 @@ logger = logging.getLogger(__name__)
 class ModelQuantizer:
     """
     模型量化器
-    
+
     支持动态量化、静态量化和 QAT（量化感知训练）。
-    
+
     Args:
         model: PyTorch 模型
         backend: 量化后端 ("fbgemm" 或 "qnnpack")
-        
+
     Example:
         >>> quantizer = ModelQuantizer(model)
         >>> quantized_model = quantizer.dynamic_quantize()
     """
-    
+
     def __init__(
         self,
         model: nn.Module,
@@ -38,57 +37,57 @@ class ModelQuantizer:
         self.model = model
         self.backend = backend
         torch.backends.quantized.engine = backend
-    
+
     def dynamic_quantize(
         self,
         dtype: torch.dtype = torch.qint8,
-        modules: Optional[set] = None,
+        modules: set | None = None,
     ) -> nn.Module:
         """
         动态量化
-        
+
         Args:
             dtype: 量化数据类型
             modules: 要量化的模块类型
-            
+
         Returns:
             量化后的模型
         """
         if modules is None:
             modules = {nn.Linear, nn.LSTM, nn.GRU}
-        
+
         quantized_model = quant.quantize_dynamic(
             self.model,
             modules,
             dtype=dtype,
         )
 
-        logger.info(f"✓ Dynamic quantization completed")
+        logger.info("✓ Dynamic quantization completed")
         logger.info(f"  Backend: {self.backend}")
         logger.info(f"  Dtype: {dtype}")
 
         return quantized_model
-    
+
     def static_quantize(
         self,
         calibration_data: torch.utils.data.DataLoader,
     ) -> nn.Module:
         """
         静态量化
-        
+
         Args:
             calibration_data: 校准数据
-            
+
         Returns:
             量化后的模型
         """
         # 准备模型
         self.model.eval()
         self.model.qconfig = quant.get_default_qconfig(self.backend)
-        
+
         # 融合模块
         model_fused = self._fuse_modules()
-        
+
         # 准备量化
         model_prepared = quant.prepare(model_fused)
 
@@ -101,15 +100,15 @@ class ModelQuantizer:
         # 转换
         quantized_model = quant.convert(model_prepared)
 
-        logger.info(f"✓ Static quantization completed")
+        logger.info("✓ Static quantization completed")
 
         return quantized_model
-    
+
     def _fuse_modules(self) -> nn.Module:
         """融合模块"""
         # 简化版本，实际使用需要根据模型结构定制
         return self.model
-    
+
     def compare_size(
         self,
         original_model: nn.Module,
@@ -121,11 +120,11 @@ class ModelQuantizer:
             size = Path("temp.pth").stat().st_size / (1024 * 1024)
             Path("temp.pth").unlink()
             return size
-        
+
         original_size = get_size(original_model)
         quantized_size = get_size(quantized_model)
 
-        logger.info(f"\nModel Size Comparison:")
+        logger.info("\nModel Size Comparison:")
         logger.info(f"  Original: {original_size:.2f} MB")
         logger.info(f"  Quantized: {quantized_size:.2f} MB")
         logger.info(f"  Reduction: {(1 - quantized_size/original_size)*100:.1f}%")
@@ -134,20 +133,20 @@ class ModelQuantizer:
 class ModelPruner:
     """
     模型剪枝器
-    
+
     支持非结构化剪枝和结构化剪枝。
-    
+
     Args:
         model: PyTorch 模型
-        
+
     Example:
         >>> pruner = ModelPruner(model)
         >>> pruned_model = pruner.prune_unstructured(amount=0.3)
     """
-    
+
     def __init__(self, model: nn.Module):
         self.model = model
-    
+
     def prune_unstructured(
         self,
         amount: float = 0.3,
@@ -155,21 +154,21 @@ class ModelPruner:
     ) -> nn.Module:
         """
         非结构化剪枝
-        
+
         Args:
             amount: 剪枝比例
             method: 剪枝方法 ("l1" 或 "random")
-            
+
         Returns:
             剪枝后的模型
         """
         import torch.nn.utils.prune as prune
-        
+
         parameters_to_prune = []
-        for name, module in self.model.named_modules():
+        for _name, module in self.model.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 parameters_to_prune.append((module, 'weight'))
-        
+
         if method == "l1":
             prune.global_unstructured(
                 parameters_to_prune,
@@ -182,17 +181,17 @@ class ModelPruner:
                 pruning_method=prune.RandomUnstructured,
                 amount=amount,
             )
-        
+
         # 移除重参数化
         for module, param_name in parameters_to_prune:
             prune.remove(module, param_name)
 
-        logger.info(f"✓ Unstructured pruning completed")
+        logger.info("✓ Unstructured pruning completed")
         logger.info(f"  Amount: {amount*100:.1f}%")
         logger.info(f"  Method: {method}")
 
         return self.model
-    
+
     def prune_structured(
         self,
         amount: float = 0.3,
@@ -200,17 +199,17 @@ class ModelPruner:
     ) -> nn.Module:
         """
         结构化剪枝
-        
+
         Args:
             amount: 剪枝比例
             dim: 剪枝维度
-            
+
         Returns:
             剪枝后的模型
         """
         import torch.nn.utils.prune as prune
-        
-        for name, module in self.model.named_modules():
+
+        for _name, module in self.model.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 prune.ln_structured(
                     module,
@@ -221,24 +220,24 @@ class ModelPruner:
                 )
                 prune.remove(module, 'weight')
 
-        logger.info(f"✓ Structured pruning completed")
+        logger.info("✓ Structured pruning completed")
         logger.info(f"  Amount: {amount*100:.1f}%")
         logger.info(f"  Dim: {dim}")
 
         return self.model
-    
+
     def get_sparsity(self) -> float:
         """获取稀疏度"""
         total_params = 0
         zero_params = 0
-        
+
         for param in self.model.parameters():
             total_params += param.numel()
             zero_params += (param == 0).sum().item()
-        
+
         sparsity = zero_params / total_params
 
-        logger.info(f"\nModel Sparsity:")
+        logger.info("\nModel Sparsity:")
         logger.info(f"  Total params: {total_params:,}")
         logger.info(f"  Zero params: {zero_params:,}")
         logger.info(f"  Sparsity: {sparsity*100:.2f}%")
@@ -249,26 +248,26 @@ class ModelPruner:
 def quantize_model(
     model: nn.Module,
     method: str = "dynamic",
-    calibration_data: Optional[torch.utils.data.DataLoader] = None,
+    calibration_data: torch.utils.data.DataLoader | None = None,
     **kwargs,
 ) -> nn.Module:
     """
     量化模型的便捷函数
-    
+
     Args:
         model: PyTorch 模型
         method: 量化方法 ("dynamic" 或 "static")
         calibration_data: 校准数据（静态量化需要）
         **kwargs: 额外参数
-        
+
     Returns:
         量化后的模型
-        
+
     Example:
         >>> quantized_model = quantize_model(model, method="dynamic")
     """
     quantizer = ModelQuantizer(model, **kwargs)
-    
+
     if method == "dynamic":
         return quantizer.dynamic_quantize()
     elif method == "static":
@@ -287,21 +286,21 @@ def prune_model(
 ) -> nn.Module:
     """
     剪枝模型的便捷函数
-    
+
     Args:
         model: PyTorch 模型
         amount: 剪枝比例
         method: 剪枝方法 ("unstructured" 或 "structured")
         **kwargs: 额外参数
-        
+
     Returns:
         剪枝后的模型
-        
+
     Example:
         >>> pruned_model = prune_model(model, amount=0.3)
     """
     pruner = ModelPruner(model)
-    
+
     if method == "unstructured":
         return pruner.prune_unstructured(amount, **kwargs)
     elif method == "structured":
@@ -315,21 +314,21 @@ def compress_model(
     quantize: bool = True,
     prune: bool = True,
     prune_amount: float = 0.3,
-    calibration_data: Optional[torch.utils.data.DataLoader] = None,
+    calibration_data: torch.utils.data.DataLoader | None = None,
 ) -> nn.Module:
     """
     压缩模型（量化 + 剪枝）
-    
+
     Args:
         model: PyTorch 模型
         quantize: 是否量化
         prune: 是否剪枝
         prune_amount: 剪枝比例
         calibration_data: 校准数据
-        
+
     Returns:
         压缩后的模型
-        
+
     Example:
         >>> compressed_model = compress_model(model, quantize=True, prune=True)
     """

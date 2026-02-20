@@ -7,14 +7,14 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from app.core.database import init_db
 from app.core.config import settings
+from app.core.database import init_db
 
 
 def main():
     """初始化数据库"""
     print(f"Initializing database at: {settings.DATABASE_URL}")
-    
+
     try:
         init_db()
         print("✅ Database initialized successfully!")

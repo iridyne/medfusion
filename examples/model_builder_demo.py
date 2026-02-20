@@ -9,7 +9,6 @@ import torch
 
 from med_core.models import (
     MultiModalModelBuilder,
-    build_model_from_config,
     smurf_small,
 )
 

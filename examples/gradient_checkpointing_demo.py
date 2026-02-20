@@ -95,7 +95,7 @@ def train_with_checkpointing():
 
     # 启用梯度检查点
     model.enable_gradient_checkpointing(segments=4)
-    print(f"✓ 梯度检查点已启用 (segments=4)")
+    print("✓ 梯度检查点已启用 (segments=4)")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)

@@ -1,7 +1,8 @@
 """系统 API"""
-from fastapi import APIRouter
-import psutil
 import platform
+
+import psutil
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -23,20 +24,20 @@ async def get_system_resources():
     """获取系统资源使用情况"""
     cpu_percent = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
-    
+
     # 尝试获取 GPU 信息
     gpu_info = []
     try:
         import pynvml
         pynvml.nvmlInit()
         device_count = pynvml.nvmlDeviceGetCount()
-        
+
         for i in range(device_count):
             handle = pynvml.nvmlDeviceGetHandleByIndex(i)
             name = pynvml.nvmlDeviceGetName(handle)
             memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
             utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
-            
+
             gpu_info.append({
                 "id": i,
                 "name": name,
@@ -45,11 +46,11 @@ async def get_system_resources():
                 "memory_percent": memory_info.used / memory_info.total * 100,
                 "utilization": utilization.gpu,
             })
-        
+
         pynvml.nvmlShutdown()
-    except:
+    except Exception:
         gpu_info = []
-    
+
     return {
         "cpu": {
             "percent": cpu_percent,

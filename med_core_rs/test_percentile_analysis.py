@@ -3,8 +3,10 @@
 测试 Quickselect vs 排序算法的性能差异
 """
 
-import numpy as np
 import time
+
+import numpy as np
+
 
 def test_percentile_algorithms():
     """对比不同大小数据的 percentile 计算"""
@@ -24,8 +26,8 @@ def test_percentile_algorithms():
         times = []
         for _ in range(50):
             start = time.perf_counter()
-            low = np.percentile(data, 1.0)
-            high = np.percentile(data, 99.0)
+            np.percentile(data, 1.0)
+            np.percentile(data, 99.0)
             times.append(time.perf_counter() - start)
 
         numpy_time = np.mean(times)
@@ -38,8 +40,8 @@ def test_percentile_algorithms():
             sorted_data = np.sort(data)
             idx_low = int(0.01 * len(sorted_data))
             idx_high = int(0.99 * len(sorted_data))
-            low = sorted_data[idx_low]
-            high = sorted_data[idx_high]
+            sorted_data[idx_low]
+            sorted_data[idx_high]
             times.append(time.perf_counter() - start)
 
         sort_time = np.mean(times)
