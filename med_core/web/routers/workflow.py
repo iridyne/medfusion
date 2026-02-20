@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from ..config import settings
 from ..workflow_engine import (
     NodeStatus,
     WorkflowEngine,
@@ -82,7 +83,7 @@ async def validate_workflow(request: WorkflowValidateRequest):
     - 必需输入
     """
     try:
-        engine = WorkflowEngine()
+        engine = WorkflowEngine(data_dir=settings.data_dir)
         engine.load_workflow(request.workflow.model_dump())
 
         is_valid, errors = engine.validate()
@@ -107,7 +108,7 @@ async def execute_workflow(request: WorkflowExecuteRequest):
         workflow_id = str(uuid.uuid4())
 
         # 创建引擎
-        engine = WorkflowEngine()
+        engine = WorkflowEngine(data_dir=settings.data_dir)
         engine.load_workflow(request.workflow.model_dump())
 
         # 验证工作流

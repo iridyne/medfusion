@@ -9,7 +9,10 @@ import logging
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+from .node_executors import ExecutorFactory, NodeExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +92,32 @@ class WorkflowExecutionError(Exception):
 class WorkflowEngine:
     """工作流执行引擎"""
 
-    def __init__(self):
+    def __init__(self, data_dir: Optional[Path] = None):
         self.nodes: Dict[str, Node] = {}
         self.edges: List[Edge] = []
         self.adjacency_list: Dict[str, List[str]] = defaultdict(list)
         self.reverse_adjacency_list: Dict[str, List[str]] = defaultdict(list)
+        self.data_dir = data_dir or Path.cwd() / "data"
+        self.executor_factory = ExecutorFactory
+</text>
+
+<old_text line=401>
+    async def _execute_data_loader(
+        self, node: Node, inputs: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """执行数据加载节点"""
+        logger.info(f"Loading dataset: {node.data.get('datasetId')}")
+
+        # TODO: 实际的数据加载逻辑
+        # 这里返回模拟数据
+        return {
+            "dataset": {
+                "id": node.data.get("datasetId"),
+                "name": node.data.get("datasetName"),
+                "split": node.data.get("split", "train"),
+                "batch_size": node.data.get("batchSize", 32),
+            }
+        }
 
     def load_workflow(self, workflow_data: Dict[str, Any]) -> None:
         """
@@ -402,86 +426,49 @@ class WorkflowEngine:
         self, node: Node, inputs: Dict[str, Any]
     ) -> Dict[str, Any]:
         """执行数据加载节点"""
-        logger.info(f"Loading dataset: {node.data.get('datasetId')}")
-
-        # TODO: 实际的数据加载逻辑
-        # 这里返回模拟数据
-        return {
-            "dataset": {
-                "id": node.data.get("datasetId"),
-                "name": node.data.get("datasetName"),
-                "split": node.data.get("split", "train"),
-                "batch_size": node.data.get("batchSize", 32),
-            }
-        }
+        try:
+            executor = self.executor_factory.create("dataLoader", self.data_dir)
+            result = await executor.execute(node.data, inputs)
+            return result
+        except NodeExecutionError as e:
+            logger.error(f"DataLoader node execution failed: {e}")
+            raise WorkflowExecutionError(f"数据加载节点执行失败: {e}") from e
 
     async def _execute_model(
         self, node: Node, inputs: Dict[str, Any]
     ) -> Dict[str, Any]:
         """执行模型构建节点"""
-        logger.info(f"Building model: {node.data.get('backbone')}")
-
-        # TODO: 实际的模型构建逻辑
-        return {
-            "model": {
-                "backbone": node.data.get("backbone", "resnet18"),
-                "fusion": node.data.get("fusion", "concatenate"),
-                "aggregator": node.data.get("aggregator", "mean"),
-                "num_classes": node.data.get("numClasses", 2),
-            }
-        }
+        try:
+            executor = self.executor_factory.create("model", self.data_dir)
+            result = await executor.execute(node.data, inputs)
+            return result
+        except NodeExecutionError as e:
+            logger.error(f"Model node execution failed: {e}")
+            raise WorkflowExecutionError(f"模型构建节点执行失败: {e}") from e
 
     async def _execute_training(
         self, node: Node, inputs: Dict[str, Any]
     ) -> Dict[str, Any]:
         """执行训练节点"""
-        logger.info("Starting training...")
-
-        model = inputs.get("model")
-        dataset = inputs.get("dataset")
-
-        if not model or not dataset:
-            raise WorkflowExecutionError("训练节点缺少必需的输入（model 或 dataset）")
-
-        # TODO: 实际的训练逻辑
-        # 这里返回模拟结果
-        return {
-            "trained_model": {
-                **model,
-                "trained": True,
-                "epochs": node.data.get("epochs", 10),
-            },
-            "history": {
-                "loss": [0.5, 0.4, 0.3, 0.2, 0.1],
-                "accuracy": [0.7, 0.75, 0.8, 0.85, 0.9],
-            },
-        }
+        try:
+            executor = self.executor_factory.create("training", self.data_dir)
+            result = await executor.execute(node.data, inputs)
+            return result
+        except NodeExecutionError as e:
+            logger.error(f"Training node execution failed: {e}")
+            raise WorkflowExecutionError(f"训练节点执行失败: {e}") from e
 
     async def _execute_evaluation(
         self, node: Node, inputs: Dict[str, Any]
     ) -> Dict[str, Any]:
         """执行评估节点"""
-        logger.info("Starting evaluation...")
-
-        model = inputs.get("model")
-        test_data = inputs.get("test_data")
-
-        if not model or not test_data:
-            raise WorkflowExecutionError("评估节点缺少必需的输入（model 或 test_data）")
-
-        # TODO: 实际的评估逻辑
-        return {
-            "metrics": {
-                "accuracy": 0.92,
-                "precision": 0.91,
-                "recall": 0.93,
-                "f1": 0.92,
-            },
-            "report": {
-                "confusion_matrix": [[45, 5], [3, 47]],
-                "classification_report": "...",
-            },
-        }
+        try:
+            executor = self.executor_factory.create("evaluation", self.data_dir)
+            result = await executor.execute(node.data, inputs)
+            return result
+        except NodeExecutionError as e:
+            logger.error(f"Evaluation node execution failed: {e}")
+            raise WorkflowExecutionError(f"评估节点执行失败: {e}") from e
 
     def get_status(self) -> Dict[str, Any]:
         """获取工作流执行状态"""
