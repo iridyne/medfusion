@@ -105,8 +105,8 @@ async def health_check():
 
 
 # API 路由
-from .api import datasets, experiments, models, system, training
-from .routers import workflow_router
+from .api import datasets, models, system, training
+from .routers import experiments, workflow_router
 
 app.include_router(system.router, prefix="/api/system", tags=["系统"])
 app.include_router(training.router, prefix="/api/training", tags=["训练"])

@@ -11,6 +11,7 @@ import {
   SettingOutlined,
   ToolOutlined,
   InboxOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -41,6 +42,11 @@ export default function Sidebar() {
       key: "/training",
       icon: <ExperimentOutlined />,
       label: t("nav.training"),
+    },
+    {
+      key: "/experiments",
+      icon: <BarChartOutlined />,
+      label: "实验对比",
     },
     {
       key: "/models",

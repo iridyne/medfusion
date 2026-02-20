@@ -12,6 +12,7 @@ import ModelLibrary from "./pages/ModelLibrary";
 import Preprocessing from "./pages/Preprocessing";
 import SystemMonitor from "./pages/SystemMonitor";
 import Settings from "./pages/Settings";
+import ExperimentComparison from "./pages/ExperimentComparison";
 import Sidebar from "./components/Sidebar";
 import {
   ThemeMode,
@@ -65,6 +66,7 @@ function App() {
               <Route path="/config" element={<ConfigGenerator />} />
               <Route path="/datasets" element={<DatasetManager />} />
               <Route path="/training" element={<TrainingMonitor />} />
+              <Route path="/experiments" element={<ExperimentComparison />} />
               <Route path="/models" element={<ModelLibrary />} />
               <Route path="/preprocessing" element={<Preprocessing />} />
               <Route path="/system" element={<SystemMonitor />} />
