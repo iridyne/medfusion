@@ -6,6 +6,7 @@ import enUS from "antd/locale/en_US";
 import { useTranslation } from "react-i18next";
 import WorkflowEditor from "./pages/WorkflowEditor";
 import ConfigGenerator from "./pages/ConfigGenerator";
+import DatasetManager from "./pages/DatasetManager";
 import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
 import Preprocessing from "./pages/Preprocessing";
@@ -62,6 +63,7 @@ function App() {
               <Route path="/" element={<WorkflowEditor />} />
               <Route path="/workflow" element={<WorkflowEditor />} />
               <Route path="/config" element={<ConfigGenerator />} />
+              <Route path="/datasets" element={<DatasetManager />} />
               <Route path="/training" element={<TrainingMonitor />} />
               <Route path="/models" element={<ModelLibrary />} />
               <Route path="/preprocessing" element={<Preprocessing />} />

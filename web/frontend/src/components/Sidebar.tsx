@@ -10,6 +10,7 @@ import {
   DashboardOutlined,
   SettingOutlined,
   ToolOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -30,6 +31,11 @@ export default function Sidebar() {
       key: "/config",
       icon: <ToolOutlined />,
       label: "配置生成器",
+    },
+    {
+      key: "/datasets",
+      icon: <InboxOutlined />,
+      label: "数据管理",
     },
     {
       key: "/training",
