@@ -42,6 +42,11 @@ dependencies = [
     "pydicom>=3.0.1",
     "einops>=0.7.0",
     "timm>=0.9.0",
+    "sqlalchemy>=2.0.46",
+    "fastapi>=0.129.0",
+    "uvicorn>=0.41.0",
+    "pydantic-settings>=2.13.1",
+    "python-dotenv>=1.2.1",
 ]
 
 [project.optional-dependencies]
