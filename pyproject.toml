@@ -52,6 +52,14 @@ dependencies = [
 [project.optional-dependencies]
 wandb = ["wandb>=0.15.0"]
 lightning = ["pytorch-lightning>=2.0.0"]
+docs = [
+    "sphinx>=7.0.0",
+    "furo>=2024.1.29",
+    "myst-parser>=2.0.0",
+    "sphinx-autodoc-typehints>=1.25.0",
+    "sphinx-copybutton>=0.5.2",
+    "linkify-it-py>=2.0.0",
+]
 
 [project.scripts]
 med-train = "med_core.cli:train"

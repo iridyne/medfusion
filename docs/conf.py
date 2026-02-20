@@ -13,9 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'MedFusion'
-copyright = '2024, MedFusion Team'
+copyright = '2024-2026, MedFusion Team'
 author = 'MedFusion Team'
-release = '0.1.0'
+release = '0.2.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -86,17 +86,29 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 html_static_path = ['_static']
 
 html_theme_options = {
-    'navigation_depth': 4,
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'includehidden': True,
-    'titles_only': False,
-    'display_version': True,
+    "light_css_variables": {
+        "color-brand-primary": "#2563eb",  # 蓝色主题
+        "color-brand-content": "#2563eb",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#60a5fa",  # 深色模式蓝色
+        "color-brand-content": "#60a5fa",
+    },
+    "sidebar_hide_name": False,
+    "navigation_with_keys": True,
+    "top_of_page_button": "edit",
+    "source_repository": "https://github.com/yourusername/medfusion",
+    "source_branch": "main",
+    "source_directory": "docs/",
 }
+
+html_title = f"{project} {release}"
+html_logo = None  # 可以添加 logo 路径
+html_favicon = None  # 可以添加 favicon 路径
 
 # Intersphinx mapping
 intersphinx_mapping = {
