@@ -7,6 +7,7 @@
 1. 分割掩码监督（Segmentation Mask Supervision）
 2. CAM自监督（CAM-based Self-Supervision）
 3. 多实例学习（Multiple Instance Learning）
+4. SE/ECA/Transformer 注意力（v0.2.0 新增）
 """
 
 from med_core.attention_supervision.base import (
@@ -25,6 +26,22 @@ from med_core.attention_supervision.mil_supervision import (
     MultiInstanceLearning,
     extract_patches,
 )
+from med_core.attention_supervision.advanced_attention import (
+    SEAttention,
+    ECAAttention,
+    SpatialAttention,
+    CBAM,
+    MultiHeadSelfAttention,
+    TransformerAttention2D,
+    create_attention_module,
+)
+from med_core.attention_supervision.advanced_supervision import (
+    ChannelAttentionSupervision,
+    SpatialAttentionSupervision,
+    TransformerAttentionSupervision,
+    HybridAttentionSupervision,
+    create_attention_supervision,
+)
 
 __all__ = [
     # 基类
@@ -39,4 +56,18 @@ __all__ = [
     # 多实例学习
     "MultiInstanceLearning",
     "extract_patches",
+    # 高级注意力模块 (v0.2.0)
+    "SEAttention",
+    "ECAAttention",
+    "SpatialAttention",
+    "CBAM",
+    "MultiHeadSelfAttention",
+    "TransformerAttention2D",
+    "create_attention_module",
+    # 高级注意力监督 (v0.2.0)
+    "ChannelAttentionSupervision",
+    "SpatialAttentionSupervision",
+    "TransformerAttentionSupervision",
+    "HybridAttentionSupervision",
+    "create_attention_supervision",
 ]
