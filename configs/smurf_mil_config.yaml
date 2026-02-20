@@ -1,0 +1,332 @@
+# SMuRF with MIL Configuration for Lung Cancer Classification
+# This configuration demonstrates how to use Multiple Instance Learning (MIL)
+# for pathology modality with multiple patches per sample.
+
+project_name: "smurf_mil_lung_cancer"
+experiment_name: "smurf_mil_attention_small"
+
+# ============================================================================
+# Model Architecture
+# ============================================================================
+model:
+  type: multimodal  # Use generic multi-modal model builder
+
+  # Define modalities
+  modalities:
+    # 3D Radiology (CT scans)
+    radiology:
+      backbone: swin3d_small
+      modality_type: vision3d
+      in_channels: 1
+      feature_dim: 512
+
+    # 2D Pathology (histopathology slides)
+    # Note: Input will be [B, N, C, H, W] where N is number of patches
+    pathology:
+      backbone: swin2d_small
+      modality_type: vision
+      in_channels: 3
+      feature_dim: 512
+
+  # Multiple Instance Learning (MIL) configuration
+  # Aggregates features from multiple pathology patches
+  mil:
+    pathology:
+      strategy: attention  # Options: mean, max, attention, gated, deepsets, transformer
+      attention_dim: 128
+      dropout: 0.1
+      # For gated attention
+      # strategy: gated
+      # For transformer aggregation
+      # strategy: transformer
+      # num_heads: 8
+      # num_layers: 2
+
+  # Fusion strategy
+  fusion:
+    strategy: fused_attention  # Options: concat, kronecker, fused_attention
+    num_heads: 8
+    use_kronecker: true
+    output_dim: 256
+
+  # Task head
+  head:
+    task_type: classification  # Options: classification, survival_cox, survival_deep
+    num_classes: 4
+    hidden_dims: [256]
+    dropout: 0.3
+
+# ============================================================================
+# Training Configuration
+# ============================================================================
+training:
+  num_epochs: 100
+  batch_size: 4  # Smaller batch size due to multiple patches
+  learning_rate: 1e-4
+  weight_decay: 0.01
+  optimizer: adamw
+
+  # Mixed precision training (highly recommended for MIL)
+  mixed_precision: true
+
+  # Gradient settings
+  gradient_clip_norm: 1.0
+  gradient_accumulation_steps: 2  # Accumulate gradients to simulate larger batch
+
+  # Learning rate schedule
+  lr_scheduler:
+    type: cosine  # Options: cosine, step, plateau
+    warmup_epochs: 10
+    min_lr: 1e-6
+
+  # Early stopping
+  early_stopping:
+    enabled: true
+    patience: 15
+    monitor: val_loss
+    mode: min
+
+  # Progressive training (optional)
+  progressive_training:
+    enabled: false
+    freeze_vision_epochs: 10
+    freeze_tabular_epochs: 0
+
+# ============================================================================
+# Data Configuration
+# ============================================================================
+data:
+  data_dir: "data/lung_cancer_mil"
+
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+
+  # Data loading
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  # Radiology (CT) preprocessing
+  radiology:
+    image_size: [64, 128, 128]  # [D, H, W]
+    normalize: true
+    normalization_method: "percentile"  # Options: percentile, zscore, minmax
+    clip_range: [0, 100]  # HU units
+
+    augmentation:
+      enabled: true
+      rotation_range: 10
+      zoom_range: 0.1
+      flip_probability: 0.5
+      elastic_deformation: false
+
+  # Pathology preprocessing (MIL mode)
+  pathology:
+    # MIL-specific settings
+    num_patches: 10  # Number of patches per slide
+    patch_size: [224, 224]
+    patch_sampling: "top_k"  # Options: random, top_k, grid, attention_guided
+
+    # For top_k sampling
+    top_k_method: "variance"  # Options: variance, entropy, gradient
+
+    # Image preprocessing
+    normalize: true
+    normalization_method: "imagenet"  # Use ImageNet stats
+
+    augmentation:
+      enabled: true
+      color_jitter: 0.2
+      rotation_range: 15
+      flip_probability: 0.5
+      random_crop: false
+      # Patch-level augmentation
+      patch_dropout: 0.1  # Randomly drop patches during training
+
+  # Class balancing
+  class_balancing:
+    enabled: true
+    method: "weighted_sampling"  # Options: weighted_sampling, oversampling, focal_loss
+
+# ============================================================================
+# Evaluation Configuration
+# ============================================================================
+evaluation:
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - auc_roc
+    - auc_pr
+
+  # MIL-specific metrics
+  mil_metrics:
+    - patch_attention_entropy  # Measure attention distribution
+    - top_patch_accuracy  # Accuracy using only top-attended patch
+    - attention_consistency  # Consistency across epochs
+
+  # Generate visualizations
+  visualizations:
+    - confusion_matrix
+    - roc_curve
+    - pr_curve
+    - grad_cam
+    - attention_maps
+    - mil_attention_heatmap  # Visualize which patches are important
+    - top_attended_patches  # Show top-k attended patches
+
+  # Evaluation frequency
+  eval_frequency: 1  # Evaluate every N epochs
+
+  # Test-time augmentation
+  tta:
+    enabled: false
+    num_augmentations: 5
+
+# ============================================================================
+# Checkpointing
+# ============================================================================
+checkpointing:
+  save_dir: "outputs/smurf_mil_lung_cancer"
+  save_best_only: true
+  monitor: val_accuracy
+  mode: max
+  save_frequency: 5  # Save every N epochs
+  keep_last_n: 3  # Keep last N checkpoints
+
+  # Save attention weights for analysis
+  save_attention_weights: true
+
+# ============================================================================
+# Logging
+# ============================================================================
+logging:
+  log_dir: "logs/smurf_mil_lung_cancer"
+
+  # TensorBoard
+  tensorboard: true
+
+  # Weights & Biases
+  wandb:
+    enabled: false
+    project: "medfusion"
+    entity: null
+    tags: ["smurf", "mil", "lung_cancer", "fused_attention"]
+
+  # Logging frequency
+  log_frequency: 10  # Log every N batches
+  log_images: true
+  log_gradients: false
+
+  # MIL-specific logging
+  log_attention_weights: true  # Log attention weights distribution
+  log_patch_contributions: true  # Log per-patch contributions
+
+# ============================================================================
+# Hardware Configuration
+# ============================================================================
+hardware:
+  device: cuda
+  num_gpus: 1
+  distributed: false
+
+  # Memory optimization (important for MIL with many patches)
+  gradient_checkpointing: true  # Enable to reduce memory usage
+  empty_cache_frequency: 50  # Clear cache more frequently
+
+  # Patch processing optimization
+  process_patches_in_batches: true  # Process patches in mini-batches
+  patch_batch_size: 5  # Process 5 patches at a time
+
+# ============================================================================
+# Advanced Features (Optional)
+# ============================================================================
+advanced:
+  # Attention supervision for MIL
+  attention_supervision:
+    enabled: false
+    method: "consistency"  # Options: mask_guided, consistency, sparsity
+    loss_weight: 0.1
+
+    # Encourage attention sparsity (focus on few patches)
+    sparsity_regularization:
+      enabled: true
+      weight: 0.01
+      method: "entropy"  # Options: entropy, l1
+
+    # Encourage attention consistency across similar samples
+    consistency_regularization:
+      enabled: false
+      weight: 0.05
+
+  # Model compression
+  compression:
+    enabled: false
+    method: "pruning"  # Options: pruning, quantization, distillation
+
+  # Ensemble
+  ensemble:
+    enabled: false
+    num_models: 3
+    aggregation: "voting"  # Options: voting, averaging
+
+  # MIL-specific advanced features
+  mil_advanced:
+    # Adaptive number of patches per sample
+    adaptive_num_patches:
+      enabled: false
+      min_patches: 5
+      max_patches: 20
+      selection_method: "attention_threshold"
+
+    # Hierarchical MIL (patches -> regions -> slide)
+    hierarchical:
+      enabled: false
+      num_levels: 2
+      patches_per_region: 5
+
+    # Patch-level augmentation mixing
+    patch_mixup:
+      enabled: false
+      alpha: 0.2
+
+# ============================================================================
+# Reproducibility
+# ============================================================================
+reproducibility:
+  seed: 42
+  deterministic: true
+  benchmark: false
+
+# ============================================================================
+# MIL-Specific Notes
+# ============================================================================
+#
+# Multiple Instance Learning (MIL) is useful when:
+# 1. You have multiple patches/regions per sample (e.g., whole slide images)
+# 2. Labels are at the slide level, not patch level
+# 3. You want the model to learn which patches are most relevant
+#
+# Key considerations:
+# - Batch size should be smaller due to memory requirements (N patches per sample)
+# - Enable gradient checkpointing if running out of memory
+# - Monitor attention weights to understand which patches are important
+# - Consider patch sampling strategies (random vs. top-k vs. grid)
+# - Use attention-based aggregation for better interpretability
+#
+# Expected input format:
+# - Radiology: [B, C, D, H, W] - standard 3D volume
+# - Pathology: [B, N, C, H, W] - N patches per sample
+#
+# The model will:
+# 1. Extract features from each patch independently
+# 2. Aggregate patch features using MIL attention
+# 3. Fuse aggregated pathology features with radiology features
+# 4. Make final prediction
+#
+# ============================================================================

@@ -40,6 +40,7 @@
     "workflow": "Workflow Editor",
     "training": "Training Monitor",
     "models": "Model Library",
+    "preprocessing": "Data Preprocessing",
     "system": "System Monitor",
     "settings": "Settings"
   },
@@ -187,6 +188,70 @@
     "logs": "Logs",
     "refresh": "Refresh",
     "autoRefresh": "Auto Refresh"
+  },
+  "preprocessing": {
+    "title": "Data Preprocessing",
+    "createTask": "Create Preprocessing Task",
+    "taskList": "Task List",
+    "taskDetail": "Task Details",
+    "statistics": {
+      "totalTasks": "Total Tasks",
+      "runningTasks": "Running",
+      "completedTasks": "Completed",
+      "failedTasks": "Failed"
+    },
+    "status": {
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "fields": {
+      "taskName": "Task Name",
+      "inputDir": "Input Directory",
+      "outputDir": "Output Directory",
+      "totalImages": "Total Images",
+      "processedImages": "Processed",
+      "failedImages": "Failed",
+      "progress": "Progress",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "error": "Error Message"
+    },
+    "config": {
+      "size": "Image Size",
+      "normalize": "Normalization Method",
+      "removeArtifacts": "Remove Artifacts",
+      "enhanceContrast": "Enhance Contrast",
+      "normalizeOptions": {
+        "minmax": "Min-Max Normalization",
+        "zscore": "Z-Score Standardization",
+        "percentile": "Percentile Normalization",
+        "none": "No Normalization"
+      }
+    },
+    "actions": {
+      "start": "Start",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "viewDetail": "View Details",
+      "viewLogs": "View Logs"
+    },
+    "messages": {
+      "taskCreated": "Preprocessing task created",
+      "taskStarted": "Preprocessing task started",
+      "taskCancelled": "Preprocessing task cancelled",
+      "taskDeleted": "Preprocessing task deleted",
+      "taskCompleted": "Preprocessing task completed",
+      "taskFailed": "Preprocessing task failed",
+      "confirmCancel": "Are you sure you want to cancel this task?",
+      "confirmDelete": "Are you sure you want to delete this task? This action cannot be undone.",
+      "inputDirRequired": "Please enter input directory",
+      "outputDirRequired": "Please enter output directory",
+      "taskNameRequired": "Please enter task name"
+    }
   },
   "settings": {
     "title": "Settings",

@@ -6,6 +6,7 @@ import {
   AppstoreOutlined,
   ExperimentOutlined,
   DatabaseOutlined,
+  FileImageOutlined,
   DashboardOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
@@ -33,6 +34,11 @@ export default function Sidebar() {
       key: "/models",
       icon: <DatabaseOutlined />,
       label: t("nav.models"),
+    },
+    {
+      key: "/preprocessing",
+      icon: <FileImageOutlined />,
+      label: t("nav.preprocessing"),
     },
     {
       key: "/system",

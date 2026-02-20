@@ -50,7 +50,7 @@ class ConcatenateFusion(BaseFusion):
         self.projection = nn.Sequential(
             nn.Linear(concat_dim, output_dim),
             nn.ReLU(),
-            nn.BatchNorm1d(output_dim),
+            nn.LayerNorm(output_dim),
             nn.Dropout(dropout),
         )
 
@@ -460,7 +460,9 @@ FUSION_REGISTRY = {
 
 
 def create_fusion_module(
-    fusion_type: Literal["concatenate", "gated", "attention", "cross_attention", "bilinear"],
+    fusion_type: Literal[
+        "concatenate", "gated", "attention", "cross_attention", "bilinear"
+    ],
     vision_dim: int,
     tabular_dim: int,
     output_dim: int = 96,

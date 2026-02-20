@@ -1,22 +1,23 @@
 """FastAPI 应用主入口"""
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.staticfiles import StaticFiles
-import uvicorn
+
 import logging
 import traceback
+from contextlib import asynccontextmanager
 
-from app.api import workflows, training, models, datasets, system, auth
+import uvicorn
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.api import auth, datasets, models, preprocessing, system, training, workflows
 from app.core.config import settings
 from app.core.database import init_db
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # 全局异常处理器
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -64,7 +66,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         f"Request: {request.method} {request.url}\n"
         f"Traceback: {traceback.format_exc()}"
     )
-    
+
     # 开发环境返回详细错误信息
     if settings.DEBUG:
         return JSONResponse(
@@ -74,13 +76,13 @@ async def global_exception_handler(request: Request, exc: Exception):
                 "error": str(exc),
                 "type": type(exc).__name__,
                 "traceback": traceback.format_exc().split("\n"),
-            }
+            },
         )
-    
+
     # 生产环境返回通用错误信息
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error"}
+        content={"detail": "Internal server error"},
     )
 
 
@@ -89,8 +91,9 @@ async def not_found_handler(request: Request, exc):
     """404 错误处理"""
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
-        content={"detail": f"Path {request.url.path} not found"}
+        content={"detail": f"Path {request.url.path} not found"},
     )
+
 
 # 注册路由（添加 API 版本控制）
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
@@ -98,6 +101,9 @@ app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["workflow
 app.include_router(training.router, prefix="/api/v1/training", tags=["training"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["models"])
 app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
+app.include_router(
+    preprocessing.router, prefix="/api/v1/preprocessing", tags=["preprocessing"]
+)
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 
 
@@ -121,6 +127,7 @@ async def liveness():
 async def readiness():
     """就绪检查"""
     from app.core.database import SessionLocal
+
     try:
         db = SessionLocal()
         db.execute("SELECT 1")

@@ -40,6 +40,7 @@
     "workflow": "工作流编辑器",
     "training": "训练监控",
     "models": "模型库",
+    "preprocessing": "数据预处理",
     "system": "系统监控",
     "settings": "设置"
   },
@@ -188,7 +189,86 @@
     "refresh": "刷新",
     "autoRefresh": "自动刷新"
   },
-  "settings": {
+  "preprocessing": {
+    "title": "数据预处理",
+    "createTask": "创建预处理任务",
+    "taskList": "任务列表",
+    "taskDetail": "任务详情",
+    "statistics": {
+      "totalTasks": "任务总数",
+      "runningTasks": "运行中",
+      "completedTasks": "已完成",
+      "failedTasks": "失败"
+    },
+    "status": {
+      "pending": "等待中",
+      "running": "运行中",
+      "completed": "已完成",
+      "failed": "失败",
+      "cancelled": "已取消"
+    },
+    "fields": {
+      "taskName": "任务名称",
+      "inputDir": "输入目录",
+      "outputDir": "输出目录",
+      "totalImages": "总图像数",
+      "processedImages": "已处理",
+      "failedImages": "失败",
+      "progress": "进度",
+      "startTime": "开始时间",
+      "endTime": "结束时间",
+      "duration": "持续时间",
+      "error": "错误信息"
+    },
+    "config": {
+      "size": "图像大小",
+      "normalize": "归一化方法",
+      "removeArtifacts": "移除伪影",
+      "enhanceContrast": "增强对比度",
+      "normalizeOptions": {
+        "minmax": "最小-最大归一化",
+        "zscore": "Z-Score 标准化",
+        "percentile": "百分位归一化",
+        "none": "不归一化"
+      }
+    },
+    "actions": {
+      "start": "开始",
+      "cancel": "取消",
+      "delete": "删除",
+      "viewDetail": "查看详情",
+      "viewLogs": "查看日志"
+    },
+    "messages": {
+      "taskCreated": "预处理任务已创建",
+      "taskStarted": "预处理任务已开始",
+      "taskCancelled": "预处理任务已取消",
+      "taskDeleted": "预处理任务已删除",
+      "taskCompleted": "预处理任务已完成",
+      "taskFailed": "预处理任务失败",
+      "confirmCancel": "确定要取消此任务吗？",
+      "confirmDelete": "确定要删除此任务吗？此操作不可恢复。",
+      "inputDirRequired": "请输入输入目录",
+      "outputDirRequired": "请输入输出目录",
+      "taskNameRequired": "请输入任务名称"
+    }
+  },
+  "settings": {</thinking>
+
+Looking at the file structure, I need to add preprocessing translations in two places:
+1. Add "preprocessing" to the "nav" section
+2. Add a complete "preprocessing" section with all necessary translations
+
+<edits>
+
+<old_text line=40>
+  "nav": {
+    "workflow": "工作流编辑器",
+    "training": "训练监控",
+    "models": "模型库",
+    "system": "系统监控",
+    "settings": "设置"
+  },
     "title": "设置",
     "general": "通用",
     "appearance": "外观",

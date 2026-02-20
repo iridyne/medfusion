@@ -1,0 +1,40 @@
+[package]
+name = "med_core_rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "med_core_rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# PyO3 for Python bindings
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py38"] }
+numpy = "0.22"
+
+# Image processing
+image = "0.25"
+imageproc = "0.25"
+
+# Numerical computing
+ndarray = "0.16"
+ndarray-stats = "0.6"
+
+# Parallel processing
+rayon = "1.10"
+
+# SIMD optimizations (optional, for advanced users)
+# packed_simd_2 = "0.3"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "preprocessing_bench"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

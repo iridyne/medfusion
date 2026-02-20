@@ -383,7 +383,9 @@ class MILAggregator(nn.Module):
     def __init__(
         self,
         input_dim: int,
-        strategy: Literal['mean', 'max', 'attention', 'gated', 'deepsets', 'transformer'] = 'attention',
+        strategy: Literal[
+            "mean", "max", "attention", "gated", "deepsets", "transformer"
+        ] = "attention",
         attention_dim: int = 128,
         hidden_dim: int = 256,
         output_dim: int | None = None,
@@ -398,23 +400,29 @@ class MILAggregator(nn.Module):
         self.output_dim = output_dim or input_dim
 
         # Create aggregator based on strategy
-        if strategy == 'mean':
+        if strategy == "mean":
             self.aggregator = MeanPoolingAggregator(input_dim)
-        elif strategy == 'max':
+        elif strategy == "max":
             self.aggregator = MaxPoolingAggregator(input_dim)
-        elif strategy == 'attention':
+        elif strategy == "attention":
             self.aggregator = AttentionAggregator(input_dim, attention_dim, dropout)
-        elif strategy == 'gated':
-            self.aggregator = GatedAttentionAggregator(input_dim, attention_dim, dropout)
-        elif strategy == 'deepsets':
-            self.aggregator = DeepSetsAggregator(input_dim, hidden_dim, self.output_dim, dropout)
-        elif strategy == 'transformer':
-            self.aggregator = TransformerAggregator(input_dim, num_heads, num_layers, dropout)
+        elif strategy == "gated":
+            self.aggregator = GatedAttentionAggregator(
+                input_dim, attention_dim, dropout
+            )
+        elif strategy == "deepsets":
+            self.aggregator = DeepSetsAggregator(
+                input_dim, hidden_dim, self.output_dim, dropout
+            )
+        elif strategy == "transformer":
+            self.aggregator = TransformerAggregator(
+                input_dim, num_heads, num_layers, dropout
+            )
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
 
         # Output projection if needed
-        if self.output_dim != input_dim and strategy not in ['deepsets']:
+        if self.output_dim != input_dim and strategy not in ["deepsets"]:
             self.output_proj = nn.Linear(input_dim, self.output_dim)
         else:
             self.output_proj = None
@@ -434,7 +442,7 @@ class MILAggregator(nn.Module):
             If return_attention=True and strategy supports it, also returns attention weights
         """
         # Aggregate
-        if return_attention and self.strategy in ['attention', 'gated']:
+        if return_attention and self.strategy in ["attention", "gated"]:
             aggregated, attention_weights = self.aggregator(x, return_attention=True)
         else:
             aggregated = self.aggregator(x)
@@ -444,6 +452,6 @@ class MILAggregator(nn.Module):
         if self.output_proj is not None:
             aggregated = self.output_proj(aggregated)
 
-        if return_attention and attention_weights is not None:
+        if return_attention:
             return aggregated, attention_weights
         return aggregated

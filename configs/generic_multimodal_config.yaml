@@ -1,0 +1,426 @@
+# Generic Multi-Modal Model Configuration
+# This configuration demonstrates how to build arbitrary multi-modal models
+# using the generic MultiModalModelBuilder.
+
+project_name: "generic_multimodal"
+experiment_name: "custom_model_v1"
+
+# ============================================================================
+# Model Architecture
+# ============================================================================
+model:
+  type: multimodal  # Use generic multi-modal model builder
+
+  # Define modalities (you can add as many as needed)
+  modalities:
+    # Example 1: 2D Vision modality (e.g., X-ray, fundus images)
+    xray:
+      backbone: resnet50  # Options: resnet18/50/101, efficientnet_b0-b7, vit_b_16, swin_t/s/b
+      modality_type: vision
+      in_channels: 1  # Grayscale
+      feature_dim: 512
+      pretrained: true
+      attention_type: cbam  # Options: cbam, se, eca, none
+
+    # Example 2: 3D Vision modality (e.g., CT, MRI)
+    ct:
+      backbone: swin3d_small  # Options: swin3d_tiny/small/base
+      modality_type: vision3d
+      in_channels: 1
+      feature_dim: 512
+
+    # Example 3: Tabular modality (e.g., clinical data, lab results)
+    clinical:
+      backbone: mlp  # Options: mlp, adaptive_mlp, residual_mlp
+      modality_type: tabular
+      input_dim: 20  # Number of clinical features
+      feature_dim: 128
+      hidden_dims: [256, 128]
+      dropout: 0.3
+
+    # Example 4: Another 2D Vision modality (e.g., pathology)
+    # pathology:
+    #   backbone: swin2d_small
+    #   modality_type: vision
+    #   in_channels: 3  # RGB
+    #   feature_dim: 512
+
+  # Optional: Multiple Instance Learning (MIL) for specific modalities
+  # Useful when you have multiple patches/regions per sample
+  mil:
+    # Apply MIL to pathology modality (if enabled)
+    # pathology:
+    #   strategy: attention  # Options: mean, max, attention, gated, deepsets, transformer
+    #   attention_dim: 128
+    #   dropout: 0.1
+
+  # Fusion strategy
+  # Note: For >2 modalities, currently uses mean pooling
+  # For 2 modalities, you can use any fusion strategy
+  fusion:
+    strategy: fused_attention  # Options: concat, gated, attention, cross_attention, bilinear, kronecker, fused_attention
+    # Strategy-specific parameters
+    num_heads: 8  # For attention-based fusion
+    use_kronecker: true  # For fused_attention
+    output_dim: 256  # Fused feature dimension
+
+  # Task head
+  head:
+    task_type: classification  # Options: classification, survival_cox, survival_deep, survival_discrete
+    num_classes: 3  # For classification
+    hidden_dims: [256, 128]  # Hidden layers in head
+    dropout: 0.3
+
+    # For survival analysis tasks:
+    # task_type: survival_cox
+    # num_time_bins: 10  # For discrete time survival
+    # time_range: [0, 365]  # Days
+
+# ============================================================================
+# Training Configuration
+# ============================================================================
+training:
+  num_epochs: 100
+  batch_size: 16
+  learning_rate: 1e-4
+  weight_decay: 0.01
+  optimizer: adamw  # Options: adam, adamw, sgd
+
+  # Mixed precision training (recommended)
+  mixed_precision: true
+
+  # Gradient settings
+  gradient_clip_norm: 1.0
+  gradient_accumulation_steps: 1
+
+  # Learning rate schedule
+  lr_scheduler:
+    type: cosine  # Options: cosine, step, plateau, exponential
+    warmup_epochs: 10
+    min_lr: 1e-6
+    # For step scheduler
+    # step_size: 30
+    # gamma: 0.1
+    # For plateau scheduler
+    # patience: 10
+    # factor: 0.5
+
+  # Early stopping
+  early_stopping:
+    enabled: true
+    patience: 20
+    monitor: val_loss  # Options: val_loss, val_accuracy, val_auc
+    mode: min  # Options: min, max
+
+  # Progressive training (optional)
+  # Useful for fine-tuning pre-trained models
+  progressive_training:
+    enabled: false
+    freeze_vision_epochs: 10  # Freeze vision backbones for N epochs
+    freeze_tabular_epochs: 0  # Freeze tabular backbones for N epochs
+    differential_lr:
+      enabled: false
+      backbone_lr_multiplier: 0.1  # Use 10% of base LR for backbones
+      fusion_lr_multiplier: 1.0
+      head_lr_multiplier: 1.0
+
+# ============================================================================
+# Data Configuration
+# ============================================================================
+data:
+  data_dir: "data/multimodal_dataset"
+
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+
+  # Data loading
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+
+  # Modality-specific preprocessing
+  preprocessing:
+    # X-ray preprocessing
+    xray:
+      image_size: [224, 224]
+      normalize: true
+      normalization_method: "imagenet"  # Options: imagenet, zscore, minmax, percentile
+
+      augmentation:
+        enabled: true
+        rotation_range: 15
+        zoom_range: 0.1
+        flip_probability: 0.5
+        brightness_range: 0.2
+        contrast_range: 0.2
+
+    # CT preprocessing
+    ct:
+      image_size: [64, 128, 128]  # [D, H, W]
+      normalize: true
+      normalization_method: "percentile"
+      clip_range: [-1000, 400]  # HU units
+
+      augmentation:
+        enabled: true
+        rotation_range: 10
+        zoom_range: 0.1
+        flip_probability: 0.5
+        elastic_deformation: false
+
+    # Clinical data preprocessing
+    clinical:
+      normalize: true
+      normalization_method: "zscore"  # Options: zscore, minmax, robust
+      handle_missing: "mean"  # Options: mean, median, drop, forward_fill
+
+      # Feature engineering
+      feature_engineering:
+        enabled: false
+        polynomial_features: false
+        interaction_features: false
+
+  # Class balancing
+  class_balancing:
+    enabled: true
+    method: "weighted_sampling"  # Options: weighted_sampling, oversampling, undersampling, focal_loss
+    # For focal loss
+    # focal_loss_gamma: 2.0
+    # focal_loss_alpha: 0.25
+
+  # Data caching
+  caching:
+    enabled: true
+    cache_dir: ".cache/multimodal"
+    cache_preprocessed: true
+
+# ============================================================================
+# Evaluation Configuration
+# ============================================================================
+evaluation:
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - auc_roc
+    - auc_pr
+    - balanced_accuracy
+    - cohen_kappa
+
+  # Per-class metrics
+  per_class_metrics: true
+
+  # Generate visualizations
+  visualizations:
+    - confusion_matrix
+    - roc_curve
+    - pr_curve
+    - grad_cam  # For vision modalities
+    - attention_maps  # For attention-based fusion
+    - feature_embeddings  # t-SNE/UMAP of learned features
+    - modality_contributions  # Contribution of each modality
+
+  # Evaluation frequency
+  eval_frequency: 1  # Evaluate every N epochs
+  eval_on_train: false  # Also evaluate on training set
+
+  # Test-time augmentation
+  tta:
+    enabled: false
+    num_augmentations: 5
+    aggregation: "mean"  # Options: mean, max, voting
+
+# ============================================================================
+# Checkpointing
+# ============================================================================
+checkpointing:
+  save_dir: "outputs/generic_multimodal"
+  save_best_only: false  # Save all checkpoints or only best
+  monitor: val_accuracy  # Metric to monitor for best model
+  mode: max  # Options: min, max
+  save_frequency: 5  # Save every N epochs
+  keep_last_n: 3  # Keep last N checkpoints (null for all)
+
+  # Save additional information
+  save_optimizer_state: true
+  save_scheduler_state: true
+  save_training_state: true  # For resuming training
+
+# ============================================================================
+# Logging
+# ============================================================================
+logging:
+  log_dir: "logs/generic_multimodal"
+
+  # Console logging
+  console_log_level: INFO  # Options: DEBUG, INFO, WARNING, ERROR
+
+  # TensorBoard
+  tensorboard:
+    enabled: true
+    log_dir: "runs/generic_multimodal"
+
+  # Weights & Biases
+  wandb:
+    enabled: false
+    project: "medfusion"
+    entity: null  # Your W&B username/team
+    tags: ["multimodal", "custom"]
+    notes: "Generic multi-modal model experiment"
+
+  # MLflow
+  mlflow:
+    enabled: false
+    tracking_uri: "http://localhost:5000"
+    experiment_name: "generic_multimodal"
+
+  # Logging frequency
+  log_frequency: 10  # Log every N batches
+  log_images: true
+  log_gradients: false
+  log_weights: false
+
+  # Log modality-specific information
+  log_modality_features: true
+  log_fusion_weights: true
+
+# ============================================================================
+# Hardware Configuration
+# ============================================================================
+hardware:
+  device: cuda  # Options: cuda, cpu, mps (for Apple Silicon)
+  num_gpus: 1
+  gpu_ids: [0]  # Specific GPU IDs to use
+
+  # Distributed training
+  distributed:
+    enabled: false
+    backend: nccl  # Options: nccl, gloo
+    init_method: env://
+    world_size: 1
+    rank: 0
+
+  # Memory optimization
+  gradient_checkpointing: false  # Enable if OOM
+  empty_cache_frequency: 100  # Clear cache every N batches
+  max_memory_allocated: null  # Max memory in GB (null for no limit)
+
+  # Compilation (PyTorch 2.0+)
+  compile:
+    enabled: false
+    mode: default  # Options: default, reduce-overhead, max-autotune
+
+# ============================================================================
+# Advanced Features (Optional)
+# ============================================================================
+advanced:
+  # Attention supervision
+  attention_supervision:
+    enabled: false
+    method: "cam_based"  # Options: mask_guided, cam_based, consistency
+    loss_weight: 0.1
+    target_modality: "xray"  # Which modality to supervise
+
+  # Model compression
+  compression:
+    enabled: false
+    method: "pruning"  # Options: pruning, quantization, distillation
+    pruning_ratio: 0.3
+    quantization_bits: 8
+
+  # Knowledge distillation
+  distillation:
+    enabled: false
+    teacher_checkpoint: null
+    temperature: 3.0
+    alpha: 0.5  # Weight for distillation loss
+
+  # Ensemble
+  ensemble:
+    enabled: false
+    num_models: 3
+    aggregation: "voting"  # Options: voting, averaging, stacking
+
+  # Uncertainty estimation
+  uncertainty:
+    enabled: false
+    method: "mc_dropout"  # Options: mc_dropout, deep_ensemble, temperature_scaling
+    num_samples: 10  # For MC Dropout
+
+  # Explainability
+  explainability:
+    enabled: false
+    methods:
+      - grad_cam
+      - integrated_gradients
+      - attention_rollout
+    save_explanations: true
+
+# ============================================================================
+# Experiment Tracking
+# ============================================================================
+experiment:
+  # Experiment metadata
+  description: "Generic multi-modal model for medical imaging"
+  tags: ["multimodal", "medical", "custom"]
+
+  # Hyperparameter search (optional)
+  hyperparameter_search:
+    enabled: false
+    method: "optuna"  # Options: optuna, ray_tune, grid_search
+    num_trials: 50
+    search_space:
+      learning_rate: [1e-5, 1e-3]
+      batch_size: [8, 16, 32]
+      dropout: [0.1, 0.5]
+      fusion_output_dim: [128, 256, 512]
+
+# ============================================================================
+# Reproducibility
+# ============================================================================
+reproducibility:
+  seed: 42
+  deterministic: true  # Slower but reproducible
+  benchmark: false  # Enable for faster training (non-deterministic)
+
+# ============================================================================
+# Usage Examples
+# ============================================================================
+#
+# 1. Build model from this config:
+#    ```python
+#    from med_core.models import build_model_from_config
+#    model = build_model_from_config('configs/generic_multimodal_config.yaml')
+#    ```
+#
+# 2. Build model programmatically:
+#    ```python
+#    from med_core.models import MultiModalModelBuilder
+#
+#    model = (MultiModalModelBuilder()
+#        .add_modality('xray', backbone='resnet50', modality_type='vision')
+#        .add_modality('clinical', backbone='mlp', modality_type='tabular', input_dim=20)
+#        .set_fusion('attention')
+#        .set_head('classification', num_classes=3)
+#        .build())
+#    ```
+#
+# 3. Train model:
+#    ```bash
+#    uv run medfusion-train --config configs/generic_multimodal_config.yaml
+#    ```
+#
+# 4. Evaluate model:
+#    ```bash
+#    uv run medfusion-evaluate \
+#        --config configs/generic_multimodal_config.yaml \
+#        --checkpoint outputs/generic_multimodal/best_model.pth
+#    ```
+#
+# ============================================================================

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import WorkflowEditor from "./pages/WorkflowEditor";
 import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
+import Preprocessing from "./pages/Preprocessing";
 import SystemMonitor from "./pages/SystemMonitor";
 import Settings from "./pages/Settings";
 import Sidebar from "./components/Sidebar";
@@ -61,6 +62,7 @@ function App() {
               <Route path="/workflow" element={<WorkflowEditor />} />
               <Route path="/training" element={<TrainingMonitor />} />
               <Route path="/models" element={<ModelLibrary />} />
+              <Route path="/preprocessing" element={<Preprocessing />} />
               <Route path="/system" element={<SystemMonitor />} />
               <Route
                 path="/settings"

@@ -80,3 +80,14 @@ Thumbs.db
 # uv
 .uv/
 .analysis_archive/
+
+# Rust
+med_core_rs/target/
+med_core_rs/Cargo.lock
+med_core_rs/**/*.rs.bk
+med_core_rs/*.so
+med_core_rs/*.pyd
+
+# Caches
+.ruff_cache/
+.mypy_cache/

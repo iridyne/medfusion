@@ -13,7 +13,6 @@ from med_core.preprocessing.image import (
     apply_clahe,
     crop_center,
     normalize_intensity,
-    remove_bottom_watermark,
 )
 from med_core.preprocessing.quality import (
     QualityMetrics,
@@ -26,7 +25,6 @@ __all__ = [
     "normalize_intensity",
     "crop_center",
     "apply_clahe",
-    "remove_bottom_watermark",
     "assess_image_quality",
     "detect_artifacts",
     "QualityMetrics",

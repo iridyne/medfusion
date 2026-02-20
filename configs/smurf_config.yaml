@@ -1,0 +1,229 @@
+# SMuRF Model Configuration for Lung Cancer Classification
+# This configuration demonstrates how to use the generic multi-modal model builder
+# to create a SMuRF model from configuration.
+
+project_name: "smurf_lung_cancer"
+experiment_name: "smurf_fused_attention_small"
+
+# ============================================================================
+# Model Architecture
+# ============================================================================
+model:
+  type: multimodal  # Use generic multi-modal model builder
+
+  # Define modalities
+  modalities:
+    # 3D Radiology (CT scans)
+    radiology:
+      backbone: swin3d_small
+      modality_type: vision3d
+      in_channels: 1
+      feature_dim: 512
+
+    # 2D Pathology (histopathology slides)
+    pathology:
+      backbone: swin2d_small
+      modality_type: vision
+      in_channels: 3
+      feature_dim: 512
+
+  # Fusion strategy
+  fusion:
+    strategy: fused_attention  # Options: concat, kronecker, fused_attention
+    num_heads: 8
+    use_kronecker: true
+    output_dim: 256
+
+  # Task head
+  head:
+    task_type: classification  # Options: classification, survival_cox, survival_deep
+    num_classes: 4
+    hidden_dims: [256]
+    dropout: 0.3
+
+# ============================================================================
+# Training Configuration
+# ============================================================================
+training:
+  num_epochs: 100
+  batch_size: 8
+  learning_rate: 1e-4
+  weight_decay: 0.01
+  optimizer: adamw
+
+  # Mixed precision training (reduces memory usage)
+  mixed_precision: true
+
+  # Gradient settings
+  gradient_clip_norm: 1.0
+  gradient_accumulation_steps: 1
+
+  # Learning rate schedule
+  lr_scheduler:
+    type: cosine  # Options: cosine, step, plateau
+    warmup_epochs: 10
+    min_lr: 1e-6
+
+  # Early stopping
+  early_stopping:
+    enabled: true
+    patience: 15
+    monitor: val_loss
+    mode: min
+
+  # Progressive training (optional)
+  progressive_training:
+    enabled: false
+    freeze_vision_epochs: 10
+    freeze_tabular_epochs: 0
+
+# ============================================================================
+# Data Configuration
+# ============================================================================
+data:
+  data_dir: "data/lung_cancer"
+
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  random_seed: 42
+
+  # Data loading
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  # Radiology (CT) preprocessing
+  radiology:
+    image_size: [64, 128, 128]  # [D, H, W]
+    normalize: true
+    normalization_method: "percentile"  # Options: percentile, zscore, minmax
+    clip_range: [0, 100]  # HU units
+
+    augmentation:
+      enabled: true
+      rotation_range: 10
+      zoom_range: 0.1
+      flip_probability: 0.5
+      elastic_deformation: false
+
+  # Pathology preprocessing
+  pathology:
+    image_size: [224, 224]
+    normalize: true
+    normalization_method: "imagenet"  # Use ImageNet stats
+
+    augmentation:
+      enabled: true
+      color_jitter: 0.2
+      rotation_range: 15
+      flip_probability: 0.5
+      random_crop: false
+
+  # Class balancing
+  class_balancing:
+    enabled: true
+    method: "weighted_sampling"  # Options: weighted_sampling, oversampling, focal_loss
+
+# ============================================================================
+# Evaluation Configuration
+# ============================================================================
+evaluation:
+  # Metrics to compute
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - auc_roc
+    - auc_pr
+
+  # Generate visualizations
+  visualizations:
+    - confusion_matrix
+    - roc_curve
+    - pr_curve
+    - grad_cam
+    - attention_maps
+
+  # Evaluation frequency
+  eval_frequency: 1  # Evaluate every N epochs
+
+  # Test-time augmentation
+  tta:
+    enabled: false
+    num_augmentations: 5
+
+# ============================================================================
+# Checkpointing
+# ============================================================================
+checkpointing:
+  save_dir: "outputs/smurf_lung_cancer"
+  save_best_only: true
+  monitor: val_accuracy
+  mode: max
+  save_frequency: 5  # Save every N epochs
+  keep_last_n: 3  # Keep last N checkpoints
+
+# ============================================================================
+# Logging
+# ============================================================================
+logging:
+  log_dir: "logs/smurf_lung_cancer"
+
+  # TensorBoard
+  tensorboard: true
+
+  # Weights & Biases
+  wandb:
+    enabled: false
+    project: "medfusion"
+    entity: null
+    tags: ["smurf", "lung_cancer", "fused_attention"]
+
+  # Logging frequency
+  log_frequency: 10  # Log every N batches
+  log_images: true
+  log_gradients: false
+
+# ============================================================================
+# Hardware Configuration
+# ============================================================================
+hardware:
+  device: cuda
+  num_gpus: 1
+  distributed: false
+
+  # Memory optimization
+  gradient_checkpointing: false  # Enable if OOM
+  empty_cache_frequency: 100  # Clear cache every N batches
+
+# ============================================================================
+# Advanced Features (Optional)
+# ============================================================================
+advanced:
+  # Attention supervision
+  attention_supervision:
+    enabled: false
+    method: "cam_based"  # Options: mask_guided, cam_based, consistency
+    loss_weight: 0.1
+
+  # Model compression
+  compression:
+    enabled: false
+    method: "pruning"  # Options: pruning, quantization, distillation
+
+  # Ensemble
+  ensemble:
+    enabled: false
+    num_models: 3
+    aggregation: "voting"  # Options: voting, averaging
+
+# ============================================================================
+# Reproducibility
+# ============================================================================
+reproducibility:
+  seed: 42
+  deterministic: true
+  benchmark: false
