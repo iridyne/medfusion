@@ -112,7 +112,7 @@ app.include_router(system.router, prefix="/api/system", tags=["系统"])
 app.include_router(training.router, prefix="/api/training", tags=["训练"])
 app.include_router(models.router, prefix="/api/models", tags=["模型"])
 app.include_router(datasets.router, prefix="/api/datasets", tags=["数据集"])
-app.include_router(experiments.router, prefix="/api/experiments", tags=["实验"])
+app.include_router(experiments.router)
 app.include_router(workflow_router)
 
 

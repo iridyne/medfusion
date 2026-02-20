@@ -121,9 +121,7 @@ class WorkflowEngine:
         if enable_monitoring:
             self.resource_monitor = ResourceMonitor(interval=2.0, history_size=300)
             logger.info("Resource monitor enabled")
-</text>
 
-<old_text line=401>
     async def _execute_data_loader(
         self, node: Node, inputs: Dict[str, Any]
     ) -> Dict[str, Any]:
