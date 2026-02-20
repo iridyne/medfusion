@@ -453,6 +453,45 @@ docs/
 - 清理构建产物（dist/、build/、*.egg-info）
 - 更新 .gitignore 避免再次提交
 
+### 代码提交规范
+
+**Commit Message 语言要求：**
+- ✅ 所有 commit message 必须使用全英文
+- ❌ 禁止使用中文或中英文混合
+
+**原因：**
+1. 国际化标准：便于国际开发者理解和协作
+2. 工具兼容性：避免编码问题和 Git 工具显示异常
+3. 专业性：符合开源项目的最佳实践
+
+**格式规范（遵循 Conventional Commits）：**
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Type 类型：**
+- `feat`: 新功能
+- `fix`: Bug 修复
+- `docs`: 文档更新
+- `style`: 代码格式（不影响功能）
+- `refactor`: 重构
+- `perf`: 性能优化
+- `test`: 测试相关
+- `chore`: 构建/工具/依赖更新
+
+**示例：**
+- ✅ `feat(web): add workflow editor with ReactFlow`
+- ✅ `fix(ci): resolve composite action venv activation issue`
+- ✅ `docs: update ROADMAP with zero-code workflow priority`
+- ❌ `添加工作流编辑器功能`
+- ❌ `修复 CI/CD 问题`
+
+**记录时间：** 2026-02-20
+
 ### 商业化开发经验
 
 **背景（2026-02-20 记录）：**

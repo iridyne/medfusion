@@ -21,24 +21,25 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ inputs.python-version }}
-        cache: ${{ inputs.cache == 'true' && 'pip' || '' }}
 
     - name: Install uv
       shell: bash
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Create virtual environment
+    - name: Add uv to PATH
       shell: bash
-      run: uv venv
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
+    - name: Create virtual environment and install dependencies
       shell: bash
       run: |
-        source .venv/bin/activate
+        uv venv
         uv pip install -e ".[${{ inputs.extras }}]"
 
-    - name: Add venv to PATH
+    - name: Activate virtual environment
       shell: bash
-      run: echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+      run: |
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+</text>

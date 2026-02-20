@@ -19,8 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.cargo/bin:$PATH"
 
-# 复制依赖文件
+# 复制依赖文件和源代码
 COPY pyproject.toml README.md ./
+COPY med_core ./med_core
 
 # 创建虚拟环境并安装依赖（包含 web 可选依赖）
 RUN uv venv /opt/venv
