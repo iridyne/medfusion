@@ -141,9 +141,9 @@ class MultiViewMultiModalFusionModel(nn.Module):
 
             # Get view aggregation auxiliary outputs if available
             view_aggregation_aux = None
-            if hasattr(self.vision_backbone.aggregator, 'last_attention_weights'):
+            if hasattr(self.vision_backbone.aggregator, "last_attention_weights"):
                 view_aggregation_aux = {
-                    'view_attention_weights': self.vision_backbone.aggregator.last_attention_weights
+                    "view_attention_weights": self.vision_backbone.aggregator.last_attention_weights
                 }
         else:
             # Single-view vision backbone (backward compatible)
@@ -157,7 +157,9 @@ class MultiViewMultiModalFusionModel(nn.Module):
         tabular_features = self.tabular_backbone(tabular)
 
         # Fuse features
-        fused_features, fusion_aux = self.fusion_module(vision_features, tabular_features)
+        fused_features, fusion_aux = self.fusion_module(
+            vision_features, tabular_features
+        )
 
         # Main classification
         logits = self.classifier(fused_features)
@@ -201,12 +203,18 @@ class MultiViewMultiModalFusionModel(nn.Module):
                 attention_weights["fusion_attention"] = fusion_attn
 
         # View aggregation attention
-        if self.is_multiview and hasattr(self.vision_backbone.aggregator, 'last_attention_weights'):
-            attention_weights["view_attention"] = self.vision_backbone.aggregator.last_attention_weights
+        if self.is_multiview and hasattr(
+            self.vision_backbone.aggregator, "last_attention_weights"
+        ):
+            attention_weights["view_attention"] = (
+                self.vision_backbone.aggregator.last_attention_weights
+            )
 
         return attention_weights if attention_weights else None
 
-    def freeze_vision_backbone(self, strategy: str = "full", unfreeze_last_n: int = 2) -> None:
+    def freeze_vision_backbone(
+        self, strategy: str = "full", unfreeze_last_n: int = 2
+    ) -> None:
         """
         Freeze vision backbone parameters.
 
@@ -214,12 +222,12 @@ class MultiViewMultiModalFusionModel(nn.Module):
             strategy: Freezing strategy ("full", "partial", "none")
             unfreeze_last_n: Number of last layers to keep trainable
         """
-        if hasattr(self.vision_backbone, 'freeze_backbone'):
+        if hasattr(self.vision_backbone, "freeze_backbone"):
             self.vision_backbone.freeze_backbone(strategy, unfreeze_last_n)
 
     def unfreeze_vision_backbone(self) -> None:
         """Unfreeze all vision backbone parameters."""
-        if hasattr(self.vision_backbone, 'unfreeze_backbone'):
+        if hasattr(self.vision_backbone, "unfreeze_backbone"):
             self.vision_backbone.unfreeze_backbone()
 
     def get_config(self) -> dict[str, Any]:
@@ -231,9 +239,9 @@ class MultiViewMultiModalFusionModel(nn.Module):
             "fusion_config": self.fusion_module.get_config(),
         }
 
-        if hasattr(self.vision_backbone, 'get_config'):
+        if hasattr(self.vision_backbone, "get_config"):
             config["vision_config"] = self.vision_backbone.get_config()
-        if hasattr(self.tabular_backbone, 'get_config'):
+        if hasattr(self.tabular_backbone, "get_config"):
             config["tabular_config"] = self.tabular_backbone.get_config()
 
         return config
@@ -285,7 +293,7 @@ def create_multiview_fusion_model(
         create_multiview_vision_backbone,
         create_tabular_backbone,
     )
-    from med_core.fusion.factory import create_fusion_module
+    from med_core.fusion.strategies import create_fusion_module
 
     # Create multi-view vision backbone
     vision_backbone = create_multiview_vision_backbone(
@@ -294,14 +302,14 @@ def create_multiview_fusion_model(
         share_weights=share_weights,
         view_names=view_names,
         feature_dim=vision_feature_dim,
-        **kwargs.get('vision_kwargs', {}),
+        **kwargs.get("vision_kwargs", {}),
     )
 
     # Create tabular backbone
     tabular_backbone = create_tabular_backbone(
         input_dim=tabular_input_dim,
         output_dim=tabular_feature_dim,
-        **kwargs.get('tabular_kwargs', {}),
+        **kwargs.get("tabular_kwargs", {}),
     )
 
     # Create fusion module
@@ -310,7 +318,7 @@ def create_multiview_fusion_model(
         vision_dim=vision_feature_dim,
         tabular_dim=tabular_feature_dim,
         output_dim=fusion_output_dim,
-        **kwargs.get('fusion_kwargs', {}),
+        **kwargs.get("fusion_kwargs", {}),
     )
 
     # Create complete model
@@ -319,8 +327,8 @@ def create_multiview_fusion_model(
         tabular_backbone=tabular_backbone,
         fusion_module=fusion_module,
         num_classes=num_classes,
-        dropout=kwargs.get('dropout', 0.4),
-        use_auxiliary_heads=kwargs.get('use_auxiliary_heads', True),
+        dropout=kwargs.get("dropout", 0.4),
+        use_auxiliary_heads=kwargs.get("use_auxiliary_heads", True),
     )
 
     return model

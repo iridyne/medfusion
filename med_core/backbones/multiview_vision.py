@@ -86,10 +86,9 @@ class MultiViewVisionBackbone(nn.Module):
 
         # If not sharing weights, create separate backbones for each view
         if not share_weights and view_names is not None:
-            self.view_backbones = nn.ModuleDict({
-                view_name: self._clone_backbone(backbone)
-                for view_name in view_names
-            })
+            self.view_backbones = nn.ModuleDict(
+                {view_name: self._clone_backbone(backbone) for view_name in view_names}
+            )
         else:
             self.view_backbones = None
 
@@ -101,12 +100,11 @@ class MultiViewVisionBackbone(nn.Module):
     def _clone_backbone(self, backbone: BaseVisionBackbone) -> BaseVisionBackbone:
         """Create a deep copy of the backbone with separate parameters."""
         import copy
+
         return copy.deepcopy(backbone)
 
     def _process_single_view(
-        self,
-        view_name: str,
-        view_tensor: torch.Tensor
+        self, view_name: str, view_tensor: torch.Tensor
     ) -> torch.Tensor:
         """
         Process a single view through the backbone.
@@ -178,15 +176,30 @@ class MultiViewVisionBackbone(nn.Module):
                 view_names_ordered.append(view_name)
 
             # Stack features: (B, N, feature_dim)
-            view_features = torch.stack(view_features, dim=1)
+            view_features_tensor = torch.stack(view_features, dim=1)
+
+            # Convert tensor back to dict format for aggregator
+            view_features = {
+                name: view_features_tensor[:, i, :]
+                for i, name in enumerate(view_names_ordered)
+            }
 
             # Create view mask if not provided (all views valid)
             if view_mask is None:
-                view_mask = torch.ones(
-                    batch_size, num_views,
+                view_mask_tensor = torch.ones(
+                    batch_size,
+                    num_views,
                     dtype=torch.bool,
-                    device=view_features.device
+                    device=view_features_tensor.device,
                 )
+            else:
+                view_mask_tensor = view_mask
+
+            # Convert view_mask to dict format
+            view_mask = {
+                name: view_mask_tensor[:, i]
+                for i, name in enumerate(view_names_ordered)
+            }
 
         # Handle stacked tensor input
         elif isinstance(x, torch.Tensor) and x.dim() == 5:
@@ -200,15 +213,40 @@ class MultiViewVisionBackbone(nn.Module):
             features_flat = self.backbone(x_flat)  # (B*N, feature_dim)
 
             # Reshape back to (B, N, feature_dim)
-            view_features = features_flat.view(batch_size, num_views, -1)
+            view_features_tensor = features_flat.view(batch_size, num_views, -1)
+
+            # Convert tensor to dict format for aggregator
+            if self.view_names and len(self.view_names) == num_views:
+                view_features = {
+                    name: view_features_tensor[:, i, :]
+                    for i, name in enumerate(self.view_names)
+                }
+            else:
+                view_features = {
+                    f"view_{i}": view_features_tensor[:, i, :] for i in range(num_views)
+                }
 
             # Create view mask if not provided
             if view_mask is None:
-                view_mask = torch.ones(
-                    batch_size, num_views,
+                view_mask_tensor = torch.ones(
+                    batch_size,
+                    num_views,
                     dtype=torch.bool,
-                    device=view_features.device
+                    device=view_features_tensor.device,
                 )
+            else:
+                view_mask_tensor = view_mask
+
+            # Convert view_mask to dict format
+            if self.view_names and len(self.view_names) == num_views:
+                view_mask = {
+                    name: view_mask_tensor[:, i]
+                    for i, name in enumerate(self.view_names)
+                }
+            else:
+                view_mask = {
+                    f"view_{i}": view_mask_tensor[:, i] for i in range(num_views)
+                }
 
         else:
             raise ValueError(
@@ -221,6 +259,10 @@ class MultiViewVisionBackbone(nn.Module):
 
         # Aggregate view features
         aggregated_features = self.aggregator(view_features, view_mask)
+
+        # Handle tuple return (features, attention_weights)
+        if isinstance(aggregated_features, tuple):
+            aggregated_features = aggregated_features[0]
 
         return aggregated_features
 
@@ -289,7 +331,7 @@ def create_multiview_vision_backbone(
         ...     feature_dim=128,
         ... )
     """
-    from med_core.backbones.factory import create_vision_backbone
+    from med_core.backbones.vision import create_vision_backbone
 
     # Create base backbone
     base_backbone = create_vision_backbone(backbone_name, **backbone_kwargs)
