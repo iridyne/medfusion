@@ -1,54 +1,65 @@
 # Test Status Report
 
-**Date**: 2024-02-20
-**Commit**: f269359
+**Last Updated**: 2024-02-20
 
 ## Summary
 
-- ✅ **595 tests passed** (84.7%)
-- ❌ **86 tests failed** (12.2%)
-- ❌ **11 tests errored** (1.6%)
-- ⏭️ **11 tests skipped** (1.6%)
+- **Total Tests**: 703 (excluding test_end_to_end.py)
+- **Passed**: 614 (87.3%) ⬆️ +19 from previous
+- **Failed**: 74 (10.5%) ⬇️ -12 from previous
+- **Errors**: 4 (0.6%) ⬇️ -7 from previous
+- **Skipped**: 11 (1.6%)
 
-## Key Fixes Completed
+## Recent Fixes
 
-1. ✅ Fixed `create_default_config` import error
-2. ✅ Fixed `MILAggregator` return value logic
-3. ✅ Fixed factory module imports (fusion.factory → fusion.strategies, backbones.factory → backbones.vision)
-4. ✅ Fixed aggregator dict/tensor compatibility in MultiViewVisionBackbone
-5. ✅ Multiview integration test forward pass now works
+### Commit 760688a: View Aggregator API Compatibility
+- Fixed `create_view_aggregator` to filter kwargs based on aggregator type
+- Updated all tests to unpack `(tensor, metadata)` tuple return values
+- Fixed aggregator type name from 'learned' to 'learned_weight'
+- Updated attention weights test to handle dict metadata format
+- **Result**: All 13 view aggregator tests passing ✅
+
+### Commit c28f0a8: Code Quality Improvements
+- Fixed f-string issues in cli.py
+- Removed unused imports in multiple files
+- Applied ruff auto-fixes
+
+### Commit 9f230f8: Factory Import Paths
+- Fixed fusion.factory → fusion.strategies
+- Fixed backbones.factory → backbones.vision
+- Fixed MultiViewVisionBackbone aggregator compatibility
+- Fixed create_vision_backbone parameter name (name → backbone_name)
 
 ## Remaining Issues
 
-### 1. API Compatibility (86 failures + 11 errors)
-**Root cause**: Tests using old API signatures
+### High Priority (API Compatibility)
+- **74 test failures**: Mostly parameter name mismatches
+  - Common issues: `name` vs `backbone_name`, missing parameters
+  - Estimated fix time: 2-3 hours
 
-Examples:
-- `create_vision_backbone(name=...)` → should be `create_vision_backbone(backbone_name=...)`
-- `BaseViewAggregator(name=...)` → `name` parameter removed
-- `aggregator_type` parameter in wrong places
+### Medium Priority (Import Errors)
+- **4 test errors**: Module import issues in test_trainers.py
+  - Need to investigate trainer initialization errors
 
-**Solution**: Update test code to use current API or mark as deprecated
+### Low Priority
+- **11 skipped tests**: Intentionally skipped, no action needed
 
-### 2. Workflow Validation (1 failure)
-- `test_invalid_edge`: KeyError when accessing nonexistent node
-- Needs better error handling in workflow engine
+## Next Steps
 
-### 3. Test End-to-End (collection error)
-- `test_end_to_end.py` has import errors
-- Likely missing `ModelEvaluator` class
+1. Continue fixing API compatibility issues in remaining 74 tests
+2. Investigate and fix 4 trainer initialization errors
+3. Target: 90%+ pass rate (630+ tests passing)
 
-## Recommendation
+## Test Categories
 
-**Option A**: Fix critical API compatibility issues (2-3 hours)
-- Update ~30 test files to use current API
-- Focus on high-value tests (trainers, multiview, aggregators)
+### Fully Passing ✅
+- View Aggregators (13/13)
+- Multiview Integration (basic tests)
 
-**Option B**: Mark outdated tests as skip (30 minutes)
-- Add `@pytest.mark.skip(reason="API changed")` to failing tests
-- Focus on new feature development
+### Partially Passing ⚠️
+- Trainers (errors in initialization)
+- Backbones (parameter name issues)
+- Fusion modules (some API mismatches)
 
-**Option C**: Move forward with v0.5.0 development
-- Current pass rate (84.7%) is acceptable for development
-- Fix tests incrementally as we touch related code
-
+### Not Yet Fixed ❌
+- End-to-end tests (excluded from current run)
