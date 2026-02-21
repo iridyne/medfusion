@@ -61,7 +61,9 @@ class TestMultimodalTrainer:
         config.training.use_progressive_training = False
         return config
 
-    def test_trainer_initialization(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_initialization(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test trainer can be initialized."""
         train_loader, val_loader = simple_dataloaders
 
@@ -77,7 +79,9 @@ class TestMultimodalTrainer:
         assert trainer.model is not None
         assert trainer.optimizer is not None
 
-    def test_trainer_single_epoch(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_single_epoch(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test trainer can run a single epoch."""
         train_loader, val_loader = simple_dataloaders
 
@@ -99,7 +103,9 @@ class TestMultimodalTrainer:
         assert isinstance(train_metrics["loss"], float)
         assert isinstance(val_metrics["loss"], float)
 
-    def test_trainer_full_training(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_full_training(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test trainer can complete full training."""
         train_loader, val_loader = simple_dataloaders
 
@@ -118,7 +124,9 @@ class TestMultimodalTrainer:
         assert len(history["train_loss"]) == 2
         assert len(history["val_loss"]) == 2
 
-    def test_trainer_with_mixed_precision(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_with_mixed_precision(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test trainer with mixed precision training."""
         train_loader, val_loader = simple_dataloaders
         simple_config.training.mixed_precision = True
@@ -134,7 +142,9 @@ class TestMultimodalTrainer:
         assert trainer.use_amp is True
         assert trainer.scaler is not None
 
-    def test_trainer_progressive_training(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_progressive_training(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test progressive training stages."""
         train_loader, val_loader = simple_dataloaders
         simple_config.training.use_progressive_training = True
@@ -160,7 +170,9 @@ class TestMultimodalTrainer:
         trainer.current_epoch = 2
         trainer.on_epoch_start()  # Stage 3
 
-    def test_trainer_checkpoint_saving(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_checkpoint_saving(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test checkpoint saving."""
         with tempfile.TemporaryDirectory() as tmpdir:
             train_loader, val_loader = simple_dataloaders
@@ -183,7 +195,9 @@ class TestMultimodalTrainer:
                 checkpoints = list(checkpoint_dir.glob("*.pt"))
                 assert len(checkpoints) > 0
 
-    def test_trainer_early_stopping(self, simple_model, simple_dataloaders, simple_config):
+    def test_trainer_early_stopping(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test early stopping mechanism."""
         train_loader, val_loader = simple_dataloaders
         simple_config.training.num_epochs = 10
@@ -224,16 +238,34 @@ class TestMultiViewMultimodalTrainer:
     def multiview_config(self):
         """Create multi-view config for testing."""
         config = create_ct_multiview_config(
-            data_root="./data",
-            csv_path="./data.csv",
-            image_dir="./images",
+            view_names=["view1", "view2"],
+            aggregator_type="mean",
+            backbone="resnet18",
         )
         config.training.num_epochs = 2
         config.training.mixed_precision = False
         config.training.use_progressive_training = False
         return config
 
-    def test_multiview_trainer_initialization(self, multiview_model, simple_dataloaders, multiview_config):
+    @pytest.fixture
+    def simple_dataloaders(self):
+        """Create simple dataloaders for testing."""
+        # Create dummy data
+        images = torch.randn(40, 3, 224, 224)
+        tabular = torch.randn(40, 10)
+        labels = torch.randint(0, 2, (40,))
+
+        train_dataset = TensorDataset(images[:30], tabular[:30], labels[:30])
+        val_dataset = TensorDataset(images[30:], tabular[30:], labels[30:])
+
+        train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+
+        return train_loader, val_loader
+
+    def test_multiview_trainer_initialization(
+        self, multiview_model, simple_dataloaders, multiview_config
+    ):
         """Test multi-view trainer can be initialized."""
         train_loader, val_loader = simple_dataloaders
 
@@ -248,7 +280,9 @@ class TestMultiViewMultimodalTrainer:
         assert trainer is not None
         assert trainer.model is not None
 
-    def test_multiview_trainer_progressive_views(self, multiview_model, simple_dataloaders, multiview_config):
+    def test_multiview_trainer_progressive_views(
+        self, multiview_model, simple_dataloaders, multiview_config
+    ):
         """Test progressive view training."""
         train_loader, val_loader = simple_dataloaders
         multiview_config.training.use_progressive_views = True
@@ -276,6 +310,42 @@ class TestMultiViewMultimodalTrainer:
 class TestTrainerUtilities:
     """Test trainer utility functions."""
 
+    @pytest.fixture
+    def simple_model(self):
+        """Create a simple model for testing."""
+        return create_fusion_model(
+            vision_backbone_name="resnet18",
+            tabular_input_dim=10,
+            num_classes=2,
+            fusion_type="concatenate",
+            pretrained=False,
+        )
+
+    @pytest.fixture
+    def simple_dataloaders(self):
+        """Create simple dataloaders for testing."""
+        # Create dummy data
+        images = torch.randn(40, 3, 224, 224)
+        tabular = torch.randn(40, 10)
+        labels = torch.randint(0, 2, (40,))
+
+        train_dataset = TensorDataset(images[:30], tabular[:30], labels[:30])
+        val_dataset = TensorDataset(images[30:], tabular[30:], labels[30:])
+
+        train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+
+        return train_loader, val_loader
+
+    @pytest.fixture
+    def simple_config(self):
+        """Create simple config for testing."""
+        config = create_default_config()
+        config.training.num_epochs = 2
+        config.training.mixed_precision = False
+        config.training.use_progressive_training = False
+        return config
+
     def test_gradient_clipping(self, simple_model, simple_dataloaders, simple_config):
         """Test gradient clipping works."""
         train_loader, val_loader = simple_dataloaders
@@ -301,12 +371,11 @@ class TestTrainerUtilities:
         for p in trainer.model.parameters():
             if p.grad is not None:
                 total_norm_before += p.grad.data.norm(2).item() ** 2
-        total_norm_before = total_norm_before ** 0.5
+        total_norm_before = total_norm_before**0.5
 
         # Apply gradient clipping
         torch.nn.utils.clip_grad_norm_(
-            trainer.model.parameters(),
-            simple_config.training.gradient_clip
+            trainer.model.parameters(), simple_config.training.gradient_clip
         )
 
         # Check gradients after clipping
@@ -314,13 +383,15 @@ class TestTrainerUtilities:
         for p in trainer.model.parameters():
             if p.grad is not None:
                 total_norm_after += p.grad.data.norm(2).item() ** 2
-        total_norm_after = total_norm_after ** 0.5
+        total_norm_after = total_norm_after**0.5
 
         # If original norm was > 1.0, it should be clipped to 1.0
         if total_norm_before > 1.0:
             assert total_norm_after <= 1.0 + 1e-6
 
-    def test_learning_rate_scheduling(self, simple_model, simple_dataloaders, simple_config):
+    def test_learning_rate_scheduling(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
         """Test learning rate scheduler works."""
         train_loader, val_loader = simple_dataloaders
         simple_config.training.num_epochs = 3

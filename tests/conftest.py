@@ -87,14 +87,16 @@ def sample_csv_data(temp_dir):
         img_path = image_dir / f"patient_{i}.jpg"
         img.save(img_path)
 
-        data.append({
-            "patient_id": f"P{i:03d}",
-            "image_path": f"patient_{i}.jpg",
-            "age": 50 + i,
-            "bmi": 25.0 + i * 0.5,
-            "gender": i % 2,
-            "label": i % 2,
-        })
+        data.append(
+            {
+                "patient_id": f"P{i:03d}",
+                "image_path": f"patient_{i}.jpg",
+                "age": 50 + i,
+                "bmi": 25.0 + i * 0.5,
+                "gender": i % 2,
+                "label": i % 2,
+            }
+        )
 
     df = pd.DataFrame(data)
     csv_path = temp_dir / "data.csv"
@@ -127,14 +129,16 @@ def sample_multiview_csv_data(temp_dir):
             img.save(img_path)
             views[f"{view_name}_path"] = f"patient_{i}_{view_name}.jpg"
 
-        data.append({
-            "patient_id": f"P{i:03d}",
-            **views,
-            "age": 50 + i,
-            "bmi": 25.0 + i * 0.5,
-            "gender": i % 2,
-            "label": i % 2,
-        })
+        data.append(
+            {
+                "patient_id": f"P{i:03d}",
+                **views,
+                "age": 50 + i,
+                "bmi": 25.0 + i * 0.5,
+                "gender": i % 2,
+                "label": i % 2,
+            }
+        )
 
     df = pd.DataFrame(data)
     csv_path = temp_dir / "multiview_data.csv"
@@ -167,14 +171,17 @@ def fusion_types():
 @pytest.fixture
 def aggregator_types():
     """List of view aggregator types to test."""
-    return ["max", "mean", "attention", "cross_attention", "learned"]
+    return ["max", "mean", "attention", "cross_attention", "learned_weight"]
 
 
 # Utility functions for tests
 
+
 def assert_tensor_shape(tensor, expected_shape):
     """Assert tensor has expected shape."""
-    assert tensor.shape == expected_shape, f"Expected shape {expected_shape}, got {tensor.shape}"
+    assert tensor.shape == expected_shape, (
+        f"Expected shape {expected_shape}, got {tensor.shape}"
+    )
 
 
 def assert_tensor_range(tensor, min_val=None, max_val=None):

@@ -294,13 +294,14 @@ class TestMemoryMappedCache:
 
     def test_eviction(self, cache_dir):
         """测试淘汰策略"""
-        cache = MemoryMappedCache(cache_dir, max_size_gb=0.001)
+        # 使用非常小的缓存限制 (0.0001 GB = 100KB)
+        cache = MemoryMappedCache(cache_dir, max_size_gb=0.0001)
 
-        # 添加数据直到超过限制
+        # 添加数据直到超过限制 (每个数组约 40KB)
         data = np.random.randn(100, 100).astype(np.float32)
         cache.put("key1", data)
         cache.put("key2", data)
-        cache.put("key3", data)
+        cache.put("key3", data)  # 这应该触发 key1 的驱逐
 
         # 第一个键应该被淘汰
         assert cache.get("key1") is None

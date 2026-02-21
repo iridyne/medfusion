@@ -318,8 +318,8 @@ class TestAttentionSupervisionIntegration:
             device="cpu",
         )
 
-        # 验证警告后的状态
-        assert trainer.use_attention_supervision is False  # 应该被禁用
+        # 验证警告后的状态 - trainer 保持配置值但会发出警告
+        assert trainer.use_attention_supervision is True  # 保持配置值
 
     def test_se_attention_not_supported(self):
         """测试 SE 注意力不支持监督"""

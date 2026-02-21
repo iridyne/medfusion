@@ -87,9 +87,9 @@ class TestMultiViewDataset:
         )
 
         stats = dataset.get_statistics()
-        assert "view_availability" in stats
-        assert "total_samples" in stats
-        assert stats["total_samples"] == len(dataset)
+        assert "view_statistics" in stats
+        assert "total_samples" in stats["view_statistics"]
+        assert stats["view_statistics"]["total_samples"] == len(dataset)
 
     def test_multiview_with_missing_views(self, sample_multiview_csv_data, temp_dir):
         """Test handling of missing views."""
@@ -175,7 +175,9 @@ class TestMultiViewDataset:
         assert "coronal" in views
         assert torch.all(views["coronal"] == 0)
 
-    def test_multiview_handle_missing_duplicate(self, sample_multiview_csv_data, temp_dir):
+    def test_multiview_handle_missing_duplicate(
+        self, sample_multiview_csv_data, temp_dir
+    ):
         """Test handle_missing='duplicate' strategy."""
         import pandas as pd
 
@@ -203,7 +205,21 @@ class TestMultiViewDataset:
         views, _, _ = dataset[0]
         # Missing view should be duplicated from another view
         assert "coronal" in views
-        assert not torch.all(views["coronal"] == 0)
+        assert "axial" in views
+
+        # Convert to tensors for comparison
+        import torchvision.transforms.functional as F
+
+        coronal_view = views["coronal"]
+        axial_view = views["axial"]
+
+        if not isinstance(coronal_view, torch.Tensor):
+            coronal_view = F.to_tensor(coronal_view)
+        if not isinstance(axial_view, torch.Tensor):
+            axial_view = F.to_tensor(axial_view)
+
+        # Coronal should be duplicated from axial (first available view)
+        assert torch.allclose(coronal_view, axial_view)
 
     def test_multiview_feature_names(self, sample_multiview_csv_data):
         """Test feature names are preserved."""
@@ -254,10 +270,12 @@ class TestMultiViewDataset:
         """Test dataset with image transforms."""
         from torchvision import transforms
 
-        transform = transforms.Compose([
-            transforms.Resize((128, 128)),
-            transforms.ToTensor(),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.Resize((128, 128)),
+                transforms.ToTensor(),
+            ]
+        )
 
         config = MultiViewConfig(
             view_names=["axial", "coronal", "sagittal"],

@@ -115,7 +115,7 @@ class TestBackboneFactories:
                 "view2": torch.randn(4, 128),
                 "view3": torch.randn(4, 128),
             }
-            output = aggregator(views)
+            output, _ = aggregator(views)
             assert output.shape == (4, 128)
 
     def test_create_multiview_vision_backbone(self):
@@ -255,9 +255,9 @@ class TestConfigFactories:
     def test_create_ct_multiview_config(self):
         """Test creating CT multi-view config."""
         config = create_ct_multiview_config(
-            data_root="./data",
-            csv_path="./data.csv",
-            image_dir="./images",
+            view_names=["axial", "coronal", "sagittal"],
+            aggregator_type="attention",
+            backbone="resnet18",
         )
         assert config is not None
         assert hasattr(config, "data")
@@ -269,10 +269,9 @@ class TestConfigFactories:
     def test_create_temporal_multiview_config(self):
         """Test creating temporal multi-view config."""
         config = create_temporal_multiview_config(
-            data_root="./data",
-            csv_path="./data.csv",
-            image_dir="./images",
             num_timepoints=3,
+            aggregator_type="attention",
+            backbone="resnet18",
         )
         assert config is not None
         assert hasattr(config.data, "view_names")
@@ -342,9 +341,9 @@ class TestTrainerFactories:
 
         # Create config
         config = create_ct_multiview_config(
-            data_root="./data",
-            csv_path="./data.csv",
-            image_dir="./images",
+            view_names=["axial", "coronal", "sagittal"],
+            aggregator_type="attention",
+            backbone="resnet18",
         )
 
         # Create trainer

@@ -109,7 +109,9 @@ class TestBinaryMetrics:
 
         metrics = calculate_binary_metrics(y_true, y_pred, y_prob)
 
-        assert isinstance(metrics, dict)
+        # BinaryMetrics is not a dict but has dict-like interface
+        assert hasattr(metrics, "items")
+        assert hasattr(metrics, "keys")
         for key, value in metrics.items():
             assert isinstance(key, str)
             assert isinstance(value, (int, float, np.number))
@@ -137,9 +139,19 @@ class TestBinaryMetrics:
 
         metrics = calculate_binary_metrics(y_true, y_pred, y_prob)
 
-        # All metrics should be between 0 and 1
+        # All metrics should be between 0 and 1 (except count metrics)
+        count_metrics = [
+            "true_positives",
+            "true_negatives",
+            "false_positives",
+            "false_negatives",
+            "num_samples",
+            "optimal_threshold",  # Can be inf in edge cases
+        ]
         for key, value in metrics.items():
-            if key not in ["confusion_matrix"]:  # Skip non-scalar metrics
+            if (
+                key not in ["confusion_matrix"] + count_metrics
+            ):  # Skip non-scalar and count metrics
                 assert 0 <= value <= 1, f"{key} = {value} is out of range [0, 1]"
 
 

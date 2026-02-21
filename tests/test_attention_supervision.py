@@ -284,14 +284,14 @@ class TestTrainerIntegration:
     def test_trainer_config_validation(self):
         """Test trainer validates attention supervision config."""
         config = ExperimentConfig(
-            name="test_attention",
+            experiment_name="test_attention",
             data=DataConfig(
-                train_image_dir="dummy",
-                train_csv="dummy.csv",
-                val_image_dir="dummy",
-                val_csv="dummy.csv",
-                tabular_features=["age", "bmi"],
-                label_column="label",
+                data_root="dummy",
+                csv_path="dummy.csv",
+                image_dir="dummy",
+                categorical_features=["age", "bmi"],
+                target_column="label",
+                batch_size=2,
             ),
             model=ModelConfig(
                 vision=VisionConfig(
@@ -299,34 +299,30 @@ class TestTrainerIntegration:
                     attention_type="cbam",
                     enable_attention_supervision=True,
                 ),
-                tabular=TabularConfig(input_dim=2),
-                fusion=FusionConfig(strategy="concatenate"),
+                tabular=TabularConfig(),
+                fusion=FusionConfig(fusion_type="concatenate"),
             ),
             training=TrainingConfig(
                 num_epochs=1,
-                batch_size=2,
-                use_attention_supervision=True,
-                attention_supervision_method="mask_guided",
             ),
         )
 
         # Config should be valid
         assert config.model.vision.enable_attention_supervision
-        assert config.training.use_attention_supervision
         assert config.model.vision.attention_type == "cbam"
 
     def test_trainer_config_mismatch_warning(self):
         """Test trainer warns on config mismatch."""
         # Config with SE attention (doesn't support spatial weights)
         config = ExperimentConfig(
-            name="test_attention",
+            experiment_name="test_attention",
             data=DataConfig(
-                train_image_dir="dummy",
-                train_csv="dummy.csv",
-                val_image_dir="dummy",
-                val_csv="dummy.csv",
-                tabular_features=["age", "bmi"],
-                label_column="label",
+                data_root="dummy",
+                csv_path="dummy.csv",
+                image_dir="dummy",
+                categorical_features=["age", "bmi"],
+                target_column="label",
+                batch_size=2,
             ),
             model=ModelConfig(
                 vision=VisionConfig(
@@ -334,13 +330,11 @@ class TestTrainerIntegration:
                     attention_type="se",  # SE doesn't support spatial attention
                     enable_attention_supervision=True,
                 ),
-                tabular=TabularConfig(input_dim=2),
-                fusion=FusionConfig(strategy="concatenate"),
+                tabular=TabularConfig(),
+                fusion=FusionConfig(fusion_type="concatenate"),
             ),
             training=TrainingConfig(
                 num_epochs=1,
-                batch_size=2,
-                use_attention_supervision=True,
             ),
         )
 

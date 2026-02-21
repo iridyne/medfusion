@@ -19,7 +19,7 @@ class TestVisionBackboneFactory:
             "resnet18",
             "resnet34",
             "resnet50",
-            "mobilenet_v2",
+            "mobilenetv2",
             "efficientnet_b0",
         ],
     )
