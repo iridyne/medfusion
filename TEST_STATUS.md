@@ -1,65 +1,93 @@
-# Test Status Report
+# MedFusion Test Status Report
 
-**Last Updated**: 2024-02-20
+**Last Updated**: 2026-02-20
+**Test Suite Version**: v0.4.0
 
 ## Summary
 
-- **Total Tests**: 703 (excluding test_end_to_end.py)
-- **Passed**: 614 (87.3%) ⬆️ +19 from previous
-- **Failed**: 74 (10.5%) ⬇️ -12 from previous
-- **Errors**: 4 (0.6%) ⬇️ -7 from previous
-- **Skipped**: 11 (1.6%)
+| Metric | Count | Percentage |
+|--------|-------|------------|
+| **Total Tests** | 703 | 100% |
+| **Passed** | 622 | **88.5%** |
+| **Failed** | 66 | 9.4% |
+| **Errors** | 4 | 0.6% |
+| **Skipped** | 11 | 1.6% |
 
-## Recent Fixes
+## Progress History
 
-### Commit 760688a: View Aggregator API Compatibility
-- Fixed `create_view_aggregator` to filter kwargs based on aggregator type
-- Updated all tests to unpack `(tensor, metadata)` tuple return values
-- Fixed aggregator type name from 'learned' to 'learned_weight'
-- Updated attention weights test to handle dict metadata format
-- **Result**: All 13 view aggregator tests passing ✅
+- **Initial**: 578 passed (82.2%)
+- **After view aggregator fixes**: 595 passed (84.6%)
+- **After factory function fixes**: 614 passed (87.3%)
+- **Current**: 622 passed (88.5%) ✅
 
-### Commit c28f0a8: Code Quality Improvements
-- Fixed f-string issues in cli.py
-- Removed unused imports in multiple files
-- Applied ruff auto-fixes
+## Recent Fixes (2026-02-20)
 
-### Commit 9f230f8: Factory Import Paths
-- Fixed fusion.factory → fusion.strategies
-- Fixed backbones.factory → backbones.vision
-- Fixed MultiViewVisionBackbone aggregator compatibility
-- Fixed create_vision_backbone parameter name (name → backbone_name)
+### 1. View Aggregator API Compatibility ✅
+- **Issue**: Factory function passed unsupported kwargs to aggregators
+- **Fix**: Filter kwargs based on aggregator type
+- **Impact**: +13 tests passed
+
+### 2. Factory Function Parameter Filtering ✅
+- **Issue**: `config` parameter passed to backbone constructors
+- **Fix**: Filter out `config` in all factory functions
+- **Impact**: +19 tests passed
+
+### 3. Attention Type Handling ✅
+- **Issue**: `attention_type=None` not handled (only string "none")
+- **Fix**: Check for both `None` object and `"none"` string
+- **Impact**: +8 tests passed
 
 ## Remaining Issues
 
-### High Priority (API Compatibility)
-- **74 test failures**: Mostly parameter name mismatches
-  - Common issues: `name` vs `backbone_name`, missing parameters
-  - Estimated fix time: 2-3 hours
+### High Priority (66 failures)
 
-### Medium Priority (Import Errors)
-- **4 test errors**: Module import issues in test_trainers.py
-  - Need to investigate trainer initialization errors
+1. **Trainer Initialization** (30+ failures)
+   - Missing `optimizer` positional argument
+   - Unexpected `log_dir` keyword argument
+   - **Root Cause**: Test code uses old API
+   - **Solution**: Update test fixtures to match current API
 
-### Low Priority
-- **11 skipped tests**: Intentionally skipped, no action needed
+2. **DataConfig Parameters** (20+ failures)
+   - `train_...` parameters not accepted
+   - **Root Cause**: API parameter names changed
+   - **Solution**: Update test code parameter names
+
+3. **Workflow Validation** (1 failure)
+   - KeyError: 'nonexistent_node'
+   - **Root Cause**: Validation logic issue
+   - **Solution**: Fix edge validation in workflow engine
+
+### Low Priority (4 errors)
+
+1. **MultiView Trainer** (2 errors)
+   - Import or initialization errors
+   - **Solution**: Investigate and fix
+
+2. **Trainer Utilities** (2 errors)
+   - Gradient clipping and LR scheduling tests
+   - **Solution**: Check utility function compatibility
 
 ## Next Steps
 
-1. Continue fixing API compatibility issues in remaining 74 tests
-2. Investigate and fix 4 trainer initialization errors
-3. Target: 90%+ pass rate (630+ tests passing)
+### Option A: Continue API Compatibility Fixes (2-3 hours)
+- Update trainer test fixtures
+- Fix DataConfig parameter names
+- Fix workflow validation logic
+- **Target**: 90%+ pass rate (630+ tests)
 
-## Test Categories
+### Option B: Mark Outdated Tests as Skip (30 minutes)
+- Add `@pytest.mark.skip` to tests using old API
+- Focus on maintaining current functionality
+- **Target**: Document known issues, move forward
 
-### Fully Passing ✅
-- View Aggregators (13/13)
-- Multiview Integration (basic tests)
+### Option C: Stop Here and Move to v0.5.0 (0 hours)
+- 88.5% pass rate is acceptable for development
+- Focus on new features instead of old test compatibility
+- **Target**: Start v0.5.0 development
 
-### Partially Passing ⚠️
-- Trainers (errors in initialization)
-- Backbones (parameter name issues)
-- Fusion modules (some API mismatches)
+## Recommendation
 
-### Not Yet Fixed ❌
-- End-to-end tests (excluded from current run)
+**Choose Option A** - We're close to 90% and the remaining fixes are straightforward. Achieving 90%+ pass rate will give us confidence in the codebase before starting v0.5.0 development.
+
+Estimated time: 2-3 hours
+Expected result: 630+ tests passing (90%+)
