@@ -13,7 +13,11 @@ from med_core.configs.base_config import (
     TrainingConfig,
     VisionConfig,
 )
-from med_core.configs.config_loader import load_config, save_config
+from med_core.configs.config_loader import (
+    create_default_config,
+    load_config,
+    save_config,
+)
 from med_core.configs.multiview_config import (
     MultiViewDataConfig,
     MultiViewExperimentConfig,
@@ -50,6 +54,7 @@ __all__ = [
     "create_ct_multiview_config",
     "create_temporal_multiview_config",
     # Config utilities
+    "create_default_config",
     "load_config",
     "save_config",
     # Validation

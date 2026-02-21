@@ -452,6 +452,6 @@ class MILAggregator(nn.Module):
         if self.output_proj is not None:
             aggregated = self.output_proj(aggregated)
 
-        if return_attention:
+        if return_attention and attention_weights is not None:
             return aggregated, attention_weights
         return aggregated
