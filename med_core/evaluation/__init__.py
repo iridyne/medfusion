@@ -20,6 +20,10 @@ from med_core.evaluation.report import (
     generate_evaluation_report,
 )
 from med_core.evaluation.report_generator import ReportGenerator
+from med_core.evaluation.report_generator_enhanced import (
+    EnhancedReportGenerator,
+    generate_enhanced_report,
+)
 from med_core.evaluation.report_visualizer import ReportVisualizer
 from med_core.evaluation.visualization import plot_confusion_matrix, plot_roc_curve
 
@@ -39,4 +43,7 @@ __all__ = [
     "EvaluationReport",  # Legacy alias for backward compatibility
     "ReportGenerator",
     "generate_evaluation_report",
+    # Enhanced report generation
+    "EnhancedReportGenerator",
+    "generate_enhanced_report",
 ]
