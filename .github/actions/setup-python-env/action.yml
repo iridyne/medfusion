@@ -1,18 +1,18 @@
-name: 'Setup Python Environment'
-description: 'Setup Python with uv and install MedFusion dependencies'
+name: "Setup Python Environment"
+description: "Setup Python with uv and install MedFusion dependencies"
 inputs:
   python-version:
-    description: 'Python version to use'
+    description: "Python version to use"
     required: false
-    default: '3.11'
+    default: "3.11"
   extras:
-    description: 'Extra dependencies to install (e.g., dev, docs, web)'
+    description: "Extra dependencies to install (e.g., dev, docs, web)"
     required: false
-    default: 'dev'
+    default: "dev"
   cache:
-    description: 'Enable pip cache'
+    description: "Enable pip cache"
     required: false
-    default: 'true'
+    default: "true"
 
 runs:
   using: "composite"
@@ -22,24 +22,22 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install uv
+    - name: Install uv and setup environment
       shell: bash
       run: |
+        # Install uv
         curl -LsSf https://astral.sh/uv/install.sh | sh
 
-    - name: Add uv to PATH
-      shell: bash
-      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        # Add uv to PATH for this step
+        export PATH="$HOME/.cargo/bin:$PATH"
 
-    - name: Create virtual environment and install dependencies
-      shell: bash
-      run: |
+        # Add uv to PATH for subsequent steps
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+        # Create virtual environment and install dependencies
         uv venv
         uv pip install -e ".[${{ inputs.extras }}]"
 
-    - name: Activate virtual environment
-      shell: bash
-      run: |
+        # Activate virtual environment for subsequent steps
         echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
         echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
-</text>
