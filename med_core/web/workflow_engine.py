@@ -255,13 +255,7 @@ class WorkflowEngine:
             errors.append("工作流为空，至少需要一个节点")
             return False, errors
 
-        # 检查循环依赖
-        try:
-            self._topological_sort()
-        except WorkflowValidationError as e:
-            errors.append(f"检测到循环依赖: {e!s}")
-
-        # 检查边的有效性
+        # 检查边的有效性（必须在拓扑排序之前）
         for edge in self.edges:
             if edge.source not in self.nodes:
                 errors.append(f"边 {edge.id} 的源节点 {edge.source} 不存在")
@@ -281,6 +275,13 @@ class WorkflowEngine:
                     errors.append(
                         f"节点 {edge.target} 没有输入端口 {edge.target_handle}"
                     )
+
+        # 检查循环依赖（只在边都有效时进行）
+        if not any("不存在" in error for error in errors):
+            try:
+                self._topological_sort()
+            except WorkflowValidationError as e:
+                errors.append(f"检测到循环依赖: {e!s}")
 
         # 检查必需的输入
         for node in self.nodes.values():
@@ -396,7 +397,9 @@ class WorkflowEngine:
 
                     if progress_callback:
                         await progress_callback(
-                            node_id, NodeStatus.COMPLETED, (i + 1) / len(execution_order)
+                            node_id,
+                            NodeStatus.COMPLETED,
+                            (i + 1) / len(execution_order),
                         )
 
                     logger.info(f"Node {node_id} completed successfully")
@@ -517,14 +520,20 @@ class WorkflowEngine:
         """保存检查点"""
         try:
             execution_state = {
-                node_id: {"status": node.status.value, "error": node.error, "result": node.result}
+                node_id: {
+                    "status": node.status.value,
+                    "error": node.error,
+                    "result": node.result,
+                }
                 for node_id, node in self.nodes.items()
             }
 
             metadata = {
                 "failed": failed,
                 "completed_nodes": sum(
-                    1 for node in self.nodes.values() if node.status == NodeStatus.COMPLETED
+                    1
+                    for node in self.nodes.values()
+                    if node.status == NodeStatus.COMPLETED
                 ),
                 "total_nodes": len(self.nodes),
             }
@@ -535,8 +544,25 @@ class WorkflowEngine:
                 None,
                 self.checkpoint_manager.save_checkpoint,
                 workflow_id,
-                {node_id: {"id": node_id, "type": node.type, "data": node.data, "position": node.position} for node_id, node in self.nodes.items()},
-                [{"id": edge.id, "source": edge.source, "target": edge.target, "sourceHandle": edge.source_handle, "targetHandle": edge.target_handle} for edge in self.edges],
+                {
+                    node_id: {
+                        "id": node_id,
+                        "type": node.type,
+                        "data": node.data,
+                        "position": node.position,
+                    }
+                    for node_id, node in self.nodes.items()
+                },
+                [
+                    {
+                        "id": edge.id,
+                        "source": edge.source,
+                        "target": edge.target,
+                        "sourceHandle": edge.source_handle,
+                        "targetHandle": edge.target_handle,
+                    }
+                    for edge in self.edges
+                ],
                 execution_state,
                 metadata,
             )
@@ -571,7 +597,9 @@ class WorkflowEngine:
 
         return status
 
-    def get_resource_statistics(self, duration: Optional[float] = None) -> Dict[str, Any]:
+    def get_resource_statistics(
+        self, duration: Optional[float] = None
+    ) -> Dict[str, Any]:
         """获取资源统计信息"""
         if not self.resource_monitor:
             return {}
