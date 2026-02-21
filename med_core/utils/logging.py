@@ -52,11 +52,28 @@ class JSONFormatter(logging.Formatter):
         # Add extra fields
         for key, value in record.__dict__.items():
             if key not in [
-                "name", "msg", "args", "created", "filename", "funcName",
-                "levelname", "levelno", "lineno", "module", "msecs",
-                "message", "pathname", "process", "processName",
-                "relativeCreated", "thread", "threadName", "exc_info",
-                "exc_text", "stack_info", "taskName"
+                "name",
+                "msg",
+                "args",
+                "created",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "message",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "thread",
+                "threadName",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+                "taskName",
             ]:
                 log_data[key] = value
 
@@ -67,11 +84,11 @@ class ColoredFormatter(logging.Formatter):
     """Formatter that adds colors to console output."""
 
     COLORS = {
-        "DEBUG": "\033[36m",      # Cyan
-        "INFO": "\033[32m",       # Green
-        "WARNING": "\033[33m",    # Yellow
-        "ERROR": "\033[31m",      # Red
-        "CRITICAL": "\033[35m",   # Magenta
+        "DEBUG": "\033[36m",  # Cyan
+        "INFO": "\033[32m",  # Green
+        "WARNING": "\033[33m",  # Yellow
+        "ERROR": "\033[31m",  # Red
+        "CRITICAL": "\033[35m",  # Magenta
     }
     RESET = "\033[0m"
 
@@ -189,7 +206,11 @@ class LogContext:
 
     def __enter__(self):
         """Enter context and set context variables."""
-        current = log_context.get().copy()
+        current = log_context.get()
+        if current is None:
+            current = {}
+        else:
+            current = current.copy()
         current.update(self.context)
         self.token = log_context.set(current)
         return self
@@ -216,7 +237,7 @@ class PerformanceLogger:
         logger: logging.Logger | None = None,
         level: int = logging.INFO,
         log_args: bool = False,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize performance logger.
@@ -252,7 +273,9 @@ class PerformanceLogger:
 
         if exc_type is not None:
             extra["error"] = str(exc_val)
-            self.logger.error(f"{self.operation} failed after {elapsed:.4f}s", extra=extra)
+            self.logger.error(
+                f"{self.operation} failed after {elapsed:.4f}s", extra=extra
+            )
         else:
             self.logger.log(self.level, message, extra=extra)
 
@@ -266,6 +289,7 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
         def my_function(arg1, arg2):
             pass
     """
+
     def decorator(func):
         nonlocal logger
         if logger is None:
@@ -285,19 +309,24 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
                 logger.log(
                     level,
                     f"{func_name} completed in {elapsed:.4f}s",
-                    extra={"function": func_name, "elapsed_time": elapsed}
+                    extra={"function": func_name, "elapsed_time": elapsed},
                 )
                 return result
             except Exception as e:
                 elapsed = time.perf_counter() - start_time
                 logger.error(
                     f"{func_name} failed after {elapsed:.4f}s: {e}",
-                    extra={"function": func_name, "elapsed_time": elapsed, "error": str(e)},
-                    exc_info=True
+                    extra={
+                        "function": func_name,
+                        "elapsed_time": elapsed,
+                        "error": str(e),
+                    },
+                    exc_info=True,
                 )
                 raise
 
         return wrapper
+
     return decorator
 
 
@@ -387,4 +416,3 @@ class MetricsLogger:
                     "count": len(vals),
                 }
         return summary
-

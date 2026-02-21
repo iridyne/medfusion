@@ -89,6 +89,22 @@ class BinaryMetrics:
             return d[key]
         raise KeyError(key)
 
+    def __contains__(self, key: str) -> bool:
+        """Support 'in' operator for dict-like behavior."""
+        return key in self.to_dict()
+
+    def keys(self):
+        """Return dict keys for dict-like behavior."""
+        return self.to_dict().keys()
+
+    def values(self):
+        """Return dict values for dict-like behavior."""
+        return self.to_dict().values()
+
+    def items(self):
+        """Return dict items for dict-like behavior."""
+        return self.to_dict().items()
+
     def summary(self) -> str:
         """Return formatted summary."""
         return (
@@ -197,8 +213,12 @@ def calculate_multiclass_metrics(
 
     return {
         "accuracy": accuracy_score(y_true, y_pred),
-        "macro_precision": precision_score(y_true, y_pred, average="macro", zero_division=0.0),
-        "macro_recall": recall_score(y_true, y_pred, average="macro", zero_division=0.0),
+        "macro_precision": precision_score(
+            y_true, y_pred, average="macro", zero_division=0.0
+        ),
+        "macro_recall": recall_score(
+            y_true, y_pred, average="macro", zero_division=0.0
+        ),
         "macro_f1": f1_score(y_true, y_pred, average="macro", zero_division=0.0),
         "weighted_f1": f1_score(y_true, y_pred, average="weighted", zero_division=0.0),
         "confusion_matrix": confusion_matrix(y_true, y_pred).tolist(),

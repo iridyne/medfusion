@@ -78,7 +78,9 @@ def normalize_intensity(
     raise ValueError(f"Unknown method: {method}")
 
 
-def crop_center(image: NPArray | Image.Image, size: int | tuple[int, int]) -> Image.Image:
+def crop_center(
+    image: NPArray | Image.Image, size: int | tuple[int, int]
+) -> Image.Image:
     """
     Crop center region of image.
 
@@ -93,11 +95,15 @@ def crop_center(image: NPArray | Image.Image, size: int | tuple[int, int]) -> Im
     if isinstance(image, np.ndarray):
         arr = image
         if getattr(arr, "dtype", None) is not None and arr.dtype != np.uint8:
-            arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(np.uint8)
+            arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(
+                np.uint8
+            )
         image = Image.fromarray(arr)
 
     if not isinstance(image, Image.Image):
-        raise TypeError("`image` must be a PIL Image or numpy array convertible to one.")
+        raise TypeError(
+            "`image` must be a PIL Image or numpy array convertible to one."
+        )
 
     width, height = image.size
     target_w, target_h = (size, size) if isinstance(size, int) else size
@@ -184,11 +190,21 @@ class ImagePreprocessor:
 
     def __init__(
         self,
-        normalize_method: Literal["minmax", "zscore", "percentile", "none"] = "percentile",
+        normalize_method: Literal[
+            "minmax", "zscore", "percentile", "none"
+        ] = "percentile",
         apply_clahe: bool = False,
         remove_watermark: bool = False,
         output_size: tuple[int, int] | None = None,
     ) -> None:
+        # Validate normalize_method
+        valid_methods = ["minmax", "zscore", "percentile", "none"]
+        if normalize_method not in valid_methods:
+            raise ValueError(
+                f"Invalid normalize_method: {normalize_method}. "
+                f"Must be one of {valid_methods}"
+            )
+
         self.normalize_method = normalize_method
         self.apply_clahe = apply_clahe
         self.remove_watermark = remove_watermark
@@ -209,11 +225,15 @@ class ImagePreprocessor:
         if isinstance(image, np.ndarray):
             arr = image
             if arr.dtype != np.uint8:
-                arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(np.uint8)
+                arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(
+                    np.uint8
+                )
             image = Image.fromarray(arr)
 
         if not isinstance(image, Image.Image):
-            raise TypeError("`image` must be a PIL Image or a numpy array convertible to one.")
+            raise TypeError(
+                "`image` must be a PIL Image or a numpy array convertible to one."
+            )
 
         # Ensure RGB
         if getattr(image, "mode", None) != "RGB":

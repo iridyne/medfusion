@@ -162,7 +162,14 @@ class BaseMultiViewDataset(ABC, Dataset):
         elif strategy == "zero":
             # Return zero tensor with same shape as reference
             if reference_image is not None:
-                return torch.zeros_like(reference_image)
+                if isinstance(reference_image, torch.Tensor):
+                    return torch.zeros_like(reference_image)
+                else:
+                    # reference_image is PIL Image, convert to tensor first
+                    import torchvision.transforms.functional as F
+
+                    ref_tensor = F.to_tensor(reference_image)
+                    return torch.zeros_like(ref_tensor)
             else:
                 # Default shape (will need to be handled by model)
                 return torch.zeros(3, 224, 224)
@@ -170,7 +177,11 @@ class BaseMultiViewDataset(ABC, Dataset):
         elif strategy == "duplicate":
             # Duplicate the first available view
             if reference_image is not None:
-                return reference_image.clone()
+                if isinstance(reference_image, torch.Tensor):
+                    return reference_image.clone()
+                else:
+                    # reference_image is PIL Image, return a copy
+                    return reference_image.copy()
             else:
                 # Try to find any available view in this sample
                 view_dict = self.image_paths[idx]
