@@ -333,8 +333,19 @@ def create_multiview_vision_backbone(
     """
     from med_core.backbones.vision import create_vision_backbone
 
+    # Filter out multiview-specific parameters that shouldn't be passed to base backbone
+    multiview_params = {
+        "aggregation_strategy",
+        "aggregator_type",
+        "share_weights",
+        "view_names",
+    }
+    filtered_kwargs = {
+        k: v for k, v in backbone_kwargs.items() if k not in multiview_params
+    }
+
     # Create base backbone
-    base_backbone = create_vision_backbone(backbone_name, **backbone_kwargs)
+    base_backbone = create_vision_backbone(backbone_name, **filtered_kwargs)
 
     # Wrap with multi-view support
     multiview_backbone = MultiViewVisionBackbone(

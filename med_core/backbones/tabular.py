@@ -358,7 +358,7 @@ def create_tabular_backbone(
     elif backbone_type == "residual":
         hidden_dim = hidden_dims[0] if hidden_dims else 64
         num_blocks = len(hidden_dims) if hidden_dims else 3
-        return ResidualTabularBackbone(
+        return ResidualMLP(
             input_dim=input_dim,
             output_dim=output_dim,
             hidden_dim=hidden_dim,

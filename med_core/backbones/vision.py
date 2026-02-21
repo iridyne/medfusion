@@ -833,8 +833,11 @@ class MaxViTBackbone(BaseVisionBackbone):
         # Load pretrained model
         self._backbone = model_fn(weights=weights if pretrained else None)
 
-        # Replace classification head
-        self._backbone.classifier = nn.Identity()
+        # Replace classification head with pooling
+        self._backbone.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(start_dim=1),
+        )
 
         # Projection head
         self._projection = nn.Sequential(
@@ -1288,7 +1291,7 @@ BACKBONE_REGISTRY = {
 
 
 def create_vision_backbone(
-    backbone_name: str,
+    backbone_name: str | None = None,
     pretrained: bool = True,
     freeze: bool = False,
     feature_dim: int = 128,
@@ -1296,6 +1299,7 @@ def create_vision_backbone(
     attention_type: str = "cbam",
     use_roi_guidance: bool = False,
     enable_attention_supervision: bool = False,
+    name: str | None = None,  # Backward compatibility alias
 ) -> BaseVisionBackbone:
     """
     Factory function to create vision backbones.
@@ -1304,7 +1308,7 @@ def create_vision_backbone(
         backbone_name: Name of the backbone architecture
         pretrained: Whether to load pretrained weights
         freeze: Whether to freeze backbone parameters
-        feature_dim: Output feature dimension
+        feature_dim: int = 128,
         dropout: Dropout rate for projection head
         attention_type: Type of attention mechanism ("cbam", "se", "eca", "none")
         use_roi_guidance: Whether to use ROI-guided spatial attention
@@ -1317,12 +1321,26 @@ def create_vision_backbone(
         >>> backbone = create_vision_backbone("resnet18", pretrained=True, feature_dim=128)
         >>> features = backbone(images)  # (B, 128)
     """
+    # Handle backward compatibility: 'name' is an alias for 'backbone_name'
+    if backbone_name is None and name is not None:
+        backbone_name = name
+    elif backbone_name is None:
+        raise ValueError("Either 'backbone_name' or 'name' must be provided")
+
     if backbone_name not in BACKBONE_REGISTRY:
         available = list(BACKBONE_REGISTRY.keys())
         raise ValueError(f"Unknown backbone: {backbone_name}. Available: {available}")
 
-    # ViT and Swin don't support CNN-style attention
-    if backbone_name.startswith(("vit_", "swin_")):
+    # ViT, Swin, and new backbones don't support CNN-style attention
+    no_attention_backbones = (
+        "vit_",
+        "swin_",
+        "maxvit_",
+        "convnext_",
+        "efficientnet_v2_",
+        "regnet_",
+    )
+    if backbone_name.startswith(no_attention_backbones):
         return BACKBONE_REGISTRY[backbone_name](
             pretrained=pretrained,
             freeze=freeze,
