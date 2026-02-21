@@ -108,6 +108,13 @@ class ConfigValidator:
                 f"data.num_workers must be non-negative, got {data.num_workers}"
             )
 
+        # Validate multiview config if enabled
+        if hasattr(data, 'enable_multiview') and data.enable_multiview:
+            if hasattr(data, 'view_names') and not data.view_names:
+                self.errors.append(
+                    "data.view_names cannot be empty when enable_multiview=True"
+                )
+
     def _validate_training_config(self, config: ExperimentConfig) -> None:
         """Validate training configuration."""
         training = config.training
@@ -159,6 +166,11 @@ class ConfigValidator:
                 f"logging.log_every_n_steps must be positive, got {logging.log_every_n_steps}"
             )
 
+        if logging.save_every_n_epochs <= 0:
+            self.errors.append(
+                f"logging.save_every_n_epochs must be positive, got {logging.save_every_n_epochs}"
+            )
+
     def _validate_cross_dependencies(self, config: ExperimentConfig) -> None:
         """Validate cross-dependencies between config sections."""
         # Attention supervision requires attention to be enabled
@@ -167,6 +179,14 @@ class ConfigValidator:
                 self.errors.append(
                     "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True"
                 )
+
+        # Multiview requires consistent configuration
+        if hasattr(config.data, 'enable_multiview') and config.data.enable_multiview:
+            if hasattr(config.model.vision, 'enable_multiview'):
+                if not config.model.vision.enable_multiview:
+                    self.errors.append(
+                        "data.enable_multiview=True requires model.vision.enable_multiview=True"
+                    )
 
 
 def validate_config(config: ExperimentConfig) -> list[str]:
