@@ -5,7 +5,6 @@ Generates professional Word and PDF reports for experiment comparisons,
 following medical SOP standards.
 """
 
-import io
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -16,11 +15,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Inches
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (

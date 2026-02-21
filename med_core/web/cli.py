@@ -125,7 +125,7 @@ def start(host: str, port: int, auth: bool, token: str, no_browser: bool, reload
 @web.command()
 def info():
     """显示 Web UI 信息"""
-    console.print(f"[bold]MedFusion Web UI[/bold]")
+    console.print("[bold]MedFusion Web UI[/bold]")
     console.print(f"版本: {settings.version}")
     console.print(f"数据目录: {settings.data_dir}")
     console.print(f"数据库: {settings.database_url}")
