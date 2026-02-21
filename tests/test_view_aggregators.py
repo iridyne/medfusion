@@ -45,7 +45,7 @@ class TestViewAggregators:
             view_names=list(view_features.keys()),
         )
 
-        output = aggregator(view_features)
+        output, _ = aggregator(view_features)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
@@ -57,7 +57,7 @@ class TestViewAggregators:
             view_names=list(view_features.keys()),
         )
 
-        output = aggregator(view_features)
+        output, _ = aggregator(view_features)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
@@ -69,7 +69,7 @@ class TestViewAggregators:
             view_names=list(view_features.keys()),
         )
 
-        output = aggregator(view_features, view_mask=view_mask)
+        output, _ = aggregator(view_features, view_mask=view_mask)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
@@ -82,7 +82,7 @@ class TestViewAggregators:
             num_heads=4,
         )
 
-        output = aggregator(view_features)
+        output, _ = aggregator(view_features)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
@@ -95,13 +95,17 @@ class TestViewAggregators:
             num_heads=4,
         )
 
-        # Enable returning attention weights
-        aggregator.return_attention = True
-        output, attn_weights = aggregator(view_features)
+        # Aggregator always returns attention weights in metadata dict
+        output, metadata = aggregator(view_features)
 
         assert output.shape == (batch_size, 128)
-        assert attn_weights is not None
-        assert attn_weights.shape[0] == batch_size
+        assert "attention_weights" in metadata
+        attn_weights_dict = metadata["attention_weights"]
+        assert isinstance(attn_weights_dict, dict)
+        # Check each view has attention weights
+        for view_name in view_features.keys():
+            assert view_name in attn_weights_dict
+            assert attn_weights_dict[view_name].shape[0] == batch_size
 
     def test_cross_view_attention_aggregator(self, view_features, batch_size):
         """Test CrossViewAttentionAggregator."""
@@ -112,26 +116,26 @@ class TestViewAggregators:
             num_heads=4,
         )
 
-        output = aggregator(view_features)
+        output, _ = aggregator(view_features)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
     def test_learned_weight_aggregator(self, view_features, batch_size):
         """Test LearnedWeightAggregator."""
         aggregator = create_view_aggregator(
-            aggregator_type="learned",
+            aggregator_type="learned_weight",
             feature_dim=128,
             view_names=list(view_features.keys()),
         )
 
-        output = aggregator(view_features)
+        output, _ = aggregator(view_features)
         assert output.shape == (batch_size, 128)
         assert not torch.isnan(output).any()
 
     def test_learned_weight_aggregator_weights_sum_to_one(self, view_features):
         """Test LearnedWeightAggregator weights sum to 1."""
         aggregator = create_view_aggregator(
-            aggregator_type="learned",
+            aggregator_type="learned_weight",
             feature_dim=128,
             view_names=list(view_features.keys()),
         )
@@ -144,36 +148,51 @@ class TestViewAggregators:
         """Test aggregators work with single view."""
         view_features = {"single": torch.randn(batch_size, 128)}
 
-        for agg_type in ["max", "mean", "attention", "cross_attention", "learned"]:
+        for agg_type in [
+            "max",
+            "mean",
+            "attention",
+            "cross_attention",
+            "learned_weight",
+        ]:
             aggregator = create_view_aggregator(
                 aggregator_type=agg_type,
                 feature_dim=128,
                 view_names=["single"],
             )
 
-            output = aggregator(view_features)
+            output, _ = aggregator(view_features)
             assert output.shape == (batch_size, 128)
 
     def test_aggregator_with_many_views(self, batch_size):
         """Test aggregators work with many views."""
-        view_features = {
-            f"view_{i}": torch.randn(batch_size, 128)
-            for i in range(10)
-        }
+        view_features = {f"view_{i}": torch.randn(batch_size, 128) for i in range(10)}
 
-        for agg_type in ["max", "mean", "attention", "cross_attention", "learned"]:
+        for agg_type in [
+            "max",
+            "mean",
+            "attention",
+            "cross_attention",
+            "learned_weight",
+        ]:
             aggregator = create_view_aggregator(
                 aggregator_type=agg_type,
                 feature_dim=128,
                 view_names=list(view_features.keys()),
             )
 
-            output = aggregator(view_features)
+            output, _ = aggregator(view_features)
             assert output.shape == (batch_size, 128)
 
     def test_aggregator_gradient_flow(self, view_features):
         """Test gradients flow through aggregators."""
-        for agg_type in ["max", "mean", "attention", "cross_attention", "learned"]:
+        for agg_type in [
+            "max",
+            "mean",
+            "attention",
+            "cross_attention",
+            "learned_weight",
+        ]:
             aggregator = create_view_aggregator(
                 aggregator_type=agg_type,
                 feature_dim=128,
@@ -182,11 +201,10 @@ class TestViewAggregators:
 
             # Make input require grad
             view_features_grad = {
-                k: v.clone().requires_grad_(True)
-                for k, v in view_features.items()
+                k: v.clone().requires_grad_(True) for k, v in view_features.items()
             }
 
-            output = aggregator(view_features_grad)
+            output, _ = aggregator(view_features_grad)
             loss = output.sum()
             loss.backward()
 
@@ -205,18 +223,18 @@ class TestViewAggregators:
             )
 
     def test_aggregator_output_dim(self, view_features, batch_size):
-        """Test aggregator respects output_dim parameter."""
-        output_dim = 256
+        """Test aggregator output dimension matches feature_dim."""
+        feature_dim = 128
 
         aggregator = create_view_aggregator(
             aggregator_type="attention",
-            feature_dim=128,
+            feature_dim=feature_dim,
             view_names=list(view_features.keys()),
-            output_dim=output_dim,
+            num_heads=4,
         )
 
-        output = aggregator(view_features)
-        assert output.shape == (batch_size, output_dim)
+        output, _ = aggregator(view_features)
+        assert output.shape == (batch_size, feature_dim)
 
 
 if __name__ == "__main__":

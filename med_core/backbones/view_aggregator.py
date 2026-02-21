@@ -88,7 +88,11 @@ class BaseViewAggregator(ABC, nn.Module):
                     mask_list.append(view_mask[name])
                 else:
                     # Default to all valid
-                    mask_list.append(torch.ones(stacked.size(0), device=stacked.device, dtype=torch.bool))
+                    mask_list.append(
+                        torch.ones(
+                            stacked.size(0), device=stacked.device, dtype=torch.bool
+                        )
+                    )
             masks = torch.stack(mask_list, dim=1)  # (B, num_views)
         else:
             masks = None
@@ -110,7 +114,7 @@ class MaxPoolAggregator(BaseViewAggregator):
         # Apply mask if provided
         if masks is not None:
             # Set masked positions to -inf so they don't affect max
-            stacked = stacked.masked_fill(~masks.unsqueeze(-1), float('-inf'))
+            stacked = stacked.masked_fill(~masks.unsqueeze(-1), float("-inf"))
 
         # Max pooling across views
         aggregated, max_indices = torch.max(stacked, dim=1)  # (B, D)
@@ -133,7 +137,9 @@ class MeanPoolAggregator(BaseViewAggregator):
             # Masked mean
             masks_expanded = masks.unsqueeze(-1).float()  # (B, num_views, 1)
             masked_features = stacked * masks_expanded
-            aggregated = masked_features.sum(dim=1) / masks_expanded.sum(dim=1).clamp(min=1)
+            aggregated = masked_features.sum(dim=1) / masks_expanded.sum(dim=1).clamp(
+                min=1
+            )
         else:
             # Simple mean
             aggregated = stacked.mean(dim=1)  # (B, D)
@@ -184,7 +190,9 @@ class AttentionAggregator(BaseViewAggregator):
 
         # Attention
         aggregated, attn_weights = self.attention(
-            query, stacked, stacked,
+            query,
+            stacked,
+            stacked,
             key_padding_mask=~masks if masks is not None else None,
             need_weights=True,
         )  # aggregated: (B, 1, D), attn_weights: (B, 1, num_views)
@@ -260,7 +268,9 @@ class CrossViewAttentionAggregator(BaseViewAggregator):
 
         # Self-attention across views
         attended, _ = self.cross_attention(
-            tokens, tokens, tokens,
+            tokens,
+            tokens,
+            tokens,
             key_padding_mask=~extended_mask if extended_mask is not None else None,
         )
         tokens = self.norm1(tokens + attended)
@@ -338,7 +348,9 @@ AGGREGATOR_REGISTRY = {
 
 
 def create_view_aggregator(
-    aggregator_type: Literal["max", "mean", "attention", "cross_attention", "learned_weight"],
+    aggregator_type: Literal[
+        "max", "mean", "attention", "cross_attention", "learned_weight"
+    ],
     feature_dim: int,
     **kwargs,
 ) -> BaseViewAggregator:
@@ -371,7 +383,21 @@ def create_view_aggregator(
 
     aggregator_cls = AGGREGATOR_REGISTRY[aggregator_type]
 
-    return aggregator_cls(feature_dim=feature_dim, **kwargs)
+    # Filter kwargs based on aggregator type
+    filtered_kwargs = {}
+    if aggregator_type in ["attention", "cross_attention"]:
+        # Attention-based aggregators accept num_heads and dropout
+        if "num_heads" in kwargs:
+            filtered_kwargs["num_heads"] = kwargs["num_heads"]
+        if "dropout" in kwargs:
+            filtered_kwargs["dropout"] = kwargs["dropout"]
+    elif aggregator_type == "learned_weight":
+        # LearnedWeightAggregator accepts view_names
+        if "view_names" in kwargs:
+            filtered_kwargs["view_names"] = kwargs["view_names"]
+    # max and mean aggregators don't accept any additional kwargs
+
+    return aggregator_cls(feature_dim=feature_dim, **filtered_kwargs)
 
 
 def list_available_aggregators() -> list[str]:

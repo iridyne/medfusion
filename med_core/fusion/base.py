@@ -186,7 +186,9 @@ class MultiModalFusionModel(nn.Module):
         tabular_features = self.tabular_backbone(tabular)
 
         # Fuse features
-        fused_features, fusion_aux = self.fusion_module(vision_features, tabular_features)
+        fused_features, fusion_aux = self.fusion_module(
+            vision_features, tabular_features
+        )
 
         # Main classification
         logits = self.classifier(fused_features)
@@ -259,7 +261,7 @@ def create_fusion_model(
 
     # Create vision backbone
     vision_backbone = create_vision_backbone(
-        name=vision_backbone_name,
+        backbone_name=vision_backbone_name,
         pretrained=pretrained,
         **kwargs,
     )
