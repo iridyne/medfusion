@@ -35,15 +35,17 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         super().__init__(*args, **kwargs)
 
         # Track if we're using multi-view
-        self.is_multiview = getattr(self.config.data, 'enable_multiview', False)
+        self.is_multiview = getattr(self.config.data, "enable_multiview", False)
 
         # Progressive view training settings
         self.use_progressive_views = getattr(
-            self.config.model.vision, 'use_progressive_view_training', False
+            self.config.model.vision, "use_progressive_view_training", False
         )
         if self.use_progressive_views:
             self.initial_views = self.config.model.vision.initial_views
-            self.add_views_every_n_epochs = self.config.model.vision.add_views_every_n_epochs
+            self.add_views_every_n_epochs = (
+                self.config.model.vision.add_views_every_n_epochs
+            )
             self.all_view_names = self.config.data.view_names
             self.current_active_views = set(self.initial_views)
 
@@ -60,19 +62,19 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         epoch = self.current_epoch
 
         # Calculate how many views to activate
-        views_to_add = (epoch // self.add_views_every_n_epochs)
+        views_to_add = epoch // self.add_views_every_n_epochs
         target_num_views = min(
-            len(self.initial_views) + views_to_add,
-            len(self.all_view_names)
+            len(self.initial_views) + views_to_add, len(self.all_view_names)
         )
 
         # Add views progressively
         if len(self.current_active_views) < target_num_views:
             remaining_views = [
-                v for v in self.all_view_names
-                if v not in self.current_active_views
+                v for v in self.all_view_names if v not in self.current_active_views
             ]
-            views_to_activate = remaining_views[:target_num_views - len(self.current_active_views)]
+            views_to_activate = remaining_views[
+                : target_num_views - len(self.current_active_views)
+            ]
             self.current_active_views.update(views_to_activate)
 
             logger.info(
@@ -218,9 +220,11 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
 
         return {"loss": loss, "accuracy": acc}
 
-    def on_epoch_end(self):
+    def on_epoch_end(
+        self, train_metrics: dict[str, float], val_metrics: dict[str, float]
+    ):
         """Log additional multi-view specific metrics."""
-        super().on_epoch_end()
+        super().on_epoch_end(train_metrics, val_metrics)
 
         # Log active views if using progressive training
         if self.use_progressive_views:

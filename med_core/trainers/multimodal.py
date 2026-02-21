@@ -29,6 +29,8 @@ class MultimodalTrainer(BaseTrainer):
     """
 
     def __init__(self, *args, **kwargs):
+        # Filter out parameters that should come from config
+        kwargs.pop("log_dir", None)
         super().__init__(*args, **kwargs)
 
         # Mixed precision scaler

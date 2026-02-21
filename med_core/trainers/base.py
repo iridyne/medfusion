@@ -11,6 +11,7 @@ from typing import Any
 
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -38,7 +39,7 @@ class BaseTrainer(ABC):
         model: nn.Module,
         train_loader: DataLoader,
         val_loader: DataLoader,
-        optimizer: torch.optim.Optimizer,
+        optimizer: torch.optim.Optimizer | None = None,
         scheduler: Any | None = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
     ):
@@ -46,7 +47,22 @@ class BaseTrainer(ABC):
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.optimizer = optimizer
+
+        # Create optimizer if not provided
+        if optimizer is None:
+            lr = config.training.optimizer.learning_rate
+            weight_decay = getattr(config.training.optimizer, "weight_decay", 0.0)
+            self.optimizer = optim.AdamW(
+                model.parameters(),
+                lr=lr,
+                weight_decay=weight_decay,
+            )
+            logger.info(
+                f"Auto-created AdamW optimizer with lr={lr}, weight_decay={weight_decay}"
+            )
+        else:
+            self.optimizer = optimizer
+
         self.scheduler = scheduler
         self.device = torch.device(device)
 
@@ -151,9 +167,20 @@ class BaseTrainer(ABC):
         # Checkpointing & Early Stopping
         self._handle_checkpointing(val_metrics)
 
-    def train(self):
-        """Main training loop."""
+    def train(self) -> dict[str, list[float]]:
+        """
+        Main training loop.
+
+        Returns:
+            Dictionary containing training history with keys like 'train_loss', 'val_loss', etc.
+        """
         self.on_train_start()
+
+        # Initialize history tracking
+        history = {
+            "train_loss": [],
+            "val_loss": [],
+        }
 
         for epoch in range(self.config.training.num_epochs):
             self.current_epoch = epoch
@@ -170,15 +197,33 @@ class BaseTrainer(ABC):
 
             self.on_epoch_end(train_metrics, val_metrics)
 
+            # Record history
+            history["train_loss"].append(train_metrics.get("loss", 0.0))
+            history["val_loss"].append(val_metrics.get("loss", 0.0))
+
+            # Record other metrics
+            for key, value in train_metrics.items():
+                if key != "loss":
+                    history_key = f"train_{key}"
+                    if history_key not in history:
+                        history[history_key] = []
+                    history[history_key].append(value)
+
+            for key, value in val_metrics.items():
+                if key != "loss":
+                    history_key = f"val_{key}"
+                    if history_key not in history:
+                        history[history_key] = []
+                    history[history_key].append(value)
+
             if self.patience_counter >= self.config.training.patience:
                 logger.info("Early stopping triggered")
                 break
 
         self.writer.close()
+        return history
 
-    def _run_epoch(
-        self, loader: DataLoader, training: bool = True
-    ) -> dict[str, float]:
+    def _run_epoch(self, loader: DataLoader, training: bool = True) -> dict[str, float]:
         """Run a single epoch of training or validation."""
         metrics_sum = {}
         num_batches = len(loader)
