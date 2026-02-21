@@ -120,6 +120,7 @@ class MultiModalFusionModel(nn.Module):
         num_classes: int = 2,
         dropout: float = 0.4,
         use_auxiliary_heads: bool = True,
+        return_dict: bool = True,
     ):
         """
         Initialize multimodal fusion model.
@@ -131,6 +132,7 @@ class MultiModalFusionModel(nn.Module):
             num_classes: Number of output classes
             dropout: Dropout rate for classifier
             use_auxiliary_heads: Whether to include per-modality classifiers
+            return_dict: If True, return dict with all outputs. If False, return only logits tensor.
         """
         super().__init__()
 
@@ -138,6 +140,7 @@ class MultiModalFusionModel(nn.Module):
         self.tabular_backbone = tabular_backbone
         self.fusion_module = fusion_module
         self.use_auxiliary_heads = use_auxiliary_heads
+        self.return_dict = return_dict
 
         # Main classifier
         fusion_dim = fusion_module.output_dim
@@ -163,7 +166,7 @@ class MultiModalFusionModel(nn.Module):
         self,
         images: torch.Tensor,
         tabular: torch.Tensor,
-    ) -> dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor] | torch.Tensor:
         """
         Forward pass through the full multimodal model.
 
@@ -172,14 +175,17 @@ class MultiModalFusionModel(nn.Module):
             tabular: Tabular input tensor (B, num_features)
 
         Returns:
-            Dictionary containing:
-                - logits: Main fusion classifier output (B, num_classes)
-                - vision_features: Vision backbone features (B, vision_dim)
-                - tabular_features: Tabular backbone features (B, tabular_dim)
-                - fused_features: Fused features (B, fusion_dim)
-                - vision_logits: Vision-only classifier output (if auxiliary heads)
-                - tabular_logits: Tabular-only classifier output (if auxiliary heads)
-                - fusion_aux: Auxiliary fusion outputs (attention weights, etc.)
+            If return_dict=True (default):
+                Dictionary containing:
+                    - logits: Main fusion classifier output (B, num_classes)
+                    - vision_features: Vision backbone features (B, vision_dim)
+                    - tabular_features: Tabular backbone features (B, tabular_dim)
+                    - fused_features: Fused features (B, fusion_dim)
+                    - vision_logits: Vision-only classifier output (if auxiliary heads)
+                    - tabular_logits: Tabular-only classifier output (if auxiliary heads)
+                    - fusion_aux: Auxiliary fusion outputs (attention weights, etc.)
+            If return_dict=False:
+                Tensor of logits (B, num_classes)
         """
         # Extract features from each modality
         vision_features = self.vision_backbone(images)
@@ -192,6 +198,10 @@ class MultiModalFusionModel(nn.Module):
 
         # Main classification
         logits = self.classifier(fused_features)
+
+        # If return_dict=False, just return logits tensor
+        if not self.return_dict:
+            return logits
 
         # Build output dict
         outputs = {

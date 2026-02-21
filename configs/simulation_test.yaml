@@ -1,0 +1,88 @@
+# 模拟测试配置
+project_name: "simulation-test"
+experiment_name: "pneumonia_detection_test"
+description: "快速测试 MedFusion 完整流程"
+
+seed: 42
+deterministic: true
+device: "auto"
+
+# 数据配置
+data:
+  data_root: "data/simulation_test"
+  csv_path: "data/simulation_test/dataset.csv"
+  image_dir: "data/simulation_test"
+
+  image_path_column: "image_path"
+  target_column: "diagnosis"
+  patient_id_column: "patient_id"
+
+  numerical_features:
+    - "age"
+  categorical_features:
+    - "sex"
+
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+  image_size: 224
+  image_channels: 3
+  batch_size: 16
+  num_workers: 2
+  pin_memory: true
+  augmentation_strength: "light"
+
+# 模型配置
+model:
+  num_classes: 2
+
+  vision:
+    backbone: "resnet18"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 128
+    dropout: 0.3
+    attention_type: "none"
+
+  tabular:
+    hidden_dims: [32, 32]
+    output_dim: 16
+    dropout: 0.2
+    use_batch_norm: true
+
+  fusion:
+    fusion_type: "concatenate"
+    hidden_dim: 64
+    dropout: 0.3
+
+# 训练配置（快速测试）
+training:
+  num_epochs: 3
+  mixed_precision: true
+  gradient_clip: 1.0
+
+  use_progressive_training: false
+
+  early_stopping: false
+
+  save_top_k: 1
+  save_last: true
+
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 1.0e-3
+    weight_decay: 0.01
+
+  scheduler:
+    scheduler: "step"
+    step_size: 2
+    gamma: 0.1
+
+# 日志配置
+logging:
+  output_dir: "outputs/simulation_test"
+  use_tensorboard: false
+  use_wandb: false
+  log_every_n_steps: 5
+  save_visualizations: true

@@ -46,7 +46,7 @@ from med_core.datasets import (  # noqa: E402
     split_dataset,
 )
 from med_core.evaluation import (  # noqa: E402
-    calculate_metrics,
+    calculate_binary_metrics,
     generate_evaluation_report,
 )
 from med_core.fusion import (  # noqa: E402
@@ -299,7 +299,7 @@ def main():
             all_preds.extend(preds.cpu().numpy())
             all_labels.extend(labels.cpu().numpy())
 
-    metrics = calculate_metrics(all_labels, all_preds)
+    metrics = calculate_binary_metrics(all_labels, all_preds)
 
     # Generate Report
     report_path = generate_evaluation_report(

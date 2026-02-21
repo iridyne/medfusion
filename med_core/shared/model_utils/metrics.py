@@ -57,6 +57,29 @@ class BinaryMetrics:
     num_samples: int = 0
     optimal_threshold: float = 0.5
 
+    # Confidence intervals (95% CI) - for report generation
+    ci_auc_roc: tuple[float, float] | None = None
+    ci_accuracy: tuple[float, float] | None = None
+    ci_sensitivity: tuple[float, float] | None = None
+    ci_specificity: tuple[float, float] | None = None
+
+    # Aliases for backward compatibility with report generator
+    @property
+    def true_positives(self) -> int:
+        return self.tp
+
+    @property
+    def true_negatives(self) -> int:
+        return self.tn
+
+    @property
+    def false_positives(self) -> int:
+        return self.fp
+
+    @property
+    def false_negatives(self) -> int:
+        return self.fn
+
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary."""
         return {
