@@ -170,17 +170,17 @@ const ROCCurve: React.FC<ROCCurveProps> = ({ experimentIds }) => {
             }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              value.toFixed(3),
-              name.replace("_tpr", ""),
-            ]}
+            formatter={(
+              value: number | undefined,
+              name: string | undefined,
+            ) => [(value ?? 0).toFixed(3), (name ?? "").replace("_tpr", "")]}
             labelFormatter={(label) => `FPR: ${parseFloat(label).toFixed(3)}`}
           />
           <Legend
             wrapperStyle={{ paddingTop: 20 }}
             formatter={(value) => {
               const expData = data.find((d) =>
-                value.includes(d.experimentName)
+                value.includes(d.experimentName),
               );
               return expData
                 ? `${expData.experimentName} (AUC: ${expData.auc.toFixed(3)})`
@@ -226,12 +226,12 @@ const ROCCurve: React.FC<ROCCurveProps> = ({ experimentIds }) => {
       <div style={{ marginTop: 16, fontSize: 12, color: "#8c8c8c" }}>
         <div>
           <span style={{ fontWeight: 500 }}>ROC Curve:</span> Receiver Operating
-          Characteristic curve showing the trade-off between True Positive Rate and
-          False Positive Rate at various threshold settings.
+          Characteristic curve showing the trade-off between True Positive Rate
+          and False Positive Rate at various threshold settings.
         </div>
         <div style={{ marginTop: 8 }}>
-          <span style={{ fontWeight: 500 }}>AUC:</span> Area Under the Curve - Higher
-          is better (1.0 = perfect classifier, 0.5 = random classifier)
+          <span style={{ fontWeight: 500 }}>AUC:</span> Area Under the Curve -
+          Higher is better (1.0 = perfect classifier, 0.5 = random classifier)
         </div>
       </div>
     </div>

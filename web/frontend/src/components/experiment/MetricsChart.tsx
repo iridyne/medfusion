@@ -61,7 +61,10 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
   if (chartType === "bar") {
     return (
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <BarChart
+          data={chartData}
+          margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="metric" />
           <YAxis
@@ -72,9 +75,12 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
             }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(2)}${name === "Loss" ? "" : "%"}`,
-              name,
+            formatter={(
+              value: number | undefined,
+              name: string | undefined,
+            ) => [
+              `${(value ?? 0).toFixed(2)}${(name ?? "") === "Loss" ? "" : "%"}`,
+              name ?? "",
             ]}
           />
           <Legend />
@@ -93,7 +99,10 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+      <LineChart
+        data={chartData}
+        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="metric" />
         <YAxis
@@ -104,9 +113,9 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
           }}
         />
         <Tooltip
-          formatter={(value: number, name: string) => [
-            `${value.toFixed(2)}${name === "Loss" ? "" : "%"}`,
-            name,
+          formatter={(value: number | undefined, name: string | undefined) => [
+            `${(value ?? 0).toFixed(2)}${(name ?? "") === "Loss" ? "" : "%"}`,
+            name ?? "",
           ]}
         />
         <Legend />
