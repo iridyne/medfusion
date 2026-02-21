@@ -51,7 +51,9 @@ class ResNetBackbone(BaseVisionBackbone):
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown ResNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown ResNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         self.variant = variant
         self.enable_attention_supervision = enable_attention_supervision
@@ -65,9 +67,14 @@ class ResNetBackbone(BaseVisionBackbone):
 
         # Optional attention module
         # If attention supervision is enabled and using CBAM, configure it to return weights
-        return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+        return_attention_weights = (
+            enable_attention_supervision and attention_type == "cbam"
+        )
         self._attention = create_attention_module(
-            attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+            attention_type,
+            self._backbone_out_dim,
+            use_roi_guidance,
+            return_attention_weights,
         )
 
         # Global pooling
@@ -144,7 +151,9 @@ class ResNetBackbone(BaseVisionBackbone):
     def extract_features(self, x: torch.Tensor) -> torch.Tensor:
         return self._backbone(x)
 
-    def forward(self, x: torch.Tensor, return_intermediates: bool = False) -> torch.Tensor | dict[str, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_intermediates: bool = False
+    ) -> torch.Tensor | dict[str, torch.Tensor]:
         """
         Forward pass through the backbone.
 
@@ -170,7 +179,9 @@ class ResNetBackbone(BaseVisionBackbone):
             if self.enable_attention_supervision:
                 # CBAM returns (features, weights_dict)
                 feature_maps, weights_dict = self._attention(feature_maps)
-                attention_weights = weights_dict.get("spatial_weights")  # (B, 1, H, W) or None
+                attention_weights = weights_dict.get(
+                    "spatial_weights"
+                )  # (B, 1, H, W) or None
             else:
                 # Normal mode, just apply attention
                 feature_maps = self._attention(feature_maps)
@@ -220,7 +231,9 @@ class MobileNetBackbone(BaseVisionBackbone):
 
     def __init__(
         self,
-        variant: Literal["mobilenetv2", "mobilenetv3_small", "mobilenetv3_large"] = "mobilenetv2",
+        variant: Literal[
+            "mobilenetv2", "mobilenetv3_small", "mobilenetv3_large"
+        ] = "mobilenetv2",
         pretrained: bool = True,
         freeze: bool = False,
         feature_dim: int = 128,
@@ -245,9 +258,14 @@ class MobileNetBackbone(BaseVisionBackbone):
         self._backbone = backbone_model.features
 
         # Optional attention
-        return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+        return_attention_weights = (
+            enable_attention_supervision and attention_type == "cbam"
+        )
         self._attention = create_attention_module(
-            attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+            attention_type,
+            self._backbone_out_dim,
+            use_roi_guidance,
+            return_attention_weights,
         )
 
         # Pooling and projection
@@ -338,7 +356,9 @@ class EfficientNetBackbone(BaseVisionBackbone):
 
     def __init__(
         self,
-        variant: Literal["efficientnet_b0", "efficientnet_b1", "efficientnet_b2"] = "efficientnet_b0",
+        variant: Literal[
+            "efficientnet_b0", "efficientnet_b1", "efficientnet_b2"
+        ] = "efficientnet_b0",
         pretrained: bool = True,
         freeze: bool = False,
         feature_dim: int = 128,
@@ -359,9 +379,14 @@ class EfficientNetBackbone(BaseVisionBackbone):
         backbone_model = model_fn(weights=weights if pretrained else None)
         self._backbone = backbone_model.features
 
-        return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+        return_attention_weights = (
+            enable_attention_supervision and attention_type == "cbam"
+        )
         self._attention = create_attention_module(
-            attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+            attention_type,
+            self._backbone_out_dim,
+            use_roi_guidance,
+            return_attention_weights,
         )
 
         self._pool = nn.AdaptiveAvgPool2d(1)
@@ -638,28 +663,30 @@ class ConvNeXtBackbone(BaseVisionBackbone):
         "convnext_tiny": (
             models.convnext_tiny,
             models.ConvNeXt_Tiny_Weights.IMAGENET1K_V1,
-            768
+            768,
         ),
         "convnext_small": (
             models.convnext_small,
             models.ConvNeXt_Small_Weights.IMAGENET1K_V1,
-            768
+            768,
         ),
         "convnext_base": (
             models.convnext_base,
             models.ConvNeXt_Base_Weights.IMAGENET1K_V1,
-            1024
+            1024,
         ),
         "convnext_large": (
             models.convnext_large,
             models.ConvNeXt_Large_Weights.IMAGENET1K_V1,
-            1536
+            1536,
         ),
     }
 
     def __init__(
         self,
-        variant: Literal["convnext_tiny", "convnext_small", "convnext_base", "convnext_large"] = "convnext_tiny",
+        variant: Literal[
+            "convnext_tiny", "convnext_small", "convnext_base", "convnext_large"
+        ] = "convnext_tiny",
         pretrained: bool = True,
         freeze: bool = False,
         feature_dim: int = 128,
@@ -671,7 +698,9 @@ class ConvNeXtBackbone(BaseVisionBackbone):
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown ConvNeXt variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown ConvNeXt variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         self.variant = variant
         self.enable_attention_supervision = enable_attention_supervision
@@ -686,9 +715,14 @@ class ConvNeXtBackbone(BaseVisionBackbone):
         # Optional attention module (ConvNeXt already has good attention-like mechanisms)
         self._attention = None
         if attention_type != "none":
-            return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+            return_attention_weights = (
+                enable_attention_supervision and attention_type == "cbam"
+            )
             self._attention = create_attention_module(
-                attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+                attention_type,
+                self._backbone_out_dim,
+                use_roi_guidance,
+                return_attention_weights,
             )
 
         # Projection head
@@ -775,11 +809,7 @@ class MaxViTBackbone(BaseVisionBackbone):
     """
 
     VARIANTS = {
-        "maxvit_t": (
-            models.maxvit_t,
-            models.MaxVit_T_Weights.IMAGENET1K_V1,
-            512
-        ),
+        "maxvit_t": (models.maxvit_t, models.MaxVit_T_Weights.IMAGENET1K_V1, 512),
     }
 
     def __init__(
@@ -793,7 +823,9 @@ class MaxViTBackbone(BaseVisionBackbone):
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown MaxViT variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown MaxViT variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         self.variant = variant
         model_fn, weights, self._backbone_out_dim = self.VARIANTS[variant]
@@ -907,7 +939,9 @@ class EfficientNetV2Backbone(BaseVisionBackbone):
 
     def __init__(
         self,
-        variant: Literal["efficientnet_v2_s", "efficientnet_v2_m", "efficientnet_v2_l"] = "efficientnet_v2_s",
+        variant: Literal[
+            "efficientnet_v2_s", "efficientnet_v2_m", "efficientnet_v2_l"
+        ] = "efficientnet_v2_s",
         pretrained: bool = True,
         freeze: bool = False,
         feature_dim: int = 128,
@@ -931,9 +965,14 @@ class EfficientNetV2Backbone(BaseVisionBackbone):
         # Optional attention (EfficientNetV2 already has SE blocks)
         self._attention = None
         if attention_type != "none":
-            return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+            return_attention_weights = (
+                enable_attention_supervision and attention_type == "cbam"
+            )
             self._attention = create_attention_module(
-                attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+                attention_type,
+                self._backbone_out_dim,
+                use_roi_guidance,
+                return_attention_weights,
             )
 
         self._pool = nn.AdaptiveAvgPool2d(1)
@@ -1047,8 +1086,13 @@ class RegNetBackbone(BaseVisionBackbone):
     def __init__(
         self,
         variant: Literal[
-            "regnet_y_400mf", "regnet_y_800mf", "regnet_y_1_6gf", "regnet_y_3_2gf",
-            "regnet_y_8gf", "regnet_y_16gf", "regnet_y_32gf"
+            "regnet_y_400mf",
+            "regnet_y_800mf",
+            "regnet_y_1_6gf",
+            "regnet_y_3_2gf",
+            "regnet_y_8gf",
+            "regnet_y_16gf",
+            "regnet_y_32gf",
         ] = "regnet_y_400mf",
         pretrained: bool = True,
         freeze: bool = False,
@@ -1061,7 +1105,9 @@ class RegNetBackbone(BaseVisionBackbone):
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown RegNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown RegNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         self.variant = variant
         self.enable_attention_supervision = enable_attention_supervision
@@ -1076,9 +1122,14 @@ class RegNetBackbone(BaseVisionBackbone):
         # Optional attention module
         self._attention = None
         if attention_type != "none":
-            return_attention_weights = enable_attention_supervision and attention_type == "cbam"
+            return_attention_weights = (
+                enable_attention_supervision and attention_type == "cbam"
+            )
             self._attention = create_attention_module(
-                attention_type, self._backbone_out_dim, use_roi_guidance, return_attention_weights
+                attention_type,
+                self._backbone_out_dim,
+                use_roi_guidance,
+                return_attention_weights,
             )
 
         # Global pooling
@@ -1168,44 +1219,68 @@ BACKBONE_REGISTRY = {
     "resnet34": lambda **kwargs: ResNetBackbone(variant="resnet34", **kwargs),
     "resnet50": lambda **kwargs: ResNetBackbone(variant="resnet50", **kwargs),
     "resnet101": lambda **kwargs: ResNetBackbone(variant="resnet101", **kwargs),
-
     # MobileNet family
     "mobilenetv2": lambda **kwargs: MobileNetBackbone(variant="mobilenetv2", **kwargs),
-    "mobilenetv3_small": lambda **kwargs: MobileNetBackbone(variant="mobilenetv3_small", **kwargs),
-    "mobilenetv3_large": lambda **kwargs: MobileNetBackbone(variant="mobilenetv3_large", **kwargs),
-
+    "mobilenetv3_small": lambda **kwargs: MobileNetBackbone(
+        variant="mobilenetv3_small", **kwargs
+    ),
+    "mobilenetv3_large": lambda **kwargs: MobileNetBackbone(
+        variant="mobilenetv3_large", **kwargs
+    ),
     # EfficientNet family (V1)
-    "efficientnet_b0": lambda **kwargs: EfficientNetBackbone(variant="efficientnet_b0", **kwargs),
-    "efficientnet_b1": lambda **kwargs: EfficientNetBackbone(variant="efficientnet_b1", **kwargs),
-    "efficientnet_b2": lambda **kwargs: EfficientNetBackbone(variant="efficientnet_b2", **kwargs),
-
+    "efficientnet_b0": lambda **kwargs: EfficientNetBackbone(
+        variant="efficientnet_b0", **kwargs
+    ),
+    "efficientnet_b1": lambda **kwargs: EfficientNetBackbone(
+        variant="efficientnet_b1", **kwargs
+    ),
+    "efficientnet_b2": lambda **kwargs: EfficientNetBackbone(
+        variant="efficientnet_b2", **kwargs
+    ),
     # EfficientNetV2 family (NEW)
-    "efficientnet_v2_s": lambda **kwargs: EfficientNetV2Backbone(variant="efficientnet_v2_s", **kwargs),
-    "efficientnet_v2_m": lambda **kwargs: EfficientNetV2Backbone(variant="efficientnet_v2_m", **kwargs),
-    "efficientnet_v2_l": lambda **kwargs: EfficientNetV2Backbone(variant="efficientnet_v2_l", **kwargs),
-
+    "efficientnet_v2_s": lambda **kwargs: EfficientNetV2Backbone(
+        variant="efficientnet_v2_s", **kwargs
+    ),
+    "efficientnet_v2_m": lambda **kwargs: EfficientNetV2Backbone(
+        variant="efficientnet_v2_m", **kwargs
+    ),
+    "efficientnet_v2_l": lambda **kwargs: EfficientNetV2Backbone(
+        variant="efficientnet_v2_l", **kwargs
+    ),
     # ConvNeXt family (NEW)
-    "convnext_tiny": lambda **kwargs: ConvNeXtBackbone(variant="convnext_tiny", **kwargs),
-    "convnext_small": lambda **kwargs: ConvNeXtBackbone(variant="convnext_small", **kwargs),
-    "convnext_base": lambda **kwargs: ConvNeXtBackbone(variant="convnext_base", **kwargs),
-    "convnext_large": lambda **kwargs: ConvNeXtBackbone(variant="convnext_large", **kwargs),
-
+    "convnext_tiny": lambda **kwargs: ConvNeXtBackbone(
+        variant="convnext_tiny", **kwargs
+    ),
+    "convnext_small": lambda **kwargs: ConvNeXtBackbone(
+        variant="convnext_small", **kwargs
+    ),
+    "convnext_base": lambda **kwargs: ConvNeXtBackbone(
+        variant="convnext_base", **kwargs
+    ),
+    "convnext_large": lambda **kwargs: ConvNeXtBackbone(
+        variant="convnext_large", **kwargs
+    ),
     # MaxViT family (NEW)
     "maxvit_t": lambda **kwargs: MaxViTBackbone(variant="maxvit_t", **kwargs),
-
     # RegNet family (NEW)
-    "regnet_y_400mf": lambda **kwargs: RegNetBackbone(variant="regnet_y_400mf", **kwargs),
-    "regnet_y_800mf": lambda **kwargs: RegNetBackbone(variant="regnet_y_800mf", **kwargs),
-    "regnet_y_1_6gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_1_6gf", **kwargs),
-    "regnet_y_3_2gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_3_2gf", **kwargs),
+    "regnet_y_400mf": lambda **kwargs: RegNetBackbone(
+        variant="regnet_y_400mf", **kwargs
+    ),
+    "regnet_y_800mf": lambda **kwargs: RegNetBackbone(
+        variant="regnet_y_800mf", **kwargs
+    ),
+    "regnet_y_1_6gf": lambda **kwargs: RegNetBackbone(
+        variant="regnet_y_1_6gf", **kwargs
+    ),
+    "regnet_y_3_2gf": lambda **kwargs: RegNetBackbone(
+        variant="regnet_y_3_2gf", **kwargs
+    ),
     "regnet_y_8gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_8gf", **kwargs),
     "regnet_y_16gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_16gf", **kwargs),
     "regnet_y_32gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_32gf", **kwargs),
-
     # Vision Transformer family
     "vit_b_16": lambda **kwargs: ViTBackbone(variant="vit_b_16", **kwargs),
     "vit_b_32": lambda **kwargs: ViTBackbone(variant="vit_b_32", **kwargs),
-
     # Swin Transformer family
     "swin_t": lambda **kwargs: SwinBackbone(variant="swin_t", **kwargs),
     "swin_s": lambda **kwargs: SwinBackbone(variant="swin_s", **kwargs),
@@ -1220,6 +1295,7 @@ def create_vision_backbone(
     dropout: float = 0.3,
     attention_type: str = "cbam",
     use_roi_guidance: bool = False,
+    enable_attention_supervision: bool = False,
 ) -> BaseVisionBackbone:
     """
     Factory function to create vision backbones.
@@ -1232,6 +1308,7 @@ def create_vision_backbone(
         dropout: Dropout rate for projection head
         attention_type: Type of attention mechanism ("cbam", "se", "eca", "none")
         use_roi_guidance: Whether to use ROI-guided spatial attention
+        enable_attention_supervision: Whether to enable attention supervision for training
 
     Returns:
         Vision backbone instance
@@ -1242,9 +1319,7 @@ def create_vision_backbone(
     """
     if backbone_name not in BACKBONE_REGISTRY:
         available = list(BACKBONE_REGISTRY.keys())
-        raise ValueError(
-            f"Unknown backbone: {backbone_name}. Available: {available}"
-        )
+        raise ValueError(f"Unknown backbone: {backbone_name}. Available: {available}")
 
     # ViT and Swin don't support CNN-style attention
     if backbone_name.startswith(("vit_", "swin_")):
@@ -1262,6 +1337,7 @@ def create_vision_backbone(
         dropout=dropout,
         attention_type=attention_type,
         use_roi_guidance=use_roi_guidance,
+        enable_attention_supervision=enable_attention_supervision,
     )
 
 

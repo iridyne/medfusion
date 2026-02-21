@@ -64,7 +64,9 @@ class AdaptiveMLP(BaseTabularBackbone):
             activation: Activation function type
             input_dropout: Dropout rate applied to input (for regularization)
         """
-        super().__init__(input_dim=input_dim, output_dim=output_dim, hidden_dims=hidden_dims)
+        super().__init__(
+            input_dim=input_dim, output_dim=output_dim, hidden_dims=hidden_dims
+        )
 
         self.dropout_rate = dropout
         self.use_batch_norm = use_batch_norm
@@ -73,7 +75,9 @@ class AdaptiveMLP(BaseTabularBackbone):
 
         # Get activation class
         if activation not in self.ACTIVATIONS:
-            raise ValueError(f"Unknown activation: {activation}. Choose from {list(self.ACTIVATIONS.keys())}")
+            raise ValueError(
+                f"Unknown activation: {activation}. Choose from {list(self.ACTIVATIONS.keys())}"
+            )
         activation_cls = self.ACTIVATIONS[activation]
 
         # Build network
@@ -162,14 +166,20 @@ class ResidualMLP(BaseTabularBackbone):
             dropout: Dropout rate
             use_batch_norm: Whether to use batch normalization
         """
-        super().__init__(input_dim=input_dim, output_dim=output_dim, hidden_dims=[hidden_dim] * num_blocks)
+        super().__init__(
+            input_dim=input_dim,
+            output_dim=output_dim,
+            hidden_dims=[hidden_dim] * num_blocks,
+        )
 
         self.hidden_dim = hidden_dim
         self.num_blocks = num_blocks
 
         # Input projection
         self.input_proj = nn.Linear(input_dim, hidden_dim)
-        self.input_norm = nn.BatchNorm1d(hidden_dim) if use_batch_norm else nn.Identity()
+        self.input_norm = (
+            nn.BatchNorm1d(hidden_dim) if use_batch_norm else nn.Identity()
+        )
 
         # Residual blocks
         self.blocks = nn.ModuleList()
@@ -198,10 +208,12 @@ class ResidualMLP(BaseTabularBackbone):
         if use_batch_norm:
             layers.append(nn.BatchNorm1d(dim))
 
-        layers.extend([
-            nn.Dropout(dropout),
-            nn.Linear(dim, dim),
-        ])
+        layers.extend(
+            [
+                nn.Dropout(dropout),
+                nn.Linear(dim, dim),
+            ]
+        )
 
         if use_batch_norm:
             layers.append(nn.BatchNorm1d(dim))
@@ -258,9 +270,9 @@ class FeatureTokenizer(nn.Module):
 
         # For numerical features: linear projection per feature
         num_numerical = numerical_features or num_features
-        self.numerical_embeddings = nn.ModuleList([
-            nn.Linear(1, embedding_dim) for _ in range(num_numerical)
-        ])
+        self.numerical_embeddings = nn.ModuleList(
+            [nn.Linear(1, embedding_dim) for _ in range(num_numerical)]
+        )
 
         # For categorical features: embedding tables
         self.categorical_embeddings = nn.ModuleList()
@@ -298,7 +310,7 @@ class FeatureTokenizer(nn.Module):
         # Embed numerical features
         if numerical is not None:
             for i, embed in enumerate(self.numerical_embeddings):
-                feat = numerical[:, i:i+1]  # (B, 1)
+                feat = numerical[:, i : i + 1]  # (B, 1)
                 tokens.append(embed(feat).unsqueeze(1))  # (B, 1, embed_dim)
 
         # Embed categorical features
@@ -333,22 +345,25 @@ def create_tabular_backbone(
     Returns:
         Tabular backbone instance
     """
+    # Filter out 'config' from kwargs as it's not needed by backbone constructors
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k != "config"}
+
     if backbone_type == "mlp":
         return AdaptiveMLP(
             input_dim=input_dim,
             output_dim=output_dim,
             hidden_dims=hidden_dims,
-            **kwargs,
+            **filtered_kwargs,
         )
     elif backbone_type == "residual":
         hidden_dim = hidden_dims[0] if hidden_dims else 64
         num_blocks = len(hidden_dims) if hidden_dims else 3
-        return ResidualMLP(
+        return ResidualTabularBackbone(
             input_dim=input_dim,
             output_dim=output_dim,
             hidden_dim=hidden_dim,
             num_blocks=num_blocks,
-            **kwargs,
+            **filtered_kwargs,
         )
     else:
         raise ValueError(f"Unknown backbone type: {backbone_type}")

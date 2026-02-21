@@ -259,11 +259,20 @@ def create_fusion_model(
     from med_core.backbones import create_tabular_backbone, create_vision_backbone
     from med_core.fusion.strategies import create_fusion_module
 
+    # Filter out 'config' from kwargs as it's not needed by sub-components
+    filtered_kwargs = {k: v for k, v in kwargs.items() if k != "config"}
+
     # Create vision backbone
     vision_backbone = create_vision_backbone(
         backbone_name=vision_backbone_name,
         pretrained=pretrained,
-        **kwargs,
+        **filtered_kwargs,
+    )
+
+    # Create tabular backbone
+    tabular_backbone = create_tabular_backbone(
+        input_dim=tabular_input_dim,
+        **filtered_kwargs,
     )
 
     # Create tabular backbone
@@ -277,7 +286,7 @@ def create_fusion_model(
         fusion_type=fusion_type,
         vision_dim=vision_backbone.output_dim,
         tabular_dim=tabular_backbone.output_dim,
-        **kwargs,
+        **filtered_kwargs,
     )
 
     # Assemble complete model
