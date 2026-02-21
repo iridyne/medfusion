@@ -27,7 +27,9 @@ class ChannelAttention(nn.Module):
         )
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x: torch.Tensor, return_weights: bool = False) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_weights: bool = False
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: Input features (B, C, H, W)
@@ -56,7 +58,9 @@ class SpatialAttention(nn.Module):
         self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x: torch.Tensor, return_weights: bool = False) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_weights: bool = False
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: Input features (B, C, H, W)
@@ -102,7 +106,9 @@ class ROIGuidedSpatialAttention(nn.Module):
         self.suppression_weight = suppression_weight
         self._roi_mask = None
 
-    def _create_roi_mask(self, size: tuple[int, int], device: torch.device) -> torch.Tensor:
+    def _create_roi_mask(
+        self, size: tuple[int, int], device: torch.device
+    ) -> torch.Tensor:
         """Create ROI mask that suppresses artifact regions."""
         h, w = size
         mask = torch.zeros(1, 1, h, w, device=device)
@@ -121,7 +127,9 @@ class ROIGuidedSpatialAttention(nn.Module):
 
         return mask
 
-    def forward(self, x: torch.Tensor, return_weights: bool = False) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_weights: bool = False
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: Input features (B, C, H, W)
@@ -187,7 +195,9 @@ class CBAM(nn.Module):
             else:
                 self.spatial_attention = SpatialAttention()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    def forward(
+        self, x: torch.Tensor
+    ) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
         Args:
             x: Input features (B, C, H, W)
@@ -314,7 +324,7 @@ def create_attention_module(
         return SEBlock(in_channels)
     elif attention_type == "eca":
         return ECABlock(in_channels)
-    elif attention_type == "none":
+    elif attention_type == "none" or attention_type is None:
         return None
     else:
         raise ValueError(f"Unknown attention type: {attention_type}")
