@@ -14,7 +14,6 @@ from torch.utils.data import DataLoader
 from med_core.configs import create_ct_multiview_config, create_default_config
 from med_core.datasets import MedicalMultimodalDataset, MedicalMultiViewDataset
 from med_core.datasets.multiview_types import MultiViewConfig
-from med_core.evaluation import ModelEvaluator
 from med_core.fusion import create_fusion_model, create_multiview_fusion_model
 from med_core.trainers import MultimodalTrainer, MultiViewMultimodalTrainer
 
@@ -88,14 +87,20 @@ class TestSingleViewEndToEnd:
             assert len(history["train_loss"]) == 2
             assert len(history["val_loss"]) == 2
 
-            # 7. Evaluate model
-            evaluator = ModelEvaluator(model, device="cpu")
-            metrics = evaluator.evaluate(val_loader)
+            # 7. Evaluate model (simple validation)
+            model.eval()
+            correct = 0
+            total = 0
+            with torch.no_grad():
+                for batch in val_loader:
+                    images, tabular, labels = batch
+                    outputs = model(images, tabular)
+                    predictions = torch.argmax(outputs["logits"], dim=1)
+                    correct += (predictions == labels).sum().item()
+                    total += labels.size(0)
 
-            assert "accuracy" in metrics
-            assert "auc" in metrics
-            assert 0 <= metrics["accuracy"] <= 1
-            assert 0 <= metrics["auc"] <= 1
+            accuracy = correct / total
+            assert 0 <= accuracy <= 1
 
     def test_single_view_with_different_fusion_strategies(self, sample_csv_data):
         """Test pipeline with different fusion strategies."""

@@ -54,7 +54,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           python-version: ${{ matrix.python-version }}
-          extras: "dev"
+          extras: "dev,web"
 
       - name: Run tests
         run: |
@@ -81,7 +81,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           python-version: "3.11"
-          extras: "dev"
+          extras: "dev,web"
 
       - name: Generate mock data
         run: |
