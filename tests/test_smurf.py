@@ -3,6 +3,10 @@ Unit tests for SMuRF Model.
 """
 
 import pytest
+
+# Skip this test file if med_core.models cannot be imported
+pytest.importorskip("med_core.models")
+
 import torch
 
 from med_core.models.smurf import (

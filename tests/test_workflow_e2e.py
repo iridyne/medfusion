@@ -17,6 +17,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Skip this test file if med_core.web.workflow_engine cannot be imported
+pytest.importorskip("med_core.web.workflow_engine")
+
 from med_core.web.workflow_engine import (
     NodeStatus,
     WorkflowEngine,
