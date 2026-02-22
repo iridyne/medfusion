@@ -1,6 +1,5 @@
 """Tests for enhanced exception system."""
 
-
 from med_core.exceptions import (
     AttentionSupervisionError,
     BackboneNotFoundError,
@@ -37,20 +36,14 @@ class TestMedCoreError:
 
     def test_error_with_context(self):
         """Test error with context."""
-        error = MedCoreError(
-            "Test error",
-            context={"key1": "value1", "key2": 42}
-        )
+        error = MedCoreError("Test error", context={"key1": "value1", "key2": 42})
         assert error.context == {"key1": "value1", "key2": 42}
         assert "Context:" in str(error)
         assert "key1=value1" in str(error)
 
     def test_error_with_suggestion(self):
         """Test error with suggestion."""
-        error = MedCoreError(
-            "Test error",
-            suggestion="Try doing this instead"
-        )
+        error = MedCoreError("Test error", suggestion="Try doing this instead")
         assert error.suggestion == "Try doing this instead"
         assert "💡 Suggestion:" in str(error)
 
@@ -115,7 +108,7 @@ class TestDimensionMismatchError:
         error = DimensionMismatchError(
             expected=(32, 3, 224, 224),
             actual=(32, 3, 256, 256),
-            tensor_name="input_image"
+            tensor_name="input_image",
         )
 
         assert error.error_code == "E701"
@@ -149,10 +142,7 @@ class TestTrainingError:
     def test_training_error_with_epoch(self):
         """Test training error with epoch info."""
         error = TrainingError(
-            "Loss exploded",
-            epoch=10,
-            step=500,
-            suggestion="Reduce learning rate"
+            "Loss exploded", epoch=10, step=500, suggestion="Reduce learning rate"
         )
 
         assert error.error_code == "E400"
@@ -180,7 +170,7 @@ class TestAttentionSupervisionError:
         error = AttentionSupervisionError(
             "Attention supervision requires CBAM",
             attention_type="se",
-            suggestion="Use CBAM attention instead"
+            suggestion="Use CBAM attention instead",
         )
 
         assert error.error_code == "E900"
@@ -197,7 +187,7 @@ class TestMultiViewError:
             "Missing view",
             view_name="coronal",
             num_views=2,
-            suggestion="Provide all required views"
+            suggestion="Provide all required views",
         )
 
         assert error.error_code == "E1000"
@@ -213,7 +203,7 @@ class TestIncompatibleConfigError:
         error = IncompatibleConfigError(
             "Cannot use attention supervision with SE attention",
             conflicting_options=["use_attention_supervision", "attention_type=se"],
-            suggestion="Use CBAM attention for supervision"
+            suggestion="Use CBAM attention for supervision",
         )
 
         assert error.error_code == "E101"
@@ -225,10 +215,7 @@ class TestFormatErrorReport:
 
     def test_format_medcore_error(self):
         """Test formatting MedCore error."""
-        error = BackboneNotFoundError(
-            "resnet999",
-            ["resnet18", "resnet50"]
-        )
+        error = BackboneNotFoundError("resnet999", ["resnet18", "resnet50"])
 
         report = format_error_report(error)
 

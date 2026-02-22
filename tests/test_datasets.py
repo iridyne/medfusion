@@ -230,12 +230,8 @@ class TestDatasetSplitting(unittest.TestCase):
 
     def test_split_reproducibility(self):
         """Test that splitting is reproducible with same seed."""
-        train1, val1, test1 = split_dataset(
-            self.dataset, random_seed=42
-        )
-        train2, val2, test2 = split_dataset(
-            self.dataset, random_seed=42
-        )
+        train1, val1, test1 = split_dataset(self.dataset, random_seed=42)
+        train2, val2, test2 = split_dataset(self.dataset, random_seed=42)
         self.assertEqual(len(train1), len(train2))
         self.assertEqual(len(val1), len(val2))
 
@@ -275,9 +271,11 @@ class TestDataLoaders(unittest.TestCase):
         labels = np.random.randint(0, 2, num_samples)
 
         # Add transform to convert PIL Image to Tensor
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-        ])
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+            ]
+        )
 
         dataset = MedicalMultimodalDataset(
             image_paths=image_paths,

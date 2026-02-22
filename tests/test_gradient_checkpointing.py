@@ -38,9 +38,7 @@ class TestGradientCheckpointingUtils:
         x = torch.randn(4, 128, requires_grad=True)
 
         # 使用梯度检查点
-        output = checkpoint_sequential(
-            layers, segments=2, input=x, use_reentrant=False
-        )
+        output = checkpoint_sequential(layers, segments=2, input=x, use_reentrant=False)
 
         # 验证输出形状
         assert output.shape == (4, 128)

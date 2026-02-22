@@ -37,9 +37,7 @@ class TestKroneckerFusion:
 
     def test_bilinear_projection(self):
         """Test with bilinear projection."""
-        fusion = KroneckerFusion(
-            dim1=128, dim2=128, output_dim=256, use_bilinear=True
-        )
+        fusion = KroneckerFusion(dim1=128, dim2=128, output_dim=256, use_bilinear=True)
         x1 = torch.randn(4, 128)
         x2 = torch.randn(4, 128)
 

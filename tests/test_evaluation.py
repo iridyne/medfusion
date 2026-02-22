@@ -38,9 +38,7 @@ class TestBinaryMetrics(unittest.TestCase):
     def test_perfect_predictions(self):
         """Test metrics with perfect predictions."""
         metrics = calculate_binary_metrics(
-            self.y_true_perfect,
-            self.y_pred_perfect,
-            self.y_prob_perfect
+            self.y_true_perfect, self.y_pred_perfect, self.y_prob_perfect
         )
         self.assertEqual(metrics.accuracy, 1.0)
         self.assertEqual(metrics.auc, 1.0)
@@ -51,9 +49,7 @@ class TestBinaryMetrics(unittest.TestCase):
     def test_random_predictions(self):
         """Test metrics with random predictions."""
         metrics = calculate_binary_metrics(
-            self.y_true_random,
-            self.y_pred_random,
-            self.y_prob_random
+            self.y_true_random, self.y_pred_random, self.y_prob_random
         )
         self.assertIsInstance(metrics.accuracy, float)
         self.assertGreaterEqual(metrics.accuracy, 0.0)
@@ -64,7 +60,9 @@ class TestBinaryMetrics(unittest.TestCase):
         """Test metrics with imbalanced classes."""
         y_true = np.array([0] * 90 + [1] * 10)
         y_pred = np.array([0] * 85 + [1] * 15)
-        y_prob = np.concatenate([np.random.rand(90) * 0.3, np.random.rand(10) * 0.7 + 0.3])
+        y_prob = np.concatenate(
+            [np.random.rand(90) * 0.3, np.random.rand(10) * 0.7 + 0.3]
+        )
 
         metrics = calculate_binary_metrics(y_true, y_pred, y_prob)
         self.assertIsInstance(metrics.accuracy, float)
@@ -74,9 +72,7 @@ class TestBinaryMetrics(unittest.TestCase):
     def test_metrics_summary(self):
         """Test metrics summary string."""
         metrics = calculate_binary_metrics(
-            self.y_true_perfect,
-            self.y_pred_perfect,
-            self.y_prob_perfect
+            self.y_true_perfect, self.y_pred_perfect, self.y_prob_perfect
         )
         summary = metrics.summary()
         self.assertIsInstance(summary, str)

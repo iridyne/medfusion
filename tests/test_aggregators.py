@@ -49,10 +49,11 @@ class TestMeanPoolingAggregator:
         aggregator = MeanPoolingAggregator(input_dim=3)
 
         # Create simple input
-        x = torch.tensor([
-            [[1.0, 2.0, 3.0],
-             [4.0, 5.0, 6.0]],
-        ])
+        x = torch.tensor(
+            [
+                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+            ]
+        )
 
         output = aggregator(x)
         expected = torch.tensor([[2.5, 3.5, 4.5]])
@@ -80,10 +81,11 @@ class TestMaxPoolingAggregator:
         """Test that max is computed correctly."""
         aggregator = MaxPoolingAggregator(input_dim=3)
 
-        x = torch.tensor([
-            [[1.0, 5.0, 3.0],
-             [4.0, 2.0, 6.0]],
-        ])
+        x = torch.tensor(
+            [
+                [[1.0, 5.0, 3.0], [4.0, 2.0, 6.0]],
+            ]
+        )
 
         output = aggregator(x)
         expected = torch.tensor([[4.0, 5.0, 6.0]])
@@ -96,11 +98,7 @@ class TestAttentionAggregator:
 
     def test_initialization(self):
         """Test aggregator initialization."""
-        aggregator = AttentionAggregator(
-            input_dim=512,
-            attention_dim=128,
-            dropout=0.1
-        )
+        aggregator = AttentionAggregator(input_dim=512, attention_dim=128, dropout=0.1)
         assert aggregator.input_dim == 512
         assert aggregator.attention_dim == 128
 
@@ -139,9 +137,7 @@ class TestGatedAttentionAggregator:
     def test_initialization(self):
         """Test aggregator initialization."""
         aggregator = GatedAttentionAggregator(
-            input_dim=512,
-            attention_dim=128,
-            dropout=0.1
+            input_dim=512, attention_dim=128, dropout=0.1
         )
         assert aggregator.input_dim == 512
         assert aggregator.attention_dim == 128
@@ -173,10 +169,7 @@ class TestDeepSetsAggregator:
     def test_initialization(self):
         """Test aggregator initialization."""
         aggregator = DeepSetsAggregator(
-            input_dim=512,
-            hidden_dim=256,
-            output_dim=128,
-            dropout=0.1
+            input_dim=512, hidden_dim=256, output_dim=128, dropout=0.1
         )
         assert aggregator.input_dim == 512
         assert aggregator.hidden_dim == 256
@@ -219,10 +212,7 @@ class TestTransformerAggregator:
     def test_initialization(self):
         """Test aggregator initialization."""
         aggregator = TransformerAggregator(
-            input_dim=512,
-            num_heads=8,
-            num_layers=2,
-            dropout=0.1
+            input_dim=512, num_heads=8, num_layers=2, dropout=0.1
         )
         assert aggregator.input_dim == 512
         assert aggregator.num_heads == 8
@@ -258,9 +248,9 @@ class TestTransformerAggregator:
 class TestMILAggregator:
     """Tests for unified MILAggregator."""
 
-    @pytest.mark.parametrize("strategy", [
-        'mean', 'max', 'attention', 'gated', 'deepsets', 'transformer'
-    ])
+    @pytest.mark.parametrize(
+        "strategy", ["mean", "max", "attention", "gated", "deepsets", "transformer"]
+    )
     def test_all_strategies(self, strategy, batch_features):
         """Test all aggregation strategies."""
         aggregator = MILAggregator(input_dim=512, strategy=strategy)
@@ -272,22 +262,18 @@ class TestMILAggregator:
     def test_invalid_strategy(self):
         """Test that invalid strategy raises error."""
         with pytest.raises(ValueError, match="Unknown strategy"):
-            MILAggregator(input_dim=512, strategy='invalid')
+            MILAggregator(input_dim=512, strategy="invalid")
 
     def test_output_projection(self, batch_features):
         """Test output projection."""
-        aggregator = MILAggregator(
-            input_dim=512,
-            strategy='mean',
-            output_dim=256
-        )
+        aggregator = MILAggregator(input_dim=512, strategy="mean", output_dim=256)
         output = aggregator(batch_features)
 
         assert output.shape == (4, 256)
 
     def test_attention_return(self, batch_features):
         """Test returning attention weights."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         output, attention = aggregator(batch_features, return_attention=True)
 
         assert output.shape == (4, 512)
@@ -295,7 +281,7 @@ class TestMILAggregator:
 
     def test_gated_attention_return(self, batch_features):
         """Test returning gated attention weights."""
-        aggregator = MILAggregator(input_dim=512, strategy='gated')
+        aggregator = MILAggregator(input_dim=512, strategy="gated")
         output, attention = aggregator(batch_features, return_attention=True)
 
         assert output.shape == (4, 512)
@@ -303,7 +289,7 @@ class TestMILAggregator:
 
     def test_no_attention_for_mean(self, batch_features):
         """Test that mean strategy doesn't return attention."""
-        aggregator = MILAggregator(input_dim=512, strategy='mean')
+        aggregator = MILAggregator(input_dim=512, strategy="mean")
         output = aggregator(batch_features, return_attention=True)
 
         # Should only return output, not tuple
@@ -313,10 +299,7 @@ class TestMILAggregator:
     def test_deepsets_with_custom_dims(self, batch_features):
         """Test DeepSets with custom dimensions."""
         aggregator = MILAggregator(
-            input_dim=512,
-            strategy='deepsets',
-            hidden_dim=256,
-            output_dim=128
+            input_dim=512, strategy="deepsets", hidden_dim=256, output_dim=128
         )
         output = aggregator(batch_features)
 
@@ -325,10 +308,7 @@ class TestMILAggregator:
     def test_transformer_with_custom_params(self, batch_features):
         """Test Transformer with custom parameters."""
         aggregator = MILAggregator(
-            input_dim=512,
-            strategy='transformer',
-            num_heads=4,
-            num_layers=3
+            input_dim=512, strategy="transformer", num_heads=4, num_layers=3
         )
         output = aggregator(batch_features)
 
@@ -338,14 +318,17 @@ class TestMILAggregator:
 class TestAggregatorGradients:
     """Test gradient flow through aggregators."""
 
-    @pytest.mark.parametrize("aggregator_class", [
-        MeanPoolingAggregator,
-        MaxPoolingAggregator,
-        AttentionAggregator,
-        GatedAttentionAggregator,
-        DeepSetsAggregator,
-        TransformerAggregator,
-    ])
+    @pytest.mark.parametrize(
+        "aggregator_class",
+        [
+            MeanPoolingAggregator,
+            MaxPoolingAggregator,
+            AttentionAggregator,
+            GatedAttentionAggregator,
+            DeepSetsAggregator,
+            TransformerAggregator,
+        ],
+    )
     def test_gradient_flow(self, aggregator_class):
         """Test that gradients flow through aggregator."""
         if aggregator_class == DeepSetsAggregator:
@@ -372,7 +355,7 @@ class TestAggregatorEdgeCases:
 
     def test_single_instance(self):
         """Test with single instance."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         x = torch.randn(2, 1, 512)
         output = aggregator(x)
 
@@ -380,7 +363,7 @@ class TestAggregatorEdgeCases:
 
     def test_large_batch(self):
         """Test with large batch size."""
-        aggregator = MILAggregator(input_dim=512, strategy='mean')
+        aggregator = MILAggregator(input_dim=512, strategy="mean")
         x = torch.randn(128, 10, 512)
         output = aggregator(x)
 
@@ -388,7 +371,7 @@ class TestAggregatorEdgeCases:
 
     def test_many_instances(self):
         """Test with many instances."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         x = torch.randn(2, 100, 512)
         output = aggregator(x)
 
@@ -396,7 +379,7 @@ class TestAggregatorEdgeCases:
 
     def test_eval_mode(self):
         """Test in evaluation mode."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         aggregator.eval()
 
         x = torch.randn(2, 10, 512)
@@ -438,5 +421,5 @@ class TestAggregatorComparison:
         assert not torch.allclose(attn1, attn2)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

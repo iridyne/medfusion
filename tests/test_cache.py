@@ -113,7 +113,7 @@ class TestLRUCache:
         stats = cache.get_stats()
         assert stats["hits"] == 2
         assert stats["misses"] == 1
-        assert stats["hit_rate"] == 2/3
+        assert stats["hit_rate"] == 2 / 3
         assert stats["size"] == 2
 
     def test_clear(self):
@@ -210,11 +210,7 @@ class TestPrefetchDataset:
     def test_basic_prefetch(self):
         """测试基本预取功能"""
         base_dataset = DummyDataset(size=20, delay=0.01)
-        prefetch_dataset = PrefetchDataset(
-            base_dataset,
-            prefetch_size=5,
-            num_workers=2
-        )
+        prefetch_dataset = PrefetchDataset(base_dataset, prefetch_size=5, num_workers=2)
 
         # 顺序访问
         start_time = time.time()
@@ -230,11 +226,7 @@ class TestPrefetchDataset:
     def test_prefetch_queue(self):
         """测试预取队列"""
         base_dataset = DummyDataset(size=20)
-        prefetch_dataset = PrefetchDataset(
-            base_dataset,
-            prefetch_size=3,
-            num_workers=1
-        )
+        prefetch_dataset = PrefetchDataset(base_dataset, prefetch_size=3, num_workers=1)
 
         # 访问第一个样本
         prefetch_dataset[0]
@@ -247,9 +239,7 @@ class TestPrefetchDataset:
         """测试顺序访问性能"""
         base_dataset = DummyDataset(size=50)
         prefetch_dataset = PrefetchDataset(
-            base_dataset,
-            prefetch_size=10,
-            num_workers=2
+            base_dataset, prefetch_size=10, num_workers=2
         )
 
         # 顺序访问所有样本
@@ -365,10 +355,7 @@ class TestCacheFactory:
         """测试组合缓存"""
         dataset = DummyDataset(size=10)
         result = create_cached_dataset(
-            dataset,
-            cache_type="both",
-            cache_size=5,
-            prefetch_size=3
+            dataset, cache_type="both", cache_size=5, prefetch_size=3
         )
 
         assert isinstance(result, PrefetchDataset)

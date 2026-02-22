@@ -107,9 +107,7 @@ class TestAttentionAggregator:
         assert aggregated.shape == (4, 512)
         assert attention_weights.shape == (4, 10, 1)
         # Attention weights should sum to 1
-        assert torch.allclose(
-            attention_weights.sum(dim=1), torch.ones(4, 1), atol=1e-5
-        )
+        assert torch.allclose(attention_weights.sum(dim=1), torch.ones(4, 1), atol=1e-5)
 
     def test_different_attention_dim(self):
         """Test with different attention dimensions."""
@@ -154,9 +152,7 @@ class TestGatedAttentionAggregator:
 
         assert aggregated.shape == (4, 512)
         assert attention_weights.shape == (4, 10, 1)
-        assert torch.allclose(
-            attention_weights.sum(dim=1), torch.ones(4, 1), atol=1e-5
-        )
+        assert torch.allclose(attention_weights.sum(dim=1), torch.ones(4, 1), atol=1e-5)
 
     def test_gradient_flow(self):
         """Test gradient flow."""
@@ -272,7 +268,7 @@ class TestMILAggregator:
 
     def test_mean_strategy(self):
         """Test mean pooling strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='mean')
+        aggregator = MILAggregator(input_dim=512, strategy="mean")
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -281,7 +277,7 @@ class TestMILAggregator:
 
     def test_max_strategy(self):
         """Test max pooling strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='max')
+        aggregator = MILAggregator(input_dim=512, strategy="max")
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -290,7 +286,7 @@ class TestMILAggregator:
 
     def test_attention_strategy(self):
         """Test attention strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         features = torch.randn(4, 10, 512)
 
         aggregated, attention_weights = aggregator(features, return_attention=True)
@@ -300,7 +296,7 @@ class TestMILAggregator:
 
     def test_gated_strategy(self):
         """Test gated attention strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='gated')
+        aggregator = MILAggregator(input_dim=512, strategy="gated")
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -309,7 +305,7 @@ class TestMILAggregator:
 
     def test_deepsets_strategy(self):
         """Test deep sets strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='deepsets', output_dim=256)
+        aggregator = MILAggregator(input_dim=512, strategy="deepsets", output_dim=256)
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -318,7 +314,7 @@ class TestMILAggregator:
 
     def test_transformer_strategy(self):
         """Test transformer strategy."""
-        aggregator = MILAggregator(input_dim=512, strategy='transformer')
+        aggregator = MILAggregator(input_dim=512, strategy="transformer")
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -327,9 +323,7 @@ class TestMILAggregator:
 
     def test_output_projection(self):
         """Test output projection."""
-        aggregator = MILAggregator(
-            input_dim=512, strategy='attention', output_dim=256
-        )
+        aggregator = MILAggregator(input_dim=512, strategy="attention", output_dim=256)
         features = torch.randn(4, 10, 512)
 
         aggregated = aggregator(features)
@@ -339,11 +333,11 @@ class TestMILAggregator:
     def test_invalid_strategy(self):
         """Test error handling for invalid strategy."""
         with pytest.raises(ValueError):
-            MILAggregator(input_dim=512, strategy='invalid')
+            MILAggregator(input_dim=512, strategy="invalid")
 
     def test_gradient_flow_all_strategies(self):
         """Test gradient flow for all strategies."""
-        strategies = ['mean', 'max', 'attention', 'gated', 'deepsets', 'transformer']
+        strategies = ["mean", "max", "attention", "gated", "deepsets", "transformer"]
 
         for strategy in strategies:
             aggregator = MILAggregator(input_dim=128, strategy=strategy)
@@ -374,7 +368,7 @@ class TestIntegration:
         """Compare different aggregation strategies."""
         features = torch.randn(4, 10, 512)
 
-        strategies = ['mean', 'max', 'attention', 'gated', 'deepsets', 'transformer']
+        strategies = ["mean", "max", "attention", "gated", "deepsets", "transformer"]
         results = {}
 
         for strategy in strategies:
@@ -387,7 +381,7 @@ class TestIntegration:
 
         # Different strategies should produce different results
         for i, s1 in enumerate(strategies):
-            for s2 in strategies[i+1:]:
+            for s2 in strategies[i + 1 :]:
                 assert not torch.allclose(results[s1], results[s2])
 
     def test_training_vs_eval_mode(self):
@@ -406,7 +400,7 @@ class TestIntegration:
 
     def test_variable_num_instances(self):
         """Test with variable number of instances per batch."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
 
         # Different number of instances
         for num_instances in [1, 5, 10, 20, 50]:
@@ -416,7 +410,7 @@ class TestIntegration:
 
     def test_single_instance(self):
         """Test with single instance (edge case)."""
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
         features = torch.randn(4, 1, 512)
 
         aggregated = aggregator(features)

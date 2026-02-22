@@ -33,10 +33,12 @@ def image_size():
 @pytest.fixture
 def default_transform():
     """Default transform that converts PIL images to tensors."""
-    return transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-    ])
+    return transforms.Compose(
+        [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+        ]
+    )
 
 
 @pytest.fixture

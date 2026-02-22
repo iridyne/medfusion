@@ -247,8 +247,7 @@ class TestMultimodalSelfAttentionFusion:
     def test_three_modalities(self):
         """Test with three modalities."""
         fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[512, 512, 256],
-            output_dim=256
+            modality_dims=[512, 512, 256], output_dim=256
         )
         features = [
             torch.randn(4, 512),
@@ -263,8 +262,7 @@ class TestMultimodalSelfAttentionFusion:
     def test_four_modalities(self):
         """Test with four modalities."""
         fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[512, 256, 128, 64],
-            output_dim=128
+            modality_dims=[512, 256, 128, 64], output_dim=128
         )
         features = [
             torch.randn(4, 512),
@@ -280,8 +278,7 @@ class TestMultimodalSelfAttentionFusion:
     def test_return_attention_weights(self):
         """Test returning attention weights."""
         fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[512, 512, 256],
-            output_dim=256
+            modality_dims=[512, 512, 256], output_dim=256
         )
         features = [
             torch.randn(4, 512),
@@ -298,8 +295,7 @@ class TestMultimodalSelfAttentionFusion:
     def test_invalid_num_features(self):
         """Test error handling for wrong number of features."""
         fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[512, 512, 256],
-            output_dim=256
+            modality_dims=[512, 512, 256], output_dim=256
         )
         features = [
             torch.randn(4, 512),
@@ -312,8 +308,7 @@ class TestMultimodalSelfAttentionFusion:
     def test_gradient_flow(self):
         """Test gradient flow."""
         fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[128, 128, 64],
-            output_dim=64
+            modality_dims=[128, 128, 64], output_dim=64
         )
         features = [
             torch.randn(4, 128, requires_grad=True),
@@ -350,10 +345,10 @@ class TestIntegration:
         x2 = torch.randn(4, 512)
 
         strategies = {
-            'self_attention': SelfAttentionFusion(512, 512, 256),
-            'additive': AdditiveAttentionFusion(512, 512, 256),
-            'bilinear': BilinearAttentionFusion(512, 512, 256),
-            'gated': GatedAttentionFusion(512, 512, 256),
+            "self_attention": SelfAttentionFusion(512, 512, 256),
+            "additive": AdditiveAttentionFusion(512, 512, 256),
+            "bilinear": BilinearAttentionFusion(512, 512, 256),
+            "gated": GatedAttentionFusion(512, 512, 256),
         }
 
         results = {}
@@ -389,8 +384,7 @@ class TestIntegration:
         """Test multimodal fusion vs pairwise fusion."""
         # Multimodal fusion
         multimodal_fusion = MultimodalSelfAttentionFusion(
-            modality_dims=[512, 512, 256],
-            output_dim=256
+            modality_dims=[512, 512, 256], output_dim=256
         )
         features = [
             torch.randn(4, 512),

@@ -125,8 +125,10 @@ class TestPerformanceLogger:
                 pass  # Simulate work
 
         # Check that performance was logged
-        assert any("test_operation completed" in record.message for record in caplog.records)
-        assert any(hasattr(record, 'elapsed_time') for record in caplog.records)
+        assert any(
+            "test_operation completed" in record.message for record in caplog.records
+        )
+        assert any(hasattr(record, "elapsed_time") for record in caplog.records)
 
     def test_performance_logging_with_error(self, caplog):
         """Test performance logging when error occurs."""
@@ -138,7 +140,9 @@ class TestPerformanceLogger:
                 pass
 
         # Check that error was logged with timing
-        assert any("failing_operation failed" in record.message for record in caplog.records)
+        assert any(
+            "failing_operation failed" in record.message for record in caplog.records
+        )
 
 
 class TestLogFunctionCall:
@@ -146,6 +150,7 @@ class TestLogFunctionCall:
 
     def test_function_call_logging(self, caplog):
         """Test function call logging."""
+
         @log_function_call(level=logging.INFO)
         def test_function(x, y):
             return x + y
@@ -154,11 +159,15 @@ class TestLogFunctionCall:
             result = test_function(2, 3)
 
         assert result == 5
-        assert any("Calling" in record.message and "test_function" in record.message for record in caplog.records)
+        assert any(
+            "Calling" in record.message and "test_function" in record.message
+            for record in caplog.records
+        )
         assert any("completed" in record.message for record in caplog.records)
 
     def test_function_call_logging_with_error(self, caplog):
         """Test function call logging when error occurs."""
+
         @log_function_call(level=logging.DEBUG)
         def failing_function():
             raise ValueError("Test error")
@@ -182,8 +191,14 @@ class TestMetricsLogger:
             metrics.log("accuracy", 0.85, step=100)
 
         # Check logs
-        assert any("training.loss" in record.message and "0.5" in record.message for record in caplog.records)
-        assert any("training.accuracy" in record.message and "0.85" in record.message for record in caplog.records)
+        assert any(
+            "training.loss" in record.message and "0.5" in record.message
+            for record in caplog.records
+        )
+        assert any(
+            "training.accuracy" in record.message and "0.85" in record.message
+            for record in caplog.records
+        )
 
     def test_metrics_retrieval(self):
         """Test retrieving logged metrics."""

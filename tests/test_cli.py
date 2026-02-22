@@ -3,7 +3,6 @@ Tests for CLI module structure and imports.
 """
 
 
-
 def test_cli_imports():
     """Test that CLI functions can be imported."""
     from med_core.cli import evaluate, preprocess, train

@@ -371,7 +371,9 @@ class TestBackboneComparison:
 
     def test_convnext_vs_resnet(self):
         """Compare ConvNeXt with ResNet."""
-        convnext = create_vision_backbone("convnext_tiny", pretrained=False, feature_dim=128)
+        convnext = create_vision_backbone(
+            "convnext_tiny", pretrained=False, feature_dim=128
+        )
         resnet = create_vision_backbone("resnet50", pretrained=False, feature_dim=128)
 
         x = torch.randn(2, 3, 224, 224)
@@ -384,8 +386,12 @@ class TestBackboneComparison:
 
     def test_efficientnetv2_vs_efficientnet(self):
         """Compare EfficientNetV2 with original EfficientNet."""
-        v2 = create_vision_backbone("efficientnet_v2_s", pretrained=False, feature_dim=128)
-        v1 = create_vision_backbone("efficientnet_b0", pretrained=False, feature_dim=128)
+        v2 = create_vision_backbone(
+            "efficientnet_v2_s", pretrained=False, feature_dim=128
+        )
+        v1 = create_vision_backbone(
+            "efficientnet_b0", pretrained=False, feature_dim=128
+        )
 
         x = torch.randn(2, 3, 224, 224)
 
@@ -397,9 +403,15 @@ class TestBackboneComparison:
 
     def test_regnet_scaling(self):
         """Test that RegNet variants scale properly."""
-        small = create_vision_backbone("regnet_y_400mf", pretrained=False, feature_dim=128)
-        medium = create_vision_backbone("regnet_y_1_6gf", pretrained=False, feature_dim=128)
-        large = create_vision_backbone("regnet_y_8gf", pretrained=False, feature_dim=128)
+        small = create_vision_backbone(
+            "regnet_y_400mf", pretrained=False, feature_dim=128
+        )
+        medium = create_vision_backbone(
+            "regnet_y_1_6gf", pretrained=False, feature_dim=128
+        )
+        large = create_vision_backbone(
+            "regnet_y_8gf", pretrained=False, feature_dim=128
+        )
 
         # Count parameters
         small_params = sum(p.numel() for p in small.parameters())

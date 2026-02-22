@@ -143,7 +143,7 @@ class TestCrossModalAttention:
         x2 = torch.randn(2, 64, requires_grad=True)
 
         attended_x1, attended_x2, _ = attention(x1, x2)
-        loss = (attended_x1.sum() + attended_x2.sum())
+        loss = attended_x1.sum() + attended_x2.sum()
         loss.backward()
 
         assert x1.grad is not None

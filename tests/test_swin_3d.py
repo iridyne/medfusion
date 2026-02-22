@@ -50,7 +50,9 @@ class TestSwinTransformer3DBackbone:
 
         output = backbone(x)
 
-        assert isinstance(output, dict), "Expected dict output when return_intermediate=True"
+        assert isinstance(output, dict), (
+            "Expected dict output when return_intermediate=True"
+        )
         assert "features" in output, "Missing 'features' key"
         assert "intermediate" in output, "Missing 'intermediate' key"
         assert "hidden_states" in output, "Missing 'hidden_states' key"

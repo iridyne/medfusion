@@ -85,6 +85,7 @@ class TestMultiRegionExtractor:
 
     def test_2d_input(self):
         """Test with 2D input."""
+
         class DummyBackbone2D(nn.Module):
             def __init__(self):
                 super().__init__()
@@ -114,16 +115,16 @@ class TestHierarchicalRegionExtractor:
     def test_basic_extraction(self):
         """Test basic hierarchical extraction."""
         backbone = DummyBackbone(feature_dim=512)
-        region_names = ['tumor', 'peritumoral', 'background']
+        region_names = ["tumor", "peritumoral", "background"]
         extractor = HierarchicalRegionExtractor(
-            backbone, region_names=region_names, aggregation='concat'
+            backbone, region_names=region_names, aggregation="concat"
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
         masks = {
-            'tumor': torch.randn(2, 1, 32, 64, 64),
-            'peritumoral': torch.randn(2, 1, 32, 64, 64),
-            'background': torch.randn(2, 1, 32, 64, 64),
+            "tumor": torch.randn(2, 1, 32, 64, 64),
+            "peritumoral": torch.randn(2, 1, 32, 64, 64),
+            "background": torch.randn(2, 1, 32, 64, 64),
         }
 
         features = extractor(image, masks)
@@ -133,15 +134,15 @@ class TestHierarchicalRegionExtractor:
     def test_mean_aggregation(self):
         """Test mean aggregation."""
         backbone = DummyBackbone(feature_dim=512)
-        region_names = ['tumor', 'peritumoral']
+        region_names = ["tumor", "peritumoral"]
         extractor = HierarchicalRegionExtractor(
-            backbone, region_names=region_names, aggregation='mean'
+            backbone, region_names=region_names, aggregation="mean"
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
         masks = {
-            'tumor': torch.randn(2, 1, 32, 64, 64),
-            'peritumoral': torch.randn(2, 1, 32, 64, 64),
+            "tumor": torch.randn(2, 1, 32, 64, 64),
+            "peritumoral": torch.randn(2, 1, 32, 64, 64),
         }
 
         features = extractor(image, masks)
@@ -151,16 +152,16 @@ class TestHierarchicalRegionExtractor:
     def test_attention_aggregation(self):
         """Test attention aggregation."""
         backbone = DummyBackbone(feature_dim=512)
-        region_names = ['tumor', 'peritumoral', 'background']
+        region_names = ["tumor", "peritumoral", "background"]
         extractor = HierarchicalRegionExtractor(
-            backbone, region_names=region_names, aggregation='attention'
+            backbone, region_names=region_names, aggregation="attention"
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
         masks = {
-            'tumor': torch.randn(2, 1, 32, 64, 64),
-            'peritumoral': torch.randn(2, 1, 32, 64, 64),
-            'background': torch.randn(2, 1, 32, 64, 64),
+            "tumor": torch.randn(2, 1, 32, 64, 64),
+            "peritumoral": torch.randn(2, 1, 32, 64, 64),
+            "background": torch.randn(2, 1, 32, 64, 64),
         }
 
         features = extractor(image, masks)
@@ -170,13 +171,11 @@ class TestHierarchicalRegionExtractor:
     def test_missing_mask_error(self):
         """Test error handling for missing masks."""
         backbone = DummyBackbone(feature_dim=512)
-        region_names = ['tumor', 'peritumoral']
-        extractor = HierarchicalRegionExtractor(
-            backbone, region_names=region_names
-        )
+        region_names = ["tumor", "peritumoral"]
+        extractor = HierarchicalRegionExtractor(backbone, region_names=region_names)
 
         image = torch.randn(2, 1, 32, 64, 64)
-        masks = {'tumor': torch.randn(2, 1, 32, 64, 64)}  # Missing peritumoral
+        masks = {"tumor": torch.randn(2, 1, 32, 64, 64)}  # Missing peritumoral
 
         with pytest.raises(ValueError):
             extractor(image, masks)
@@ -184,15 +183,15 @@ class TestHierarchicalRegionExtractor:
     def test_gradient_flow(self):
         """Test gradient flow."""
         backbone = DummyBackbone(feature_dim=128)
-        region_names = ['tumor', 'background']
+        region_names = ["tumor", "background"]
         extractor = HierarchicalRegionExtractor(
-            backbone, region_names=region_names, aggregation='attention'
+            backbone, region_names=region_names, aggregation="attention"
         )
 
         image = torch.randn(2, 1, 32, 64, 64, requires_grad=True)
         masks = {
-            'tumor': torch.randn(2, 1, 32, 64, 64),
-            'background': torch.randn(2, 1, 32, 64, 64),
+            "tumor": torch.randn(2, 1, 32, 64, 64),
+            "background": torch.randn(2, 1, 32, 64, 64),
         }
 
         features = extractor(image, masks)
@@ -208,9 +207,7 @@ class TestAdaptiveRegionExtractor:
     def test_basic_extraction(self):
         """Test basic adaptive extraction."""
         backbone = DummyBackbone(feature_dim=512)
-        extractor = AdaptiveRegionExtractor(
-            backbone, num_regions=5, feature_dim=512
-        )
+        extractor = AdaptiveRegionExtractor(backbone, num_regions=5, feature_dim=512)
 
         image = torch.randn(2, 1, 32, 64, 64)
         features = extractor(image)
@@ -220,9 +217,7 @@ class TestAdaptiveRegionExtractor:
     def test_return_coordinates(self):
         """Test returning region coordinates."""
         backbone = DummyBackbone(feature_dim=512)
-        extractor = AdaptiveRegionExtractor(
-            backbone, num_regions=5, feature_dim=512
-        )
+        extractor = AdaptiveRegionExtractor(backbone, num_regions=5, feature_dim=512)
 
         image = torch.randn(2, 1, 32, 64, 64)
         features, coords = extractor(image, return_coords=True)
@@ -249,9 +244,7 @@ class TestAdaptiveRegionExtractor:
     def test_gradient_flow(self):
         """Test gradient flow."""
         backbone = DummyBackbone(feature_dim=128)
-        extractor = AdaptiveRegionExtractor(
-            backbone, num_regions=3, feature_dim=128
-        )
+        extractor = AdaptiveRegionExtractor(backbone, num_regions=3, feature_dim=128)
 
         image = torch.randn(2, 1, 32, 64, 64, requires_grad=True)
         features = extractor(image)
@@ -269,9 +262,7 @@ class TestMultiScaleRegionExtractor:
         """Test basic multi-scale extraction."""
         backbone = DummyBackbone(feature_dim=512)
         extractor = MultiScaleRegionExtractor(
-            backbone,
-            scales=[1.0, 0.5],
-            num_regions_per_scale=3
+            backbone, scales=[1.0, 0.5], num_regions_per_scale=3
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
@@ -284,9 +275,7 @@ class TestMultiScaleRegionExtractor:
         """Test with single scale."""
         backbone = DummyBackbone(feature_dim=512)
         extractor = MultiScaleRegionExtractor(
-            backbone,
-            scales=[1.0],
-            num_regions_per_scale=3
+            backbone, scales=[1.0], num_regions_per_scale=3
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
@@ -298,9 +287,7 @@ class TestMultiScaleRegionExtractor:
         """Test with multiple scales."""
         backbone = DummyBackbone(feature_dim=512)
         extractor = MultiScaleRegionExtractor(
-            backbone,
-            scales=[1.0, 0.75, 0.5, 0.25],
-            num_regions_per_scale=2
+            backbone, scales=[1.0, 0.75, 0.5, 0.25], num_regions_per_scale=2
         )
 
         image = torch.randn(2, 1, 32, 64, 64)
@@ -313,9 +300,7 @@ class TestMultiScaleRegionExtractor:
         """Test gradient flow."""
         backbone = DummyBackbone(feature_dim=128)
         extractor = MultiScaleRegionExtractor(
-            backbone,
-            scales=[1.0, 0.5],
-            num_regions_per_scale=2
+            backbone, scales=[1.0, 0.5], num_regions_per_scale=2
         )
 
         image = torch.randn(2, 1, 32, 64, 64, requires_grad=True)
@@ -366,7 +351,7 @@ class TestIntegration:
 
         backbone = DummyBackbone(feature_dim=512)
         extractor = MultiRegionExtractor(backbone, num_regions=5)
-        aggregator = MILAggregator(input_dim=512, strategy='attention')
+        aggregator = MILAggregator(input_dim=512, strategy="attention")
 
         image = torch.randn(2, 1, 32, 64, 64)
 

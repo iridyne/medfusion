@@ -39,11 +39,7 @@ class TestClassificationHead:
 
     def test_with_hidden_layers(self, batch_features):
         """Test with hidden layers."""
-        head = ClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            hidden_dims=[256, 128]
-        )
+        head = ClassificationHead(input_dim=512, num_classes=4, hidden_dims=[256, 128])
         logits = head(batch_features)
         assert logits.shape == (8, 4)
 
@@ -51,10 +47,7 @@ class TestClassificationHead:
     def test_activations(self, activation, batch_features):
         """Test different activation functions."""
         head = ClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            hidden_dims=[256],
-            activation=activation
+            input_dim=512, num_classes=4, hidden_dims=[256], activation=activation
         )
         logits = head(batch_features)
         assert logits.shape == (8, 4)
@@ -62,10 +55,7 @@ class TestClassificationHead:
     def test_with_batch_norm(self, batch_features):
         """Test with batch normalization."""
         head = ClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            hidden_dims=[256],
-            use_batch_norm=True
+            input_dim=512, num_classes=4, hidden_dims=[256], use_batch_norm=True
         )
         logits = head(batch_features)
         assert logits.shape == (8, 4)
@@ -102,9 +92,7 @@ class TestMultiLabelClassificationHead:
     def test_independent_classifiers(self, batch_features):
         """Test with independent classifiers."""
         head = MultiLabelClassificationHead(
-            input_dim=512,
-            num_labels=5,
-            use_independent_classifiers=True
+            input_dim=512, num_labels=5, use_independent_classifiers=True
         )
         logits = head(batch_features)
         assert logits.shape == (8, 5)
@@ -112,9 +100,7 @@ class TestMultiLabelClassificationHead:
     def test_shared_classifier(self, batch_features):
         """Test with shared classifier."""
         head = MultiLabelClassificationHead(
-            input_dim=512,
-            num_labels=5,
-            use_independent_classifiers=False
+            input_dim=512, num_labels=5, use_independent_classifiers=False
         )
         logits = head(batch_features)
         assert logits.shape == (8, 5)
@@ -222,11 +208,7 @@ class TestEnsembleClassificationHead:
 
     def test_initialization(self):
         """Test head initialization."""
-        head = EnsembleClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=512, num_classes=4, num_heads=3)
         assert head.input_dim == 512
         assert head.num_classes == 4
         assert head.num_heads == 3
@@ -234,11 +216,7 @@ class TestEnsembleClassificationHead:
 
     def test_forward(self, batch_features):
         """Test forward pass."""
-        head = EnsembleClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=512, num_classes=4, num_heads=3)
         logits = head(batch_features)
 
         assert logits.shape == (8, 4)
@@ -248,21 +226,14 @@ class TestEnsembleClassificationHead:
     def test_aggregation_methods(self, aggregation, batch_features):
         """Test different aggregation methods."""
         head = EnsembleClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            num_heads=3,
-            aggregation=aggregation
+            input_dim=512, num_classes=4, num_heads=3, aggregation=aggregation
         )
         logits = head(batch_features)
         assert logits.shape == (8, 4)
 
     def test_return_individual(self, batch_features):
         """Test returning individual predictions."""
-        head = EnsembleClassificationHead(
-            input_dim=512,
-            num_classes=4,
-            num_heads=3
-        )
+        head = EnsembleClassificationHead(input_dim=512, num_classes=4, num_heads=3)
         logits, individual = head(batch_features, return_individual=True)
 
         assert logits.shape == (8, 4)
@@ -272,9 +243,7 @@ class TestEnsembleClassificationHead:
         """Test that invalid aggregation raises error."""
         with pytest.raises(ValueError, match="Unknown aggregation"):
             head = EnsembleClassificationHead(
-                input_dim=512,
-                num_classes=4,
-                aggregation="invalid"
+                input_dim=512, num_classes=4, aggregation="invalid"
             )
             head(torch.randn(8, 512))
 
@@ -322,5 +291,5 @@ class TestHeadsEdgeCases:
         assert logits.shape == (8, 4)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
