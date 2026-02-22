@@ -28,7 +28,6 @@ from med_core.configs.multiview_config import (
 )
 from med_core.configs.validation import (
     ConfigValidator,
-    ValidationError,
     validate_config,
     validate_config_or_exit,
 )
@@ -59,7 +58,6 @@ __all__ = [
     "save_config",
     # Validation
     "ConfigValidator",
-    "ValidationError",
     "validate_config",
     "validate_config_or_exit",
 ]

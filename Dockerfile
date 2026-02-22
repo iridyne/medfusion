@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 uv（快速依赖管理）
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.cargo/bin/uv /usr/local/bin/uv
 
 # 复制依赖文件和源代码
 COPY pyproject.toml README.md ./
