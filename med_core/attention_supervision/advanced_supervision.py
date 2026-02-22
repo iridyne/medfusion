@@ -305,7 +305,7 @@ class TransformerAttentionSupervision(BaseAttentionSupervision):
         if self.locality_weight > 0:
             # 计算注意力的距离加权
             # 假设 N = H * W，可以重塑为 2D
-            H = W = int(N ** 0.5)
+            H = W = int(N**0.5)
             if H * W == N:
                 # 创建位置索引
                 pos_y, pos_x = torch.meshgrid(

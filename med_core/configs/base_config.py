@@ -75,10 +75,20 @@ class VisionConfig(BaseConfig):
     """Vision backbone configuration."""
 
     backbone: Literal[
-        "resnet18", "resnet34", "resnet50", "resnet101",
-        "mobilenetv2", "mobilenetv3_small", "mobilenetv3_large",
-        "efficientnet_b0", "efficientnet_b1", "efficientnet_b2",
-        "vit_b_16", "vit_b_32", "swin_t", "swin_s"
+        "resnet18",
+        "resnet34",
+        "resnet50",
+        "resnet101",
+        "mobilenetv2",
+        "mobilenetv3_small",
+        "mobilenetv3_large",
+        "efficientnet_b0",
+        "efficientnet_b1",
+        "efficientnet_b2",
+        "vit_b_16",
+        "vit_b_32",
+        "swin_t",
+        "swin_s",
     ] = "resnet18"
     pretrained: bool = True
     freeze_backbone: bool = True
@@ -161,9 +171,7 @@ class OptimizerConfig(BaseConfig):
 class SchedulerConfig(BaseConfig):
     """Learning rate scheduler configuration."""
 
-    scheduler: Literal[
-        "cosine", "step", "plateau", "onecycle", "none"
-    ] = "cosine"
+    scheduler: Literal["cosine", "step", "plateau", "onecycle", "none"] = "cosine"
     warmup_epochs: int = 5
     min_lr: float = 1e-7
 

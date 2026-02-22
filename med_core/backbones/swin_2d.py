@@ -337,7 +337,9 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         norm = self._backbone.norm
 
         # Create a new forward function
-        def checkpointed_forward(x: torch.Tensor, normalize: bool = True) -> torch.Tensor:
+        def checkpointed_forward(
+            x: torch.Tensor, normalize: bool = True
+        ) -> torch.Tensor:
             if not self.training or not self._gradient_checkpointing_enabled:
                 # Normal forward pass
                 x = patch_embed(x)

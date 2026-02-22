@@ -43,7 +43,9 @@ class CLAHETransform:
     Useful for enhancing contrast in medical images.
     """
 
-    def __init__(self, clip_limit: float = 2.0, tile_grid_size: tuple[int, int] = (8, 8)):
+    def __init__(
+        self, clip_limit: float = 2.0, tile_grid_size: tuple[int, int] = (8, 8)
+    ):
         """
         Initialize CLAHE transform.
 
@@ -72,16 +74,14 @@ class CLAHETransform:
                 # Convert to LAB color space for color images
                 lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
                 clahe = cv2.createCLAHE(
-                    clipLimit=self.clip_limit,
-                    tileGridSize=self.tile_grid_size
+                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size
                 )
                 lab[:, :, 0] = clahe.apply(lab[:, :, 0])
                 result = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
             else:
                 # Grayscale
                 clahe = cv2.createCLAHE(
-                    clipLimit=self.clip_limit,
-                    tileGridSize=self.tile_grid_size
+                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size
                 )
                 result = clahe.apply(img_array)
 
@@ -174,42 +174,50 @@ def get_train_transforms(
 
     # Augmentation based on strength
     if augmentation_strength == "light":
-        transform_list.extend([
-            T.RandomHorizontalFlip(p=0.5),
-            T.RandomRotation(degrees=10),
-        ])
+        transform_list.extend(
+            [
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomRotation(degrees=10),
+            ]
+        )
 
     elif augmentation_strength == "medium":
-        transform_list.extend([
-            T.RandomHorizontalFlip(p=0.5),
-            T.RandomAffine(
-                degrees=15,
-                translate=(0.05, 0.05),
-                scale=(0.9, 1.1),
-                shear=5,
-            ),
-            T.ColorJitter(brightness=0.15, contrast=0.15),
-        ])
+        transform_list.extend(
+            [
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomAffine(
+                    degrees=15,
+                    translate=(0.05, 0.05),
+                    scale=(0.9, 1.1),
+                    shear=5,
+                ),
+                T.ColorJitter(brightness=0.15, contrast=0.15),
+            ]
+        )
 
     elif augmentation_strength == "heavy":
-        transform_list.extend([
-            T.RandomHorizontalFlip(p=0.5),
-            T.RandomVerticalFlip(p=0.3),
-            T.RandomAffine(
-                degrees=20,
-                translate=(0.1, 0.1),
-                scale=(0.8, 1.2),
-                shear=10,
-            ),
-            T.ColorJitter(brightness=0.2, contrast=0.25, saturation=0.1),
-            T.RandomPerspective(distortion_scale=0.1, p=0.3),
-        ])
+        transform_list.extend(
+            [
+                T.RandomHorizontalFlip(p=0.5),
+                T.RandomVerticalFlip(p=0.3),
+                T.RandomAffine(
+                    degrees=20,
+                    translate=(0.1, 0.1),
+                    scale=(0.8, 1.2),
+                    shear=10,
+                ),
+                T.ColorJitter(brightness=0.2, contrast=0.25, saturation=0.1),
+                T.RandomPerspective(distortion_scale=0.1, p=0.3),
+            ]
+        )
 
     # Convert to tensor and normalize
-    transform_list.extend([
-        T.ToTensor(),
-        T.Normalize(mean=normalize_mean, std=normalize_std),
-    ])
+    transform_list.extend(
+        [
+            T.ToTensor(),
+            T.Normalize(mean=normalize_mean, std=normalize_std),
+        ]
+    )
 
     # Add Gaussian noise for medium/heavy augmentation
     if augmentation_strength in ("medium", "heavy"):
@@ -245,11 +253,13 @@ def get_val_transforms(
     if use_clahe:
         transform_list.append(CLAHETransform())
 
-    transform_list.extend([
-        T.Resize((image_size, image_size)),
-        T.ToTensor(),
-        T.Normalize(mean=normalize_mean, std=normalize_std),
-    ])
+    transform_list.extend(
+        [
+            T.Resize((image_size, image_size)),
+            T.ToTensor(),
+            T.Normalize(mean=normalize_mean, std=normalize_std),
+        ]
+    )
 
     return T.Compose(transform_list)
 

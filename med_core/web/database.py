@@ -1,10 +1,11 @@
 """数据库配置和管理"""
 
+import logging
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from contextlib import contextmanager
-import logging
+from sqlalchemy.orm import Session, sessionmaker
 
 from .config import settings
 
@@ -13,7 +14,9 @@ logger = logging.getLogger(__name__)
 # 创建数据库引擎
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
+    connect_args={"check_same_thread": False}
+    if "sqlite" in settings.database_url
+    else {},
     pool_pre_ping=True,
     echo=settings.debug,
 )

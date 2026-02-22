@@ -1,10 +1,11 @@
 """系统信息 API"""
 
-from fastapi import APIRouter
-from typing import Dict, Any
 import platform
+from typing import Any
+
 import psutil
 import torch
+from fastapi import APIRouter
 
 from ..config import settings
 
@@ -12,7 +13,7 @@ router = APIRouter()
 
 
 @router.get("/info")
-async def get_system_info() -> Dict[str, Any]:
+async def get_system_info() -> dict[str, Any]:
     """获取系统信息"""
     return {
         "app_name": settings.app_name,
@@ -24,7 +25,7 @@ async def get_system_info() -> Dict[str, Any]:
 
 
 @router.get("/version")
-async def get_version() -> Dict[str, str]:
+async def get_version() -> dict[str, str]:
     """获取版本信息"""
     return {
         "backend": settings.version,
@@ -34,7 +35,7 @@ async def get_version() -> Dict[str, str]:
 
 
 @router.get("/resources")
-async def get_system_resources() -> Dict[str, Any]:
+async def get_system_resources() -> dict[str, Any]:
     """获取系统资源使用情况"""
     # CPU 信息
     cpu_percent = psutil.cpu_percent(interval=1)
@@ -47,13 +48,16 @@ async def get_system_resources() -> Dict[str, Any]:
     gpu_info = []
     if torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
-            gpu_info.append({
-                "id": i,
-                "name": torch.cuda.get_device_name(i),
-                "memory_total": torch.cuda.get_device_properties(i).total_memory / 1024**3,  # GB
-                "memory_allocated": torch.cuda.memory_allocated(i) / 1024**3,  # GB
-                "memory_reserved": torch.cuda.memory_reserved(i) / 1024**3,  # GB
-            })
+            gpu_info.append(
+                {
+                    "id": i,
+                    "name": torch.cuda.get_device_name(i),
+                    "memory_total": torch.cuda.get_device_properties(i).total_memory
+                    / 1024**3,  # GB
+                    "memory_allocated": torch.cuda.memory_allocated(i) / 1024**3,  # GB
+                    "memory_reserved": torch.cuda.memory_reserved(i) / 1024**3,  # GB
+                }
+            )
 
     return {
         "cpu": {
@@ -71,7 +75,7 @@ async def get_system_resources() -> Dict[str, Any]:
 
 
 @router.get("/storage")
-async def get_storage_info() -> Dict[str, Any]:
+async def get_storage_info() -> dict[str, Any]:
     """获取存储信息"""
     data_dir = settings.data_dir
 

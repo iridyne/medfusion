@@ -1,9 +1,11 @@
 """混合精度训练"""
+
 import torch
 
 
 class AMPTrainer:
     """AMP 训练器"""
+
     def __init__(self, model, optimizer):
         self.model = model
         self.optimizer = optimizer
@@ -20,6 +22,7 @@ class AMPTrainer:
         self.optimizer.zero_grad()
 
         return loss.item()
+
 
 def create_amp_trainer(model, optimizer):
     return AMPTrainer(model, optimizer)

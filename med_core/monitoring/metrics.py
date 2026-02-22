@@ -1,7 +1,9 @@
 """监控指标"""
 
+
 class MetricsCollector:
     """指标收集器"""
+
     def __init__(self):
         self.metrics = {}
 
@@ -12,5 +14,6 @@ class MetricsCollector:
 
     def get_metrics(self) -> dict:
         return self.metrics
+
 
 collector = MetricsCollector()

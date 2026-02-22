@@ -58,7 +58,9 @@ def visualize_attention_overlay(
         image = np.repeat(image, 3, axis=-1)
 
     # 归一化注意力到 [0, 1]
-    attention = (attention - attention.min()) / (attention.max() - attention.min() + 1e-8)
+    attention = (attention - attention.min()) / (
+        attention.max() - attention.min() + 1e-8
+    )
 
     # 创建图形
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -76,12 +78,12 @@ def visualize_attention_overlay(
     if title:
         ax.set_title(title, fontsize=14)
 
-    ax.axis('off')
+    ax.axis("off")
     plt.tight_layout()
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -136,8 +138,12 @@ def visualize_attention_comparison(
     if image.shape[-1] == 1:
         image = np.repeat(image, 3, axis=-1)
 
-    attention_before = (attention_before - attention_before.min()) / (attention_before.max() - attention_before.min() + 1e-8)
-    attention_after = (attention_after - attention_after.min()) / (attention_after.max() - attention_after.min() + 1e-8)
+    attention_before = (attention_before - attention_before.min()) / (
+        attention_before.max() - attention_before.min() + 1e-8
+    )
+    attention_after = (attention_after - attention_after.min()) / (
+        attention_after.max() - attention_after.min() + 1e-8
+    )
 
     # 确定子图数量
     num_plots = 3 if target is None else 4
@@ -154,36 +160,36 @@ def visualize_attention_comparison(
     # 原图
     axes[0].imshow(image)
     axes[0].set_title(titles[0], fontsize=12)
-    axes[0].axis('off')
+    axes[0].axis("off")
 
     # 引导前
     axes[1].imshow(image)
-    im1 = axes[1].imshow(attention_before, cmap='jet', alpha=0.5)
+    im1 = axes[1].imshow(attention_before, cmap="jet", alpha=0.5)
     axes[1].set_title(titles[1], fontsize=12)
-    axes[1].axis('off')
+    axes[1].axis("off")
     plt.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
 
     # 引导后
     axes[2].imshow(image)
-    im2 = axes[2].imshow(attention_after, cmap='jet', alpha=0.5)
+    im2 = axes[2].imshow(attention_after, cmap="jet", alpha=0.5)
     axes[2].set_title(titles[2], fontsize=12)
-    axes[2].axis('off')
+    axes[2].axis("off")
     plt.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
 
     # 目标掩码
     if target is not None:
         target = (target - target.min()) / (target.max() - target.min() + 1e-8)
         axes[3].imshow(image)
-        im3 = axes[3].imshow(target, cmap='Reds', alpha=0.5)
+        im3 = axes[3].imshow(target, cmap="Reds", alpha=0.5)
         axes[3].set_title(titles[3], fontsize=12)
-        axes[3].axis('off')
+        axes[3].axis("off")
         plt.colorbar(im3, ax=axes[3], fraction=0.046, pad=0.04)
 
     plt.tight_layout()
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -233,7 +239,9 @@ def visualize_attention_supervision_loss(
     if image.shape[-1] == 1:
         image = np.repeat(image, 3, axis=-1)
 
-    attention = (attention - attention.min()) / (attention.max() - attention.min() + 1e-8)
+    attention = (attention - attention.min()) / (
+        attention.max() - attention.min() + 1e-8
+    )
     target = (target - target.min()) / (target.max() - target.min() + 1e-8)
 
     # 创建图形
@@ -243,22 +251,22 @@ def visualize_attention_supervision_loss(
     ax1 = plt.subplot(1, 4, 1)
     ax1.imshow(image)
     ax1.set_title("原图", fontsize=12)
-    ax1.axis('off')
+    ax1.axis("off")
 
     # 子图2: 注意力
     ax2 = plt.subplot(1, 4, 2)
     ax2.imshow(image)
-    im2 = ax2.imshow(attention, cmap='jet', alpha=0.5)
+    im2 = ax2.imshow(attention, cmap="jet", alpha=0.5)
     ax2.set_title("模型注意力", fontsize=12)
-    ax2.axis('off')
+    ax2.axis("off")
     plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
 
     # 子图3: 目标
     ax3 = plt.subplot(1, 4, 3)
     ax3.imshow(image)
-    im3 = ax3.imshow(target, cmap='Reds', alpha=0.5)
+    im3 = ax3.imshow(target, cmap="Reds", alpha=0.5)
     ax3.set_title("目标分布", fontsize=12)
-    ax3.axis('off')
+    ax3.axis("off")
     plt.colorbar(im3, ax=ax3, fraction=0.046, pad=0.04)
 
     # 子图4: 损失组件
@@ -266,22 +274,28 @@ def visualize_attention_supervision_loss(
     loss_names = list(loss_components.keys())
     loss_values = list(loss_components.values())
 
-    bars = ax4.bar(loss_names, loss_values, color='steelblue')
+    bars = ax4.bar(loss_names, loss_values, color="steelblue")
     ax4.set_title("损失组件", fontsize=12)
     ax4.set_ylabel("损失值", fontsize=10)
-    ax4.tick_params(axis='x', rotation=45)
+    ax4.tick_params(axis="x", rotation=45)
 
     # 在柱状图上显示数值
     for bar, value in zip(bars, loss_values):
         height = bar.get_height()
-        ax4.text(bar.get_x() + bar.get_width() / 2., height,
-                f'{value:.4f}', ha='center', va='bottom', fontsize=9)
+        ax4.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height,
+            f"{value:.4f}",
+            ha="center",
+            va="bottom",
+            fontsize=9,
+        )
 
     plt.tight_layout()
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -335,7 +349,9 @@ def visualize_mil_attention(
 
     # 找到 top-k patches
     top_k_indices = np.argsort(patch_attention)[-top_k:][::-1]
-    top_k_coords = [(idx // num_patches_w, idx % num_patches_w) for idx in top_k_indices]
+    top_k_coords = [
+        (idx // num_patches_w, idx % num_patches_w) for idx in top_k_indices
+    ]
 
     # 创建图形
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
@@ -343,12 +359,12 @@ def visualize_mil_attention(
     # 子图1: 原图
     axes[0].imshow(image)
     axes[0].set_title("原图", fontsize=12)
-    axes[0].axis('off')
+    axes[0].axis("off")
 
     # 子图2: 注意力热图
-    im = axes[1].imshow(attention_map, cmap='jet', interpolation='nearest')
+    im = axes[1].imshow(attention_map, cmap="jet", interpolation="nearest")
     axes[1].set_title("Patch 注意力分布", fontsize=12)
-    axes[1].axis('off')
+    axes[1].axis("off")
     plt.colorbar(im, ax=axes[1], fraction=0.046, pad=0.04)
 
     # 子图3: Top-k patches 高亮
@@ -366,32 +382,35 @@ def visualize_mil_attention(
 
         # 绘制矩形
         rect = plt.Rectangle(
-            (x, y), patch_w, patch_h,
+            (x, y),
+            patch_w,
+            patch_h,
             fill=False,
-            edgecolor='red',
+            edgecolor="red",
             linewidth=2,
         )
         axes[2].add_patch(rect)
 
         # 标注排名
         axes[2].text(
-            x + patch_w / 2, y + patch_h / 2,
-            f'{rank + 1}',
-            color='yellow',
+            x + patch_w / 2,
+            y + patch_h / 2,
+            f"{rank + 1}",
+            color="yellow",
             fontsize=12,
-            fontweight='bold',
-            ha='center',
-            va='center',
+            fontweight="bold",
+            ha="center",
+            va="center",
         )
 
     axes[2].set_title(f"Top-{top_k} 重要 Patches", fontsize=12)
-    axes[2].axis('off')
+    axes[2].axis("off")
 
     plt.tight_layout()
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -454,21 +473,21 @@ def plot_attention_statistics(
         labels = [f"Step {i}" for i in x]
 
     # 熵
-    axes[0].plot(x, entropies, marker='o', color='steelblue')
+    axes[0].plot(x, entropies, marker="o", color="steelblue")
     axes[0].set_title("注意力熵（越小越集中）", fontsize=12)
     axes[0].set_xlabel("步骤", fontsize=10)
     axes[0].set_ylabel("熵", fontsize=10)
     axes[0].grid(True, alpha=0.3)
 
     # 方差
-    axes[1].plot(x, variances, marker='s', color='coral')
+    axes[1].plot(x, variances, marker="s", color="coral")
     axes[1].set_title("注意力方差（越大越集中）", fontsize=12)
     axes[1].set_xlabel("步骤", fontsize=10)
     axes[1].set_ylabel("方差", fontsize=10)
     axes[1].grid(True, alpha=0.3)
 
     # 最大值
-    axes[2].plot(x, max_values, marker='^', color='green')
+    axes[2].plot(x, max_values, marker="^", color="green")
     axes[2].set_title("注意力最大值", fontsize=12)
     axes[2].set_xlabel("步骤", fontsize=10)
     axes[2].set_ylabel("最大值", fontsize=10)
@@ -478,6 +497,6 @@ def plot_attention_statistics(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig

@@ -7,7 +7,7 @@
 import asyncio
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
 # 存储正在执行的工作流
-active_workflows: Dict[str, WorkflowEngine] = {}
+active_workflows: dict[str, WorkflowEngine] = {}
 
 
 class WorkflowData(BaseModel):
     """工作流数据模型"""
 
-    nodes: list[Dict[str, Any]] = Field(..., description="节点列表")
-    edges: list[Dict[str, Any]] = Field(..., description="边列表")
+    nodes: list[dict[str, Any]] = Field(..., description="节点列表")
+    edges: list[dict[str, Any]] = Field(..., description="边列表")
 
 
 class WorkflowValidateRequest(BaseModel):
@@ -51,7 +51,7 @@ class WorkflowExecuteRequest(BaseModel):
     """工作流执行请求"""
 
     workflow: WorkflowData
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class WorkflowExecuteResponse(BaseModel):
@@ -66,8 +66,8 @@ class WorkflowStatusResponse(BaseModel):
     """工作流状态响应"""
 
     workflow_id: str
-    status: Dict[str, Any]
-    results: Optional[Dict[str, Any]] = None
+    status: dict[str, Any]
+    results: dict[str, Any] | None = None
 
 
 @router.post("/validate", response_model=WorkflowValidateResponse)
@@ -286,7 +286,7 @@ async def list_workflows():
 
 
 @router.get("/{workflow_id}/resources")
-async def get_workflow_resources(workflow_id: str, duration: Optional[int] = None):
+async def get_workflow_resources(workflow_id: str, duration: int | None = None):
     """
     获取工作流执行期间的资源使用统计
 
@@ -352,7 +352,7 @@ async def list_workflow_checkpoints(workflow_id: str):
 
 
 @router.post("/{workflow_id}/resume")
-async def resume_workflow(workflow_id: str, checkpoint_path: Optional[str] = None):
+async def resume_workflow(workflow_id: str, checkpoint_path: str | None = None):
     """
     从检查点恢复工作流执行
 
@@ -397,7 +397,7 @@ async def resume_workflow(workflow_id: str, checkpoint_path: Optional[str] = Non
         }
 
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Failed to resume workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

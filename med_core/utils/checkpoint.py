@@ -128,7 +128,9 @@ def find_best_checkpoint(
             if value is None:
                 continue
 
-            if (mode == "max" and value > best_value) or (mode == "min" and value < best_value):
+            if (mode == "max" and value > best_value) or (
+                mode == "min" and value < best_value
+            ):
                 best_value = value
                 best_checkpoint = ckpt_path
 
@@ -169,7 +171,9 @@ def cleanup_checkpoints(
         try:
             checkpoint = torch.load(ckpt_path, map_location="cpu")
             metrics = checkpoint.get("metrics", {})
-            value = metrics.get(metric_name, float("-inf") if mode == "max" else float("inf"))
+            value = metrics.get(
+                metric_name, float("-inf") if mode == "max" else float("inf")
+            )
             epoch = checkpoint.get("epoch", 0)
             checkpoint_data.append((ckpt_path, value, epoch))
         except Exception:

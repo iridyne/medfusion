@@ -28,7 +28,9 @@ class MultiViewDataConfig(DataConfig):
 
     # Multi-view settings
     enable_multiview: bool = False
-    view_names: list[str] = field(default_factory=list)  # e.g., ["axial", "coronal", "sagittal"]
+    view_names: list[str] = field(
+        default_factory=list
+    )  # e.g., ["axial", "coronal", "sagittal"]
 
     # View path columns in CSV
     # Option 1: Separate columns for each view
@@ -140,7 +142,9 @@ class MultiViewExperimentConfig(BaseConfig):
         # Validate multi-view consistency
         if self.data.enable_multiview:
             if not self.data.view_names:
-                raise ValueError("view_names must be specified when enable_multiview=True")
+                raise ValueError(
+                    "view_names must be specified when enable_multiview=True"
+                )
 
             if not self.data.view_path_columns and not self.data.multiview_path_column:
                 raise ValueError(
@@ -163,6 +167,7 @@ class MultiViewExperimentConfig(BaseConfig):
     def _detect_device() -> str:
         """Detect available device."""
         import torch
+
         if torch.cuda.is_available():
             return "cuda"
         elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -174,12 +179,14 @@ class MultiViewExperimentConfig(BaseConfig):
     def device_obj(self):
         """Get torch device object."""
         import torch
+
         return torch.device(self.device)
 
     @property
     def checkpoint_dir(self):
         """Get checkpoint directory path."""
         from pathlib import Path
+
         path = Path(self.logging.output_dir) / "checkpoints"
         path.mkdir(parents=True, exist_ok=True)
         return path
@@ -188,6 +195,7 @@ class MultiViewExperimentConfig(BaseConfig):
     def log_dir(self):
         """Get log directory path."""
         from pathlib import Path
+
         path = Path(self.logging.output_dir) / "logs"
         path.mkdir(parents=True, exist_ok=True)
         return path
@@ -196,12 +204,14 @@ class MultiViewExperimentConfig(BaseConfig):
     def results_dir(self):
         """Get results directory path."""
         from pathlib import Path
+
         path = Path(self.logging.output_dir) / "results"
         path.mkdir(parents=True, exist_ok=True)
         return path
 
 
 # Example configuration presets
+
 
 def create_ct_multiview_config(
     view_names: list[str] = None,
@@ -238,9 +248,7 @@ def create_ct_multiview_config(
     # Data config
     config.data.enable_multiview = True
     config.data.view_names = view_names
-    config.data.view_path_columns = {
-        view: f"{view}_path" for view in view_names
-    }
+    config.data.view_path_columns = {view: f"{view}_path" for view in view_names}
     config.data.missing_view_strategy = "zero"
     config.data.require_all_views = False
 
@@ -288,9 +296,7 @@ def create_temporal_multiview_config(
     # Data config
     config.data.enable_multiview = True
     config.data.view_names = view_names
-    config.data.view_path_columns = {
-        view: f"image_path_{view}" for view in view_names
-    }
+    config.data.view_path_columns = {view: f"image_path_{view}" for view in view_names}
     config.data.missing_view_strategy = "skip"  # Skip incomplete temporal sequences
     config.data.require_all_views = True
 

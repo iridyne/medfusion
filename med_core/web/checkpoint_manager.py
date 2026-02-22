@@ -9,7 +9,7 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import torch
 
@@ -35,10 +35,10 @@ class CheckpointManager:
     def save_checkpoint(
         self,
         workflow_id: str,
-        nodes: Dict[str, Any],
-        edges: List[Dict[str, Any]],
-        execution_state: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None,
+        nodes: dict[str, Any],
+        edges: list[dict[str, Any]],
+        execution_state: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
     ) -> Path:
         """
         保存检查点
@@ -89,7 +89,7 @@ class CheckpointManager:
             logger.error(f"Failed to save checkpoint: {e}")
             raise
 
-    def load_checkpoint(self, checkpoint_path: Path) -> Dict[str, Any]:
+    def load_checkpoint(self, checkpoint_path: Path) -> dict[str, Any]:
         """
         加载检查点
 
@@ -106,11 +106,11 @@ class CheckpointManager:
                 raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
             # 加载工作流定义
-            with open(checkpoint_path / "workflow.json", "r") as f:
+            with open(checkpoint_path / "workflow.json") as f:
                 workflow_data = json.load(f)
 
             # 加载执行状态
-            with open(checkpoint_path / "state.json", "r") as f:
+            with open(checkpoint_path / "state.json") as f:
                 state_data = json.load(f)
 
             # 加载模型权重
@@ -128,9 +128,7 @@ class CheckpointManager:
             logger.error(f"Failed to load checkpoint: {e}")
             raise
 
-    def list_checkpoints(
-        self, workflow_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def list_checkpoints(self, workflow_id: str | None = None) -> list[dict[str, Any]]:
         """
         列出检查点
 
@@ -154,7 +152,7 @@ class CheckpointManager:
                 # 读取状态文件
                 state_file = checkpoint_path / "state.json"
                 if state_file.exists():
-                    with open(state_file, "r") as f:
+                    with open(state_file) as f:
                         state_data = json.load(f)
 
                     checkpoints.append(
@@ -173,7 +171,7 @@ class CheckpointManager:
 
         return checkpoints
 
-    def get_latest_checkpoint(self, workflow_id: str) -> Optional[Path]:
+    def get_latest_checkpoint(self, workflow_id: str) -> Path | None:
         """
         获取最新的检查点
 
@@ -218,8 +216,8 @@ class CheckpointManager:
                     logger.warning(f"Failed to cleanup checkpoint: {e}")
 
     def _serialize_execution_state(
-        self, execution_state: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, execution_state: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         序列化执行状态
 
@@ -240,7 +238,7 @@ class CheckpointManager:
         return serialized
 
     def _save_models(
-        self, checkpoint_path: Path, execution_state: Dict[str, Any]
+        self, checkpoint_path: Path, execution_state: dict[str, Any]
     ) -> None:
         """保存模型权重"""
         models_dir = checkpoint_path / "models"
@@ -272,7 +270,7 @@ class CheckpointManager:
                         json.dump(result["history"], f, indent=2)
                     logger.debug(f"Training history saved: {history_path}")
 
-    def _load_models(self, checkpoint_path: Path) -> Dict[str, Any]:
+    def _load_models(self, checkpoint_path: Path) -> dict[str, Any]:
         """加载模型权重"""
         models = {}
         models_dir = checkpoint_path / "models"
@@ -293,7 +291,7 @@ class CheckpointManager:
         # 加载训练历史
         for history_file in models_dir.glob("*_history.json"):
             node_id = history_file.stem.rsplit("_", 1)[0]
-            with open(history_file, "r") as f:
+            with open(history_file) as f:
                 history = json.load(f)
             models[f"{node_id}_history"] = history
             logger.debug(f"Training history loaded: {history_file}")
@@ -309,8 +307,8 @@ class CheckpointManager:
         return total_size
 
     def resume_workflow(
-        self, workflow_id: str, checkpoint_path: Optional[Path] = None
-    ) -> Dict[str, Any]:
+        self, workflow_id: str, checkpoint_path: Path | None = None
+    ) -> dict[str, Any]:
         """
         恢复工作流执行
 

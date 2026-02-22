@@ -41,7 +41,9 @@ class TabularPreprocessor:
         self.scaling_method = scaling_method
 
         self.label_encoders = {}
-        self.scaler = StandardScaler() if scaling_method == "standard" else MinMaxScaler()
+        self.scaler = (
+            StandardScaler() if scaling_method == "standard" else MinMaxScaler()
+        )
         self._fitted = False
 
     def fit_transform(
@@ -71,7 +73,11 @@ class TabularPreprocessor:
         X_num = self._scale_numerical(df[self.numerical_features], fit=True)
 
         # Combine features
-        X = np.hstack([X_cat, X_num]) if X_cat.size > 0 and X_num.size > 0 else (X_cat if X_cat.size > 0 else X_num)
+        X = (
+            np.hstack([X_cat, X_num])
+            if X_cat.size > 0 and X_num.size > 0
+            else (X_cat if X_cat.size > 0 else X_num)
+        )
 
         # Extract target
         y = df[target_col].values if target_col else None
@@ -94,7 +100,11 @@ class TabularPreprocessor:
         X_cat = self._encode_categorical(df[self.categorical_features], fit=False)
         X_num = self._scale_numerical(df[self.numerical_features], fit=False)
 
-        X = np.hstack([X_cat, X_num]) if X_cat.size > 0 and X_num.size > 0 else (X_cat if X_cat.size > 0 else X_num)
+        X = (
+            np.hstack([X_cat, X_num])
+            if X_cat.size > 0 and X_num.size > 0
+            else (X_cat if X_cat.size > 0 else X_num)
+        )
         y = df[target_col].values if target_col else None
 
         return X, y

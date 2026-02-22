@@ -250,7 +250,9 @@ class MedicalMultiViewDataset(BaseMultiViewDataset):
         logger.info("View availability:")
         for view_name, count in view_counts.items():
             percentage = 100 * count / len(image_paths_list)
-            logger.info(f"  {view_name}: {count}/{len(image_paths_list)} ({percentage:.1f}%)")
+            logger.info(
+                f"  {view_name}: {count}/{len(image_paths_list)} ({percentage:.1f}%)"
+            )
 
         # Extract and preprocess tabular features
         tabular_data, feature_names, scaler = cls._prepare_tabular_features(

@@ -1,9 +1,10 @@
 """模型管理 API"""
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List, Dict, Any
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from ..database import get_db_session
 from ..models import ModelInfo
@@ -13,6 +14,7 @@ router = APIRouter()
 
 class ModelResponse(BaseModel):
     """模型响应"""
+
     id: int
     name: str
     description: str | None
@@ -28,14 +30,16 @@ class ModelResponse(BaseModel):
 
 @router.get("")
 async def list_models(
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db_session)
-) -> List[ModelResponse]:
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+) -> list[ModelResponse]:
     """获取模型列表"""
-    models = db.query(ModelInfo).order_by(
-        ModelInfo.created_at.desc()
-    ).offset(skip).limit(limit).all()
+    models = (
+        db.query(ModelInfo)
+        .order_by(ModelInfo.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return [
         ModelResponse(
@@ -46,7 +50,7 @@ async def list_models(
             architecture=model.architecture,
             accuracy=model.accuracy,
             num_parameters=model.num_parameters,
-            created_at=model.created_at.isoformat()
+            created_at=model.created_at.isoformat(),
         )
         for model in models
     ]
@@ -54,9 +58,8 @@ async def list_models(
 
 @router.get("/{model_id}")
 async def get_model(
-    model_id: int,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, Any]:
+    model_id: int, db: Session = Depends(get_db_session)
+) -> dict[str, Any]:
     """获取模型详情"""
     model = db.query(ModelInfo).filter(ModelInfo.id == model_id).first()
 
@@ -86,9 +89,8 @@ async def get_model(
 
 @router.delete("/{model_id}")
 async def delete_model(
-    model_id: int,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, str]:
+    model_id: int, db: Session = Depends(get_db_session)
+) -> dict[str, str]:
     """删除模型"""
     model = db.query(ModelInfo).filter(ModelInfo.id == model_id).first()
 

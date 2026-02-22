@@ -39,7 +39,10 @@ def evaluate() -> None:
     """Command-line entry point for evaluation."""
     parser = argparse.ArgumentParser(description="Evaluate a medical multimodal model")
     parser.add_argument(
-        "--config", type=str, required=True, help="Path to config file used for training"
+        "--config",
+        type=str,
+        required=True,
+        help="Path to config file used for training",
     )
     parser.add_argument(
         "--checkpoint", type=str, required=True, help="Path to model checkpoint"
@@ -181,6 +184,7 @@ def evaluate() -> None:
         )
     else:
         from med_core.evaluation import calculate_multiclass_metrics
+
         metrics = calculate_multiclass_metrics(
             y_true=all_labels,
             y_pred=all_preds,

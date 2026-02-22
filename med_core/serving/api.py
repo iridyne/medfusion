@@ -6,6 +6,7 @@ import torch.nn as nn
 
 class ModelServer:
     """模型服务器"""
+
     def __init__(self, model: nn.Module):
         self.model = model
         self.model.eval()
@@ -15,6 +16,7 @@ class ModelServer:
             x = torch.tensor(data).unsqueeze(0)
             output = self.model(x)
             return output.squeeze().tolist()
+
 
 def create_server(model: nn.Module):
     return ModelServer(model)

@@ -128,11 +128,13 @@ class GradCAM:
         self.model.zero_grad()
 
         # Handle inputs
-        if additional_inputs and 'tabular' in additional_inputs:
-            tabular_input = additional_inputs['tabular']
+        if additional_inputs and "tabular" in additional_inputs:
+            tabular_input = additional_inputs["tabular"]
         else:
             # Create dummy tabular input if not provided
-            tabular_input = torch.zeros(input_tensor.size(0), 1, device=input_tensor.device)
+            tabular_input = torch.zeros(
+                input_tensor.size(0), 1, device=input_tensor.device
+            )
 
         # Forward pass
         output = self.model(input_tensor, tabular_input)
@@ -153,7 +155,9 @@ class GradCAM:
         logits.backward(gradient=one_hot, retain_graph=True)
 
         if self.gradients is None or self.activations is None:
-            raise RuntimeError("Gradients or activations not captured. Check target layer.")
+            raise RuntimeError(
+                "Gradients or activations not captured. Check target layer."
+            )
 
         # Compute Grad-CAM
         # Global average pooling of gradients

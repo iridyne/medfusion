@@ -8,7 +8,6 @@ This module now uses a modular architecture with separate components
 for metrics calculation, visualization, and report generation.
 """
 
-
 from med_core.evaluation.report_generator import (
     ReportGenerator,
     generate_evaluation_report,
@@ -24,4 +23,3 @@ __all__ = [
 
 # Backward compatibility alias
 EvaluationReport = ReportGenerator
-

@@ -52,7 +52,9 @@ def extract_patches(
     num_patches_w = patches.size(3)
 
     # 重排维度
-    patches = patches.contiguous().view(B, C, num_patches_h * num_patches_w, patch_size, patch_size)
+    patches = patches.contiguous().view(
+        B, C, num_patches_h * num_patches_w, patch_size, patch_size
+    )
     patches = patches.permute(0, 2, 1, 3, 4)
     # (B, num_patches, C, patch_size, patch_size)
 
@@ -304,7 +306,9 @@ class MILSupervision(BaseAttentionSupervision):
         return AttentionLoss(
             total_loss=total_loss,
             components=components,
-            attention_weights=attention_map if attention_map is not None else attention_weights,
+            attention_weights=attention_map
+            if attention_map is not None
+            else attention_weights,
             metadata={
                 "patch_attention": attention_weights,
                 "grid_size": grid_size,
@@ -390,12 +394,18 @@ class AttentionMIL(nn.Module):
         num_patches = patches.size(1)
 
         # 批量提取特征
-        patches_flat = patches.view(B * num_patches, C, self.patch_size, self.patch_size)
-        patch_features_flat = self.backbone(patches_flat)  # (B*num_patches, feature_dim, h, w)
+        patches_flat = patches.view(
+            B * num_patches, C, self.patch_size, self.patch_size
+        )
+        patch_features_flat = self.backbone(
+            patches_flat
+        )  # (B*num_patches, feature_dim, h, w)
 
         # 全局平均池化
         patch_features_flat = F.adaptive_avg_pool2d(patch_features_flat, 1)
-        patch_features_flat = patch_features_flat.flatten(1)  # (B*num_patches, feature_dim)
+        patch_features_flat = patch_features_flat.flatten(
+            1
+        )  # (B*num_patches, feature_dim)
 
         # 重塑
         patch_features = patch_features_flat.view(B, num_patches, -1)
@@ -405,7 +415,9 @@ class AttentionMIL(nn.Module):
         mil_outputs = self.mil(patch_features)
 
         # 转换为空间注意力图
-        attention_map = mil_outputs["attention_weights"].view(B, grid_size[0], grid_size[1])
+        attention_map = mil_outputs["attention_weights"].view(
+            B, grid_size[0], grid_size[1]
+        )
 
         return {
             "logits": mil_outputs["logits"],

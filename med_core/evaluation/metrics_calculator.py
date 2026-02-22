@@ -31,6 +31,7 @@ class MetricsCalculator:
         Returns:
             Dictionary with formatted metrics
         """
+
         def fmt_ci(ci):
             return f"({ci[0]:.4f}, {ci[1]:.4f})" if ci else "-"
 

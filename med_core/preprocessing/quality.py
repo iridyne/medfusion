@@ -77,11 +77,7 @@ def compute_laplacian_variance(image: np.ndarray) -> float:
         Laplacian variance value
     """
     # Simple Laplacian kernel
-    laplacian_kernel = np.array([
-        [0, 1, 0],
-        [1, -4, 1],
-        [0, 1, 0]
-    ], dtype=np.float32)
+    laplacian_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=np.float32)
 
     # Manual convolution (avoiding scipy dependency)
     h, w = image.shape[:2]
@@ -91,13 +87,13 @@ def compute_laplacian_variance(image: np.ndarray) -> float:
     image = image.astype(np.float32)
 
     # Pad image
-    padded = np.pad(image, 1, mode='reflect')
+    padded = np.pad(image, 1, mode="reflect")
 
     # Apply Laplacian
     laplacian = np.zeros_like(image)
     for i in range(3):
         for j in range(3):
-            laplacian += laplacian_kernel[i, j] * padded[i:i+h, j:j+w]
+            laplacian += laplacian_kernel[i, j] * padded[i : i + h, j : j + w]
 
     return float(laplacian.var())
 
@@ -197,7 +193,7 @@ def estimate_noise(image: np.ndarray) -> float:
     local_vars = []
     for i in range(0, h - window_size, window_size):
         for j in range(0, w - window_size, window_size):
-            window = image[i:i+window_size, j:j+window_size]
+            window = image[i : i + window_size, j : j + window_size]
             local_vars.append(window.var())
 
     if local_vars:
@@ -259,12 +255,12 @@ def detect_compression_artifacts(
 
     # Horizontal boundaries
     for i in range(block_size, h - block_size, block_size):
-        diff = np.abs(image[i-1, :] - image[i, :]).mean()
+        diff = np.abs(image[i - 1, :] - image[i, :]).mean()
         boundary_diffs.append(diff)
 
     # Vertical boundaries
     for j in range(block_size, w - block_size, block_size):
-        diff = np.abs(image[:, j-1] - image[:, j]).mean()
+        diff = np.abs(image[:, j - 1] - image[:, j]).mean()
         boundary_diffs.append(diff)
 
     if boundary_diffs:
@@ -306,15 +302,14 @@ def detect_watermark(
         # Default: check bottom 15% of image
         check_regions = [
             (0.0, 1.0, 0.85, 1.0),  # Bottom strip
-            (0.0, 0.2, 0.8, 1.0),   # Bottom-left corner
-            (0.8, 1.0, 0.8, 1.0),   # Bottom-right corner
+            (0.0, 0.2, 0.8, 1.0),  # Bottom-left corner
+            (0.8, 1.0, 0.8, 1.0),  # Bottom-right corner
         ]
 
     # Check for unusual patterns in suspected watermark regions
     for x_start, x_end, y_start, y_end in check_regions:
         region = image[
-            int(y_start * h):int(y_end * h),
-            int(x_start * w):int(x_end * w)
+            int(y_start * h) : int(y_end * h), int(x_start * w) : int(x_end * w)
         ]
 
         if region.size == 0:
@@ -322,7 +317,7 @@ def detect_watermark(
 
         # Check if region has suspiciously uniform or text-like patterns
         region_std = region.std()
-        main_image = image[:int(h * 0.8), :]
+        main_image = image[: int(h * 0.8), :]
         main_std = main_image.std()
 
         # If region is much more uniform or has very different contrast
@@ -376,7 +371,7 @@ def assess_image_quality(
     if metrics.noise_estimate > 0:
         metrics.snr_estimate = metrics.contrast_rms / metrics.noise_estimate
     else:
-        metrics.snr_estimate = float('inf')
+        metrics.snr_estimate = float("inf")
 
     # Detect artifacts
     metrics.has_motion_blur = detect_motion_blur(img_array)
@@ -387,7 +382,9 @@ def assess_image_quality(
     if metrics.has_motion_blur:
         warnings.append("Motion blur detected - image may be too blurry for analysis")
     if metrics.has_compression_artifacts:
-        warnings.append("Compression artifacts detected - consider using higher quality images")
+        warnings.append(
+            "Compression artifacts detected - consider using higher quality images"
+        )
     if metrics.has_watermark:
         warnings.append("Possible watermark detected in image")
     if metrics.contrast_rms < 0.1:
@@ -403,17 +400,17 @@ def assess_image_quality(
     contrast_score = min(metrics.contrast_rms / 0.25, 1.0)
     noise_score = max(1.0 - metrics.noise_estimate * 10, 0.0)
     artifact_score = 1.0 - (
-        0.4 * metrics.has_motion_blur +
-        0.3 * metrics.has_compression_artifacts +
-        0.3 * metrics.has_watermark
+        0.4 * metrics.has_motion_blur
+        + 0.3 * metrics.has_compression_artifacts
+        + 0.3 * metrics.has_watermark
     )
 
     # Weighted average
     metrics.overall_score = (
-        sharpness_weight * sharpness_score +
-        contrast_weight * contrast_score +
-        noise_weight * noise_score +
-        artifact_weight * artifact_score
+        sharpness_weight * sharpness_score
+        + contrast_weight * contrast_score
+        + noise_weight * noise_score
+        + artifact_weight * artifact_score
     )
 
     return metrics
@@ -474,12 +471,16 @@ def filter_by_quality(
                 accepted_paths.append(path)
                 accepted_metrics.append(metrics)
             else:
-                logger.debug(f"Rejected {path}: quality score {metrics.overall_score:.2f} < {min_score}")
+                logger.debug(
+                    f"Rejected {path}: quality score {metrics.overall_score:.2f} < {min_score}"
+                )
 
         except Exception as e:
             logger.warning(f"Failed to assess quality of {path}: {e}")
 
-    logger.info(f"Accepted {len(accepted_paths)}/{len(image_paths)} images based on quality")
+    logger.info(
+        f"Accepted {len(accepted_paths)}/{len(image_paths)} images based on quality"
+    )
 
     if return_metrics:
         return accepted_paths, accepted_metrics

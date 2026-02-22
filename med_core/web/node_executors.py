@@ -6,8 +6,9 @@
 
 import asyncio
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import torch
 from torch.utils.data import DataLoader
@@ -31,10 +32,10 @@ class NodeExecutor:
 
     async def execute(
         self,
-        node_data: Dict[str, Any],
-        inputs: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        node_data: dict[str, Any],
+        inputs: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """
         执行节点
 
@@ -54,10 +55,10 @@ class DataLoaderExecutor(NodeExecutor):
 
     async def execute(
         self,
-        node_data: Dict[str, Any],
-        inputs: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        node_data: dict[str, Any],
+        inputs: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """
         加载数据集
 
@@ -138,10 +139,10 @@ class ModelExecutor(NodeExecutor):
 
     async def execute(
         self,
-        node_data: Dict[str, Any],
-        inputs: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        node_data: dict[str, Any],
+        inputs: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """
         构建模型
 
@@ -214,10 +215,10 @@ class TrainingExecutor(NodeExecutor):
 
     async def execute(
         self,
-        node_data: Dict[str, Any],
-        inputs: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        node_data: dict[str, Any],
+        inputs: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """
         训练模型
 
@@ -292,7 +293,7 @@ class TrainingExecutor(NodeExecutor):
             logger.error(f"Training execution failed: {e}")
             raise NodeExecutionError(f"训练失败: {e}") from e
 
-    async def _train_async(self, trainer, progress_callback: Optional[Callable] = None):
+    async def _train_async(self, trainer, progress_callback: Callable | None = None):
         """异步训练"""
         loop = asyncio.get_event_loop()
 
@@ -310,10 +311,10 @@ class EvaluationExecutor(NodeExecutor):
 
     async def execute(
         self,
-        node_data: Dict[str, Any],
-        inputs: Dict[str, Any],
-        progress_callback: Optional[Callable] = None,
-    ) -> Dict[str, Any]:
+        node_data: dict[str, Any],
+        inputs: dict[str, Any],
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """
         评估模型
 

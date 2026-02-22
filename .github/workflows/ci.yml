@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout code
@@ -113,6 +113,7 @@ jobs:
           context: .
           push: false
           tags: medfusion:test
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -136,7 +137,7 @@ jobs:
           extras: "dev"
 
       - name: Install security tools
-        run: uv pip install bandit safety
+        run: uv pip install bandit==1.7.5 safety==3.0.1
 
       - name: Run bandit (security linter)
         run: |

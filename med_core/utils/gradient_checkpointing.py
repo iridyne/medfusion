@@ -50,7 +50,9 @@ def apply_gradient_checkpointing(
         module._use_reentrant = use_reentrant
         logger.info(f"Enabled gradient checkpointing for {module.__class__.__name__}")
     else:
-        logger.warning(f"Gradient checkpointing already enabled for {module.__class__.__name__}")
+        logger.warning(
+            f"Gradient checkpointing already enabled for {module.__class__.__name__}"
+        )
 
 
 def checkpoint_sequential(
@@ -253,7 +255,9 @@ def estimate_memory_savings(
             memory_with = 0.0
 
         savings = memory_without - memory_with
-        savings_percent = (savings / memory_without * 100) if memory_without > 0 else 0.0
+        savings_percent = (
+            (savings / memory_without * 100) if memory_without > 0 else 0.0
+        )
 
         return {
             "without_checkpoint": memory_without,
@@ -262,7 +266,9 @@ def estimate_memory_savings(
             "savings_percent": savings_percent,
         }
     else:
-        logger.warning(f"Model {model.__class__.__name__} does not support gradient checkpointing")
+        logger.warning(
+            f"Model {model.__class__.__name__} does not support gradient checkpointing"
+        )
         return {
             "without_checkpoint": memory_without,
             "with_checkpoint": memory_without,

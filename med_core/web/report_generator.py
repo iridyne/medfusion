@@ -8,7 +8,7 @@ following medical SOP standards.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class ReportGenerator:
     """Generate professional experiment comparison reports."""
 
-    def __init__(self, output_dir: Optional[Path] = None):
+    def __init__(self, output_dir: Path | None = None):
         """
         Initialize report generator.
 
@@ -50,9 +50,9 @@ class ReportGenerator:
 
     def generate_word_report(
         self,
-        experiments: List[Dict[str, Any]],
-        comparison_data: Dict[str, Any],
-        output_filename: Optional[str] = None,
+        experiments: list[dict[str, Any]],
+        comparison_data: dict[str, Any],
+        output_filename: str | None = None,
     ) -> Path:
         """
         Generate Word report for experiment comparison.
@@ -120,9 +120,9 @@ class ReportGenerator:
 
     def generate_pdf_report(
         self,
-        experiments: List[Dict[str, Any]],
-        comparison_data: Dict[str, Any],
-        output_filename: Optional[str] = None,
+        experiments: list[dict[str, Any]],
+        comparison_data: dict[str, Any],
+        output_filename: str | None = None,
     ) -> Path:
         """
         Generate PDF report for experiment comparison.
@@ -208,7 +208,7 @@ class ReportGenerator:
         return output_path
 
     def _add_executive_summary(
-        self, doc: Document, experiments: List[Dict], comparison_data: Dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict
     ):
         """Add executive summary section to Word document."""
         # Find best performing experiment
@@ -236,7 +236,7 @@ class ReportGenerator:
             style="List Bullet",
         )
 
-    def _add_experiment_details(self, doc: Document, experiments: List[Dict]):
+    def _add_experiment_details(self, doc: Document, experiments: list[dict]):
         """Add experiment details table to Word document."""
         # Create table
         table = doc.add_table(rows=1, cols=5)
@@ -264,7 +264,7 @@ class ReportGenerator:
         doc.add_paragraph()
 
     def _add_performance_comparison(
-        self, doc: Document, experiments: List[Dict], comparison_data: Dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict
     ):
         """Add performance comparison table to Word document."""
         # Create metrics table
@@ -290,7 +290,7 @@ class ReportGenerator:
 
         doc.add_paragraph()
 
-    def _add_statistical_analysis(self, doc: Document, comparison_data: Dict):
+    def _add_statistical_analysis(self, doc: Document, comparison_data: dict):
         """Add statistical analysis section to Word document."""
         stats = comparison_data.get("statistical_tests", {})
 
@@ -327,7 +327,7 @@ class ReportGenerator:
         doc.add_paragraph()
 
     def _add_visualizations_to_word(
-        self, doc: Document, experiments: List[Dict], comparison_data: Dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict
     ):
         """Add visualizations to Word document."""
         # Generate metrics comparison chart
@@ -345,7 +345,7 @@ class ReportGenerator:
             doc.add_paragraph()
 
     def _add_conclusions(
-        self, doc: Document, experiments: List[Dict], comparison_data: Dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict
     ):
         """Add conclusions and recommendations section."""
         best_exp = max(
@@ -374,10 +374,10 @@ class ReportGenerator:
 
     def _add_executive_summary_pdf(
         self,
-        elements: List,
-        styles: Dict,
-        experiments: List[Dict],
-        comparison_data: Dict,
+        elements: list,
+        styles: dict,
+        experiments: list[dict],
+        comparison_data: dict,
     ):
         """Add executive summary to PDF."""
         best_exp = max(
@@ -398,7 +398,7 @@ class ReportGenerator:
         elements.append(Spacer(1, 20))
 
     def _add_experiment_details_pdf(
-        self, elements: List, styles: Dict, experiments: List[Dict]
+        self, elements: list, styles: dict, experiments: list[dict]
     ):
         """Add experiment details table to PDF."""
         # Prepare table data
@@ -439,10 +439,10 @@ class ReportGenerator:
 
     def _add_performance_comparison_pdf(
         self,
-        elements: List,
-        styles: Dict,
-        experiments: List[Dict],
-        comparison_data: Dict,
+        elements: list,
+        styles: dict,
+        experiments: list[dict],
+        comparison_data: dict,
     ):
         """Add performance comparison table to PDF."""
         # Prepare table data
@@ -485,7 +485,7 @@ class ReportGenerator:
         elements.append(Spacer(1, 20))
 
     def _add_visualizations_to_pdf(
-        self, elements: List, experiments: List[Dict], comparison_data: Dict
+        self, elements: list, experiments: list[dict], comparison_data: dict
     ):
         """Add visualizations to PDF."""
         # Generate and add metrics chart
@@ -506,7 +506,7 @@ class ReportGenerator:
             elements.append(Image(str(curves_path), width=5 * inch, height=3 * inch))
             elements.append(Spacer(1, 20))
 
-    def _generate_metrics_chart(self, experiments: List[Dict]) -> Optional[Path]:
+    def _generate_metrics_chart(self, experiments: list[dict]) -> Path | None:
         """Generate metrics comparison bar chart."""
         try:
             metrics_names = ["Accuracy", "Precision", "Recall", "F1 Score"]
@@ -546,7 +546,7 @@ class ReportGenerator:
             logger.error(f"Failed to generate metrics chart: {e}")
             return None
 
-    def _generate_training_curves(self, experiments: List[Dict]) -> Optional[Path]:
+    def _generate_training_curves(self, experiments: list[dict]) -> Path | None:
         """Generate training curves (loss and accuracy over epochs)."""
         try:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))

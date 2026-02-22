@@ -214,7 +214,7 @@ class CrossModalAttention(nn.Module):
         self.out2 = nn.Linear(num_heads * self.head_dim, dim2)
 
         self.dropout = nn.Dropout(dropout)
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
     def forward(
         self, x1: torch.Tensor, x2: torch.Tensor
@@ -238,13 +238,37 @@ class CrossModalAttention(nn.Module):
         x2 = x2.unsqueeze(1)
 
         # Project to Q, K, V
-        q1 = self.q1(x1).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
-        k1 = self.k1(x1).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
-        v1 = self.v1(x1).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
+        q1 = (
+            self.q1(x1)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        k1 = (
+            self.k1(x1)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        v1 = (
+            self.v1(x1)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
 
-        q2 = self.q2(x2).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
-        k2 = self.k2(x2).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
-        v2 = self.v2(x2).view(batch_size, 1, self.num_heads, self.head_dim).transpose(1, 2)
+        q2 = (
+            self.q2(x2)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        k2 = (
+            self.k2(x2)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        v2 = (
+            self.v2(x2)
+            .view(batch_size, 1, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
 
         # Cross-attention: modality 1 attends to modality 2
         attn_12 = (q1 @ k2.transpose(-2, -1)) * self.scale
@@ -321,7 +345,9 @@ class MultimodalFusedAttention(nn.Module):
             current_dim = modality_dims[0]
 
             for i in range(1, self.num_modalities):
-                intermediate_dim = output_dim if i == self.num_modalities - 1 else current_dim
+                intermediate_dim = (
+                    output_dim if i == self.num_modalities - 1 else current_dim
+                )
 
                 fusion = FusedAttentionFusion(
                     dim1=current_dim,

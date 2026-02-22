@@ -62,9 +62,7 @@ class ConfigValidator:
 
         # Validate tabular config
         if not model.tabular.hidden_dims:
-            self.errors.append(
-                "model.tabular.hidden_dims cannot be empty"
-            )
+            self.errors.append("model.tabular.hidden_dims cannot be empty")
 
         if any(dim <= 0 for dim in model.tabular.hidden_dims):
             self.errors.append(
@@ -129,8 +127,9 @@ class ConfigValidator:
 
         # Validate progressive training
         if training.use_progressive_training:
-            total_epochs = (training.stage1_epochs + training.stage2_epochs +
-                          training.stage3_epochs)
+            total_epochs = (
+                training.stage1_epochs + training.stage2_epochs + training.stage3_epochs
+            )
             if total_epochs != training.num_epochs:
                 self.errors.append(
                     f"training stage epochs sum ({total_epochs}) must equal num_epochs ({training.num_epochs})"
@@ -144,7 +143,7 @@ class ConfigValidator:
 
         # Validate attention supervision
         if training.use_attention_supervision:
-            if hasattr(training, 'attention_loss_weight'):
+            if hasattr(training, "attention_loss_weight"):
                 if not 0 <= training.attention_loss_weight <= 1:
                     self.errors.append(
                         f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}"

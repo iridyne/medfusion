@@ -78,7 +78,9 @@ class EarlyStopping:
 
     def _save_checkpoint(self, model: nn.Module) -> None:
         """Save model state."""
-        self.best_model_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+        self.best_model_state = {
+            k: v.cpu().clone() for k, v in model.state_dict().items()
+        }
         if self.verbose:
             logger.info("Validation metric improved, saving model")
 
@@ -151,8 +153,12 @@ class ModelCheckpoint:
         if len(self.best_scores) < self.save_top_k:
             is_best = True
         else:
-            worst_best = min(self.best_scores) if self.mode == "max" else max(self.best_scores)
-            if (self.mode == "max" and score > worst_best) or (self.mode == "min" and score < worst_best):
+            worst_best = (
+                min(self.best_scores) if self.mode == "max" else max(self.best_scores)
+            )
+            if (self.mode == "max" and score > worst_best) or (
+                self.mode == "min" and score < worst_best
+            ):
                 is_best = True
 
         if is_best:
@@ -170,7 +176,7 @@ class ModelCheckpoint:
 
             self.best_scores.append(score)
             self.best_scores.sort(reverse=(self.mode == "max"))
-            self.best_scores = self.best_scores[:self.save_top_k]
+            self.best_scores = self.best_scores[: self.save_top_k]
             self.best_model_path = str(path)
 
             logger.info(f"Saved checkpoint: {path}")

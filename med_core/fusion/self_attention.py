@@ -6,7 +6,6 @@ allow modalities to attend to each other without explicit cross-modal
 attention mechanisms.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -403,9 +402,9 @@ class MultimodalSelfAttentionFusion(nn.Module):
 
         # Project all modalities to same dimension
         hidden_dim = max(modality_dims)
-        self.projections = nn.ModuleList([
-            nn.Linear(dim, hidden_dim) for dim in modality_dims
-        ])
+        self.projections = nn.ModuleList(
+            [nn.Linear(dim, hidden_dim) for dim in modality_dims]
+        )
 
         # Self-attention
         self.self_attention = nn.MultiheadAttention(

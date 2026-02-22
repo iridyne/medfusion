@@ -262,7 +262,9 @@ class MultimodalKroneckerFusion(nn.Module):
 
             for i in range(1, self.num_modalities):
                 # Intermediate dimension for sequential fusion
-                intermediate_dim = output_dim if i == self.num_modalities - 1 else current_dim
+                intermediate_dim = (
+                    output_dim if i == self.num_modalities - 1 else current_dim
+                )
 
                 fusion = KroneckerFusion(
                     dim1=current_dim,

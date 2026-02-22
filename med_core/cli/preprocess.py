@@ -20,7 +20,9 @@ def preprocess() -> None:
     """Command-line entry point for image preprocessing."""
     parser = argparse.ArgumentParser(description="Preprocess medical images")
     parser.add_argument("--input-dir", type=str, required=True, help="Input directory")
-    parser.add_argument("--output-dir", type=str, required=True, help="Output directory")
+    parser.add_argument(
+        "--output-dir", type=str, required=True, help="Output directory"
+    )
     parser.add_argument("--size", type=int, default=224, help="Target image size")
     parser.add_argument(
         "--normalize",

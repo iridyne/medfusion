@@ -1,9 +1,9 @@
 """Web 配置管理"""
 
 from pathlib import Path
-from typing import Optional
-from pydantic_settings import BaseSettings
+
 from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -22,26 +22,37 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default_factory=lambda: Path.home() / ".medfusion")
 
     # 数据库配置
-    database_url: Optional[str] = None
+    database_url: str | None = None
 
     # Redis 配置（可选）
-    redis_url: Optional[str] = None
+    redis_url: str | None = None
 
     # 认证配置
     auth_enabled: bool = False
-    auth_token: Optional[str] = None
+    auth_token: str | None = None
     secret_key: str = "change-this-in-production"
 
     # 文件上传配置
     max_upload_size: int = 500 * 1024 * 1024  # 500MB
     allowed_extensions: set = {
-        '.jpg', '.jpeg', '.png', '.dcm', '.nii', '.nii.gz',
-        '.csv', '.json', '.yaml', '.yml', '.pth', '.pt', '.onnx'
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".dcm",
+        ".nii",
+        ".nii.gz",
+        ".csv",
+        ".json",
+        ".yaml",
+        ".yml",
+        ".pth",
+        ".pt",
+        ".onnx",
     }
 
     # 日志配置
     log_level: str = "INFO"
-    log_file: Optional[Path] = None
+    log_file: Path | None = None
 
     class Config:
         env_prefix = "MEDFUSION_"

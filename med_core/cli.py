@@ -35,7 +35,8 @@ main.add_command(preprocess, name="preprocess")
 
 # 添加 Web UI 命令
 try:
-    from med_core.web.cli import web, data
+    from med_core.web.cli import data, web
+
     main.add_command(web, name="web")
     main.add_command(data, name="data")
 except ImportError:

@@ -98,7 +98,9 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
-            raise ValueError(f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}")
+            raise ValueError(
+                f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+            )
 
         self.variant = variant
         self.in_channels = in_channels
@@ -146,7 +148,9 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
         self._pool = nn.AdaptiveAvgPool3d(1)
 
         # Dimension reduction
-        self.dim_reduction = nn.Conv3d(self._backbone_out_dim, feature_dim, kernel_size=1)
+        self.dim_reduction = nn.Conv3d(
+            self._backbone_out_dim, feature_dim, kernel_size=1
+        )
 
         # Projection head (optional, for consistency with other backbones)
         self._projection = nn.Sequential(
@@ -187,10 +191,12 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
         patch_embed = self._backbone.patch_embed
         pos_drop = self._backbone.pos_drop
         layers = list(self._backbone.layers)
-        norm = self._backbone.norm if hasattr(self._backbone, 'norm') else None
+        norm = self._backbone.norm if hasattr(self._backbone, "norm") else None
 
         # Create a new forward function
-        def checkpointed_forward(x: torch.Tensor, normalize: bool = True) -> list[torch.Tensor]:
+        def checkpointed_forward(
+            x: torch.Tensor, normalize: bool = True
+        ) -> list[torch.Tensor]:
             if not self.training or not self._gradient_checkpointing_enabled:
                 # Normal forward pass
                 x = patch_embed(x)
@@ -310,16 +316,28 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
 
 
 # Convenience functions for creating common configurations
-def swin3d_tiny(in_channels: int = 1, feature_dim: int = 128, **kwargs) -> SwinTransformer3DBackbone:
+def swin3d_tiny(
+    in_channels: int = 1, feature_dim: int = 128, **kwargs
+) -> SwinTransformer3DBackbone:
     """Create a tiny 3D Swin Transformer (fastest, lowest memory)."""
-    return SwinTransformer3DBackbone(variant="tiny", in_channels=in_channels, feature_dim=feature_dim, **kwargs)
+    return SwinTransformer3DBackbone(
+        variant="tiny", in_channels=in_channels, feature_dim=feature_dim, **kwargs
+    )
 
 
-def swin3d_small(in_channels: int = 1, feature_dim: int = 128, **kwargs) -> SwinTransformer3DBackbone:
+def swin3d_small(
+    in_channels: int = 1, feature_dim: int = 128, **kwargs
+) -> SwinTransformer3DBackbone:
     """Create a small 3D Swin Transformer (balanced)."""
-    return SwinTransformer3DBackbone(variant="small", in_channels=in_channels, feature_dim=feature_dim, **kwargs)
+    return SwinTransformer3DBackbone(
+        variant="small", in_channels=in_channels, feature_dim=feature_dim, **kwargs
+    )
 
 
-def swin3d_base(in_channels: int = 1, feature_dim: int = 128, **kwargs) -> SwinTransformer3DBackbone:
+def swin3d_base(
+    in_channels: int = 1, feature_dim: int = 128, **kwargs
+) -> SwinTransformer3DBackbone:
     """Create a base 3D Swin Transformer (highest capacity)."""
-    return SwinTransformer3DBackbone(variant="base", in_channels=in_channels, feature_dim=feature_dim, **kwargs)
+    return SwinTransformer3DBackbone(
+        variant="base", in_channels=in_channels, feature_dim=feature_dim, **kwargs
+    )

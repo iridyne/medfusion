@@ -6,7 +6,6 @@ for predicting patient survival outcomes, including Cox proportional
 hazards models and discrete-time survival analysis.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -119,11 +118,13 @@ class DiscreteTimeSurvivalHead(nn.Module):
         prev_dim = input_dim
 
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(dropout),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(prev_dim, hidden_dim),
+                    nn.ReLU(inplace=True),
+                    nn.Dropout(dropout),
+                ]
+            )
             prev_dim = hidden_dim
 
         self.feature_extractor = nn.Sequential(*layers)
@@ -251,12 +252,16 @@ class DeepSurvivalHead(nn.Module):
         features = self.feature_proj(x)  # [B, hidden_dim]
 
         # Expand features for all time bins
-        features = features.unsqueeze(1).expand(-1, self.num_time_bins, -1)  # [B, T, hidden_dim]
+        features = features.unsqueeze(1).expand(
+            -1, self.num_time_bins, -1
+        )  # [B, T, hidden_dim]
 
         # Get time embeddings
         time_indices = torch.arange(self.num_time_bins, device=x.device)
         time_embeds = self.time_embedding(time_indices)  # [T, hidden_dim]
-        time_embeds = time_embeds.unsqueeze(0).expand(batch_size, -1, -1)  # [B, T, hidden_dim]
+        time_embeds = time_embeds.unsqueeze(0).expand(
+            batch_size, -1, -1
+        )  # [B, T, hidden_dim]
 
         # Concatenate features and time embeddings
         combined = torch.cat([features, time_embeds], dim=2)  # [B, T, hidden_dim*2]
@@ -344,9 +349,7 @@ class MultiTaskSurvivalHead(nn.Module):
             nn.Linear(hidden_dim // 2, num_time_bins),
         )
 
-    def forward(
-        self, x: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
 
@@ -421,11 +424,13 @@ class RankingSurvivalHead(nn.Module):
         prev_dim = input_dim
 
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(dropout),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(prev_dim, hidden_dim),
+                    nn.ReLU(inplace=True),
+                    nn.Dropout(dropout),
+                ]
+            )
             prev_dim = hidden_dim
 
         self.feature_extractor = nn.Sequential(*layers)

@@ -34,8 +34,11 @@ def get_device_info() -> dict[str, Any]:
     """
     info = {
         "cuda_available": torch.cuda.is_available(),
-        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
-        "mps_available": hasattr(torch.backends, "mps") and torch.backends.mps.is_available(),
+        "cuda_device_count": torch.cuda.device_count()
+        if torch.cuda.is_available()
+        else 0,
+        "mps_available": hasattr(torch.backends, "mps")
+        and torch.backends.mps.is_available(),
     }
 
     if info["cuda_available"]:

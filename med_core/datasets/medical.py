@@ -336,7 +336,9 @@ def split_dataset(
     test_ratio: float = 0.15,
     random_seed: int = 42,
     stratify: bool = True,
-) -> tuple[MedicalMultimodalDataset, MedicalMultimodalDataset, MedicalMultimodalDataset]:
+) -> tuple[
+    MedicalMultimodalDataset, MedicalMultimodalDataset, MedicalMultimodalDataset
+]:
     """
     Split dataset into train/val/test sets.
 

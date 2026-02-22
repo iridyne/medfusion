@@ -1,9 +1,10 @@
 """实验管理 API"""
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List, Dict, Any
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from ..database import get_db_session
 from ..models import Experiment
@@ -13,6 +14,7 @@ router = APIRouter()
 
 class ExperimentResponse(BaseModel):
     """实验响应"""
+
     id: int
     name: str
     description: str | None
@@ -25,14 +27,16 @@ class ExperimentResponse(BaseModel):
 
 @router.get("")
 async def list_experiments(
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db_session)
-) -> List[ExperimentResponse]:
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+) -> list[ExperimentResponse]:
     """获取实验列表"""
-    experiments = db.query(Experiment).order_by(
-        Experiment.created_at.desc()
-    ).offset(skip).limit(limit).all()
+    experiments = (
+        db.query(Experiment)
+        .order_by(Experiment.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return [
         ExperimentResponse(
@@ -40,7 +44,7 @@ async def list_experiments(
             name=exp.name,
             description=exp.description,
             status=exp.status,
-            created_at=exp.created_at.isoformat()
+            created_at=exp.created_at.isoformat(),
         )
         for exp in experiments
     ]
@@ -48,9 +52,8 @@ async def list_experiments(
 
 @router.get("/{experiment_id}")
 async def get_experiment(
-    experiment_id: int,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, Any]:
+    experiment_id: int, db: Session = Depends(get_db_session)
+) -> dict[str, Any]:
     """获取实验详情"""
     experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()
 
@@ -71,9 +74,8 @@ async def get_experiment(
 
 @router.delete("/{experiment_id}")
 async def delete_experiment(
-    experiment_id: int,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, str]:
+    experiment_id: int, db: Session = Depends(get_db_session)
+) -> dict[str, str]:
     """删除实验"""
     experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()
 

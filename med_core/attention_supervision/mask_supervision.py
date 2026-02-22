@@ -47,7 +47,7 @@ def mask_to_attention_target(
         mask = F.interpolate(
             mask.float(),
             size=size,
-            mode='bilinear',
+            mode="bilinear",
             align_corners=False,
         )
 
@@ -164,11 +164,17 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
 
         # 归一化��意力权重
         if self.loss_type == "kl":
-            attention_norm = self.normalize_attention(attention_weights, method="softmax")
+            attention_norm = self.normalize_attention(
+                attention_weights, method="softmax"
+            )
         elif self.loss_type == "bce":
-            attention_norm = self.normalize_attention(attention_weights, method="sigmoid")
+            attention_norm = self.normalize_attention(
+                attention_weights, method="sigmoid"
+            )
         else:  # mse
-            attention_norm = self.normalize_attention(attention_weights, method="minmax")
+            attention_norm = self.normalize_attention(
+                attention_weights, method="minmax"
+            )
 
         # 计算主损失
         if self.loss_type == "mse":
@@ -182,7 +188,7 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
             kl_loss = F.kl_div(
                 torch.log(attention_norm_flat + 1e-8),
                 attention_target_flat,
-                reduction='batchmean',
+                reduction="batchmean",
             )
             main_loss = kl_loss
 
@@ -315,7 +321,7 @@ class BBoxSupervisedAttention(MaskSupervisedAttention):
             y_max = int(torch.clamp(y_max, 0, H - 1))
 
             # 填充掩码
-            masks[i, y_min:y_max+1, x_min:x_max+1] = 1.0
+            masks[i, y_min : y_max + 1, x_min : x_max + 1] = 1.0
 
         return masks
 
@@ -441,7 +447,7 @@ class KeypointSupervisedAttention(MaskSupervisedAttention):
         y_grid, x_grid = torch.meshgrid(
             torch.arange(H, device=device),
             torch.arange(W, device=device),
-            indexing='ij',
+            indexing="ij",
         )
         y_grid = y_grid.float()
         x_grid = x_grid.float()
@@ -459,7 +465,7 @@ class KeypointSupervisedAttention(MaskSupervisedAttention):
 
                 # 计算高斯分布
                 distance_sq = (x_grid - x) ** 2 + (y_grid - y) ** 2
-                gaussian = torch.exp(-distance_sq / (2 * self.gaussian_sigma ** 2))
+                gaussian = torch.exp(-distance_sq / (2 * self.gaussian_sigma**2))
 
                 # 累加（支持多个关键点）
                 masks[i] = torch.maximum(masks[i], gaussian)

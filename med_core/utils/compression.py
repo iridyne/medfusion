@@ -115,6 +115,7 @@ class ModelQuantizer:
         quantized_model: nn.Module,
     ):
         """比较模型大小"""
+
         def get_size(model):
             torch.save(model.state_dict(), "temp.pth")
             size = Path("temp.pth").stat().st_size / (1024 * 1024)
@@ -127,7 +128,7 @@ class ModelQuantizer:
         logger.info("\nModel Size Comparison:")
         logger.info(f"  Original: {original_size:.2f} MB")
         logger.info(f"  Quantized: {quantized_size:.2f} MB")
-        logger.info(f"  Reduction: {(1 - quantized_size/original_size)*100:.1f}%")
+        logger.info(f"  Reduction: {(1 - quantized_size / original_size) * 100:.1f}%")
 
 
 class ModelPruner:
@@ -167,7 +168,7 @@ class ModelPruner:
         parameters_to_prune = []
         for _name, module in self.model.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
-                parameters_to_prune.append((module, 'weight'))
+                parameters_to_prune.append((module, "weight"))
 
         if method == "l1":
             prune.global_unstructured(
@@ -187,7 +188,7 @@ class ModelPruner:
             prune.remove(module, param_name)
 
         logger.info("✓ Unstructured pruning completed")
-        logger.info(f"  Amount: {amount*100:.1f}%")
+        logger.info(f"  Amount: {amount * 100:.1f}%")
         logger.info(f"  Method: {method}")
 
         return self.model
@@ -213,15 +214,15 @@ class ModelPruner:
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 prune.ln_structured(
                     module,
-                    name='weight',
+                    name="weight",
                     amount=amount,
                     n=2,
                     dim=dim,
                 )
-                prune.remove(module, 'weight')
+                prune.remove(module, "weight")
 
         logger.info("✓ Structured pruning completed")
-        logger.info(f"  Amount: {amount*100:.1f}%")
+        logger.info(f"  Amount: {amount * 100:.1f}%")
         logger.info(f"  Dim: {dim}")
 
         return self.model
@@ -240,7 +241,7 @@ class ModelPruner:
         logger.info("\nModel Sparsity:")
         logger.info(f"  Total params: {total_params:,}")
         logger.info(f"  Zero params: {zero_params:,}")
-        logger.info(f"  Sparsity: {sparsity*100:.2f}%")
+        logger.info(f"  Sparsity: {sparsity * 100:.2f}%")
 
         return sparsity
 

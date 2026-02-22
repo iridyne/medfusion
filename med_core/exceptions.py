@@ -146,7 +146,9 @@ class BackboneError(ModelError):
         backbone_name: str | None = None,
         suggestion: str | None = None,
     ):
-        super().__init__(message=message, model_name=backbone_name, suggestion=suggestion)
+        super().__init__(
+            message=message, model_name=backbone_name, suggestion=suggestion
+        )
         self.error_code = "E310"
 
 
@@ -447,4 +449,3 @@ def format_error_report(error: Exception) -> str:
         return report
     else:
         return f"❌ Error: {str(error)}\n"
-

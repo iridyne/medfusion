@@ -1,8 +1,8 @@
 """训练服务"""
 
-from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, Any
 import logging
+from concurrent.futures import ProcessPoolExecutor
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ class TrainingService:
         self.executor = ProcessPoolExecutor(max_workers=4)
         self.jobs = {}
 
-    def submit_job(self, job_id: str, config: Dict[str, Any]):
+    def submit_job(self, job_id: str, config: dict[str, Any]):
         """提交训练任务"""
         logger.info(f"提交训练任务: {job_id}")
 
@@ -24,7 +24,7 @@ class TrainingService:
 
         logger.info(f"训练任务已提交到进程池: {job_id}")
 
-    def _run_training(self, job_id: str, config: Dict[str, Any]):
+    def _run_training(self, job_id: str, config: dict[str, Any]):
         """运行训练任务（在子进程中执行）"""
         try:
             logger.info(f"开始训练任务: {job_id}")
@@ -43,7 +43,7 @@ class TrainingService:
             logger.error(f"训练任务失败: {job_id}, 错误: {e}")
             return {"status": "failed", "error": str(e)}
 
-    def get_job_status(self, job_id: str) -> Dict[str, Any]:
+    def get_job_status(self, job_id: str) -> dict[str, Any]:
         """获取任务状态"""
         if job_id not in self.jobs:
             return {"status": "not_found"}

@@ -22,11 +22,25 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
+    - name: Cache uv dependencies
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.cargo/bin/uv
+        key: ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ inputs.python-version }}-
+          ${{ runner.os }}-uv-
+
     - name: Install uv and setup environment
       shell: bash
       run: |
-        # Install uv
-        curl -LsSf https://astral.sh/uv/install.sh | sh
+        # Install uv if not cached
+        if ! command -v uv &> /dev/null; then
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+        fi
 
         # Add uv to PATH for this step
         export PATH="$HOME/.cargo/bin:$PATH"

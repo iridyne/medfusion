@@ -10,7 +10,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any
 
 import psutil
 
@@ -35,7 +35,7 @@ class ResourceSnapshot:
     memory_percent: float
     memory_used_gb: float
     memory_total_gb: float
-    gpu_info: List[Dict[str, Any]] = field(default_factory=list)
+    gpu_info: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -57,7 +57,7 @@ class ResourceMonitor:
         self,
         interval: float = 1.0,
         history_size: int = 300,
-        thresholds: Optional[ResourceThresholds] = None,
+        thresholds: ResourceThresholds | None = None,
     ):
         """
         初始化资源监控器
@@ -72,11 +72,11 @@ class ResourceMonitor:
         self.thresholds = thresholds or ResourceThresholds()
 
         # 历史记录（使用 deque 实现固定大小的环形缓冲区）
-        self.history: Deque[ResourceSnapshot] = deque(maxlen=history_size)
+        self.history: deque[ResourceSnapshot] = deque(maxlen=history_size)
 
         # 监控状态
         self.monitoring = False
-        self.monitor_task: Optional[asyncio.Task] = None
+        self.monitor_task: asyncio.Task | None = None
 
         # GPU 初始化
         self.gpu_available = False
@@ -163,7 +163,7 @@ class ResourceMonitor:
             gpu_info=gpu_info,
         )
 
-    def _get_gpu_info(self) -> List[Dict[str, Any]]:
+    def _get_gpu_info(self) -> list[dict[str, Any]]:
         """获取 GPU 信息"""
         gpu_info = []
 
@@ -261,7 +261,7 @@ class ResourceMonitor:
                     f"({gpu['memory_used_gb']:.1f}/{gpu['memory_total_gb']:.1f} GB)"
                 )
 
-    def get_current_status(self) -> Dict[str, Any]:
+    def get_current_status(self) -> dict[str, Any]:
         """
         获取当前资源状态
 
@@ -308,7 +308,7 @@ class ResourceMonitor:
             "monitoring": self.monitoring,
         }
 
-    def get_history(self, duration: Optional[float] = None) -> List[Dict[str, Any]]:
+    def get_history(self, duration: float | None = None) -> list[dict[str, Any]]:
         """
         获取历史记录
 
@@ -338,7 +338,7 @@ class ResourceMonitor:
             for s in snapshots
         ]
 
-    def get_statistics(self, duration: Optional[float] = None) -> Dict[str, Any]:
+    def get_statistics(self, duration: float | None = None) -> dict[str, Any]:
         """
         获取统计信息
 

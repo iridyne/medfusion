@@ -5,7 +5,7 @@ Experiments Router - API endpoints for experiment comparison and reporting
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
@@ -29,12 +29,12 @@ class ExperimentConfig(BaseModel):
 
     backbone: str
     fusion: str
-    aggregator: Optional[str] = None
+    aggregator: str | None = None
     learning_rate: float
     batch_size: int
     epochs: int
     optimizer: str = "adam"
-    scheduler: Optional[str] = None
+    scheduler: str | None = None
 
 
 class ExperimentMetrics(BaseModel):
@@ -44,7 +44,7 @@ class ExperimentMetrics(BaseModel):
     precision: float
     recall: float
     f1_score: float
-    auc: Optional[float] = None
+    auc: float | None = None
     loss: float
 
 
@@ -60,13 +60,13 @@ class Experiment(BaseModel):
     created_at: str
     updated_at: str
     is_favorite: bool = False
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class ExperimentListResponse(BaseModel):
     """Response for experiment list"""
 
-    experiments: List[Experiment]
+    experiments: list[Experiment]
     total: int
     page: int
     page_size: int
@@ -76,7 +76,7 @@ class ComparisonMetric(BaseModel):
     """Single metric comparison across experiments"""
 
     metric: str
-    experiments: Dict[str, float]
+    experiments: dict[str, float]
     best_experiment: str
     worst_experiment: str
 
@@ -84,9 +84,9 @@ class ComparisonMetric(BaseModel):
 class ComparisonResponse(BaseModel):
     """Response for experiment comparison"""
 
-    experiments: List[Experiment]
-    metrics: List[ComparisonMetric]
-    summary: Dict[str, Any]
+    experiments: list[Experiment]
+    metrics: list[ComparisonMetric]
+    summary: dict[str, Any]
 
 
 class TrainingHistory(BaseModel):
@@ -105,14 +105,14 @@ class MetricsHistoryResponse(BaseModel):
 
     experiment_id: str
     experiment_name: str
-    history: List[TrainingHistory]
+    history: list[TrainingHistory]
 
 
 class ConfusionMatrixData(BaseModel):
     """Confusion matrix data"""
 
-    classes: List[str]
-    matrix: List[List[int]]
+    classes: list[str]
+    matrix: list[list[int]]
     total: int
 
 
@@ -130,13 +130,13 @@ class ROCCurveData(BaseModel):
     experiment_id: str
     experiment_name: str
     auc: float
-    points: List[ROCPoint]
+    points: list[ROCPoint]
 
 
 class ReportRequest(BaseModel):
     """Request for report generation"""
 
-    experiment_ids: List[str]
+    experiment_ids: list[str]
     format: str = Field(..., pattern="^(word|pdf)$")
     include_charts: bool = True
     include_config: bool = True
@@ -157,7 +157,7 @@ class ReportResponse(BaseModel):
 # ============================================================================
 
 
-def get_mock_experiments() -> List[Experiment]:
+def get_mock_experiments() -> list[Experiment]:
     """Generate mock experiment data"""
     return [
         Experiment(
@@ -279,10 +279,8 @@ def get_mock_experiments() -> List[Experiment]:
 async def list_experiments(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
-    status: Optional[str] = Query(None, pattern="^(completed|running|failed|pending)$"),
-    sort_by: Optional[str] = Query(
-        "created_at", pattern="^(created_at|accuracy|name)$"
-    ),
+    status: str | None = Query(None, pattern="^(completed|running|failed|pending)$"),
+    sort_by: str | None = Query("created_at", pattern="^(created_at|accuracy|name)$"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
 ):
     """
@@ -319,7 +317,7 @@ async def list_experiments(
 
     except Exception as e:
         logger.error(f"Failed to list experiments: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{experiment_id}", response_model=Experiment)
@@ -340,11 +338,11 @@ async def get_experiment(experiment_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get experiment {experiment_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/compare", response_model=ComparisonResponse)
-async def compare_experiments(experiment_ids: List[str]):
+async def compare_experiments(experiment_ids: list[str]):
     """
     Compare multiple experiments
     """
@@ -412,7 +410,7 @@ async def compare_experiments(experiment_ids: List[str]):
         raise
     except Exception as e:
         logger.error(f"Failed to compare experiments: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{experiment_id}/metrics", response_model=MetricsHistoryResponse)
@@ -463,7 +461,7 @@ async def get_metrics_history(experiment_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get metrics history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{experiment_id}/confusion-matrix", response_model=ConfusionMatrixData)
@@ -508,7 +506,7 @@ async def get_confusion_matrix(experiment_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get confusion matrix: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/{experiment_id}/roc-curve", response_model=ROCCurveData)
@@ -554,7 +552,7 @@ async def get_roc_curve(experiment_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get ROC curve: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/report", response_model=ReportResponse)
@@ -622,7 +620,7 @@ async def generate_report(request: ReportRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to generate report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/reports/{filename}")
@@ -653,7 +651,7 @@ async def download_report(filename: str):
         raise
     except Exception as e:
         logger.error(f"Failed to download report: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.patch("/{experiment_id}/favorite")
@@ -667,7 +665,7 @@ async def toggle_favorite(experiment_id: str):
 
     except Exception as e:
         logger.error(f"Failed to toggle favorite: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{experiment_id}")
@@ -681,4 +679,4 @@ async def delete_experiment(experiment_id: str):
 
     except Exception as e:
         logger.error(f"Failed to delete experiment: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

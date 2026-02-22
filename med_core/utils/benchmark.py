@@ -220,9 +220,14 @@ class DataLoaderBenchmark:
 
             # 移动到设备（模拟实际使用）
             if isinstance(batch, (list, tuple)):
-                batch = [b.to(self.device) if isinstance(b, torch.Tensor) else b for b in batch]
+                batch = [
+                    b.to(self.device) if isinstance(b, torch.Tensor) else b
+                    for b in batch
+                ]
 
-            samples_loaded += len(batch[0]) if isinstance(batch, (list, tuple)) else len(batch)
+            samples_loaded += (
+                len(batch[0]) if isinstance(batch, (list, tuple)) else len(batch)
+            )
 
         end_time = time.time()
         duration = end_time - start_time
@@ -379,9 +384,9 @@ class BenchmarkSuite:
         """
         self.results = []
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Running Benchmark Suite: {self.name}")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
         for name, func in self.benchmarks:
             logger.info(f"Running: {name}...")
@@ -438,9 +443,9 @@ class BenchmarkSuite:
 
         comparisons = []
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Comparing with baseline: {baseline_file}")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
         for result in self.results:
             if result.name not in baseline_results:
@@ -488,9 +493,9 @@ class BenchmarkSuite:
             logger.info("No results to display")
             return
 
-        logger.info(f"\n{'='*60}")
+        logger.info(f"\n{'=' * 60}")
         logger.info(f"Benchmark Summary: {self.name}")
-        logger.info(f"{'='*60}\n")
+        logger.info(f"{'=' * 60}\n")
 
         for result in self.results:
             logger.info(result)
@@ -515,6 +520,7 @@ def create_regression_test(
         >>> test_func = create_regression_test("baseline.json")
         >>> test_func(current_results)
     """
+
     def test(results: list[BenchmarkResult]) -> bool:
         """检查是否有性能回归"""
         with open(baseline_file) as f:
@@ -529,10 +535,14 @@ def create_regression_test(
                 continue
 
             baseline = baseline_results[result.name]
-            change = (result.throughput - baseline["throughput"]) / baseline["throughput"]
+            change = (result.throughput - baseline["throughput"]) / baseline[
+                "throughput"
+            ]
 
             if change < -tolerance:
-                logger.error(f"❌ Regression detected in {result.name}: {change*100:.1f}%")
+                logger.error(
+                    f"❌ Regression detected in {result.name}: {change * 100:.1f}%"
+                )
                 has_regression = True
 
         return not has_regression

@@ -196,7 +196,9 @@ class ModelExporter:
             import onnx
             import onnxruntime as ort
         except ImportError:
-            logger.warning("⚠ ONNX or ONNXRuntime not installed. Skipping verification.")
+            logger.warning(
+                "⚠ ONNX or ONNXRuntime not installed. Skipping verification."
+            )
             return False
 
         logger.info(f"Verifying ONNX model: {onnx_path}")

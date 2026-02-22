@@ -43,8 +43,7 @@ class HyperparameterTuner:
             import optuna
         except ImportError as e:
             raise ImportError(
-                "Optuna is not installed. "
-                "Install it with: pip install optuna"
+                "Optuna is not installed. Install it with: pip install optuna"
             ) from e
 
         self.objective_fn = objective_fn
@@ -370,9 +369,7 @@ class ModelTuner:
             self.tuner.plot_optimization_history(
                 f"{output_dir}/optimization_history.html"
             )
-            self.tuner.plot_param_importances(
-                f"{output_dir}/param_importances.html"
-            )
+            self.tuner.plot_param_importances(f"{output_dir}/param_importances.html")
             self.tuner.plot_parallel_coordinate(
                 f"{output_dir}/parallel_coordinate.html"
             )

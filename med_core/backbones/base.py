@@ -164,7 +164,9 @@ class BaseVisionBackbone(BaseBackbone):
         """
         pass
 
-    def forward(self, x: torch.Tensor, return_intermediates: bool = False) -> torch.Tensor | dict[str, torch.Tensor]:
+    def forward(
+        self, x: torch.Tensor, return_intermediates: bool = False
+    ) -> torch.Tensor | dict[str, torch.Tensor]:
         """
         Forward pass through vision backbone.
 

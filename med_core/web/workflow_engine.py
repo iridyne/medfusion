@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .checkpoint_manager import CheckpointManager
 from .node_executors import ExecutorFactory, NodeExecutionError
@@ -59,12 +59,12 @@ class Node:
 
     id: str
     type: str
-    data: Dict[str, Any]
-    position: Dict[str, float]
-    inputs: Dict[str, Port] = field(default_factory=dict)
-    outputs: Dict[str, Port] = field(default_factory=dict)
+    data: dict[str, Any]
+    position: dict[str, float]
+    inputs: dict[str, Port] = field(default_factory=dict)
+    outputs: dict[str, Port] = field(default_factory=dict)
     status: NodeStatus = NodeStatus.PENDING
-    error: Optional[str] = None
+    error: str | None = None
     result: Any = None
 
 
@@ -96,14 +96,14 @@ class WorkflowEngine:
 
     def __init__(
         self,
-        data_dir: Optional[Path] = None,
+        data_dir: Path | None = None,
         enable_checkpoints: bool = True,
         enable_monitoring: bool = True,
     ):
-        self.nodes: Dict[str, Node] = {}
-        self.edges: List[Edge] = []
-        self.adjacency_list: Dict[str, List[str]] = defaultdict(list)
-        self.reverse_adjacency_list: Dict[str, List[str]] = defaultdict(list)
+        self.nodes: dict[str, Node] = {}
+        self.edges: list[Edge] = []
+        self.adjacency_list: dict[str, list[str]] = defaultdict(list)
+        self.reverse_adjacency_list: dict[str, list[str]] = defaultdict(list)
         self.data_dir = data_dir or Path.cwd() / "data"
         self.executor_factory = ExecutorFactory
 
@@ -123,8 +123,8 @@ class WorkflowEngine:
             logger.info("Resource monitor enabled")
 
     async def _execute_data_loader(
-        self, node: Node, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, node: Node, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         """执行数据加载节点"""
         logger.info(f"Loading dataset: {node.data.get('datasetId')}")
 
@@ -139,7 +139,7 @@ class WorkflowEngine:
             }
         }
 
-    def load_workflow(self, workflow_data: Dict[str, Any]) -> None:
+    def load_workflow(self, workflow_data: dict[str, Any]) -> None:
         """
         加载工作流数据
 
@@ -241,7 +241,7 @@ class WorkflowEngine:
                 id="report", type=PortType.REPORT, node_id=node.id, is_input=False
             )
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """
         验证工作流合法性
 
@@ -294,7 +294,7 @@ class WorkflowEngine:
 
         return len(errors) == 0, errors
 
-    def _topological_sort(self) -> List[str]:
+    def _topological_sort(self) -> list[str]:
         """
         拓扑排序，返回节点执行顺序
 
@@ -305,7 +305,7 @@ class WorkflowEngine:
             WorkflowValidationError: 如果存在循环依赖
         """
         # 计算入度
-        in_degree = {node_id: 0 for node_id in self.nodes}
+        in_degree = dict.fromkeys(self.nodes, 0)
         for node_id in self.nodes:
             in_degree[node_id] = len(self.reverse_adjacency_list.get(node_id, []))
 
@@ -332,9 +332,9 @@ class WorkflowEngine:
 
     async def execute(
         self,
-        progress_callback: Optional[callable] = None,
-        workflow_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        progress_callback: callable | None = None,
+        workflow_id: str | None = None,
+    ) -> dict[str, Any]:
         """
         执行工作流
 
@@ -430,7 +430,7 @@ class WorkflowEngine:
             if self.resource_monitor:
                 await self.resource_monitor.stop()
 
-    def _collect_inputs(self, node: Node) -> Dict[str, Any]:
+    def _collect_inputs(self, node: Node) -> dict[str, Any]:
         """收集节点的输入数据"""
         inputs = {}
 
@@ -444,7 +444,7 @@ class WorkflowEngine:
 
         return inputs
 
-    async def _execute_node(self, node: Node, inputs: Dict[str, Any]) -> Any:
+    async def _execute_node(self, node: Node, inputs: dict[str, Any]) -> Any:
         """
         执行单个节点
 
@@ -467,8 +467,8 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"未知的节点类型: {node.type}")
 
     async def _execute_data_loader(
-        self, node: Node, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, node: Node, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         """执行数据加载节点"""
         try:
             executor = self.executor_factory.create("dataLoader", self.data_dir)
@@ -479,8 +479,8 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"数据加载节点执行失败: {e}") from e
 
     async def _execute_model(
-        self, node: Node, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, node: Node, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         """执行模型构建节点"""
         try:
             executor = self.executor_factory.create("model", self.data_dir)
@@ -491,8 +491,8 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"模型构建节点执行失败: {e}") from e
 
     async def _execute_training(
-        self, node: Node, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, node: Node, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         """执行训练节点"""
         try:
             executor = self.executor_factory.create("training", self.data_dir)
@@ -503,8 +503,8 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"训练节点执行失败: {e}") from e
 
     async def _execute_evaluation(
-        self, node: Node, inputs: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, node: Node, inputs: dict[str, Any]
+    ) -> dict[str, Any]:
         """执行评估节点"""
         try:
             executor = self.executor_factory.create("evaluation", self.data_dir)
@@ -515,7 +515,7 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"评估节点执行失败: {e}") from e
 
     async def _save_checkpoint(
-        self, workflow_id: str, results: Dict[str, Any], failed: bool = False
+        self, workflow_id: str, results: dict[str, Any], failed: bool = False
     ) -> None:
         """保存检查点"""
         try:
@@ -572,7 +572,7 @@ class WorkflowEngine:
         except Exception as e:
             logger.error(f"Failed to save checkpoint: {e}")
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """获取工作流执行状态"""
         status = {
             "nodes": {
@@ -597,9 +597,7 @@ class WorkflowEngine:
 
         return status
 
-    def get_resource_statistics(
-        self, duration: Optional[float] = None
-    ) -> Dict[str, Any]:
+    def get_resource_statistics(self, duration: float | None = None) -> dict[str, Any]:
         """获取资源统计信息"""
         if not self.resource_monitor:
             return {}

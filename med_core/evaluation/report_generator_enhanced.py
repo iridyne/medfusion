@@ -8,9 +8,7 @@ Extends the base report generator with:
 - Publication-ready formatting
 """
 
-import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -67,19 +65,17 @@ class EnhancedReportGenerator(ReportGenerator):
         self.statistical_tests: dict[str, Any] = {}
 
         # Configure matplotlib for high-resolution output
-        plt.rcParams['figure.dpi'] = dpi
-        plt.rcParams['savefig.dpi'] = dpi
-        plt.rcParams['font.size'] = 10
-        plt.rcParams['axes.labelsize'] = 11
-        plt.rcParams['axes.titlesize'] = 12
-        plt.rcParams['xtick.labelsize'] = 9
-        plt.rcParams['ytick.labelsize'] = 9
-        plt.rcParams['legend.fontsize'] = 9
+        plt.rcParams["figure.dpi"] = dpi
+        plt.rcParams["savefig.dpi"] = dpi
+        plt.rcParams["font.size"] = 10
+        plt.rcParams["axes.labelsize"] = 11
+        plt.rcParams["axes.titlesize"] = 12
+        plt.rcParams["xtick.labelsize"] = 9
+        plt.rcParams["ytick.labelsize"] = 9
+        plt.rcParams["legend.fontsize"] = 9
 
     def add_comparison_metrics(
-        self,
-        baseline_metrics: Any,
-        comparison_name: str = "Baseline"
+        self, baseline_metrics: Any, comparison_name: str = "Baseline"
     ) -> None:
         """
         Add baseline metrics for statistical comparison.
@@ -91,7 +87,7 @@ class EnhancedReportGenerator(ReportGenerator):
         if not self.enable_statistical_tests:
             return
 
-        if not hasattr(self, 'baseline_metrics'):
+        if not hasattr(self, "baseline_metrics"):
             self.baseline_metrics = {}
 
         self.baseline_metrics[comparison_name] = baseline_metrics
@@ -103,14 +99,16 @@ class EnhancedReportGenerator(ReportGenerator):
         Returns:
             Dictionary with test results
         """
-        if not self.enable_statistical_tests or not hasattr(self, 'baseline_metrics'):
+        if not self.enable_statistical_tests or not hasattr(self, "baseline_metrics"):
             return {}
 
         tests = {}
 
         for baseline_name, baseline in self.baseline_metrics.items():
             # McNemar's test for paired binary classification
-            if hasattr(self.metrics, 'true_positives') and hasattr(baseline, 'true_positives'):
+            if hasattr(self.metrics, "true_positives") and hasattr(
+                baseline, "true_positives"
+            ):
                 # Construct contingency table
                 # [both_correct, current_correct_baseline_wrong]
                 # [current_wrong_baseline_correct, both_wrong]
@@ -120,23 +118,32 @@ class EnhancedReportGenerator(ReportGenerator):
                 baseline_acc = baseline.accuracy
 
                 # Use binomial test for significance
-                n_samples = (self.metrics.true_positives + self.metrics.true_negatives +
-                            self.metrics.false_positives + self.metrics.false_negatives)
+                n_samples = (
+                    self.metrics.true_positives
+                    + self.metrics.true_negatives
+                    + self.metrics.false_positives
+                    + self.metrics.false_negatives
+                )
 
                 # Approximate p-value using normal approximation
-                se = np.sqrt((current_acc * (1 - current_acc) +
-                             baseline_acc * (1 - baseline_acc)) / n_samples)
+                se = np.sqrt(
+                    (
+                        current_acc * (1 - current_acc)
+                        + baseline_acc * (1 - baseline_acc)
+                    )
+                    / n_samples
+                )
                 z_score = (current_acc - baseline_acc) / se if se > 0 else 0
                 p_value = 2 * (1 - stats.norm.cdf(abs(z_score)))
 
                 tests[baseline_name] = {
-                    'test': 'Z-test for proportions',
-                    'current_accuracy': current_acc,
-                    'baseline_accuracy': baseline_acc,
-                    'difference': current_acc - baseline_acc,
-                    'z_score': z_score,
-                    'p_value': p_value,
-                    'significant': p_value < 0.05,
+                    "test": "Z-test for proportions",
+                    "current_accuracy": current_acc,
+                    "baseline_accuracy": baseline_acc,
+                    "difference": current_acc - baseline_acc,
+                    "z_score": z_score,
+                    "p_value": p_value,
+                    "significant": p_value < 0.05,
                 }
 
         self.statistical_tests = tests
@@ -165,7 +172,7 @@ class EnhancedReportGenerator(ReportGenerator):
         lines.append(f"\\label{{tab:{self.experiment_name.lower().replace(' ', '_')}}}")
 
         # Binary classification
-        if hasattr(metrics, 'auc_roc'):
+        if hasattr(metrics, "auc_roc"):
             lines.append("\\begin{tabular}{lcc}")
             lines.append("\\hline")
             lines.append("Metric & Value & 95\\% CI \\\\")
@@ -177,10 +184,18 @@ class EnhancedReportGenerator(ReportGenerator):
                     return f"({ci[0]:.3f}, {ci[1]:.3f})"
                 return "-"
 
-            lines.append(f"AUC-ROC & {metrics.auc_roc:.3f} & {fmt_ci(metrics.ci_auc_roc)} \\\\")
-            lines.append(f"Accuracy & {metrics.accuracy:.3f} & {fmt_ci(metrics.ci_accuracy)} \\\\")
-            lines.append(f"Sensitivity & {metrics.sensitivity:.3f} & {fmt_ci(metrics.ci_sensitivity)} \\\\")
-            lines.append(f"Specificity & {metrics.specificity:.3f} & {fmt_ci(metrics.ci_specificity)} \\\\")
+            lines.append(
+                f"AUC-ROC & {metrics.auc_roc:.3f} & {fmt_ci(metrics.ci_auc_roc)} \\\\"
+            )
+            lines.append(
+                f"Accuracy & {metrics.accuracy:.3f} & {fmt_ci(metrics.ci_accuracy)} \\\\"
+            )
+            lines.append(
+                f"Sensitivity & {metrics.sensitivity:.3f} & {fmt_ci(metrics.ci_sensitivity)} \\\\"
+            )
+            lines.append(
+                f"Specificity & {metrics.specificity:.3f} & {fmt_ci(metrics.ci_specificity)} \\\\"
+            )
             lines.append(f"F1 Score & {metrics.f1:.3f} & - \\\\")
             lines.append(f"Precision (PPV) & {metrics.ppv:.3f} & - \\\\")
             lines.append(f"NPV & {metrics.npv:.3f} & - \\\\")
@@ -242,8 +257,10 @@ class EnhancedReportGenerator(ReportGenerator):
                 f.write("\\hline\n")
 
                 for name, test in self.statistical_tests.items():
-                    sig = "Yes" if test['significant'] else "No"
-                    f.write(f"{name} & {test['difference']:.4f} & {test['p_value']:.4f} & {sig} \\\\\\n")
+                    sig = "Yes" if test["significant"] else "No"
+                    f.write(
+                        f"{name} & {test['difference']:.4f} & {test['p_value']:.4f} & {sig} \\\\\\n"
+                    )
 
                 f.write("\\hline\n")
                 f.write("\\end{tabular}\n")
@@ -287,7 +304,7 @@ class EnhancedReportGenerator(ReportGenerator):
                 f.write(self._generate_statistical_tests_markdown())
 
         # Also generate LaTeX report
-        latex_filename = filename.replace('.md', '.tex')
+        latex_filename = filename.replace(".md", ".tex")
         self.generate_latex_report(latex_filename)
 
         return report_path
@@ -298,11 +315,13 @@ class EnhancedReportGenerator(ReportGenerator):
             return ""
 
         lines = ["## Statistical Significance Tests\n\n"]
-        lines.append("| Comparison | Current | Baseline | Difference | p-value | Significant |\n")
+        lines.append(
+            "| Comparison | Current | Baseline | Difference | p-value | Significant |\n"
+        )
         lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
         for name, test in self.statistical_tests.items():
-            sig = "✅ Yes" if test['significant'] else "❌ No"
+            sig = "✅ Yes" if test["significant"] else "❌ No"
             lines.append(
                 f"| {name} | {test['current_accuracy']:.4f} | "
                 f"{test['baseline_accuracy']:.4f} | {test['difference']:.4f} | "
@@ -343,7 +362,7 @@ def generate_enhanced_report(
         experiment_name,
         output_dir,
         dpi=dpi,
-        enable_statistical_tests=baseline_metrics is not None
+        enable_statistical_tests=baseline_metrics is not None,
     )
 
     generator.add_metrics(metrics)

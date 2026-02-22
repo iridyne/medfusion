@@ -1,10 +1,11 @@
 """Web UI CLI 命令"""
 
-import click
-import uvicorn
 import socket
 import webbrowser
 from pathlib import Path
+
+import click
+import uvicorn
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -22,7 +23,9 @@ def find_free_port(start_port: int = 8000, max_attempts: int = 100) -> int:
                 return port
         except OSError:
             continue
-    raise RuntimeError(f"无法在 {start_port}-{start_port+max_attempts} 范围内找到可用端口")
+    raise RuntimeError(
+        f"无法在 {start_port}-{start_port + max_attempts} 范围内找到可用端口"
+    )
 
 
 def check_web_ui_exists() -> bool:
@@ -36,7 +39,7 @@ def initialize_web_server():
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
-        console=console
+        console=console,
     ) as progress:
         # 1. 初始化目录
         task1 = progress.add_task("⏳ 初始化数据目录...", total=None)
@@ -113,7 +116,7 @@ def start(host: str, port: int, auth: bool, token: str, no_browser: bool, reload
             host=host,
             port=port,
             reload=reload,
-            log_level="info"
+            log_level="info",
         )
     except KeyboardInterrupt:
         console.print("\n👋 MedFusion Web UI 已停止")
@@ -179,7 +182,7 @@ def backup(output: str):
 
     console.print(f"⏳ 正在备份到 {output}...")
     try:
-        shutil.make_archive(output, 'gztar', settings.data_dir)
+        shutil.make_archive(output, "gztar", settings.data_dir)
         console.print(f"✅ 备份完成: {output}.tar.gz")
     except Exception as e:
         console.print(f"❌ 备份失败: {e}")

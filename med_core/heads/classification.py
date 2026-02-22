@@ -6,7 +6,6 @@ for different medical imaging tasks, including multi-class classification,
 multi-label classification, and ordinal classification.
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -130,11 +129,13 @@ class MultiLabelClassificationHead(nn.Module):
                 prev_dim = input_dim
 
                 for hidden_dim in hidden_dims:
-                    layers.extend([
-                        nn.Linear(prev_dim, hidden_dim),
-                        nn.ReLU(inplace=True),
-                        nn.Dropout(dropout),
-                    ])
+                    layers.extend(
+                        [
+                            nn.Linear(prev_dim, hidden_dim),
+                            nn.ReLU(inplace=True),
+                            nn.Dropout(dropout),
+                        ]
+                    )
                     prev_dim = hidden_dim
 
                 layers.append(nn.Linear(prev_dim, 1))
@@ -145,11 +146,13 @@ class MultiLabelClassificationHead(nn.Module):
             prev_dim = input_dim
 
             for hidden_dim in hidden_dims:
-                layers.extend([
-                    nn.Linear(prev_dim, hidden_dim),
-                    nn.ReLU(inplace=True),
-                    nn.Dropout(dropout),
-                ])
+                layers.extend(
+                    [
+                        nn.Linear(prev_dim, hidden_dim),
+                        nn.ReLU(inplace=True),
+                        nn.Dropout(dropout),
+                    ]
+                )
                 prev_dim = hidden_dim
 
             self.feature_extractor = nn.Sequential(*layers)
@@ -216,11 +219,13 @@ class OrdinalClassificationHead(nn.Module):
         prev_dim = input_dim
 
         for hidden_dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, hidden_dim),
-                nn.ReLU(inplace=True),
-                nn.Dropout(dropout),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(prev_dim, hidden_dim),
+                    nn.ReLU(inplace=True),
+                    nn.Dropout(dropout),
+                ]
+            )
             prev_dim = hidden_dim
 
         self.feature_extractor = nn.Sequential(*layers)
@@ -263,11 +268,14 @@ class OrdinalClassificationHead(nn.Module):
 
         # Prepend 1 and append 0 to threshold probabilities
         # [B, K-1] -> [B, K+1]
-        padded_probs = torch.cat([
-            torch.ones(batch_size, 1, device=x.device),
-            threshold_probs,
-            torch.zeros(batch_size, 1, device=x.device),
-        ], dim=1)
+        padded_probs = torch.cat(
+            [
+                torch.ones(batch_size, 1, device=x.device),
+                threshold_probs,
+                torch.zeros(batch_size, 1, device=x.device),
+            ],
+            dim=1,
+        )
 
         # P(y = k) = P(y > k-1) - P(y > k)
         for k in range(self.num_classes):
@@ -404,15 +412,17 @@ class EnsembleClassificationHead(nn.Module):
         self.aggregation = aggregation
 
         # Create ensemble of heads
-        self.heads = nn.ModuleList([
-            ClassificationHead(
-                input_dim=input_dim,
-                num_classes=num_classes,
-                hidden_dims=hidden_dims,
-                dropout=dropout,
-            )
-            for _ in range(num_heads)
-        ])
+        self.heads = nn.ModuleList(
+            [
+                ClassificationHead(
+                    input_dim=input_dim,
+                    num_classes=num_classes,
+                    hidden_dims=hidden_dims,
+                    dropout=dropout,
+                )
+                for _ in range(num_heads)
+            ]
+        )
 
     def forward(
         self, x: torch.Tensor, return_individual: bool = False
@@ -429,7 +439,9 @@ class EnsembleClassificationHead(nn.Module):
             If return_individual=True, also returns individual predictions [B, num_heads, num_classes]
         """
         # Get predictions from all heads
-        predictions = torch.stack([head(x) for head in self.heads], dim=1)  # [B, num_heads, num_classes]
+        predictions = torch.stack(
+            [head(x) for head in self.heads], dim=1
+        )  # [B, num_heads, num_classes]
 
         # Aggregate predictions
         if self.aggregation == "mean":

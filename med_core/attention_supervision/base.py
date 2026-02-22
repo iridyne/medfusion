@@ -231,7 +231,9 @@ class AttentionConsistencyLoss(nn.Module):
             sorted_attention = torch.sort(attention_flat, dim=1)[0]
             n = sorted_attention.size(1)
             index = torch.arange(1, n + 1, device=attention.device).float()
-            gini = (2 * (sorted_attention * index).sum(dim=1)) / (n * sorted_attention.sum(dim=1) + 1e-8) - (n + 1) / n
+            gini = (2 * (sorted_attention * index).sum(dim=1)) / (
+                n * sorted_attention.sum(dim=1) + 1e-8
+            ) - (n + 1) / n
             loss = -gini.mean()  # 取负数，因为我们要最大化基尼系数
 
         else:
@@ -277,7 +279,7 @@ class AttentionSmoothLoss(nn.Module):
             # 梯度范数
             grad_h = attention[:, 1:, :] - attention[:, :-1, :]
             grad_w = attention[:, :, 1:] - attention[:, :, :-1]
-            loss = (grad_h ** 2).mean() + (grad_w ** 2).mean()
+            loss = (grad_h**2).mean() + (grad_w**2).mean()
 
         else:
             raise ValueError(f"Unknown smooth method: {self.method}")

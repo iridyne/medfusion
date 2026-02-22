@@ -58,8 +58,10 @@ def setup_distributed(
         # 设置当前设备
         torch.cuda.set_device(local_rank)
 
-        logger.info(f"Initialized distributed training: rank={rank}, "
-                    f"local_rank={local_rank}, world_size={world_size}")
+        logger.info(
+            f"Initialized distributed training: rank={rank}, "
+            f"local_rank={local_rank}, world_size={world_size}"
+        )
     else:
         logger.info("Running in single-process mode")
 
@@ -297,8 +299,10 @@ class FSDPWrapper:
                 device_id=local_rank,
             )
 
-            logger.info(f"Wrapped model with FSDP (strategy={sharding_strategy}) "
-                        f"on device {local_rank}")
+            logger.info(
+                f"Wrapped model with FSDP (strategy={sharding_strategy}) "
+                f"on device {local_rank}"
+            )
         else:
             logger.info("FSDP not initialized, using single-process model")
 

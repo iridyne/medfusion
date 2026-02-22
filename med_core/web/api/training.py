@@ -1,11 +1,12 @@
 """训练任务 API"""
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from sqlalchemy.orm import Session
-from typing import List, Dict, Any
-from pydantic import BaseModel
-import uuid
 import logging
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from ..database import get_db_session
 from ..models import TrainingJob
@@ -18,14 +19,16 @@ logger = logging.getLogger(__name__)
 # Pydantic 模型
 class TrainingConfig(BaseModel):
     """训练配置"""
+
     experiment_name: str
-    training_model_config: Dict[str, Any]  # 重命名避免冲突
-    dataset_config: Dict[str, Any]
-    training_config: Dict[str, Any]
+    training_model_config: dict[str, Any]  # 重命名避免冲突
+    dataset_config: dict[str, Any]
+    training_config: dict[str, Any]
 
 
 class TrainingJobResponse(BaseModel):
     """训练任务响应"""
+
     id: int
     job_id: str
     status: str
@@ -42,9 +45,8 @@ class TrainingJobResponse(BaseModel):
 
 @router.post("/start")
 async def start_training(
-    config: TrainingConfig,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, Any]:
+    config: TrainingConfig, db: Session = Depends(get_db_session)
+) -> dict[str, Any]:
     """开始训练任务"""
     try:
         # 生成任务 ID
@@ -55,7 +57,7 @@ async def start_training(
             job_id=job_id,
             config=config.model_dump(),  # 使用 model_dump 替代 dict
             total_epochs=config.training_config.get("epochs", 100),
-            status="queued"
+            status="queued",
         )
         db.add(job)
         db.commit()
@@ -67,26 +69,24 @@ async def start_training(
 
         logger.info(f"训练任务已创建: {job_id}")
 
-        return {
-            "job_id": job_id,
-            "status": "queued",
-            "message": "训练任务已提交"
-        }
+        return {"job_id": job_id, "status": "queued", "message": "训练任务已提交"}
     except Exception as e:
         logger.error(f"创建训练任务失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/jobs")
 async def list_training_jobs(
-    skip: int = 0,
-    limit: int = 20,
-    db: Session = Depends(get_db_session)
-) -> List[TrainingJobResponse]:
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+) -> list[TrainingJobResponse]:
     """获取训练任务列表"""
-    jobs = db.query(TrainingJob).order_by(
-        TrainingJob.created_at.desc()
-    ).offset(skip).limit(limit).all()
+    jobs = (
+        db.query(TrainingJob)
+        .order_by(TrainingJob.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
     return [
         TrainingJobResponse(
@@ -98,7 +98,7 @@ async def list_training_jobs(
             total_epochs=job.total_epochs,
             current_loss=job.current_loss,
             current_accuracy=job.current_accuracy,
-            created_at=job.created_at.isoformat()
+            created_at=job.created_at.isoformat(),
         )
         for job in jobs
     ]
@@ -106,9 +106,8 @@ async def list_training_jobs(
 
 @router.get("/{job_id}/status")
 async def get_training_status(
-    job_id: str,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, Any]:
+    job_id: str, db: Session = Depends(get_db_session)
+) -> dict[str, Any]:
     """获取训练任务状态"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
 
@@ -132,9 +131,8 @@ async def get_training_status(
 
 @router.post("/{job_id}/pause")
 async def pause_training(
-    job_id: str,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, str]:
+    job_id: str, db: Session = Depends(get_db_session)
+) -> dict[str, str]:
     """暂停训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
 
@@ -153,9 +151,8 @@ async def pause_training(
 
 @router.post("/{job_id}/resume")
 async def resume_training(
-    job_id: str,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, str]:
+    job_id: str, db: Session = Depends(get_db_session)
+) -> dict[str, str]:
     """恢复训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
 
@@ -174,9 +171,8 @@ async def resume_training(
 
 @router.post("/{job_id}/stop")
 async def stop_training(
-    job_id: str,
-    db: Session = Depends(get_db_session)
-) -> Dict[str, str]:
+    job_id: str, db: Session = Depends(get_db_session)
+) -> dict[str, str]:
     """停止训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
 
@@ -207,9 +203,6 @@ async def training_websocket(websocket: WebSocket, job_id: str):
             logger.debug(f"收到消息: {data}")
 
             # 发送测试消息
-            await websocket.send_json({
-                "type": "ping",
-                "message": "pong"
-            })
+            await websocket.send_json({"type": "ping", "message": "pong"})
     except WebSocketDisconnect:
         logger.info(f"WebSocket 连接已断开: {job_id}")

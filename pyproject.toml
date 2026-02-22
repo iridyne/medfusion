@@ -3,7 +3,7 @@ name = "medfusion"
 version = "0.2.0"
 description = "A pluggable, modular framework for multimodal medical research with deep learning"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 authors = [
     { name = "Medical AI Research", email = "iridite@foxmail.com" }
 ]
@@ -47,6 +47,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
 wandb = ["wandb>=0.15.0"]
 lightning = ["pytorch-lightning>=2.0.0"]
 web = [
@@ -138,10 +144,3 @@ module = [
 ]
 ignore_missing_imports = true
 
-[dependency-groups]
-dev = [
-    "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
-]

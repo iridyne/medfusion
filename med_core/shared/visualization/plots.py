@@ -35,17 +35,19 @@ else:
 logger = logging.getLogger(__name__)
 
 # Publication-quality defaults
-plt.rcParams.update({
-    "font.size": 12,
-    "axes.titlesize": 14,
-    "axes.labelsize": 12,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "legend.fontsize": 10,
-    "figure.dpi": 150,
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
-})
+plt.rcParams.update(
+    {
+        "font.size": 12,
+        "axes.titlesize": 14,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+        "legend.fontsize": 10,
+        "figure.dpi": 150,
+        "savefig.dpi": 300,
+        "savefig.bbox": "tight",
+    }
+)
 
 
 def plot_roc_curve(
@@ -74,7 +76,9 @@ def plot_roc_curve(
 
     # Optimal threshold (Youden's J)
     optimal_idx = np.argmax(tpr - fpr)
-    ax.scatter(fpr[optimal_idx], tpr[optimal_idx], marker="o", color="red", s=100, zorder=5)
+    ax.scatter(
+        fpr[optimal_idx], tpr[optimal_idx], marker="o", color="red", s=100, zorder=5
+    )
 
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
@@ -119,7 +123,13 @@ def plot_pr_curve(
         fig = ax.get_figure()
 
     ax.plot(recall, precision, color="green", lw=2, label=f"AUC = {pr_auc:.4f}")
-    ax.axhline(y=baseline, color="navy", lw=2, linestyle="--", label=f"Baseline ({baseline:.2f})")
+    ax.axhline(
+        y=baseline,
+        color="navy",
+        lw=2,
+        linestyle="--",
+        label=f"Baseline ({baseline:.2f})",
+    )
 
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
@@ -174,10 +184,22 @@ def plot_confusion_matrix(
 
     if class_names is None:
         n_classes = cm.shape[0]
-        class_names = ["Negative", "Positive"] if n_classes == 2 else [f"Class {i}" for i in range(n_classes)]
+        class_names = (
+            ["Negative", "Positive"]
+            if n_classes == 2
+            else [f"Class {i}" for i in range(n_classes)]
+        )
 
     fig, ax = plt.subplots(figsize=figsize)
-    sns.heatmap(cm, annot=True, fmt=fmt, cmap=cmap, xticklabels=class_names, yticklabels=class_names, ax=ax)
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt=fmt,
+        cmap=cmap,
+        xticklabels=class_names,
+        yticklabels=class_names,
+        ax=ax,
+    )
     ax.set_xlabel("Predicted Label")
     ax.set_ylabel("True Label")
     ax.set_title(title)
@@ -219,7 +241,9 @@ def plot_training_curves(
         ax_loss.plot(epochs, val_losses, "r-", label="Val Loss", lw=2)
         best_epoch = np.argmin(val_losses) + 1
         ax_loss.axvline(x=best_epoch, color="gray", linestyle="--", alpha=0.5)
-        ax_loss.scatter([best_epoch], [min(val_losses)], color="red", s=100, zorder=5, marker="*")
+        ax_loss.scatter(
+            [best_epoch], [min(val_losses)], color="red", s=100, zorder=5, marker="*"
+        )
 
     ax_loss.set_xlabel("Epoch")
     ax_loss.set_ylabel("Loss")
@@ -235,12 +259,26 @@ def plot_training_curves(
 
         if train_metrics:
             for name, values in train_metrics.items():
-                ax_metrics.plot(epochs[:len(values)], values, "-", color=colors[color_idx], label=f"Train {name}", lw=2)
+                ax_metrics.plot(
+                    epochs[: len(values)],
+                    values,
+                    "-",
+                    color=colors[color_idx],
+                    label=f"Train {name}",
+                    lw=2,
+                )
                 color_idx = (color_idx + 1) % 10
 
         if val_metrics:
             for name, values in val_metrics.items():
-                ax_metrics.plot(epochs[:len(values)], values, "--", color=colors[color_idx], label=f"Val {name}", lw=2)
+                ax_metrics.plot(
+                    epochs[: len(values)],
+                    values,
+                    "--",
+                    color=colors[color_idx],
+                    label=f"Val {name}",
+                    lw=2,
+                )
                 color_idx = (color_idx + 1) % 10
 
         ax_metrics.set_xlabel("Epoch")
@@ -276,7 +314,9 @@ def plot_calibration_curve(
     y_true = np.asarray(y_true).ravel()
     y_prob = np.asarray(y_prob).ravel()
 
-    prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=n_bins, strategy="uniform")
+    prob_true, prob_pred = calibration_curve(
+        y_true, y_prob, n_bins=n_bins, strategy="uniform"
+    )
 
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot(prob_pred, prob_true, "s-", color="blue", lw=2, label="Model")
@@ -322,8 +362,12 @@ def plot_probability_distribution(
     y_prob = np.asarray(y_prob).ravel()
 
     fig, ax = plt.subplots(figsize=figsize)
-    ax.hist(y_prob[y_true == 0], bins=20, alpha=0.6, label="Negative (True)", color="blue")
-    ax.hist(y_prob[y_true == 1], bins=20, alpha=0.6, label="Positive (True)", color="red")
+    ax.hist(
+        y_prob[y_true == 0], bins=20, alpha=0.6, label="Negative (True)", color="blue"
+    )
+    ax.hist(
+        y_prob[y_true == 1], bins=20, alpha=0.6, label="Positive (True)", color="red"
+    )
 
     ax.set_xlabel("Predicted Probability (Positive)")
     ax.set_ylabel("Count")

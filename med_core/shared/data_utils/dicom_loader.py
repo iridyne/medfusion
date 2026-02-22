@@ -107,7 +107,9 @@ class DICOMLoader:
 
         return windowed
 
-    def _convert_to_hu(self, ds: pydicom.Dataset, pixel_array: np.ndarray) -> np.ndarray:
+    def _convert_to_hu(
+        self, ds: pydicom.Dataset, pixel_array: np.ndarray
+    ) -> np.ndarray:
         """
         Convert pixel values to Hounsfield Units.
 
@@ -147,7 +149,9 @@ class DICOMLoader:
 
         return scaled
 
-    def load_as_pil(self, path: str | Path, mode: Literal["L", "RGB"] = "L") -> Image.Image:
+    def load_as_pil(
+        self, path: str | Path, mode: Literal["L", "RGB"] = "L"
+    ) -> Image.Image:
         """
         Load DICOM and return as PIL Image.
 
