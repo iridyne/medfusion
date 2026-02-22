@@ -33,6 +33,7 @@ class TestSingleViewEndToEnd:
                 numerical_features=["age", "bmi"],
                 categorical_features=["gender"],
                 normalize_features=True,
+                transform=sample_csv_data["transform"],
             )
 
             val_dataset, _ = MedicalMultimodalDataset.from_csv(
@@ -44,6 +45,7 @@ class TestSingleViewEndToEnd:
                 categorical_features=["gender"],
                 normalize_features=True,
                 scaler=train_scaler,
+                transform=sample_csv_data["transform"],
             )
 
             assert len(train_dataset) > 0
@@ -115,6 +117,7 @@ class TestSingleViewEndToEnd:
                 target_column="label",
                 numerical_features=["age", "bmi"],
                 categorical_features=["gender"],
+                transform=sample_csv_data["transform"],
             )
 
             loader = DataLoader(dataset, batch_size=4)
@@ -151,6 +154,7 @@ class TestSingleViewEndToEnd:
                 image_column="image_path",
                 target_column="label",
                 numerical_features=["age", "bmi"],
+                transform=sample_csv_data["transform"],
             )
 
             train_loader = DataLoader(dataset, batch_size=4)
@@ -209,6 +213,7 @@ class TestMultiViewEndToEnd:
                 categorical_features=["gender"],
                 view_config=view_config,
                 normalize_features=True,
+                transform=sample_multiview_csv_data["transform"],
             )
 
             val_dataset, _ = MedicalMultiViewDataset.from_csv_multiview(
@@ -221,6 +226,7 @@ class TestMultiViewEndToEnd:
                 view_config=view_config,
                 normalize_features=True,
                 scaler=train_scaler,
+                transform=sample_multiview_csv_data["transform"],
             )
 
             assert len(train_dataset) > 0
@@ -246,9 +252,8 @@ class TestMultiViewEndToEnd:
 
             # 4. Create config
             config = create_ct_multiview_config(
-                data_root=str(sample_multiview_csv_data["image_dir"].parent),
-                csv_path=str(sample_multiview_csv_data["csv_path"]),
-                image_dir=str(sample_multiview_csv_data["image_dir"]),
+                view_names=["axial", "coronal", "sagittal"],
+                aggregator_type="attention",
             )
             config.training.num_epochs = 2
             config.training.mixed_precision = False
@@ -289,6 +294,7 @@ class TestMultiViewEndToEnd:
                 target_column="label",
                 numerical_features=["age", "bmi"],
                 view_config=view_config,
+                transform=sample_multiview_csv_data["transform"],
             )
 
             loader = DataLoader(dataset, batch_size=2)
@@ -334,6 +340,7 @@ class TestMultiViewEndToEnd:
                 target_column="label",
                 numerical_features=["age", "bmi"],
                 view_config=view_config,
+                transform=sample_multiview_csv_data["transform"],
             )
 
             train_loader = DataLoader(dataset, batch_size=2)
@@ -352,9 +359,8 @@ class TestMultiViewEndToEnd:
 
             # Create config with progressive views
             config = create_ct_multiview_config(
-                data_root=str(sample_multiview_csv_data["image_dir"].parent),
-                csv_path=str(sample_multiview_csv_data["csv_path"]),
-                image_dir=str(sample_multiview_csv_data["image_dir"]),
+                view_names=["axial", "coronal", "sagittal"],
+                aggregator_type="attention",
             )
             config.training.num_epochs = 3
             config.training.use_progressive_views = True
@@ -392,6 +398,7 @@ class TestModelSavingAndLoading:
                 image_column="image_path",
                 target_column="label",
                 numerical_features=["age", "bmi"],
+                transform=sample_csv_data["transform"],
             )
 
             loader = DataLoader(dataset, batch_size=4)
@@ -447,6 +454,7 @@ class TestModelSavingAndLoading:
                 target_column="label",
                 numerical_features=["age", "bmi"],
                 view_config=view_config,
+                transform=sample_multiview_csv_data["transform"],
             )
 
             loader = DataLoader(dataset, batch_size=2)

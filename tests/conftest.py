@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import torch
+from torchvision import transforms
 
 
 @pytest.fixture
@@ -27,6 +28,15 @@ def batch_size():
 def image_size():
     """Standard image size for tests."""
     return (224, 224)
+
+
+@pytest.fixture
+def default_transform():
+    """Default transform that converts PIL images to tensors."""
+    return transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+    ])
 
 
 @pytest.fixture
@@ -71,7 +81,7 @@ def temp_dir():
 
 
 @pytest.fixture
-def sample_csv_data(temp_dir):
+def sample_csv_data(temp_dir, default_transform):
     """Create sample CSV data for dataset testing."""
     import pandas as pd
     from PIL import Image
@@ -106,11 +116,12 @@ def sample_csv_data(temp_dir):
         "csv_path": csv_path,
         "image_dir": image_dir,
         "num_samples": len(data),
+        "transform": default_transform,  # Add default transform
     }
 
 
 @pytest.fixture
-def sample_multiview_csv_data(temp_dir):
+def sample_multiview_csv_data(temp_dir, default_transform):
     """Create sample multi-view CSV data for dataset testing."""
     import pandas as pd
     from PIL import Image
@@ -153,6 +164,7 @@ def sample_multiview_csv_data(temp_dir):
             "coronal": "coronal_path",
             "sagittal": "sagittal_path",
         },
+        "transform": default_transform,  # Add default transform
     }
 
 

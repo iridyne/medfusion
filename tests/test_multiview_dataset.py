@@ -35,6 +35,7 @@ class TestMultiViewDataset:
             numerical_features=["age", "bmi"],
             categorical_features=["gender"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         assert len(dataset) == sample_multiview_csv_data["num_samples"]
@@ -55,6 +56,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         sample = dataset[0]
@@ -84,6 +86,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         stats = dataset.get_statistics()
@@ -117,6 +120,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         # Should still load samples with at least the required view
@@ -137,6 +141,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         # All samples should have required views
@@ -168,6 +173,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         views, _, _ = dataset[0]
@@ -200,6 +206,7 @@ class TestMultiViewDataset:
             target_column="label",
             numerical_features=["age", "bmi"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         views, _, _ = dataset[0]
@@ -237,6 +244,7 @@ class TestMultiViewDataset:
             numerical_features=["age", "bmi"],
             categorical_features=["gender"],
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         feature_names = dataset.get_feature_names()
@@ -260,6 +268,7 @@ class TestMultiViewDataset:
             numerical_features=["age", "bmi"],
             patient_id_column="patient_id",
             view_config=config,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         patient_id = dataset.get_patient_id(0)
@@ -316,6 +325,7 @@ class TestMultiViewDataset:
             numerical_features=["age", "bmi"],
             view_config=config,
             normalize_features=True,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         # Create val dataset with same scaler
@@ -328,6 +338,7 @@ class TestMultiViewDataset:
             view_config=config,
             normalize_features=True,
             scaler=train_scaler,
+            transform=sample_multiview_csv_data["transform"],
         )
 
         assert val_scaler is train_scaler
