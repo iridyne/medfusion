@@ -251,13 +251,13 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str):
         logger.error(f"WebSocket error for workflow {workflow_id}: {e}")
         try:
             await websocket.send_json({"type": "error", "error": str(e)})
-        except Exception:
-            pass
+        except Exception as send_error:
+            logger.debug(f"Failed to send error message: {send_error}")
     finally:
         try:
             await websocket.close()
-        except Exception:
-            pass
+        except Exception as close_error:
+            logger.debug(f"Failed to close websocket: {close_error}")
 
 
 @router.get("/")

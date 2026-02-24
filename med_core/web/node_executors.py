@@ -47,6 +47,7 @@ class NodeExecutor:
         Returns:
             执行结果字典
         """
+        # TODO: 子类需要实现具体的执行逻辑
         raise NotImplementedError
 
 

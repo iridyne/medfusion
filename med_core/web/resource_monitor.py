@@ -95,8 +95,8 @@ class ResourceMonitor:
         if self.gpu_available and PYNVML_AVAILABLE:
             try:
                 pynvml.nvmlShutdown()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to shutdown NVML during cleanup: {e}")
 
     async def start(self) -> None:
         """启动监控"""
@@ -191,7 +191,8 @@ class ResourceMonitor:
                     temperature = pynvml.nvmlDeviceGetTemperature(
                         handle, pynvml.NVML_TEMPERATURE_GPU
                     )
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get GPU temperature: {e}")
                     temperature = None
 
                 # 功率
@@ -202,7 +203,8 @@ class ResourceMonitor:
                     power_limit = (
                         pynvml.nvmlDeviceGetPowerManagementLimit(handle) / 1000.0
                     )
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Failed to get GPU power info: {e}")
                     power_usage = None
                     power_limit = None
 

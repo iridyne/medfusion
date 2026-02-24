@@ -149,8 +149,9 @@ class GatedFusion(BaseFusion):
         # Apply dropout
         fused = self.dropout(fused)
 
-        # Store gate values for analysis
-        self._last_gate_values = z.detach()
+        # Store gate values for analysis (only in eval mode to prevent memory leak)
+        if not self.training:
+            self._last_gate_values = z.detach()
 
         aux_outputs = {
             "gate_values": z,
@@ -260,8 +261,9 @@ class AttentionFusion(BaseFusion):
         # Extract CLS token as fused representation
         fused = tokens[:, 0, :]  # (B, D)
 
-        # Store attention weights
-        self._last_attention_weights = attn_weights.detach()
+        # Store attention weights (only in eval mode to prevent memory leak)
+        if not self.training:
+            self._last_attention_weights = attn_weights.detach()
 
         aux_outputs = {"attention_weights": attn_weights}
 
@@ -366,9 +368,10 @@ class CrossAttentionFusion(BaseFusion):
         concat = torch.cat([v2t, t2v], dim=1)  # (B, 2D)
         fused = self.output_proj(concat)  # (B, D)
 
-        # Store attention weights
-        self._v2t_attn = v2t_attn.detach()
-        self._t2v_attn = t2v_attn.detach()
+        # Store attention weights (only in eval mode to prevent memory leak)
+        if not self.training:
+            self._v2t_attn = v2t_attn.detach()
+            self._t2v_attn = t2v_attn.detach()
 
         aux_outputs = {
             "vision_to_tabular_attn": v2t_attn,

@@ -303,7 +303,7 @@ class BaseTrainer(ABC):
             self._save_checkpoint("last.pth", val_metrics)
 
     def _save_checkpoint(self, filename: str, metrics: dict[str, float]):
-        """Save model checkpoint."""
+        """Save model checkpoint with atomic write to prevent corruption."""
         checkpoint = {
             "epoch": self.current_epoch,
             "global_step": self.global_step,
@@ -314,7 +314,12 @@ class BaseTrainer(ABC):
         }
 
         path = self.checkpoint_dir / filename
-        torch.save(checkpoint, path)
+        temp_path = path.with_suffix(".tmp")
+
+        # Write to temporary file first
+        torch.save(checkpoint, temp_path)
+        # Atomic rename
+        temp_path.replace(path)
 
     def load_checkpoint(self, path: str | Path):
         """Load model checkpoint."""
@@ -322,7 +327,7 @@ class BaseTrainer(ABC):
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-        checkpoint = torch.load(path, map_location=self.device)
+        checkpoint = torch.load(path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.current_epoch = checkpoint["epoch"]

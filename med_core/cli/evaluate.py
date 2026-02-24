@@ -138,7 +138,7 @@ def evaluate() -> None:
 
     logger.info(f"Loading weights from {args.checkpoint}")
     try:
-        checkpoint = torch.load(args.checkpoint, map_location=device)
+        checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=True)
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         model.eval()

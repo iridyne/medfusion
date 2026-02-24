@@ -450,7 +450,7 @@ def load_checkpoint(
     """
     # 加载检查点
     map_location = {"cuda:0": f"cuda:{get_rank()}"}
-    checkpoint = torch.load(filepath, map_location=map_location)
+    checkpoint = torch.load(filepath, map_location=map_location, weights_only=True)
 
     # 加载模型状态
     if isinstance(model, (DDPWrapper, FSDPWrapper)):

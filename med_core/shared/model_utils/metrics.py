@@ -292,7 +292,8 @@ def calculate_confidence_intervals(
         try:
             auc_scores.append(roc_auc_score(y_true_boot, y_prob_boot))
             accuracy_scores.append(accuracy_score(y_true_boot, y_pred_boot))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Bootstrap iteration failed: {e}")
             continue
 
     ci_results = {}

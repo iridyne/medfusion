@@ -284,7 +284,7 @@ class CheckpointManager:
 
             # 只加载权重字典，不加载模型结构
             # 模型结构需要在恢复时重新构建
-            state_dict = torch.load(model_file, map_location="cpu")
+            state_dict = torch.load(model_file, map_location="cpu", weights_only=True)
             models[f"{node_id}_{model_type}"] = state_dict
             logger.debug(f"Model weights loaded: {model_file}")
 

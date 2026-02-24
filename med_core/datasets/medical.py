@@ -190,6 +190,19 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
             else:
                 img_path = image_dir / img_name
 
+            # Resolve to absolute path and validate it's within image_dir
+            try:
+                img_path = img_path.resolve()
+                # Ensure the resolved path is within image_dir (prevent path traversal)
+                if not Path(img_name).is_absolute():
+                    image_dir_resolved = image_dir.resolve()
+                    if not str(img_path).startswith(str(image_dir_resolved)):
+                        logger.warning(f"Path traversal attempt detected: {img_name}")
+                        continue
+            except (OSError, RuntimeError) as e:
+                logger.warning(f"Invalid path {img_name}: {e}")
+                continue
+
             if img_path.exists():
                 image_paths.append(img_path)
                 valid_indices.append(idx)
