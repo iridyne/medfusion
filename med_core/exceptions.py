@@ -24,7 +24,7 @@ class MedCoreError(Exception):
         error_code: str | None = None,
         context: dict[str, Any] | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         self.error_code = error_code or "E000"
         self.context = context or {}
         self.suggestion = suggestion
@@ -52,7 +52,7 @@ class ConfigurationError(MedCoreError):
         config_path: str | None = None,
         invalid_value: Any = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if config_path:
             context["config_path"] = config_path
@@ -76,7 +76,7 @@ class DatasetError(MedCoreError):
         dataset_path: str | None = None,
         sample_id: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if dataset_path:
             context["dataset_path"] = dataset_path
@@ -94,7 +94,7 @@ class DatasetError(MedCoreError):
 class DatasetNotFoundError(DatasetError):
     """Raised when dataset file or directory is not found."""
 
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         super().__init__(
             message=f"Dataset not found: {path}",
             dataset_path=path,
@@ -106,7 +106,7 @@ class DatasetNotFoundError(DatasetError):
 class MissingColumnError(DatasetError):
     """Raised when required column is missing from dataset."""
 
-    def __init__(self, column: str, available_columns: list[str]):
+    def __init__(self, column: str, available_columns: list[str]) -> None:
         super().__init__(
             message=f"Required column '{column}' not found in dataset",
             suggestion=f"Available columns: {', '.join(available_columns)}",
@@ -124,7 +124,7 @@ class ModelError(MedCoreError):
         message: str,
         model_name: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if model_name:
             context["model_name"] = model_name
@@ -145,7 +145,7 @@ class BackboneError(ModelError):
         message: str,
         backbone_name: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         super().__init__(
             message=message, model_name=backbone_name, suggestion=suggestion
         )
@@ -155,7 +155,7 @@ class BackboneError(ModelError):
 class BackboneNotFoundError(BackboneError):
     """Raised when requested backbone is not available."""
 
-    def __init__(self, backbone_name: str, available_backbones: list[str]):
+    def __init__(self, backbone_name: str, available_backbones: list[str]) -> None:
         super().__init__(
             message=f"Backbone '{backbone_name}' not found",
             backbone_name=backbone_name,
@@ -173,7 +173,7 @@ class FusionError(ModelError):
         message: str,
         fusion_type: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         super().__init__(message=message, model_name=fusion_type, suggestion=suggestion)
         self.error_code = "E320"
 
@@ -181,7 +181,7 @@ class FusionError(ModelError):
 class FusionNotFoundError(FusionError):
     """Raised when requested fusion strategy is not available."""
 
-    def __init__(self, fusion_type: str, available_fusions: list[str]):
+    def __init__(self, fusion_type: str, available_fusions: list[str]) -> None:
         super().__init__(
             message=f"Fusion type '{fusion_type}' not found",
             fusion_type=fusion_type,
@@ -200,7 +200,7 @@ class TrainingError(MedCoreError):
         epoch: int | None = None,
         step: int | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if epoch is not None:
             context["epoch"] = epoch
@@ -223,7 +223,7 @@ class CheckpointError(MedCoreError):
         message: str,
         checkpoint_path: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if checkpoint_path:
             context["checkpoint_path"] = checkpoint_path
@@ -239,7 +239,7 @@ class CheckpointError(MedCoreError):
 class CheckpointNotFoundError(CheckpointError):
     """Raised when checkpoint file is not found."""
 
-    def __init__(self, checkpoint_path: str):
+    def __init__(self, checkpoint_path: str) -> None:
         super().__init__(
             message=f"Checkpoint not found: {checkpoint_path}",
             checkpoint_path=checkpoint_path,
@@ -256,7 +256,7 @@ class PreprocessingError(MedCoreError):
         message: str,
         image_path: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if image_path:
             context["image_path"] = image_path
@@ -277,7 +277,7 @@ class EvaluationError(MedCoreError):
         message: str,
         metric_name: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if metric_name:
             context["metric_name"] = metric_name
@@ -300,7 +300,7 @@ class InvalidInputError(MedCoreError):
         expected_type: str | None = None,
         actual_type: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if input_name:
             context["input_name"] = input_name
@@ -326,7 +326,7 @@ class DimensionMismatchError(InvalidInputError):
         actual: tuple,
         tensor_name: str = "",
         suggestion: str | None = None,
-    ):
+    ) -> None:
         self.expected = expected
         self.actual = actual
 
@@ -350,7 +350,7 @@ class DimensionMismatchError(InvalidInputError):
 class MissingDependencyError(MedCoreError):
     """Raised when a required dependency is not installed."""
 
-    def __init__(self, package: str, install_cmd: str = ""):
+    def __init__(self, package: str, install_cmd: str = "") -> None:
         self.package = package
 
         if not install_cmd:
@@ -372,7 +372,7 @@ class AttentionSupervisionError(MedCoreError):
         message: str,
         attention_type: str | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context = {}
         if attention_type:
             context["attention_type"] = attention_type
@@ -394,7 +394,7 @@ class MultiViewError(MedCoreError):
         view_name: str | None = None,
         num_views: int | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         context: dict[str, str | int] = {}
         if view_name:
             context["view_name"] = view_name
@@ -417,7 +417,7 @@ class IncompatibleConfigError(ConfigurationError):
         message: str,
         conflicting_options: list[str] | None = None,
         suggestion: str | None = None,
-    ):
+    ) -> None:
         super().__init__(message=message, suggestion=suggestion)
         self.error_code = "E101"
         if conflicting_options:

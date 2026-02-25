@@ -99,7 +99,7 @@ class AttentionAggregator(nn.Module):
         input_dim: int,
         attention_dim: int = 128,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -161,7 +161,7 @@ class GatedAttentionAggregator(nn.Module):
         input_dim: int,
         attention_dim: int = 128,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -239,7 +239,7 @@ class DeepSetsAggregator(nn.Module):
         hidden_dim: int = 256,
         output_dim: int | None = None,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -310,7 +310,7 @@ class TransformerAggregator(nn.Module):
         num_heads: int = 8,
         num_layers: int = 2,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -392,7 +392,7 @@ class MILAggregator(nn.Module):
         num_heads: int = 8,
         num_layers: int = 2,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim

@@ -47,7 +47,7 @@ class ResNetBackbone(BaseVisionBackbone):
         attention_type: str = "cbam",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -241,7 +241,7 @@ class MobileNetBackbone(BaseVisionBackbone):
         attention_type: str = "cbam",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -366,7 +366,7 @@ class EfficientNetBackbone(BaseVisionBackbone):
         attention_type: str = "cbam",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -468,7 +468,7 @@ class ViTBackbone(BaseVisionBackbone):
         freeze: bool = False,
         feature_dim: int = 128,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -609,7 +609,7 @@ class SwinBackbone(BaseVisionBackbone):
         freeze: bool = False,
         feature_dim: int = 128,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -694,7 +694,7 @@ class ConvNeXtBackbone(BaseVisionBackbone):
         attention_type: str = "none",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -819,7 +819,7 @@ class MaxViTBackbone(BaseVisionBackbone):
         freeze: bool = False,
         feature_dim: int = 128,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -952,7 +952,7 @@ class EfficientNetV2Backbone(BaseVisionBackbone):
         attention_type: str = "none",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:
@@ -1104,7 +1104,7 @@ class RegNetBackbone(BaseVisionBackbone):
         attention_type: str = "none",
         use_roi_guidance: bool = False,
         enable_attention_supervision: bool = False,
-    ):
+    ) -> None:
         super().__init__(pretrained=pretrained, freeze=freeze, feature_dim=feature_dim)
 
         if variant not in self.VARIANTS:

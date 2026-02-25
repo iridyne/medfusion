@@ -31,7 +31,7 @@ class ConcatenateFusion(BaseFusion):
         tabular_dim: int,
         output_dim: int = 96,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         """
         Initialize concatenation fusion.
 
@@ -87,7 +87,7 @@ class GatedFusion(BaseFusion):
         initial_tabular_weight: float = 0.7,
         learnable_weights: bool = True,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         """
         Initialize gated fusion.
 
@@ -184,7 +184,7 @@ class AttentionFusion(BaseFusion):
         output_dim: int = 96,
         num_heads: int = 4,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         """
         Initialize attention fusion.
 
@@ -289,7 +289,7 @@ class CrossAttentionFusion(BaseFusion):
         output_dim: int = 96,
         num_heads: int = 4,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         """
         Initialize cross-attention fusion.
 
@@ -398,7 +398,7 @@ class BilinearFusion(BaseFusion):
         output_dim: int = 96,
         rank: int = 16,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         """
         Initialize bilinear fusion.
 

@@ -95,7 +95,7 @@ class ROIGuidedSpatialAttention(nn.Module):
         roi_top_ratio: float = 0.85,  # Focus on top 85% (avoid bottom watermarks)
         roi_side_ratio: float = 0.85,  # Focus on central 85% width
         suppression_weight: float = 2.0,
-    ):
+    ) -> None:
         super().__init__()
         padding = kernel_size // 2
         self.conv = nn.Conv2d(2, 1, kernel_size, padding=padding, bias=False)
@@ -183,7 +183,7 @@ class CBAM(nn.Module):
         use_spatial: bool = True,
         use_roi_guidance: bool = False,
         return_attention_weights: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.channel_attention = ChannelAttention(in_channels, reduction_ratio)
         self.use_spatial = use_spatial

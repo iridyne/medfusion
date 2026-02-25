@@ -209,7 +209,7 @@ class ReportGenerator:
 
     def _add_executive_summary(
         self, doc: Document, experiments: list[dict], comparison_data: dict
-    ):
+    ) -> None:
         """Add executive summary section to Word document."""
         # Find best performing experiment
         best_exp = max(
@@ -265,7 +265,7 @@ class ReportGenerator:
 
     def _add_performance_comparison(
         self, doc: Document, experiments: list[dict], comparison_data: dict
-    ):
+    ) -> None:
         """Add performance comparison table to Word document."""
         # Create metrics table
         table = doc.add_table(rows=1, cols=6)
@@ -328,7 +328,7 @@ class ReportGenerator:
 
     def _add_visualizations_to_word(
         self, doc: Document, experiments: list[dict], comparison_data: dict
-    ):
+    ) -> None:
         """Add visualizations to Word document."""
         # Generate metrics comparison chart
         chart_path = self._generate_metrics_chart(experiments)
@@ -346,7 +346,7 @@ class ReportGenerator:
 
     def _add_conclusions(
         self, doc: Document, experiments: list[dict], comparison_data: dict
-    ):
+    ) -> None:
         """Add conclusions and recommendations section."""
         best_exp = max(
             experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0)
@@ -378,7 +378,7 @@ class ReportGenerator:
         styles: dict,
         experiments: list[dict],
         comparison_data: dict,
-    ):
+    ) -> None:
         """Add executive summary to PDF."""
         best_exp = max(
             experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0)
@@ -399,7 +399,7 @@ class ReportGenerator:
 
     def _add_experiment_details_pdf(
         self, elements: list, styles: dict, experiments: list[dict]
-    ):
+    ) -> None:
         """Add experiment details table to PDF."""
         # Prepare table data
         data = [["Experiment", "Backbone", "Fusion", "Status", "Duration"]]
@@ -443,7 +443,7 @@ class ReportGenerator:
         styles: dict,
         experiments: list[dict],
         comparison_data: dict,
-    ):
+    ) -> None:
         """Add performance comparison table to PDF."""
         # Prepare table data
         data = [["Experiment", "Accuracy", "Precision", "Recall", "F1 Score", "AUC"]]
@@ -486,7 +486,7 @@ class ReportGenerator:
 
     def _add_visualizations_to_pdf(
         self, elements: list, experiments: list[dict], comparison_data: dict
-    ):
+    ) -> None:
         """Add visualizations to PDF."""
         # Generate and add metrics chart
         chart_path = self._generate_metrics_chart(experiments)

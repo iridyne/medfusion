@@ -222,7 +222,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
 
     def on_epoch_end(
         self, train_metrics: dict[str, float], val_metrics: dict[str, float]
-    ):
+    ) -> None:
         """Log additional multi-view specific metrics."""
         super().on_epoch_end(train_metrics, val_metrics)
 

@@ -132,7 +132,7 @@ class CachedDataset(Dataset):
         cache_size: int = 1000,
         cache_images: bool = True,
         cache_tabular: bool = True,
-    ):
+    ) -> None:
         self.dataset = dataset
         self.cache_images = cache_images
         self.cache_tabular = cache_tabular
@@ -205,7 +205,7 @@ class PrefetchDataset(Dataset):
         dataset: Dataset,
         prefetch_size: int = 10,
         num_workers: int = 2,
-    ):
+    ) -> None:
         self.dataset = dataset
         self.prefetch_size = prefetch_size
         self.num_workers = num_workers

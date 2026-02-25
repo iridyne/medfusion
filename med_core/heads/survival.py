@@ -36,7 +36,7 @@ class CoxSurvivalHead(nn.Module):
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         use_batch_norm: bool = False,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -104,7 +104,7 @@ class DiscreteTimeSurvivalHead(nn.Module):
         num_time_bins: int,
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -207,7 +207,7 @@ class DeepSurvivalHead(nn.Module):
         hidden_dim: int = 256,
         num_layers: int = 2,
         dropout: float = 0.3,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -319,7 +319,7 @@ class MultiTaskSurvivalHead(nn.Module):
         num_time_bins: int,
         hidden_dim: int = 256,
         dropout: float = 0.5,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -411,7 +411,7 @@ class RankingSurvivalHead(nn.Module):
         input_dim: int,
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim

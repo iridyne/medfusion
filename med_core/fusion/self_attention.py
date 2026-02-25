@@ -39,7 +39,7 @@ class SelfAttentionFusion(nn.Module):
         output_dim: int,
         num_heads: int = 8,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.dim1 = dim1
@@ -139,7 +139,7 @@ class AdditiveAttentionFusion(nn.Module):
         output_dim: int,
         attention_dim: int = 128,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.dim1 = dim1
@@ -223,7 +223,7 @@ class BilinearAttentionFusion(nn.Module):
         dim2: int,
         output_dim: int,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.dim1 = dim1
@@ -301,7 +301,7 @@ class GatedAttentionFusion(nn.Module):
         dim2: int,
         output_dim: int,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.dim1 = dim1
@@ -393,7 +393,7 @@ class MultimodalSelfAttentionFusion(nn.Module):
         output_dim: int,
         num_heads: int = 8,
         dropout: float = 0.1,
-    ):
+    ) -> None:
         super().__init__()
 
         self.modality_dims = modality_dims

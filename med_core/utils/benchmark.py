@@ -80,7 +80,7 @@ class PerformanceBenchmark:
         warmup_iterations: int = 10,
         test_iterations: int = 100,
         device: str = "cpu",
-    ):
+    ) -> None:
         self.name = name
         self.warmup_iterations = warmup_iterations
         self.test_iterations = test_iterations
@@ -182,7 +182,7 @@ class DataLoaderBenchmark:
         batch_size: int = 32,
         num_workers: int = 0,
         device: str = "cpu",
-    ):
+    ) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -269,7 +269,7 @@ class ModelBenchmark:
         model: nn.Module,
         input_shape: tuple[int, ...],
         device: str = "cpu",
-    ):
+    ) -> None:
         self.model = model.to(device)
         self.model.eval()
         self.input_shape = input_shape

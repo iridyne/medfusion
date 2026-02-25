@@ -38,7 +38,7 @@ class SEAttention(nn.Module):
         channels: int,
         reduction: int = 16,
         activation: str = "relu",
-    ):
+    ) -> None:
         super().__init__()
         self.channels = channels
         self.reduction = reduction
@@ -138,7 +138,7 @@ class ECAAttention(nn.Module):
         kernel_size: int | None = None,
         gamma: int = 2,
         b: int = 1,
-    ):
+    ) -> None:
         super().__init__()
         self.channels = channels
 
@@ -307,7 +307,7 @@ class CBAM(nn.Module):
         channels: int,
         reduction: int = 16,
         spatial_kernel: int = 7,
-    ):
+    ) -> None:
         super().__init__()
         self.channel_attention = SEAttention(channels, reduction)
         self.spatial_attention = SpatialAttention(spatial_kernel)
@@ -359,7 +359,7 @@ class MultiHeadSelfAttention(nn.Module):
         qkv_bias: bool = False,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
         assert dim % num_heads == 0, "dim must be divisible by num_heads"
 
@@ -458,7 +458,7 @@ class TransformerAttention2D(nn.Module):
         qkv_bias: bool = False,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.channels = channels
         self.attention = MultiHeadSelfAttention(

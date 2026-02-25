@@ -137,7 +137,7 @@ class WindowAttention(nn.Module):
         qkv_bias: bool = True,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.window_size = window_size
@@ -220,7 +220,7 @@ class SwinTransformerBlock(nn.Module):
         drop_path: float = 0.0,
         norm_layer: type = nn.LayerNorm,
         use_checkpoint: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads
@@ -297,7 +297,7 @@ class PatchMerging(nn.Module):
 
     def __init__(
         self, dim: int, norm_layer: type = nn.LayerNorm, spatial_dims: int = 3
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.spatial_dims = spatial_dims
@@ -360,7 +360,7 @@ class BasicLayer(nn.Module):
         norm_layer: type = nn.LayerNorm,
         downsample: nn.Module | None = None,
         use_checkpoint: bool = False,
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.depth = depth
@@ -441,7 +441,7 @@ class SwinTransformer3D(nn.Module):
         use_checkpoint: bool = False,
         spatial_dims: int = 3,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__()
         if window_size is None:
             window_size = [[4, 4, 4], [4, 4, 4]]
@@ -544,7 +544,7 @@ class PatchEmbed2D(nn.Module):
         patch_size: int = 4,
         in_channels: int = 3,
         embed_dim: int = 96,
-    ):
+    ) -> None:
         super().__init__()
         self.img_size = img_size
         self.patch_size = patch_size
@@ -634,7 +634,7 @@ class WindowAttention2D(nn.Module):
         qkv_bias: bool = True,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.window_size = window_size
@@ -751,7 +751,7 @@ class SwinTransformerBlock2D(nn.Module):
         drop: float = 0.0,
         attn_drop: float = 0.0,
         drop_path: float = 0.0,
-    ):
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.num_heads = num_heads

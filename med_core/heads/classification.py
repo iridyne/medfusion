@@ -37,7 +37,7 @@ class ClassificationHead(nn.Module):
         dropout: float = 0.5,
         use_batch_norm: bool = False,
         activation: str = "relu",
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -111,7 +111,7 @@ class MultiLabelClassificationHead(nn.Module):
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         use_independent_classifiers: bool = False,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -204,7 +204,7 @@ class OrdinalClassificationHead(nn.Module):
         num_classes: int,
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -315,7 +315,7 @@ class AttentionClassificationHead(nn.Module):
         num_classes: int,
         attention_dim: int = 128,
         dropout: float = 0.5,
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
@@ -403,7 +403,7 @@ class EnsembleClassificationHead(nn.Module):
         hidden_dims: list[int] | None = None,
         dropout: float = 0.5,
         aggregation: str = "mean",
-    ):
+    ) -> None:
         super().__init__()
 
         self.input_dim = input_dim
