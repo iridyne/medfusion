@@ -34,7 +34,7 @@ def check_web_ui_exists() -> bool:
     return static_dir.exists() and (static_dir / "index.html").exists()
 
 
-def initialize_web_server():
+def initialize_web_server() -> None:
     """初始化 Web 服务器"""
     with Progress(
         SpinnerColumn(),
@@ -71,7 +71,7 @@ def web():
 @click.option("--token", default=None, help="自定义 Token")
 @click.option("--no-browser", is_flag=True, help="不自动打开浏览器")
 @click.option("--reload", is_flag=True, help="开发模式（自动重载）")
-def start(host: str, port: int, auth: bool, token: str, no_browser: bool, reload: bool):
+def start(host: str, port: int | None, auth: bool, token: str | None, no_browser: bool, reload: bool) -> None:
     """启动 MedFusion Web UI"""
 
     # 初始化
@@ -126,7 +126,7 @@ def start(host: str, port: int, auth: bool, token: str, no_browser: bool, reload
 
 
 @web.command()
-def info():
+def info() -> None:
     """显示 Web UI 信息"""
     console.print("[bold]MedFusion Web UI[/bold]")
     console.print(f"版本: {settings.version}")
@@ -147,7 +147,7 @@ def data():
 
 
 @data.command("info")
-def data_info():
+def data_info() -> None:
     """显示数据目录信息"""
     data_dir = settings.data_dir
 
@@ -176,7 +176,7 @@ def data_info():
 
 @data.command()
 @click.argument("output", type=click.Path())
-def backup(output: str):
+def backup(output: str) -> None:
     """备份数据"""
     import shutil
 
@@ -191,7 +191,7 @@ def backup(output: str):
 @data.command()
 @click.option("--keep-models", is_flag=True, help="保留模型文件")
 @click.confirmation_option(prompt="确定要清理数据吗？")
-def clean(keep_models: bool):
+def clean(keep_models: bool) -> None:
     """清理旧数据"""
     import shutil
 

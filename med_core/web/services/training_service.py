@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 class TrainingService:
     """训练任务管理服务"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.executor = ProcessPoolExecutor(max_workers=4)
         self.jobs = {}
 
-    def submit_job(self, job_id: str, config: dict[str, Any]):
+    def submit_job(self, job_id: str, config: dict[str, Any]) -> None:
         """提交训练任务"""
         logger.info(f"提交训练任务: {job_id}")
 
@@ -24,7 +24,7 @@ class TrainingService:
 
         logger.info(f"训练任务已提交到进程池: {job_id}")
 
-    def _run_training(self, job_id: str, config: dict[str, Any]):
+    def _run_training(self, job_id: str, config: dict[str, Any]) -> dict[str, Any]:
         """运行训练任务（在子进程中执行）"""
         try:
             logger.info(f"开始训练任务: {job_id}")
@@ -61,7 +61,7 @@ class TrainingService:
         else:
             return {"status": "queued"}
 
-    def stop_job(self, job_id: str):
+    def stop_job(self, job_id: str) -> None:
         """停止任务"""
         if job_id in self.jobs:
             future = self.jobs[job_id]

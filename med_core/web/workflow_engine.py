@@ -99,7 +99,7 @@ class WorkflowEngine:
         data_dir: Path | None = None,
         enable_checkpoints: bool = True,
         enable_monitoring: bool = True,
-    ):
+    ) -> None:
         self.nodes: dict[str, Node] = {}
         self.edges: list[Edge] = []
         self.adjacency_list: dict[str, list[str]] = defaultdict(list)
