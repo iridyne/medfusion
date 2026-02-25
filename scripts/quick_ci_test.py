@@ -2,6 +2,7 @@
 """
 简化的 CI 本地测试脚本
 """
+
 import subprocess
 import sys
 from pathlib import Path

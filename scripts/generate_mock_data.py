@@ -51,7 +51,9 @@ def generate_mock_images(output_dir: Path, num_images: int = 10, image_size: int
     return image_paths
 
 
-def generate_mock_metadata(output_dir: Path, image_paths: list[str], num_samples: int = 10):
+def generate_mock_metadata(
+    output_dir: Path, image_paths: list[str], num_samples: int = 10
+):
     """
     Generate mock patient metadata CSV.
 
@@ -109,7 +111,9 @@ def main():
     print(f"Output directory: {output_dir.absolute()}")
 
     # Generate images
-    print(f"\n1. Generating {args.num_samples} images ({args.image_size}x{args.image_size})...")
+    print(
+        f"\n1. Generating {args.num_samples} images ({args.image_size}x{args.image_size})..."
+    )
     image_paths = generate_mock_images(
         output_dir, num_images=args.num_samples, image_size=args.image_size
     )
@@ -117,7 +121,9 @@ def main():
 
     # Generate metadata
     print("\n2. Generating metadata CSV...")
-    csv_path = generate_mock_metadata(output_dir, image_paths, num_samples=args.num_samples)
+    csv_path = generate_mock_metadata(
+        output_dir, image_paths, num_samples=args.num_samples
+    )
     print(f"   ✓ Metadata saved to {csv_path}")
 
     # Summary
@@ -126,12 +132,14 @@ def main():
     print("=" * 60)
     print("\nGenerated files:")
     print(f"  - {args.num_samples} images in {output_dir / 'images'}")
-    print("  - metadata.csv with columns: patient_id, image_path, age, gender, diagnosis")
+    print(
+        "  - metadata.csv with columns: patient_id, image_path, age, gender, diagnosis"
+    )
     print("\nTo use this data:")
     print("  1. Update your config YAML:")
     print("     data:")
-    print(f"       csv_path: \"{csv_path}\"")
-    print(f"       image_dir: \"{output_dir}\"")
+    print(f'       csv_path: "{csv_path}"')
+    print(f'       image_dir: "{output_dir}"')
     print("  2. Run training:")
     print("     uv run med-train --config configs/your_config.yaml")
 

@@ -12,25 +12,25 @@ sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MedFusion'
-copyright = '2024-2026, MedFusion Team'
-author = 'MedFusion Team'
-release = '0.2.0'
+project = "MedFusion"
+copyright = "2024-2026, MedFusion Team"
+author = "MedFusion Team"
+release = "0.2.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.githubpages',
-    'myst_parser',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "sphinx.ext.coverage",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.githubpages",
+    "myst_parser",
 ]
 
 # Napoleon settings
@@ -51,14 +51,14 @@ napoleon_attr_annotations = True
 
 # Autodoc settings
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
-autodoc_typehints = 'description'
-autodoc_typehints_description_target = 'documented'
+autodoc_typehints = "description"
+autodoc_typehints_description_target = "documented"
 
 # Autosummary settings
 autosummary_generate = True
@@ -80,14 +80,14 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'furo'
-html_static_path = ['_static']
+html_theme = "furo"
+html_static_path = ["_static"]
 
 html_theme_options = {
     "light_css_variables": {
@@ -112,9 +112,9 @@ html_favicon = None  # 可以添加 favicon 路径
 
 # Intersphinx mapping
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'torch': ('https://pytorch.org/docs/stable/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
+    "python": ("https://docs.python.org/3", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 # Todo extension

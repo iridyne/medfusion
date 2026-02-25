@@ -114,7 +114,7 @@ def main():
     config.data.image_dir = str(data_dir / "images")
     config.logging.output_dir = "outputs/full_workflow_test"
 
-    logger.info(f"✅ 配置加载成功")
+    logger.info("✅ 配置加载成功")
     logger.info(f"  - 实验名称: {config.experiment_name}")
     logger.info(f"  - 模型: {config.model.vision.backbone}")
     logger.info(f"  - 融合方式: {config.model.fusion.fusion_type}")
@@ -155,7 +155,7 @@ def main():
         num_workers=0,  # 避免多进程问题
     )
 
-    logger.info(f"✅ 数据集准备完成")
+    logger.info("✅ 数据集准备完成")
     logger.info(f"  - 训练集: {len(train_ds)} 样本")
     logger.info(f"  - 验证集: {len(val_ds)} 样本")
     logger.info(f"  - 测试集: {len(test_ds)} 样本")
@@ -194,7 +194,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
-    logger.info(f"✅ 模型创建完成")
+    logger.info("✅ 模型创建完成")
     logger.info(f"  - 设备: {device}")
     logger.info(f"  - 参数量: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -204,7 +204,9 @@ def main():
     logger.info("=" * 60)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=config.training.optimizer.learning_rate)
+    optimizer = optim.Adam(
+        model.parameters(), lr=config.training.optimizer.learning_rate
+    )
 
     for epoch in range(config.training.num_epochs):
         model.train()
@@ -238,9 +240,11 @@ def main():
         train_loss = total_loss / len(dataloaders["train"])
         train_acc = 100.0 * correct / total
 
-        logger.info(f"Epoch {epoch + 1}/{config.training.num_epochs} - Loss: {train_loss:.4f}, Acc: {train_acc:.2f}%")
+        logger.info(
+            f"Epoch {epoch + 1}/{config.training.num_epochs} - Loss: {train_loss:.4f}, Acc: {train_acc:.2f}%"
+        )
 
-    logger.info(f"✅ 训练完成")
+    logger.info("✅ 训练完成")
 
     # 6. 评估模型
     logger.info("\n" + "=" * 60)
@@ -277,7 +281,7 @@ def main():
         y_prob=all_probs,
     )
 
-    logger.info(f"✅ 评估完成")
+    logger.info("✅ 评估完成")
     logger.info(f"  - Accuracy: {metrics['accuracy']:.4f}")
     logger.info(f"  - AUC: {metrics['auc']:.4f}")
     logger.info(f"  - F1 Score: {metrics['f1']:.4f}")
@@ -313,10 +317,10 @@ def main():
     logger.info("\n" + "=" * 60)
     logger.info("🎉 完整工作流测试完成！")
     logger.info("=" * 60)
-    logger.info(f"测试结果:")
-    logger.info(f"  ✅ 配置加载: 成功")
+    logger.info("测试结果:")
+    logger.info("  ✅ 配置加载: 成功")
     logger.info(f"  ✅ 数据准备: 成功 ({len(full_dataset)} 样本)")
-    logger.info(f"  ✅ 模型创建: 成功")
+    logger.info("  ✅ 模型创建: 成功")
     logger.info(f"  ✅ 模型训练: 成功 ({config.training.num_epochs} epochs)")
     logger.info(f"  ✅ 模型评估: 成功 (Acc: {metrics['accuracy']:.2%})")
     logger.info(f"  {report_status}: 报告生成")

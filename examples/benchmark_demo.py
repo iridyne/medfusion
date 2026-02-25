@@ -35,7 +35,7 @@ def demo_simple_benchmark():
         slow_function()
     slow_time = time.time() - start
     print(f"   耗时: {slow_time:.3f}s")
-    print(f"   吞吐量: {100/slow_time:.1f} ops/s")
+    print(f"   吞吐量: {100 / slow_time:.1f} ops/s")
 
     # 测试快速实现
     print("\n2. 测试快速实现:")
@@ -44,7 +44,7 @@ def demo_simple_benchmark():
         fast_function()
     fast_time = time.time() - start
     print(f"   耗时: {fast_time:.3f}s")
-    print(f"   吞吐量: {100/fast_time:.1f} ops/s")
+    print(f"   吞吐量: {100 / fast_time:.1f} ops/s")
 
     # 比较
     speedup = slow_time / fast_time
@@ -65,7 +65,7 @@ def demo_benchmark_suite():
     print("  • 检测性能回归")
 
     print("\n使用示例:")
-    code = '''
+    code = """
 from med_core.utils.benchmark import BenchmarkSuite, PerformanceBenchmark
 
 # 1. 创建测试套件
@@ -86,7 +86,7 @@ suite.save_results("baseline.json")
 
 # 5. 与基线比较
 suite.compare_with("baseline.json")
-'''
+"""
     print(code)
 
 
@@ -204,7 +204,7 @@ def demo_ci_integration():
     print("=" * 60)
 
     print("\nGitHub Actions 示例:")
-    yaml = '''
+    yaml = """
 name: Performance Benchmarks
 
 on: [push, pull_request]
@@ -239,7 +239,7 @@ jobs:
         with:
           name: benchmark-results
           path: benchmarks/
-'''
+"""
     print(yaml)
 
 
@@ -289,6 +289,7 @@ def main():
     except Exception as e:
         print(f"\n❌ 错误: {e}")
         import traceback
+
         traceback.print_exc()
 
 

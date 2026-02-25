@@ -2,10 +2,11 @@
 """
 深度性能分析：找出瓶颈
 """
+
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'target/release'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "target/release"))
 
 import time
 
@@ -13,9 +14,9 @@ import numpy as np
 
 import med_core_rs
 
-print("="*70)
+print("=" * 70)
 print("🔍 深度性能分析：数据拷贝 vs 计算时间")
-print("="*70)
+print("=" * 70)
 
 # Test 1: 测量数据拷贝开销
 print("\n[测试 1] 数据拷贝开销分析")
@@ -46,9 +47,11 @@ for n in sizes:
     numpy_time = time.perf_counter() - start
 
     copy_overhead = copy_time / rust_time * 100
-    print(f"批量 {n:4d}: 拷贝 {copy_time*1000:6.2f}ms ({copy_overhead:5.1f}%), "
-          f"Rust {rust_time*1000:6.2f}ms, NumPy {numpy_time*1000:6.2f}ms, "
-          f"加速 {numpy_time/rust_time:.2f}x")
+    print(
+        f"批量 {n:4d}: 拷贝 {copy_time * 1000:6.2f}ms ({copy_overhead:5.1f}%), "
+        f"Rust {rust_time * 1000:6.2f}ms, NumPy {numpy_time * 1000:6.2f}ms, "
+        f"加速 {numpy_time / rust_time:.2f}x"
+    )
 
 # Test 2: 测量不同操作的时间分布
 print("\n[测试 2] Rust 函数内部时间分布估算")
@@ -77,11 +80,17 @@ for i in range(n):
         _ = (img - vmin) / (vmax - vmin)
 compute_time = time.perf_counter() - start
 
-print(f"总时间:     {total_time*1000:6.2f} ms (100%)")
-print(f"数据传输:   {transfer_time*1000:6.2f} ms ({transfer_time/total_time*100:5.1f}%)")
-print(f"纯计算:     {compute_time*1000:6.2f} ms ({compute_time/total_time*100:5.1f}%)")
-print(f"其他开销:   {(total_time-transfer_time-compute_time)*1000:6.2f} ms "
-      f"({(total_time-transfer_time-compute_time)/total_time*100:5.1f}%)")
+print(f"总时间:     {total_time * 1000:6.2f} ms (100%)")
+print(
+    f"数据传输:   {transfer_time * 1000:6.2f} ms ({transfer_time / total_time * 100:5.1f}%)"
+)
+print(
+    f"纯计算:     {compute_time * 1000:6.2f} ms ({compute_time / total_time * 100:5.1f}%)"
+)
+print(
+    f"其他开销:   {(total_time - transfer_time - compute_time) * 1000:6.2f} ms "
+    f"({(total_time - transfer_time - compute_time) / total_time * 100:5.1f}%)"
+)
 
 # Test 3: 不同方法的性能对比
 print("\n[测试 3] 不同归一化方法的性能")
@@ -117,8 +126,10 @@ for method in methods:
     numpy_time = time.perf_counter() - start
 
     speedup = numpy_time / rust_time
-    print(f"{method:12s}: Rust {rust_time*1000:6.2f}ms, "
-          f"NumPy {numpy_time*1000:6.2f}ms, 加速 {speedup:.2f}x")
+    print(
+        f"{method:12s}: Rust {rust_time * 1000:6.2f}ms, "
+        f"NumPy {numpy_time * 1000:6.2f}ms, 加速 {speedup:.2f}x"
+    )
 
 # Test 4: 内存布局影响
 print("\n[测试 4] 内存布局对性能的影响")
@@ -134,11 +145,13 @@ for name, images in [("C-order", images_c), ("F-order", images_f)]:
     start = time.perf_counter()
     result = med_core_rs.normalize_intensity_batch(images, method="minmax")
     elapsed = time.perf_counter() - start
-    print(f"{name:10s}: {elapsed*1000:6.2f} ms, 连续性: {images.flags['C_CONTIGUOUS']}")
+    print(
+        f"{name:10s}: {elapsed * 1000:6.2f} ms, 连续性: {images.flags['C_CONTIGUOUS']}"
+    )
 
-print("\n" + "="*70)
+print("\n" + "=" * 70)
 print("💡 分析结论")
-print("="*70)
+print("=" * 70)
 print("""
 1. 数据拷贝开销占总时间的 20-30%
 2. Python-Rust 边界开销约 10-15%

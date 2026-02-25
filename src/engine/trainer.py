@@ -94,7 +94,9 @@ class MedicalTrainer:
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup AMP
-        self.scaler = GradScaler('cuda' if device.type == 'cuda' else 'cpu', enabled=use_amp)
+        self.scaler = GradScaler(
+            "cuda" if device.type == "cuda" else "cpu", enabled=use_amp
+        )
 
         # Setup logging
         self.writer = SummaryWriter(log_dir=str(self.log_dir))
@@ -102,7 +104,7 @@ class MedicalTrainer:
 
         # Early stopping
         self.early_stopping_patience = early_stopping_patience
-        self.best_val_loss = float('inf')
+        self.best_val_loss = float("inf")
         self.best_val_auc = 0.0
         self.patience_counter = 0
 
@@ -133,17 +135,17 @@ class MedicalTrainer:
         try:
             if len(np.unique(y_true)) == 2:
                 # Binary classification
-                metrics['auc_roc'] = roc_auc_score(y_true, y_prob[:, 1])
+                metrics["auc_roc"] = roc_auc_score(y_true, y_prob[:, 1])
             else:
                 # Multiclass
-                metrics['auc_roc'] = roc_auc_score(
-                    y_true, y_prob, multi_class='ovr', average='macro'
+                metrics["auc_roc"] = roc_auc_score(
+                    y_true, y_prob, multi_class="ovr", average="macro"
                 )
         except Exception:
-            metrics['auc_roc'] = 0.0
+            metrics["auc_roc"] = 0.0
 
         # F1 Score
-        metrics['f1_score'] = f1_score(y_true, y_pred, average='macro', zero_division=0)
+        metrics["f1_score"] = f1_score(y_true, y_pred, average="macro", zero_division=0)
 
         # Confusion matrix for sensitivity and specificity
         cm = confusion_matrix(y_true, y_pred)
@@ -151,10 +153,10 @@ class MedicalTrainer:
         if cm.shape[0] == 2:
             # Binary classification
             tn, fp, fn, tp = cm.ravel()
-            metrics['sensitivity'] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            metrics['specificity'] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-            metrics['precision'] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-            metrics['npv'] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+            metrics["sensitivity"] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            metrics["specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            metrics["precision"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            metrics["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
         else:
             # Multiclass - compute macro-averaged metrics
             sensitivities = []
@@ -171,11 +173,11 @@ class MedicalTrainer:
                 sensitivities.append(sens)
                 specificities.append(spec)
 
-            metrics['sensitivity'] = np.mean(sensitivities)
-            metrics['specificity'] = np.mean(specificities)
+            metrics["sensitivity"] = np.mean(sensitivities)
+            metrics["specificity"] = np.mean(specificities)
 
         # Accuracy
-        metrics['accuracy'] = (y_true == y_pred).mean()
+        metrics["accuracy"] = (y_true == y_pred).mean()
 
         return metrics
 
@@ -190,7 +192,10 @@ class MedicalTrainer:
         total_loss = 0.0
         num_batches = 0
 
-        pbar = tqdm(self.train_loader, desc=f"Epoch {self.current_epoch + 1}/{self.num_epochs} [Train]")
+        pbar = tqdm(
+            self.train_loader,
+            desc=f"Epoch {self.current_epoch + 1}/{self.num_epochs} [Train]",
+        )
 
         for images, features, labels in pbar:
             images = images.to(self.device)
@@ -223,14 +228,16 @@ class MedicalTrainer:
             self.global_step += 1
 
             # Update progress bar
-            pbar.set_postfix({'loss': f'{loss.item():.4f}'})
+            pbar.set_postfix({"loss": f"{loss.item():.4f}"})
 
             # Log to TensorBoard
             if self.global_step % 10 == 0:
-                self.writer.add_scalar('train/batch_loss', loss.item(), self.global_step)
+                self.writer.add_scalar(
+                    "train/batch_loss", loss.item(), self.global_step
+                )
 
         avg_loss = total_loss / num_batches
-        return {'loss': avg_loss}
+        return {"loss": avg_loss}
 
     def _validate_epoch(self) -> dict[str, float]:
         """
@@ -247,7 +254,10 @@ class MedicalTrainer:
         all_preds = []
         all_probs = []
 
-        pbar = tqdm(self.val_loader, desc=f"Epoch {self.current_epoch + 1}/{self.num_epochs} [Val]")
+        pbar = tqdm(
+            self.val_loader,
+            desc=f"Epoch {self.current_epoch + 1}/{self.num_epochs} [Val]",
+        )
 
         with torch.no_grad():
             for images, features, labels in pbar:
@@ -279,7 +289,7 @@ class MedicalTrainer:
         y_prob = np.array(all_probs)
 
         metrics = self._compute_medical_metrics(y_true, y_pred, y_prob)
-        metrics['loss'] = avg_loss
+        metrics["loss"] = avg_loss
 
         return metrics
 
@@ -292,22 +302,24 @@ class MedicalTrainer:
             metrics: Current metrics
         """
         checkpoint = {
-            'epoch': self.current_epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scaler_state_dict': self.scaler.state_dict(),
-            'metrics': metrics,
-            'best_val_loss': self.best_val_loss,
-            'best_val_auc': self.best_val_auc,
+            "epoch": self.current_epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scaler_state_dict": self.scaler.state_dict(),
+            "metrics": metrics,
+            "best_val_loss": self.best_val_loss,
+            "best_val_auc": self.best_val_auc,
         }
 
         if self.scheduler is not None:
-            checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
+            checkpoint["scheduler_state_dict"] = self.scheduler.state_dict()
 
         path = self.checkpoint_dir / filename
         torch.save(checkpoint, path)
 
-    def _log_metrics(self, train_metrics: dict[str, float], val_metrics: dict[str, float]) -> None:
+    def _log_metrics(
+        self, train_metrics: dict[str, float], val_metrics: dict[str, float]
+    ) -> None:
         """
         Log metrics to TensorBoard and JSON.
 
@@ -317,30 +329,30 @@ class MedicalTrainer:
         """
         # TensorBoard
         for key, value in train_metrics.items():
-            self.writer.add_scalar(f'train/{key}', value, self.current_epoch)
+            self.writer.add_scalar(f"train/{key}", value, self.current_epoch)
 
         for key, value in val_metrics.items():
-            self.writer.add_scalar(f'val/{key}', value, self.current_epoch)
+            self.writer.add_scalar(f"val/{key}", value, self.current_epoch)
 
         # Learning rate
         if self.scheduler is not None:
             lr = self.scheduler.get_last_lr()[0]
         else:
-            lr = self.optimizer.param_groups[0]['lr']
-        self.writer.add_scalar('learning_rate', lr, self.current_epoch)
+            lr = self.optimizer.param_groups[0]["lr"]
+        self.writer.add_scalar("learning_rate", lr, self.current_epoch)
 
         # JSON history
         epoch_metrics = {
-            'epoch': self.current_epoch,
-            'train': train_metrics,
-            'val': val_metrics,
-            'lr': lr,
+            "epoch": self.current_epoch,
+            "train": train_metrics,
+            "val": val_metrics,
+            "lr": lr,
         }
         self.metrics_history.append(epoch_metrics)
 
         # Save JSON
-        json_path = self.log_dir / 'metrics_history.json'
-        with open(json_path, 'w') as f:
+        json_path = self.log_dir / "metrics_history.json"
+        with open(json_path, "w") as f:
             json.dump(self.metrics_history, f, indent=2)
 
     def train(self) -> dict[str, float]:
@@ -377,23 +389,25 @@ class MedicalTrainer:
 
             # Learning rate scheduling
             if self.scheduler is not None:
-                if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    self.scheduler.step(val_metrics['loss'])
+                if isinstance(
+                    self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                ):
+                    self.scheduler.step(val_metrics["loss"])
                 else:
                     self.scheduler.step()
 
             # Save best model
-            if val_metrics['auc_roc'] > self.best_val_auc:
-                self.best_val_auc = val_metrics['auc_roc']
-                self.best_val_loss = val_metrics['loss']
-                self._save_checkpoint('best_model.pth', val_metrics)
+            if val_metrics["auc_roc"] > self.best_val_auc:
+                self.best_val_auc = val_metrics["auc_roc"]
+                self.best_val_loss = val_metrics["loss"]
+                self._save_checkpoint("best_model.pth", val_metrics)
                 print(f"  ✓ New best model saved (AUC: {self.best_val_auc:.4f})")
                 self.patience_counter = 0
             else:
                 self.patience_counter += 1
 
             # Save last model
-            self._save_checkpoint('last_model.pth', val_metrics)
+            self._save_checkpoint("last_model.pth", val_metrics)
 
             # Early stopping
             if self.patience_counter >= self.early_stopping_patience:
@@ -408,8 +422,8 @@ class MedicalTrainer:
         print(f"Best validation loss: {self.best_val_loss:.4f}")
 
         return {
-            'best_val_auc': self.best_val_auc,
-            'best_val_loss': self.best_val_loss,
+            "best_val_auc": self.best_val_auc,
+            "best_val_loss": self.best_val_loss,
         }
 
     def load_checkpoint(self, checkpoint_path: str | Path) -> None:
@@ -421,15 +435,15 @@ class MedicalTrainer:
         """
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
 
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.scaler.load_state_dict(checkpoint['scaler_state_dict'])
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
 
-        if self.scheduler is not None and 'scheduler_state_dict' in checkpoint:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        if self.scheduler is not None and "scheduler_state_dict" in checkpoint:
+            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
-        self.current_epoch = checkpoint['epoch']
-        self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-        self.best_val_auc = checkpoint.get('best_val_auc', 0.0)
+        self.current_epoch = checkpoint["epoch"]
+        self.best_val_loss = checkpoint.get("best_val_loss", float("inf"))
+        self.best_val_auc = checkpoint.get("best_val_auc", 0.0)
 
         print(f"Loaded checkpoint from epoch {self.current_epoch}")

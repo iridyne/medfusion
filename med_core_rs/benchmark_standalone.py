@@ -21,6 +21,7 @@ try:
     from med_core_rs import (
         normalize_intensity_percentile as rust_percentile,
     )
+
     RUST_AVAILABLE = True
 except ImportError:
     print("⚠️  Rust 模块未找到")
@@ -37,7 +38,9 @@ def numpy_normalize_minmax(image: np.ndarray) -> np.ndarray:
     return np.zeros_like(image)
 
 
-def numpy_normalize_percentile(image: np.ndarray, p_low: float = 1.0, p_high: float = 99.0) -> np.ndarray:
+def numpy_normalize_percentile(
+    image: np.ndarray, p_low: float = 1.0, p_high: float = 99.0
+) -> np.ndarray:
     """NumPy Percentile normalization"""
     low = np.percentile(image, p_low)
     high = np.percentile(image, p_high)
@@ -46,7 +49,9 @@ def numpy_normalize_percentile(image: np.ndarray, p_low: float = 1.0, p_high: fl
     return np.zeros_like(image)
 
 
-def benchmark_function(func: Callable, *args, iterations: int = 50, warmup: int = 5) -> tuple[float, float]:
+def benchmark_function(
+    func: Callable, *args, iterations: int = 50, warmup: int = 5
+) -> tuple[float, float]:
     """Benchmark a function and return (mean_time, std_time)"""
     # Warmup
     for _ in range(warmup):
@@ -65,9 +70,9 @@ def benchmark_function(func: Callable, *args, iterations: int = 50, warmup: int 
 
 def compare_single_image():
     """对比单图像处理性能"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📊 单图像处理性能对比")
-    print("="*70)
+    print("=" * 70)
 
     sizes = [256, 512, 1024]
 
@@ -78,31 +83,33 @@ def compare_single_image():
         # MinMax
         print("\n  MinMax 归一化:")
         numpy_mean, numpy_std = benchmark_function(numpy_normalize_minmax, image)
-        print(f"    NumPy:  {numpy_mean*1000:6.2f} ± {numpy_std*1000:4.2f} ms")
+        print(f"    NumPy:  {numpy_mean * 1000:6.2f} ± {numpy_std * 1000:4.2f} ms")
 
         if RUST_AVAILABLE:
             rust_mean, rust_std = benchmark_function(rust_minmax, image)
-            print(f"    Rust:   {rust_mean*1000:6.2f} ± {rust_std*1000:4.2f} ms")
+            print(f"    Rust:   {rust_mean * 1000:6.2f} ± {rust_std * 1000:4.2f} ms")
             speedup = numpy_mean / rust_mean
             print(f"    🚀 加速: {speedup:.2f}x")
 
         # Percentile
         print("\n  Percentile 归一化:")
-        numpy_mean, numpy_std = benchmark_function(numpy_normalize_percentile, image, 1.0, 99.0)
-        print(f"    NumPy:  {numpy_mean*1000:6.2f} ± {numpy_std*1000:4.2f} ms")
+        numpy_mean, numpy_std = benchmark_function(
+            numpy_normalize_percentile, image, 1.0, 99.0
+        )
+        print(f"    NumPy:  {numpy_mean * 1000:6.2f} ± {numpy_std * 1000:4.2f} ms")
 
         if RUST_AVAILABLE:
             rust_mean, rust_std = benchmark_function(rust_percentile, image, 1.0, 99.0)
-            print(f"    Rust:   {rust_mean*1000:6.2f} ± {rust_std*1000:4.2f} ms")
+            print(f"    Rust:   {rust_mean * 1000:6.2f} ± {rust_std * 1000:4.2f} ms")
             speedup = numpy_mean / rust_mean
             print(f"    🚀 加速: {speedup:.2f}x")
 
 
 def compare_batch_processing():
     """对比批量处理性能"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📊 批量处理性能对比")
-    print("="*70)
+    print("=" * 70)
 
     batch_sizes = [10, 50, 100]
     img_size = 512
@@ -115,25 +122,31 @@ def compare_batch_processing():
         def numpy_batch_process(imgs):
             return np.array([numpy_normalize_percentile(img) for img in imgs])
 
-        numpy_mean, numpy_std = benchmark_function(numpy_batch_process, images, iterations=20)
-        print(f"  NumPy (顺序):    {numpy_mean*1000:7.2f} ± {numpy_std*1000:5.2f} ms")
-        print(f"                   {batch_size/numpy_mean:6.1f} 张/秒")
+        numpy_mean, numpy_std = benchmark_function(
+            numpy_batch_process, images, iterations=20
+        )
+        print(
+            f"  NumPy (顺序):    {numpy_mean * 1000:7.2f} ± {numpy_std * 1000:5.2f} ms"
+        )
+        print(f"                   {batch_size / numpy_mean:6.1f} 张/秒")
 
         if RUST_AVAILABLE:
             rust_mean, rust_std = benchmark_function(
                 rust_batch, images, "percentile", 1.0, 99.0, iterations=20
             )
-            print(f"  Rust (并行):     {rust_mean*1000:7.2f} ± {rust_std*1000:5.2f} ms")
-            print(f"                   {batch_size/rust_mean:6.1f} 张/秒")
+            print(
+                f"  Rust (并行):     {rust_mean * 1000:7.2f} ± {rust_std * 1000:5.2f} ms"
+            )
+            print(f"                   {batch_size / rust_mean:6.1f} 张/秒")
             speedup = numpy_mean / rust_mean
             print(f"  🚀 加速:         {speedup:.2f}x")
 
 
 def verify_correctness():
     """验证 Rust 和 NumPy 实现的正确性"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ 正确性验证")
-    print("="*70)
+    print("=" * 70)
 
     if not RUST_AVAILABLE:
         print("⚠️  Rust 模块不可用，跳过验证")
@@ -161,9 +174,9 @@ def verify_correctness():
 
 def print_summary():
     """打印总结"""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("📈 性能总结")
-    print("="*70)
+    print("=" * 70)
 
     if not RUST_AVAILABLE:
         print("\n⚠️  Rust 模块不可用")
@@ -186,9 +199,9 @@ def print_summary():
 
 
 def main():
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("🦀 Rust vs NumPy 性能基准测试")
-    print("="*70)
+    print("=" * 70)
 
     if not RUST_AVAILABLE:
         print("\n⚠️  Rust 模块未安装！")
@@ -200,9 +213,9 @@ def main():
     compare_batch_processing()
     print_summary()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ 基准测试完成！")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

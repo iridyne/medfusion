@@ -3,6 +3,7 @@
 
 测试工作流执行引擎和训练服务
 """
+
 import asyncio
 import sys
 from pathlib import Path
@@ -26,46 +27,25 @@ async def test_workflow_engine():
             {
                 "id": "node1",
                 "type": "dataset_loader",
-                "data": {
-                    "config": {
-                        "data_path": "/path/to/data"
-                    }
-                }
+                "data": {"config": {"data_path": "/path/to/data"}},
             },
             {
                 "id": "node2",
                 "type": "backbone_selector",
-                "data": {
-                    "config": {
-                        "backbone_type": "resnet18",
-                        "pretrained": True
-                    }
-                }
+                "data": {"config": {"backbone_type": "resnet18", "pretrained": True}},
             },
             {
                 "id": "node3",
                 "type": "trainer",
                 "data": {
-                    "config": {
-                        "epochs": 2,
-                        "batch_size": 32,
-                        "learning_rate": 0.001
-                    }
-                }
-            }
+                    "config": {"epochs": 2, "batch_size": 32, "learning_rate": 0.001}
+                },
+            },
         ],
         "edges": [
-            {
-                "id": "e1",
-                "source": "node1",
-                "target": "node3"
-            },
-            {
-                "id": "e2",
-                "source": "node2",
-                "target": "node3"
-            }
-        ]
+            {"id": "e1", "source": "node1", "target": "node3"},
+            {"id": "e2", "source": "node2", "target": "node3"},
+        ],
     }
 
     # 创建执行引擎
@@ -85,7 +65,7 @@ async def test_workflow_engine():
     print(f"  状态: {result['status']}")
     print(f"  执行节点数: {len(result['executions'])}")
 
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print("  统计信息:")
         print(f"    总节点: {result['statistics']['total_nodes']}")
         print(f"    完成节点: {result['statistics']['completed_nodes']}")
@@ -95,7 +75,7 @@ async def test_workflow_engine():
         print(f"  错误: {result.get('error')}")
         print("\n❌ 工作流执行引擎测试失败!")
 
-    return result['status'] == 'success'
+    return result["status"] == "success"
 
 
 async def test_training_service():
@@ -112,7 +92,7 @@ async def test_training_service():
             "backbone": "resnet18",
             "num_classes": 10,
             "pretrained": False,  # 不使用预训练以加快测试
-            "feature_dim": 128
+            "feature_dim": 128,
         },
         "data_config": {
             "num_samples": 100  # 少量数据用于测试
@@ -125,8 +105,8 @@ async def test_training_service():
             "use_amp": False,  # 不使用混合精度以兼容 CPU
             "gradient_checkpointing": False,
             "use_scheduler": False,
-            "save_model": False
-        }
+            "save_model": False,
+        },
     }
 
     # 创建训练服务
@@ -173,9 +153,9 @@ async def test_training_service():
         print(f"  Epoch: {status['current_epoch']}/{status['total_epochs']}")
         print(f"  耗时: {status['duration']:.2f}s")
 
-        if status['status'] == 'completed':
+        if status["status"] == "completed":
             print("  最终指标:")
-            metrics = status['metrics']
+            metrics = status["metrics"]
             print(f"    Train Loss: {metrics.get('train_loss', 0):.4f}")
             print(f"    Train Acc: {metrics.get('train_acc', 0):.2f}%")
             print(f"    Val Loss: {metrics.get('val_loss', 0):.4f}")
@@ -190,6 +170,7 @@ async def test_training_service():
     except Exception as e:
         print(f"\n❌ 训练服务测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -208,6 +189,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ 工作流执行引擎测试异常: {e}")
         import traceback
+
         traceback.print_exc()
         results.append(("工作流执行引擎", False))
 
@@ -218,6 +200,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ 训练服务测试异常: {e}")
         import traceback
+
         traceback.print_exc()
         results.append(("训练服务", False))
 

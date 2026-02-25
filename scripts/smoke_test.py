@@ -54,7 +54,9 @@ def analyze_model_architecture(model: nn.Module, config):
     print(f"  Frozen: {config.model.vision.freeze_backbone}")
     print(f"  Output Dim: {vision.output_dim}")
     print(f"  Parameters: {sum(p.numel() for p in vision.parameters()):,}")
-    print(f"  Trainable: {sum(p.numel() for p in vision.parameters() if p.requires_grad):,}")
+    print(
+        f"  Trainable: {sum(p.numel() for p in vision.parameters() if p.requires_grad):,}"
+    )
 
     # Tabular Backbone
     print_subsection("Tabular Backbone")
@@ -63,7 +65,9 @@ def analyze_model_architecture(model: nn.Module, config):
     print(f"  Hidden Dims: {config.model.tabular.hidden_dims}")
     print(f"  Output Dim: {tabular.output_dim}")
     print(f"  Parameters: {sum(p.numel() for p in tabular.parameters()):,}")
-    print(f"  Trainable: {sum(p.numel() for p in tabular.parameters() if p.requires_grad):,}")
+    print(
+        f"  Trainable: {sum(p.numel() for p in tabular.parameters() if p.requires_grad):,}"
+    )
 
     # Fusion Module
     print_subsection("Fusion Module")
@@ -122,9 +126,13 @@ def test_dimension_alignment(model: nn.Module, sample_batch):
 
                 # Check auxiliary heads if present
                 if "vision_logits" in outputs:
-                    print(f"  Vision Logits (aux): {tuple(outputs['vision_logits'].shape)}")
+                    print(
+                        f"  Vision Logits (aux): {tuple(outputs['vision_logits'].shape)}"
+                    )
                 if "tabular_logits" in outputs:
-                    print(f"  Tabular Logits (aux): {tuple(outputs['tabular_logits'].shape)}")
+                    print(
+                        f"  Tabular Logits (aux): {tuple(outputs['tabular_logits'].shape)}"
+                    )
             else:
                 logits = outputs
                 print_subsection("Forward Pass Results")
@@ -197,7 +205,9 @@ def test_gradient_flow(model: nn.Module, sample_batch, criterion):
         return False
 
 
-def test_training_loop(model, train_loader, val_loader, criterion, optimizer, num_epochs=3):
+def test_training_loop(
+    model, train_loader, val_loader, criterion, optimizer, num_epochs=3
+):
     """Test training loop and loss convergence."""
     print_section("TRAINING LOOP TEST")
 
@@ -258,7 +268,9 @@ def test_training_loop(model, train_loader, val_loader, criterion, optimizer, nu
         avg_val_loss = epoch_val_loss / num_val_batches
         val_losses.append(avg_val_loss)
 
-        print(f"  Epoch {epoch + 1}/{num_epochs}: Train Loss = {avg_train_loss:.4f}, Val Loss = {avg_val_loss:.4f}")
+        print(
+            f"  Epoch {epoch + 1}/{num_epochs}: Train Loss = {avg_train_loss:.4f}, Val Loss = {avg_val_loss:.4f}"
+        )
 
     # Analyze loss trends
     print_subsection("Loss Analysis")
@@ -291,7 +303,9 @@ def generate_report(results: dict):
         status = "✓ PASS" if passed else "✗ FAIL"
         print(f"    {status}: {test_name}")
 
-    print(f"\n  Overall Status: {'✓ ALL TESTS PASSED' if all_passed else '✗ SOME TESTS FAILED'}")
+    print(
+        f"\n  Overall Status: {'✓ ALL TESTS PASSED' if all_passed else '✗ SOME TESTS FAILED'}"
+    )
 
     if all_passed:
         print("\n  🎉 Framework is ready for production use!")
@@ -302,7 +316,9 @@ def generate_report(results: dict):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run smoke test for Med-Core framework")
+    parser = argparse.ArgumentParser(
+        description="Run smoke test for Med-Core framework"
+    )
     parser.add_argument(
         "--config",
         type=str,
@@ -426,7 +442,12 @@ def main():
     # Test 4: Training Loop
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     train_losses, val_losses = test_training_loop(
-        model, dataloaders["train"], dataloaders["val"], criterion, optimizer, num_epochs=args.epochs
+        model,
+        dataloaders["train"],
+        dataloaders["val"],
+        criterion,
+        optimizer,
+        num_epochs=args.epochs,
     )
     results["Training Loop"] = True
 

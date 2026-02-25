@@ -21,6 +21,7 @@ try:
     from med_core_rs import (
         normalize_intensity_percentile as rust_percentile,
     )
+
     RUST_AVAILABLE = True
 except ImportError:
     print("Warning: Rust module not available. Install with: maturin develop --release")
@@ -51,9 +52,9 @@ def benchmark_function(func: Callable, *args, iterations: int = 100) -> float:
 
 def compare_normalization():
     """Compare normalization performance."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("NORMALIZATION BENCHMARK")
-    print("="*70)
+    print("=" * 70)
 
     sizes = [256, 512, 1024]
 
@@ -65,14 +66,14 @@ def compare_normalization():
         py_mean, py_std = benchmark_function(
             python_normalize, image, "minmax", iterations=50
         )
-        print(f"  Python MinMax:     {py_mean*1000:.2f} ± {py_std*1000:.2f} ms")
+        print(f"  Python MinMax:     {py_mean * 1000:.2f} ± {py_std * 1000:.2f} ms")
 
         if RUST_AVAILABLE:
             # Rust MinMax
-            rust_mean, rust_std = benchmark_function(
-                rust_minmax, image, iterations=50
+            rust_mean, rust_std = benchmark_function(rust_minmax, image, iterations=50)
+            print(
+                f"  Rust MinMax:       {rust_mean * 1000:.2f} ± {rust_std * 1000:.2f} ms"
             )
-            print(f"  Rust MinMax:       {rust_mean*1000:.2f} ± {rust_std*1000:.2f} ms")
             speedup = py_mean / rust_mean
             print(f"  🚀 Speedup:        {speedup:.2f}x")
 
@@ -82,23 +83,25 @@ def compare_normalization():
         py_mean, py_std = benchmark_function(
             python_normalize, image, "percentile", iterations=50
         )
-        print(f"  Python Percentile: {py_mean*1000:.2f} ± {py_std*1000:.2f} ms")
+        print(f"  Python Percentile: {py_mean * 1000:.2f} ± {py_std * 1000:.2f} ms")
 
         if RUST_AVAILABLE:
             # Rust Percentile
             rust_mean, rust_std = benchmark_function(
                 rust_percentile, image, 1.0, 99.0, iterations=50
             )
-            print(f"  Rust Percentile:   {rust_mean*1000:.2f} ± {rust_std*1000:.2f} ms")
+            print(
+                f"  Rust Percentile:   {rust_mean * 1000:.2f} ± {rust_std * 1000:.2f} ms"
+            )
             speedup = py_mean / rust_mean
             print(f"  🚀 Speedup:        {speedup:.2f}x")
 
 
 def compare_batch_processing():
     """Compare batch processing performance."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("BATCH PROCESSING BENCHMARK")
-    print("="*70)
+    print("=" * 70)
 
     batch_sizes = [10, 50, 100]
     img_size = 512
@@ -109,22 +112,21 @@ def compare_batch_processing():
 
         # Python sequential processing
         def python_batch_process(imgs):
-            return np.array([
-                python_normalize(img, "percentile")
-                for img in imgs
-            ])
+            return np.array([python_normalize(img, "percentile") for img in imgs])
 
         py_mean, py_std = benchmark_function(
             python_batch_process, images, iterations=20
         )
-        print(f"  Python (sequential): {py_mean*1000:.2f} ± {py_std*1000:.2f} ms")
+        print(f"  Python (sequential): {py_mean * 1000:.2f} ± {py_std * 1000:.2f} ms")
 
         if RUST_AVAILABLE:
             # Rust parallel processing
             rust_mean, rust_std = benchmark_function(
                 rust_batch, images, "percentile", 1.0, 99.0, iterations=20
             )
-            print(f"  Rust (parallel):     {rust_mean*1000:.2f} ± {rust_std*1000:.2f} ms")
+            print(
+                f"  Rust (parallel):     {rust_mean * 1000:.2f} ± {rust_std * 1000:.2f} ms"
+            )
             speedup = py_mean / rust_mean
             print(f"  🚀 Speedup:          {speedup:.2f}x")
 
@@ -134,9 +136,9 @@ def compare_batch_processing():
 
 def verify_correctness():
     """Verify that Rust and Python implementations produce similar results."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("CORRECTNESS VERIFICATION")
-    print("="*70)
+    print("=" * 70)
 
     if not RUST_AVAILABLE:
         print("⚠️  Rust module not available, skipping verification")
@@ -162,9 +164,9 @@ def verify_correctness():
 
 
 def main():
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("MedCore Rust Acceleration Benchmark")
-    print("="*70)
+    print("=" * 70)
 
     if not RUST_AVAILABLE:
         print("\n⚠️  Rust module not found!")
@@ -177,9 +179,9 @@ def main():
     compare_normalization()
     compare_batch_processing()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Benchmark Complete!")
-    print("="*70)
+    print("=" * 70)
 
 
 if __name__ == "__main__":

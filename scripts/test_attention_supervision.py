@@ -81,6 +81,7 @@ def generate_synthetic_data(output_dir: Path, num_samples: int = 200):
         data.append(record)
 
     import pandas as pd
+
     df = pd.DataFrame(data)
     csv_path = output_dir / "dataset.csv"
     df.to_csv(csv_path, index=False)
@@ -89,11 +90,13 @@ def generate_synthetic_data(output_dir: Path, num_samples: int = 200):
     return csv_path
 
 
-def train_model(model, train_loader, val_loader, device, num_epochs=5, model_name="Model"):
+def train_model(
+    model, train_loader, val_loader, device, num_epochs=5, model_name="Model"
+):
     """训练模型"""
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"训练 {model_name}")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -163,8 +166,8 @@ def train_model(model, train_loader, val_loader, device, num_epochs=5, model_nam
 
         logger.info(
             f"Epoch {epoch + 1}/{num_epochs} - "
-            f"Train Loss: {train_loss/len(train_loader):.4f}, Train Acc: {train_acc:.2f}% | "
-            f"Val Loss: {val_loss/len(val_loader):.4f}, Val Acc: {val_acc:.2f}%"
+            f"Train Loss: {train_loss / len(train_loader):.4f}, Train Acc: {train_acc:.2f}% | "
+            f"Val Loss: {val_loss / len(val_loader):.4f}, Val Acc: {val_acc:.2f}%"
         )
 
     logger.info(f"✅ {model_name} 训练完成 - 最佳验证准确率: {best_val_acc:.2f}%")
@@ -173,9 +176,9 @@ def train_model(model, train_loader, val_loader, device, num_epochs=5, model_nam
 
 def evaluate_model(model, test_loader, device, model_name="Model"):
     """评估模型"""
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"评估 {model_name}")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     model.eval()
     all_preds = []
@@ -207,7 +210,7 @@ def evaluate_model(model, test_loader, device, model_name="Model"):
         y_prob=all_probs,
     )
 
-    logger.info(f"测试结果:")
+    logger.info("测试结果:")
     logger.info(f"  - Accuracy: {metrics['accuracy']:.4f}")
     logger.info(f"  - AUC: {metrics['auc']:.4f}")
     logger.info(f"  - F1 Score: {metrics['f1']:.4f}")
@@ -264,7 +267,7 @@ def main():
         num_workers=0,
     )
 
-    logger.info(f"✅ 数据集准备完成")
+    logger.info("✅ 数据集准备完成")
     logger.info(f"  - 训练集: {len(train_ds)} 样本")
     logger.info(f"  - 验证集: {len(val_ds)} 样本")
     logger.info(f"  - 测试集: {len(test_ds)} 样本")
@@ -303,7 +306,7 @@ def main():
         num_classes=2,
     )
 
-    logger.info(f"✅ 基线模型创建完成")
+    logger.info("✅ 基线模型创建完成")
 
     # 4. 创建注意力监督模型
     logger.info("\n" + "=" * 60)
@@ -337,7 +340,7 @@ def main():
         num_classes=2,
     )
 
-    logger.info(f"✅ 注意力模型创建完成")
+    logger.info("✅ 注意力模型创建完成")
 
     # 5. 训练基线模型
     best_val_acc_baseline = train_model(
@@ -380,22 +383,24 @@ def main():
     logger.info("📊 对比结果")
     logger.info("=" * 60)
 
-    logger.info(f"\n验证集最佳准确率:")
+    logger.info("\n验证集最佳准确率:")
     logger.info(f"  基线模型: {best_val_acc_baseline:.2f}%")
     logger.info(f"  注意力模型: {best_val_acc_attention:.2f}%")
     logger.info(f"  提升: {best_val_acc_attention - best_val_acc_baseline:+.2f}%")
 
-    logger.info(f"\n测试集准确率:")
+    logger.info("\n测试集准确率:")
     logger.info(f"  基线模型: {metrics_baseline['accuracy']:.4f}")
     logger.info(f"  注意力模型: {metrics_attention['accuracy']:.4f}")
-    logger.info(f"  提升: {metrics_attention['accuracy'] - metrics_baseline['accuracy']:+.4f}")
+    logger.info(
+        f"  提升: {metrics_attention['accuracy'] - metrics_baseline['accuracy']:+.4f}"
+    )
 
-    logger.info(f"\n测试集 AUC:")
+    logger.info("\n测试集 AUC:")
     logger.info(f"  基线模型: {metrics_baseline['auc']:.4f}")
     logger.info(f"  注意力模型: {metrics_attention['auc']:.4f}")
     logger.info(f"  提升: {metrics_attention['auc'] - metrics_baseline['auc']:+.4f}")
 
-    logger.info(f"\n测试集 F1 Score:")
+    logger.info("\n测试集 F1 Score:")
     logger.info(f"  基线模型: {metrics_baseline['f1']:.4f}")
     logger.info(f"  注意力模型: {metrics_attention['f1']:.4f}")
     logger.info(f"  提升: {metrics_attention['f1'] - metrics_baseline['f1']:+.4f}")
@@ -405,18 +410,18 @@ def main():
     logger.info("💡 结论")
     logger.info("=" * 60)
 
-    improvement = metrics_attention['accuracy'] - metrics_baseline['accuracy']
+    improvement = metrics_attention["accuracy"] - metrics_baseline["accuracy"]
 
     if improvement > 0.02:  # 提升超过 2%
         logger.info("✅ 注意力监督有明显效果，建议保留")
-        logger.info(f"   准确率提升: {improvement:.4f} ({improvement*100:.2f}%)")
+        logger.info(f"   准确率提升: {improvement:.4f} ({improvement * 100:.2f}%)")
     elif improvement > 0:
         logger.info("⚠️ 注意力监督有轻微提升，但不明显")
-        logger.info(f"   准确率提升: {improvement:.4f} ({improvement*100:.2f}%)")
+        logger.info(f"   准确率提升: {improvement:.4f} ({improvement * 100:.2f}%)")
         logger.info("   建议：在真实数据上测试后再决定")
     else:
         logger.info("❌ 注意力监督没有提升，甚至可能降低性能")
-        logger.info(f"   准确率变化: {improvement:.4f} ({improvement*100:.2f}%)")
+        logger.info(f"   准确率变化: {improvement:.4f} ({improvement * 100:.2f}%)")
         logger.info("   建议：删除注意力监督模块（2,678 行代码）")
 
     logger.info("\n注意：这是合成数据测试，真实数据可能有不同结果")

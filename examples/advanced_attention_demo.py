@@ -181,7 +181,7 @@ def demo_factory_function():
         print(f"  • {attn_type:12s}: {x.shape} -> {out.shape}")
 
     print("\n使用示例:")
-    code = '''
+    code = """
 from med_core.attention_supervision import create_attention_module
 
 # 创建注意力模块
@@ -202,7 +202,7 @@ class MyModel(nn.Module):
         x = self.conv(x)
         x = self.attention(x)  # 应用注意力
         return x
-'''
+"""
     print(code)
 
 
@@ -267,7 +267,7 @@ def demo_integration_example():
     print("=" * 60)
 
     print("\n完整的模型集成示例:")
-    code = '''
+    code = """
 import torch.nn as nn
 from med_core.attention_supervision import (
     SEAttention,
@@ -349,7 +349,7 @@ y = torch.randint(0, 10, (2,))
 loss, loss_dict = model.compute_loss(x, y)
 print(f"Total loss: {loss.item():.4f}")
 print(f"Loss components: {loss_dict}")
-'''
+"""
     print(code)
 
 
@@ -403,6 +403,7 @@ def main():
     except Exception as e:
         print(f"\n❌ 错误: {e}")
         import traceback
+
         traceback.print_exc()
 
 

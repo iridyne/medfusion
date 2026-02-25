@@ -66,11 +66,11 @@ def demo_lru_cache():
 
     # 获取数据
     print("\n2. 从缓存获取数据:")
-    result1 = cache.get('image_001')
+    result1 = cache.get("image_001")
     print(f"   image_001: {result1} (命中)")
-    result2 = cache.get('image_002')
+    result2 = cache.get("image_002")
     print(f"   image_002: {result2} (命中)")
-    result3 = cache.get('image_999')
+    result3 = cache.get("image_999")
     print(f"   image_999: {result3} (未命中)")
 
     # 添加新数据（触发淘汰）
@@ -84,7 +84,7 @@ def demo_lru_cache():
     print("\n4. 缓存统计:")
     stats = cache.get_stats()
     for key, value in stats.items():
-        if key == 'hit_rate':
+        if key == "hit_rate":
             print(f"   {key}: {value:.2%}")
         else:
             print(f"   {key}: {value}")
@@ -126,7 +126,7 @@ def demo_cache_benefits():
     if time_with_cache > 0:
         speedup = time_no_cache / time_with_cache
         print(f"\n3. 加速比: {speedup:.1f}x")
-        print(f"   性能提升: {(1 - time_with_cache/time_no_cache) * 100:.1f}%")
+        print(f"   性能提升: {(1 - time_with_cache / time_no_cache) * 100:.1f}%")
 
 
 def demo_access_patterns():
@@ -185,7 +185,7 @@ def demo_cache_size_impact():
             cache.get(idx)
 
         stats = cache.get_stats()
-        hit_rate = stats['hit_rate']
+        hit_rate = stats["hit_rate"]
 
         if hit_rate < 0.3:
             desc = "太小，效果差"
@@ -264,6 +264,7 @@ def main():
     except Exception as e:
         print(f"\n❌ 错误: {e}")
         import traceback
+
         traceback.print_exc()
 
 

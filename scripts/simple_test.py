@@ -23,7 +23,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from med_core.backbones import create_tabular_backbone, create_vision_backbone
 from med_core.fusion import MultiModalFusionModel, create_fusion_module
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # 测试记录

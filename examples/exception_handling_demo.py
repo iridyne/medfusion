@@ -27,8 +27,11 @@ def example_backbone_not_found():
 
     try:
         available_backbones = [
-            "resnet18", "resnet50", "efficientnet_b0",
-            "vit_b_16", "swin_t"
+            "resnet18",
+            "resnet50",
+            "efficientnet_b0",
+            "vit_b_16",
+            "swin_t",
         ]
         raise BackboneNotFoundError("resnet999", available_backbones)
     except BackboneNotFoundError as e:
@@ -46,7 +49,7 @@ def example_dimension_mismatch():
             expected=(32, 3, 224, 224),
             actual=(32, 3, 256, 256),
             tensor_name="input_images",
-            suggestion="Resize images to 224x224 or update model input size"
+            suggestion="Resize images to 224x224 or update model input size",
         )
     except DimensionMismatchError as e:
         print(format_error_report(e))
@@ -59,9 +62,7 @@ def example_missing_column():
     print("=" * 60)
 
     try:
-        available_columns = [
-            "patient_id", "age", "gender", "image_path", "diagnosis"
-        ]
+        available_columns = ["patient_id", "age", "gender", "image_path", "diagnosis"]
         raise MissingColumnError("bmi", available_columns)
     except MissingColumnError as e:
         print(format_error_report(e))
@@ -78,7 +79,7 @@ def example_training_error():
             "Loss became NaN",
             epoch=15,
             step=2500,
-            suggestion="Reduce learning rate or enable gradient clipping"
+            suggestion="Reduce learning rate or enable gradient clipping",
         )
     except TrainingError as e:
         print(format_error_report(e))
@@ -95,9 +96,9 @@ def example_incompatible_config():
             "Attention supervision requires CBAM attention mechanism",
             conflicting_options=[
                 "training.use_attention_supervision=True",
-                "model.vision.attention_type='se'"
+                "model.vision.attention_type='se'",
             ],
-            suggestion="Set model.vision.attention_type='cbam'"
+            suggestion="Set model.vision.attention_type='cbam'",
         )
     except IncompatibleConfigError as e:
         print(format_error_report(e))
@@ -111,8 +112,7 @@ def example_missing_dependency():
 
     try:
         raise MissingDependencyError(
-            "torch",
-            install_cmd="pip install torch torchvision"
+            "torch", install_cmd="pip install torch torchvision"
         )
     except MissingDependencyError as e:
         print(format_error_report(e))
@@ -153,7 +153,7 @@ def example_configuration_error():
             "Invalid batch size",
             config_path="training.batch_size",
             invalid_value=-1,
-            suggestion="Batch size must be a positive integer (e.g., 16, 32, 64)"
+            suggestion="Batch size must be a positive integer (e.g., 16, 32, 64)",
         )
     except ConfigurationError as e:
         print(format_error_report(e))

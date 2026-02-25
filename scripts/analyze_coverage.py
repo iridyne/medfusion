@@ -14,10 +14,10 @@ def find_python_files(directory):
     python_files = []
     for root, dirs, files in os.walk(directory):
         # Skip __pycache__ and hidden directories
-        dirs[:] = [d for d in dirs if not d.startswith('__') and not d.startswith('.')]
+        dirs[:] = [d for d in dirs if not d.startswith("__") and not d.startswith(".")]
 
         for file in files:
-            if file.endswith('.py') and not file.startswith('__'):
+            if file.endswith(".py") and not file.startswith("__"):
                 python_files.append(os.path.join(root, file))
 
     return sorted(python_files)
@@ -28,7 +28,7 @@ def find_test_files(directory):
     test_files = []
     for root, _dirs, files in os.walk(directory):
         for file in files:
-            if file.startswith('test_') and file.endswith('.py'):
+            if file.startswith("test_") and file.endswith(".py"):
                 test_files.append(os.path.join(root, file))
 
     return sorted(test_files)
@@ -37,15 +37,15 @@ def find_test_files(directory):
 def get_module_name(filepath, base_dir):
     """Convert file path to module name."""
     rel_path = os.path.relpath(filepath, base_dir)
-    module = rel_path.replace(os.sep, '.').replace('.py', '')
+    module = rel_path.replace(os.sep, ".").replace(".py", "")
     return module
 
 
 def analyze_coverage():
     """Analyze test coverage."""
     base_dir = Path(__file__).parent.parent
-    med_core_dir = base_dir / 'med_core'
-    tests_dir = base_dir / 'tests'
+    med_core_dir = base_dir / "med_core"
+    tests_dir = base_dir / "tests"
 
     print("=" * 80)
     print("MedFusion Test Coverage Analysis")
@@ -76,8 +76,8 @@ def analyze_coverage():
         filename = os.path.basename(filepath)
         # Extract module name from test file
         # e.g., test_backbones.py -> backbones
-        if filename.startswith('test_'):
-            module = filename[5:].replace('.py', '')
+        if filename.startswith("test_"):
+            module = filename[5:].replace(".py", "")
             if module not in test_modules:
                 test_modules[module] = []
             test_modules[module].append(filepath)
@@ -109,7 +109,9 @@ def analyze_coverage():
 
     print("-" * 80)
     coverage_pct = (total_with_tests / len(modules) * 100) if modules else 0
-    print(f"Overall module coverage: {total_with_tests}/{len(modules)} ({coverage_pct:.1f}%)")
+    print(
+        f"Overall module coverage: {total_with_tests}/{len(modules)} ({coverage_pct:.1f}%)"
+    )
     print()
 
     # Identify modules needing tests
@@ -143,7 +145,7 @@ def analyze_coverage():
     return needs_tests
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     needs_tests = analyze_coverage()
 
     if needs_tests:

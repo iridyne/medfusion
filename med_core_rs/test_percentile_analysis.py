@@ -11,14 +11,16 @@ import numpy as np
 def test_percentile_algorithms():
     """对比不同大小数据的 percentile 计算"""
 
-    print("="*70)
+    print("=" * 70)
     print("Percentile 算法性能对比")
-    print("="*70)
+    print("=" * 70)
 
-    sizes = [256*256, 512*512, 1024*1024]
+    sizes = [256 * 256, 512 * 512, 1024 * 1024]
 
     for size in sizes:
-        print(f"\n数据大小: {size:,} 个元素 ({int(np.sqrt(size))}×{int(np.sqrt(size))})")
+        print(
+            f"\n数据大小: {size:,} 个元素 ({int(np.sqrt(size))}×{int(np.sqrt(size))})"
+        )
 
         data = np.random.rand(size).astype(np.float32) * 255
 
@@ -31,7 +33,7 @@ def test_percentile_algorithms():
             times.append(time.perf_counter() - start)
 
         numpy_time = np.mean(times)
-        print(f"  NumPy percentile:  {numpy_time*1000:6.2f} ms")
+        print(f"  NumPy percentile:  {numpy_time * 1000:6.2f} ms")
 
         # 纯 Python 排序
         times = []
@@ -45,15 +47,16 @@ def test_percentile_algorithms():
             times.append(time.perf_counter() - start)
 
         sort_time = np.mean(times)
-        print(f"  NumPy sort:        {sort_time*1000:6.2f} ms")
-        print(f"  排序 vs percentile: {sort_time/numpy_time:.2f}x")
+        print(f"  NumPy sort:        {sort_time * 1000:6.2f} ms")
+        print(f"  排序 vs percentile: {sort_time / numpy_time:.2f}x")
+
 
 if __name__ == "__main__":
     test_percentile_algorithms()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("结论:")
-    print("="*70)
+    print("=" * 70)
     print("NumPy 的 percentile 函数已经高度优化（使用 quickselect）")
     print("我们的 Rust 实现需要：")
     print("  1. 数据从 Python 传到 Rust（开销）")

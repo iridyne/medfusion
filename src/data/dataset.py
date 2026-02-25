@@ -25,6 +25,7 @@ from torch.utils.data import Dataset
 # Optional DICOM support
 try:
     import pydicom
+
     PYDICOM_AVAILABLE = True
 except ImportError:
     PYDICOM_AVAILABLE = False
@@ -51,7 +52,9 @@ class MedicalDataset(Dataset):
         label_column: str = "label",
         feature_columns: list[str] | None = None,
         transform: Callable | None = None,
-        intensity_norm: Literal["minmax", "zscore", "percentile", "none"] = "percentile",
+        intensity_norm: Literal[
+            "minmax", "zscore", "percentile", "none"
+        ] = "percentile",
         percentile_range: tuple[float, float] = (1.0, 99.0),
         target_size: tuple[int, int] | None = None,
     ):
@@ -86,7 +89,9 @@ class MedicalDataset(Dataset):
         # Auto-detect feature columns if not provided
         if feature_columns is None:
             exclude_cols = {image_column, label_column, "patient_id", "study_id"}
-            feature_columns = [col for col in self.df.columns if col not in exclude_cols]
+            feature_columns = [
+                col for col in self.df.columns if col not in exclude_cols
+            ]
 
         self.feature_columns = feature_columns
 
@@ -129,7 +134,9 @@ class MedicalDataset(Dataset):
 
         if suffix == ".dcm":
             if not PYDICOM_AVAILABLE:
-                raise ImportError("pydicom is required for DICOM files. Install with: pip install pydicom")
+                raise ImportError(
+                    "pydicom is required for DICOM files. Install with: pip install pydicom"
+                )
             return self._load_dicom(path)
 
         elif suffix == ".npy":

@@ -46,7 +46,9 @@ def compare_results(baseline, current, tolerance=0.05):
             if isinstance(base_val, dict) and isinstance(curr_val, dict):
                 # 递归比较
                 compare_dict(base_val, curr_val, f"{path}.{key}" if path else key)
-            elif isinstance(base_val, (int, float)) and isinstance(curr_val, (int, float)):
+            elif isinstance(base_val, (int, float)) and isinstance(
+                curr_val, (int, float)
+            ):
                 # 比较数值
                 if key == "throughput":
                     # 吞吐量：越高越好
@@ -97,7 +99,9 @@ def print_comparison(comparisons, verbose=False):
 
     # 按是否回归分组
     regressions = [c for c in comparisons if c["is_regression"]]
-    improvements = [c for c in comparisons if c["change"] > 5 and not c["is_regression"]]
+    improvements = [
+        c for c in comparisons if c["change"] > 5 and not c["is_regression"]
+    ]
     stable = [c for c in comparisons if abs(c["change"]) <= 5]
 
     # 打印回归

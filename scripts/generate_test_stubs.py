@@ -36,16 +36,14 @@ if __name__ == '__main__':
 
 def create_test_file(module_name, test_path):
     """Create a basic test file for a module."""
-    class_name = ''.join(word.capitalize() for word in module_name.split('_'))
+    class_name = "".join(word.capitalize() for word in module_name.split("_"))
     import_path = f"med_core.{module_name}"
 
     content = BASIC_TEST_TEMPLATE.format(
-        module_name=module_name,
-        class_name=class_name,
-        import_path=import_path
+        module_name=module_name, class_name=class_name, import_path=import_path
     )
 
-    with open(test_path, 'w') as f:
+    with open(test_path, "w") as f:
         f.write(content)
 
     print(f"✅ Created: {test_path}")
@@ -54,15 +52,15 @@ def create_test_file(module_name, test_path):
 def main():
     """Generate test files for modules without tests."""
     base_dir = Path(__file__).parent.parent
-    tests_dir = base_dir / 'tests'
+    tests_dir = base_dir / "tests"
 
     # Modules that need tests (from coverage analysis)
     modules_needing_tests = [
-        'extractors',
-        'models',
-        'shared',
-        'utils',
-        'visualization',
+        "extractors",
+        "models",
+        "shared",
+        "utils",
+        "visualization",
     ]
 
     print("=" * 80)
@@ -85,5 +83,5 @@ def main():
     print("=" * 80)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

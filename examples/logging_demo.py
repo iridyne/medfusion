@@ -77,7 +77,9 @@ def example_performance_tracking():
         time.sleep(0.05)  # Simulate inference
 
     # Track with additional context
-    with PerformanceLogger("batch_processing", logger=logger, log_args=True, batch_size=32):
+    with PerformanceLogger(
+        "batch_processing", logger=logger, log_args=True, batch_size=32
+    ):
         time.sleep(0.02)
 
     print()
@@ -163,12 +165,15 @@ def example_json_logging():
         with LogContext(user_id="user123", session_id="sess456"):
             logger.info("User logged in")
             logger.info("Processing request", extra={"request_id": "req789"})
-            logger.warning("Rate limit approaching", extra={"requests": 95, "limit": 100})
+            logger.warning(
+                "Rate limit approaching", extra={"requests": 95, "limit": 100}
+            )
 
         # Read and display JSON logs
         print("\nJSON Log Output:")
         with open(log_file) as f:
             import json
+
             for line in f:
                 data = json.loads(line)
                 print(f"  {json.dumps(data, indent=2)}")

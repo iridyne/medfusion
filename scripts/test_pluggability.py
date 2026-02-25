@@ -28,7 +28,11 @@ from pathlib import Path
 if "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules:
     try:
         import pytest  # type: ignore
-        pytest.skip("Script-style tests are skipped during pytest collection", allow_module_level=True)
+
+        pytest.skip(
+            "Script-style tests are skipped during pytest collection",
+            allow_module_level=True,
+        )
     except Exception:
         # If pytest cannot be imported for some reason, simply exit early to avoid collection.
         # This branch is conservative: in normal script execution pytest won't be in sys.modules
@@ -285,8 +289,8 @@ def main():
     failed = sum(1 for r in results if r["status"] == "FAIL")
 
     print(f"\n  Total Tests: {total_tests}")
-    print(f"  Passed: {passed} ({passed/total_tests*100:.1f}%)")
-    print(f"  Failed: {failed} ({failed/total_tests*100:.1f}%)")
+    print(f"  Passed: {passed} ({passed / total_tests * 100:.1f}%)")
+    print(f"  Failed: {failed} ({failed / total_tests * 100:.1f}%)")
 
     if failed > 0:
         print("\n  Failed Combinations:")
@@ -302,14 +306,26 @@ def main():
     for vision in vision_backbones:
         vision_results = [r for r in results if r["vision"] == vision]
         vision_passed = sum(1 for r in vision_results if r["status"] == "PASS")
-        status = "PASS" if vision_passed == len(vision_results) else "PARTIAL" if vision_passed > 0 else "FAIL"
+        status = (
+            "PASS"
+            if vision_passed == len(vision_results)
+            else "PARTIAL"
+            if vision_passed > 0
+            else "FAIL"
+        )
         print_result("Vision", vision, status)
 
     print("\n  Fusion Strategies:")
     for fusion in fusion_types:
         fusion_results = [r for r in results if r["fusion"] == fusion]
         fusion_passed = sum(1 for r in fusion_results if r["status"] == "PASS")
-        status = "PASS" if fusion_passed == len(fusion_results) else "PARTIAL" if fusion_passed > 0 else "FAIL"
+        status = (
+            "PASS"
+            if fusion_passed == len(fusion_results)
+            else "PARTIAL"
+            if fusion_passed > 0
+            else "FAIL"
+        )
         print_result("Fusion", fusion, status)
 
     print("\n  Tabular Configurations:")
@@ -317,7 +333,13 @@ def main():
         tabular_str = str(tabular)
         tabular_results = [r for r in results if r["tabular"] == tabular_str]
         tabular_passed = sum(1 for r in tabular_results if r["status"] == "PASS")
-        status = "PASS" if tabular_passed == len(tabular_results) else "PARTIAL" if tabular_passed > 0 else "FAIL"
+        status = (
+            "PASS"
+            if tabular_passed == len(tabular_results)
+            else "PARTIAL"
+            if tabular_passed > 0
+            else "FAIL"
+        )
         print_result("Tabular", tabular_str, status)
 
     # Final verdict

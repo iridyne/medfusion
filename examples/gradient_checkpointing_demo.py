@@ -65,8 +65,10 @@ def train_without_checkpointing():
         if device.type == "cuda":
             memory_allocated = torch.cuda.memory_allocated() / 1024**2
             memory_reserved = torch.cuda.memory_reserved() / 1024**2
-            print(f"Batch {batch_idx + 1}: Loss={loss.item():.4f}, "
-                  f"Memory: {memory_allocated:.2f}MB / {memory_reserved:.2f}MB")
+            print(
+                f"Batch {batch_idx + 1}: Loss={loss.item():.4f}, "
+                f"Memory: {memory_allocated:.2f}MB / {memory_reserved:.2f}MB"
+            )
         else:
             print(f"Batch {batch_idx + 1}: Loss={loss.item():.4f}")
 
@@ -133,8 +135,10 @@ def train_with_checkpointing():
         if device.type == "cuda":
             memory_allocated = torch.cuda.memory_allocated() / 1024**2
             memory_reserved = torch.cuda.memory_reserved() / 1024**2
-            print(f"Batch {batch_idx + 1}: Loss={loss.item():.4f}, "
-                  f"Memory: {memory_allocated:.2f}MB / {memory_reserved:.2f}MB")
+            print(
+                f"Batch {batch_idx + 1}: Loss={loss.item():.4f}, "
+                f"Memory: {memory_allocated:.2f}MB / {memory_reserved:.2f}MB"
+            )
         else:
             print(f"Batch {batch_idx + 1}: Loss={loss.item():.4f}")
 

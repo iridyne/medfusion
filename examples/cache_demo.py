@@ -116,7 +116,7 @@ def demo_usage_example():
     print("实际使用示例")
     print("=" * 60)
 
-    code = '''
+    code = """
 # 1. 创建原始数据集
 from med_core.datasets import MedicalDataset
 
@@ -156,7 +156,7 @@ for epoch in range(num_epochs):
     if hasattr(cached_dataset, 'get_cache_stats'):
         stats = cached_dataset.get_cache_stats()
         print(f"缓存命中率: {stats['hit_rate']:.2%}")
-'''
+"""
 
     print("\n代码示例:")
     print(code)
@@ -193,6 +193,7 @@ def main():
     except Exception as e:
         print(f"\n错误: {e}")
         import traceback
+
         traceback.print_exc()
 
 

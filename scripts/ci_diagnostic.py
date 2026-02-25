@@ -6,21 +6,20 @@
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Tuple
 
 
 class Colors:
-    GREEN = '\033[0;32m'
-    RED = '\033[0;31m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    NC = '\033[0m'
+    GREEN = "\033[0;32m"
+    RED = "\033[0;31m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    NC = "\033[0m"
 
 
 def print_header(text: str):
     print(f"\n{'=' * 80}")
     print(f"  {text}")
-    print('=' * 80)
+    print("=" * 80)
 
 
 def print_step(text: str):
@@ -39,15 +38,11 @@ def print_warning(text: str):
     print(f"{Colors.YELLOW}⚠ {text}{Colors.NC}")
 
 
-def run_command(cmd: List[str], check: bool = True) -> Tuple[bool, str]:
+def run_command(cmd: list[str], check: bool = True) -> tuple[bool, str]:
     """运行命令并返回结果"""
     try:
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=check,
-            timeout=60
+            cmd, capture_output=True, text=True, check=check, timeout=60
         )
         return True, result.stdout + result.stderr
     except subprocess.CalledProcessError as e:
@@ -167,8 +162,7 @@ def check_code_quality():
     # Ruff 检查
     print_step("Ruff Linting")
     success, output = run_command(
-        ["ruff", "check", "med_core/", "tests/", "--output-format=text"],
-        check=False
+        ["ruff", "check", "med_core/", "tests/", "--output-format=text"], check=False
     )
     if success:
         print_success("Ruff 检查通过")
@@ -179,8 +173,7 @@ def check_code_quality():
     # Ruff 格式检查
     print_step("Ruff Format")
     success, output = run_command(
-        ["ruff", "format", "--check", "med_core/", "tests/"],
-        check=False
+        ["ruff", "format", "--check", "med_core/", "tests/"], check=False
     )
     if success:
         print_success("代码格式正确")
@@ -191,8 +184,7 @@ def check_code_quality():
     # mypy 类型检查
     print_step("mypy 类型检查")
     success, output = run_command(
-        ["mypy", "med_core/", "--ignore-missing-imports"],
-        check=False
+        ["mypy", "med_core/", "--ignore-missing-imports"], check=False
     )
     if success:
         print_success("类型检查通过")
@@ -221,8 +213,7 @@ def check_tests():
     # 运行测试
     print_step("运行测试")
     success, output = run_command(
-        [sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"],
-        check=False
+        [sys.executable, "-m", "pytest", "tests/", "-v", "--tb=short"], check=False
     )
     if success:
         print_success("测试通过")
@@ -255,8 +246,7 @@ def check_scripts():
 
         # 检查语法
         success, output = run_command(
-            [sys.executable, "-m", "py_compile", script],
-            check=False
+            [sys.executable, "-m", "py_compile", script], check=False
         )
         if success:
             print_success(f"{script}")
@@ -287,8 +277,17 @@ def check_docker():
         # 尝试验证 Dockerfile 语法
         print_step("验证 Dockerfile 语法")
         success, output = run_command(
-            ["docker", "build", "--no-cache", "-f", "Dockerfile", "-t", "medfusion:test", "."],
-            check=False
+            [
+                "docker",
+                "build",
+                "--no-cache",
+                "-f",
+                "Dockerfile",
+                "-t",
+                "medfusion:test",
+                ".",
+            ],
+            check=False,
         )
         if success:
             print_success("Docker 构建成功")
@@ -320,8 +319,7 @@ def check_examples():
 
     for example in example_files:
         success, output = run_command(
-            [sys.executable, "-m", "py_compile", str(example)],
-            check=False
+            [sys.executable, "-m", "py_compile", str(example)], check=False
         )
         if success:
             print_success(f"{example.name}")

@@ -259,7 +259,9 @@ def demo_inference():
     with torch.no_grad():
         torchscript_output = loaded_model(x)
     print(f"   输出形状: {torchscript_output.shape}")
-    print(f"   与 PyTorch 的差异: {(pytorch_output - torchscript_output).abs().max():.6f}")
+    print(
+        f"   与 PyTorch 的差异: {(pytorch_output - torchscript_output).abs().max():.6f}"
+    )
 
     # 3. ONNX 推理
     print("\n3. ONNX 推理:")
@@ -271,7 +273,9 @@ def demo_inference():
         ort_output = ort_session.run(None, ort_inputs)[0]
 
         print(f"   输出形状: {ort_output.shape}")
-        print(f"   与 PyTorch 的差异: {abs(pytorch_output.numpy() - ort_output).max():.6f}")
+        print(
+            f"   与 PyTorch 的差异: {abs(pytorch_output.numpy() - ort_output).max():.6f}"
+        )
     except ImportError:
         print("   ⚠ ONNXRuntime 未安装，跳过 ONNX 推理")
 
@@ -354,6 +358,7 @@ def main():
     except Exception as e:
         print(f"\n❌ 错误: {e}")
         import traceback
+
         traceback.print_exc()
 
 

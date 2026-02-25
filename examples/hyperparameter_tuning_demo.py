@@ -39,7 +39,9 @@ def train_and_evaluate(params):
     train_dataset = TensorDataset(X_train, y_train)
     val_dataset = TensorDataset(X_val, y_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=params["batch_size"], shuffle=True)
+    train_loader = DataLoader(
+        train_dataset, batch_size=params["batch_size"], shuffle=True
+    )
     val_loader = DataLoader(val_dataset, batch_size=params["batch_size"])
 
     # 创建模型
@@ -47,11 +49,17 @@ def train_and_evaluate(params):
 
     # 优化器
     if params["optimizer"] == "adam":
-        optimizer = optim.Adam(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"])
+        optimizer = optim.Adam(
+            model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"]
+        )
     elif params["optimizer"] == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"])
+        optimizer = optim.SGD(
+            model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"]
+        )
     else:
-        optimizer = optim.AdamW(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"])
+        optimizer = optim.AdamW(
+            model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"]
+        )
 
     criterion = nn.CrossEntropyLoss()
 
@@ -92,7 +100,9 @@ def demo_basic_tuning():
         params = {
             "lr": trial.suggest_float("lr", 1e-5, 1e-1, log=True),
             "batch_size": trial.suggest_int("batch_size", 16, 128, step=16),
-            "optimizer": trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"]),
+            "optimizer": trial.suggest_categorical(
+                "optimizer", ["adam", "sgd", "adamw"]
+            ),
             "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
             "dropout": trial.suggest_float("dropout", 0.0, 0.5, step=0.1),
         }

@@ -16,6 +16,7 @@ try:
         normalize_intensity_minmax,
         normalize_intensity_percentile,
     )
+
     RUST_AVAILABLE = True
     print("✅ Rust acceleration available")
 except ImportError:
@@ -71,14 +72,16 @@ class RustAcceleratedPreprocessor:
         # Crop to target size
         if self.output_size:
             if self.use_rust:
-                image = center_crop_rust(image, self.output_size[0], self.output_size[1])
+                image = center_crop_rust(
+                    image, self.output_size[0], self.output_size[1]
+                )
             else:
                 # Python fallback
                 h, w = image.shape
                 th, tw = self.output_size
                 start_h = (h - th) // 2
                 start_w = (w - tw) // 2
-                image = image[start_h:start_h+th, start_w:start_w+tw]
+                image = image[start_h : start_h + th, start_w : start_w + tw]
 
         return image
 
@@ -102,17 +105,16 @@ class RustAcceleratedPreprocessor:
 
         # Parallel normalization
         images = normalize_intensity_batch(
-            images,
-            method=self.normalize_method,
-            p_low=1.0,
-            p_high=99.0
+            images, method=self.normalize_method, p_low=1.0, p_high=99.0
         )
 
         # Crop each image (TODO: batch crop in Rust)
         if self.output_size:
             processed = []
             for img in images:
-                cropped = center_crop_rust(img, self.output_size[0], self.output_size[1])
+                cropped = center_crop_rust(
+                    img, self.output_size[0], self.output_size[1]
+                )
                 processed.append(cropped)
             images = np.array(processed)
 
@@ -121,17 +123,16 @@ class RustAcceleratedPreprocessor:
 
 def demo_single_image():
     """Demo: Process a single image."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 1: Single Image Processing")
-    print("="*70)
+    print("=" * 70)
 
     # Generate test image
     image = np.random.rand(1024, 1024).astype(np.float32) * 255
     print(f"Input image shape: {image.shape}")
 
     preprocessor = RustAcceleratedPreprocessor(
-        normalize_method="percentile",
-        output_size=(224, 224)
+        normalize_method="percentile", output_size=(224, 224)
     )
 
     start = time.perf_counter()
@@ -139,15 +140,15 @@ def demo_single_image():
     elapsed = time.perf_counter() - start
 
     print(f"Output image shape: {processed.shape}")
-    print(f"Processing time: {elapsed*1000:.2f} ms")
+    print(f"Processing time: {elapsed * 1000:.2f} ms")
     print(f"Value range: [{processed.min():.3f}, {processed.max():.3f}]")
 
 
 def demo_batch_processing():
     """Demo: Process a batch of images."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 2: Batch Processing")
-    print("="*70)
+    print("=" * 70)
 
     batch_size = 100
     img_size = 512
@@ -157,8 +158,7 @@ def demo_batch_processing():
     print(f"Input batch shape: {images.shape}")
 
     preprocessor = RustAcceleratedPreprocessor(
-        normalize_method="percentile",
-        output_size=(224, 224)
+        normalize_method="percentile", output_size=(224, 224)
     )
 
     start = time.perf_counter()
@@ -166,16 +166,16 @@ def demo_batch_processing():
     elapsed = time.perf_counter() - start
 
     print(f"Output batch shape: {processed.shape}")
-    print(f"Total processing time: {elapsed*1000:.2f} ms")
-    print(f"Time per image: {elapsed/batch_size*1000:.2f} ms")
-    print(f"Throughput: {batch_size/elapsed:.1f} images/sec")
+    print(f"Total processing time: {elapsed * 1000:.2f} ms")
+    print(f"Time per image: {elapsed / batch_size * 1000:.2f} ms")
+    print(f"Throughput: {batch_size / elapsed:.1f} images/sec")
 
 
 def demo_integration_with_dataloader():
     """Demo: Integration with PyTorch DataLoader."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("DEMO 3: Integration with DataLoader")
-    print("="*70)
+    print("=" * 70)
 
     try:
         import torch
@@ -188,8 +188,7 @@ def demo_integration_with_dataloader():
         def __init__(self, num_samples=1000):
             self.num_samples = num_samples
             self.preprocessor = RustAcceleratedPreprocessor(
-                normalize_method="percentile",
-                output_size=(224, 224)
+                normalize_method="percentile", output_size=(224, 224)
             )
 
         def __len__(self):
@@ -227,21 +226,21 @@ def demo_integration_with_dataloader():
     elapsed = time.perf_counter() - start
 
     print(f"\nTotal time: {elapsed:.2f} sec")
-    print(f"Throughput: {len(dataset)/elapsed:.1f} samples/sec")
+    print(f"Throughput: {len(dataset) / elapsed:.1f} samples/sec")
 
 
 def main():
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("MedCore Rust Acceleration - Integration Examples")
-    print("="*70)
+    print("=" * 70)
 
     demo_single_image()
     demo_batch_processing()
     demo_integration_with_dataloader()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ All demos completed!")
-    print("="*70)
+    print("=" * 70)
     print("\nNext steps:")
     print("1. Integrate into your training pipeline")
     print("2. Run benchmarks: python benchmark_comparison.py")

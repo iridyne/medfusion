@@ -2,6 +2,7 @@
 """
 CI 配置验证脚本 - 检查所有修复是否正确应用
 """
+
 import sys
 from pathlib import Path
 
@@ -14,13 +15,13 @@ def check_pyproject():
     issues = []
 
     # 检查 dev 依赖位置
-    if '[project.optional-dependencies]' in content and 'dev = [' in content:
+    if "[project.optional-dependencies]" in content and "dev = [" in content:
         print("  ✓ dev 依赖在正确位置 (optional-dependencies)")
     else:
         issues.append("dev 依赖配置错误")
 
     # 检查是否还有 dependency-groups
-    if '[dependency-groups]' in content:
+    if "[dependency-groups]" in content:
         issues.append("仍然存在 [dependency-groups] 节")
     else:
         print("  ✓ 已移除 [dependency-groups]")
@@ -48,13 +49,13 @@ def check_ci_workflow():
         issues.append("测试矩阵配置不正确")
 
     # 检查安全工具版本
-    if 'bandit==1.7.5 safety==3.0.1' in content:
+    if "bandit==1.7.5 safety==3.0.1" in content:
         print("  ✓ 安全工具版本已固定")
     else:
         issues.append("安全工具版本未固定")
 
     # 检查 Docker 平台
-    if 'platforms: linux/amd64' in content:
+    if "platforms: linux/amd64" in content:
         print("  ✓ Docker 构建限制为单平台")
     else:
         issues.append("Docker 平台配置不正确")
@@ -70,13 +71,13 @@ def check_setup_action():
     issues = []
 
     # 检查缓存配置
-    if 'actions/cache@v4' in content:
+    if "actions/cache@v4" in content:
         print("  ✓ 已添加依赖缓存")
     else:
         issues.append("缺少缓存配置")
 
     # 检查缓存路径
-    if '~/.cache/uv' in content:
+    if "~/.cache/uv" in content:
         print("  ✓ uv 缓存路径正确")
     else:
         issues.append("uv 缓存路径不正确")
@@ -158,7 +159,9 @@ def main():
     if passed == total:
         print("\n✓ 所有配置修复已正确应用！")
         print("\n下一步:")
-        print("  1. 提交更改: git add -A && git commit -m 'fix: CI configuration issues'")
+        print(
+            "  1. 提交更改: git add -A && git commit -m 'fix: CI configuration issues'"
+        )
         print("  2. 推送到远程: git push")
         print("  3. 观察 GitHub Actions 运行结果")
         return 0

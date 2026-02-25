@@ -178,18 +178,10 @@ def main():
         model=ModelConfig(
             num_classes=2,
             vision=VisionConfig(
-                backbone="resnet18",
-                pretrained=True,
-                attention_type="cbam"
+                backbone="resnet18", pretrained=True, attention_type="cbam"
             ),
-            tabular=TabularConfig(
-                hidden_dims=[32, 16],
-                output_dim=16
-            ),
-            fusion=FusionConfig(
-                fusion_type="gated",
-                hidden_dim=32
-            )
+            tabular=TabularConfig(hidden_dims=[32, 16], output_dim=16),
+            fusion=FusionConfig(fusion_type="gated", hidden_dim=32),
         ),
         training=TrainingConfig(
             num_epochs=5,  # Short run for demo
@@ -197,7 +189,7 @@ def main():
             stage1_epochs=1,
             stage2_epochs=2,
             stage3_epochs=2,
-        )
+        ),
     )
 
     # 3. Data Loading
@@ -209,12 +201,11 @@ def main():
         target_column=config.data.target_column,
         numerical_features=config.data.numerical_features,
         categorical_features=config.data.categorical_features,
-        handle_missing="fill_mean"
+        handle_missing="fill_mean",
     )
 
     train_ds, val_ds, test_ds = split_dataset(
-        full_dataset,
-        train_ratio=0.7, val_ratio=0.15, test_ratio=0.15
+        full_dataset, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15
     )
 
     # Add transforms
@@ -227,7 +218,7 @@ def main():
         val_dataset=val_ds,
         test_dataset=test_ds,
         batch_size=config.data.batch_size,
-        num_workers=config.data.num_workers
+        num_workers=config.data.num_workers,
     )
 
     # 4. Model Setup
@@ -236,33 +227,32 @@ def main():
         backbone_name=config.model.vision.backbone,
         pretrained=config.model.vision.pretrained,
         feature_dim=config.model.vision.feature_dim,
-        attention_type=config.model.vision.attention_type
+        attention_type=config.model.vision.attention_type,
     )
 
     tabular_backbone = create_tabular_backbone(
         input_dim=train_ds.get_tabular_dim(),
         output_dim=config.model.tabular.output_dim,
-        hidden_dims=config.model.tabular.hidden_dims
+        hidden_dims=config.model.tabular.hidden_dims,
     )
 
     fusion_module = create_fusion_module(
         fusion_type=config.model.fusion.fusion_type,
         vision_dim=config.model.vision.feature_dim,
         tabular_dim=config.model.tabular.output_dim,
-        output_dim=config.model.fusion.hidden_dim
+        output_dim=config.model.fusion.hidden_dim,
     )
 
     model = MultiModalFusionModel(
         vision_backbone=vision_backbone,
         tabular_backbone=tabular_backbone,
         fusion_module=fusion_module,
-        num_classes=config.model.num_classes
+        num_classes=config.model.num_classes,
     )
 
     # 5. Training Setup
     optimizer = optim.AdamW(
-        model.parameters(),
-        lr=config.training.optimizer.learning_rate
+        model.parameters(), lr=config.training.optimizer.learning_rate
     )
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=config.training.num_epochs
@@ -274,7 +264,7 @@ def main():
         train_loader=dataloaders["train"],
         val_loader=dataloaders["val"],
         optimizer=optimizer,
-        scheduler=scheduler
+        scheduler=scheduler,
     )
 
     # 6. Train
@@ -306,7 +296,7 @@ def main():
         metrics=metrics,
         output_dir=config.logging.output_dir,
         experiment_name=config.experiment_name,
-        config=config.to_dict()
+        config=config.to_dict(),
     )
 
     logger.info(f"Demo complete! Report generated at {report_path}")

@@ -42,7 +42,9 @@ class ClinicalDataSanitizer:
         self,
         dictionary_path: str | Path | None = None,
         outlier_method: Literal["iqr", "zscore", "range"] = "range",
-        missing_strategy: Literal["drop", "mean", "median", "mode", "forward_fill"] = "median",
+        missing_strategy: Literal[
+            "drop", "mean", "median", "mode", "forward_fill"
+        ] = "median",
         encoding_strategy: Literal["onehot", "label", "ordinal"] = "label",
         verbose: bool = True,
     ):
@@ -82,7 +84,7 @@ class ClinicalDataSanitizer:
                 print(f"Warning: Dictionary not found at {self.dictionary_path}")
             return {}
 
-        with open(self.dictionary_path, encoding='utf-8') as f:
+        with open(self.dictionary_path, encoding="utf-8") as f:
             return yaml.safe_load(f)
 
     def _get_valid_range(self, column: str) -> tuple[float, float] | None:
@@ -96,8 +98,10 @@ class ClinicalDataSanitizer:
                 for field_name, field_info in category_data.items():
                     if isinstance(field_info, dict):
                         # Check if this field matches the column
-                        if field_name == column or column in field_info.get('aliases', []):
-                            return field_info.get('valid_range')
+                        if field_name == column or column in field_info.get(
+                            "aliases", []
+                        ):
+                            return field_info.get("valid_range")
 
         return None
 
@@ -267,19 +271,39 @@ class ClinicalDataSanitizer:
 
         # Common medical categorical mappings
         gender_map = {
-            "male": 0, "男": 0, "M": 0, "m": 0,
-            "female": 1, "女": 1, "F": 1, "f": 1,
+            "male": 0,
+            "男": 0,
+            "M": 0,
+            "m": 0,
+            "female": 1,
+            "女": 1,
+            "F": 1,
+            "f": 1,
         }
 
         smoking_map = {
-            "never": 0, "从不": 0, "no": 0, "否": 0,
-            "former": 1, "曾经": 1, "quit": 1,
-            "current": 2, "目前": 2, "yes": 2, "是": 2,
+            "never": 0,
+            "从不": 0,
+            "no": 0,
+            "否": 0,
+            "former": 1,
+            "曾经": 1,
+            "quit": 1,
+            "current": 2,
+            "目前": 2,
+            "yes": 2,
+            "是": 2,
         }
 
         binary_map = {
-            "no": 0, "否": 0, "false": 0, "0": 0,
-            "yes": 1, "是": 1, "true": 1, "1": 1,
+            "no": 0,
+            "否": 0,
+            "false": 0,
+            "0": 0,
+            "yes": 1,
+            "是": 1,
+            "true": 1,
+            "1": 1,
         }
 
         col_lower = column.lower()
@@ -352,7 +376,7 @@ class ClinicalDataSanitizer:
             self.cleaning_stats["missing_filled"] += missing_count
 
         elif self.missing_strategy == "forward_fill":
-            df_filled[column].fillna(method='ffill', inplace=True)
+            df_filled[column].fillna(method="ffill", inplace=True)
             self.cleaning_stats["missing_filled"] += missing_count
 
         return df_filled
@@ -403,7 +427,10 @@ class ClinicalDataSanitizer:
             print("\nStep 3: Encoding categorical variables...")
 
         for col in df_clean.columns:
-            if df_clean[col].dtype == 'object' or df_clean[col].dtype.name == 'category':
+            if (
+                df_clean[col].dtype == "object"
+                or df_clean[col].dtype.name == "category"
+            ):
                 df_clean = self.encode_categorical(df_clean, col)
 
         # Step 4: Handle missing values
@@ -415,16 +442,18 @@ class ClinicalDataSanitizer:
 
         # Summary
         if self.verbose:
-            print("\n" + "="*60)
+            print("\n" + "=" * 60)
             print("Cleaning Summary:")
             print(f"  Outliers detected: {self.cleaning_stats['outliers_detected']}")
             print(f"  Outliers fixed: {self.cleaning_stats['outliers_fixed']}")
             print(f"  Logical errors: {self.cleaning_stats['logical_errors']}")
             print(f"  Missing values: {self.cleaning_stats['missing_values']}")
             print(f"  Missing filled: {self.cleaning_stats['missing_filled']}")
-            print(f"  Categorical encoded: {self.cleaning_stats['categorical_encoded']}")
+            print(
+                f"  Categorical encoded: {self.cleaning_stats['categorical_encoded']}"
+            )
             print(f"  Output shape: {df_clean.shape}")
-            print("="*60)
+            print("=" * 60)
 
         return df_clean
 
@@ -437,13 +466,13 @@ class ClinicalDataSanitizer:
 if __name__ == "__main__":
     # Create sample clinical data with issues
     sample_data = {
-        'patient_id': ['P001', 'P002', 'P003', 'P004', 'P005'],
-        'age': [45, 200, 38, -5, 61],  # Outliers: 200, -5
-        'gender': ['男', 'F', '女', 'M', '男'],
-        'systolic_bp': [120, 0, 145, 160, 135],  # Outlier: 0
-        'diastolic_bp': [80, 70, 95, 100, 85],
-        'glucose': [5.2, np.nan, 7.8, 9.1, 5.0],  # Missing value
-        'smoking': ['从不', 'yes', 'no', '目前', 'former'],
+        "patient_id": ["P001", "P002", "P003", "P004", "P005"],
+        "age": [45, 200, 38, -5, 61],  # Outliers: 200, -5
+        "gender": ["男", "F", "女", "M", "男"],
+        "systolic_bp": [120, 0, 145, 160, 135],  # Outlier: 0
+        "diastolic_bp": [80, 70, 95, 100, 85],
+        "glucose": [5.2, np.nan, 7.8, 9.1, 5.0],  # Missing value
+        "smoking": ["从不", "yes", "no", "目前", "former"],
     }
 
     df = pd.DataFrame(sample_data)
@@ -458,7 +487,7 @@ if __name__ == "__main__":
         outlier_method="range",
         missing_strategy="median",
         encoding_strategy="label",
-        verbose=True
+        verbose=True,
     )
 
     # Clean data

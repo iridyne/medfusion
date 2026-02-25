@@ -17,14 +17,11 @@ def example_basic_usage():
     print("=" * 60)
 
     # Create model
-    model = smurf_small(
-        num_classes=4,
-        fusion_strategy='fused_attention'
-    )
+    model = smurf_small(num_classes=4, fusion_strategy="fused_attention")
 
     # Prepare dummy data
     ct_scan = torch.randn(2, 1, 64, 128, 128)  # [B, C, D, H, W]
-    pathology = torch.randn(2, 3, 224, 224)     # [B, C, H, W]
+    pathology = torch.randn(2, 3, 224, 224)  # [B, C, H, W]
 
     # Forward pass
     model.eval()
@@ -45,10 +42,7 @@ def example_with_features():
     print("=" * 60)
 
     # Create model
-    model = smurf_small(
-        num_classes=4,
-        fusion_strategy='fused_attention'
-    )
+    model = smurf_small(num_classes=4, fusion_strategy="fused_attention")
 
     # Prepare data
     ct_scan = torch.randn(2, 1, 64, 128, 128)
@@ -73,10 +67,7 @@ def example_mil():
     print("=" * 60)
 
     # Create model with MIL
-    model = smurf_with_mil_small(
-        num_classes=4,
-        fusion_strategy='fused_attention'
-    )
+    model = smurf_with_mil_small(num_classes=4, fusion_strategy="fused_attention")
 
     # Prepare data with multiple pathology patches
     ct_scan = torch.randn(2, 1, 64, 128, 128)
@@ -95,7 +86,7 @@ def example_mil():
     print(f"Output logits: {logits.shape}")
 
     # Show attention weights for first sample
-    attention = features['attention_weights'][0].squeeze()
+    attention = features["attention_weights"][0].squeeze()
     print("\nAttention weights for first sample:")
     for i, weight in enumerate(attention):
         print(f"  Patch {i}: {weight.item():.4f}")
@@ -112,7 +103,7 @@ def example_different_fusion_strategies():
     ct_scan = torch.randn(2, 1, 64, 128, 128)
     pathology = torch.randn(2, 3, 224, 224)
 
-    strategies = ['concat', 'kronecker', 'fused_attention']
+    strategies = ["concat", "kronecker", "fused_attention"]
 
     for strategy in strategies:
         model = smurf_small(num_classes=4, fusion_strategy=strategy)
@@ -134,7 +125,7 @@ def example_training_setup():
     print("=" * 60)
 
     # Create model
-    model = smurf_small(num_classes=4, fusion_strategy='fused_attention')
+    model = smurf_small(num_classes=4, fusion_strategy="fused_attention")
 
     # Setup optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.01)

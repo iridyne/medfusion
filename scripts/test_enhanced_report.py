@@ -14,7 +14,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from sklearn.metrics import roc_curve
 
 # Add project root to path
@@ -28,8 +27,7 @@ from med_core.evaluation import (
 )
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -42,10 +40,7 @@ def create_sample_metrics(accuracy: float = 0.95, n_samples: int = 100):
     n_negative = n_samples - n_positive
 
     # True labels
-    y_true = np.concatenate([
-        np.ones(n_positive),
-        np.zeros(n_negative)
-    ])
+    y_true = np.concatenate([np.ones(n_positive), np.zeros(n_negative)])
 
     # Predictions with specified accuracy
     y_pred = y_true.copy()
@@ -69,18 +64,18 @@ def create_high_res_roc_plot(y_true, y_scores, output_path: Path, dpi: int = 300
     fpr, tpr, _ = roc_curve(y_true, y_scores)
 
     plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, linewidth=2, label='ROC Curve')
-    plt.plot([0, 1], [0, 1], 'k--', linewidth=1, label='Random Classifier')
+    plt.plot(fpr, tpr, linewidth=2, label="ROC Curve")
+    plt.plot([0, 1], [0, 1], "k--", linewidth=1, label="Random Classifier")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate', fontsize=12)
-    plt.ylabel('True Positive Rate', fontsize=12)
-    plt.title('Receiver Operating Characteristic (ROC) Curve', fontsize=14)
+    plt.xlabel("False Positive Rate", fontsize=12)
+    plt.ylabel("True Positive Rate", fontsize=12)
+    plt.title("Receiver Operating Characteristic (ROC) Curve", fontsize=14)
     plt.legend(loc="lower right", fontsize=11)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
 
-    plt.savefig(output_path, dpi=dpi, bbox_inches='tight')
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close()
 
     logger.info(f"✅ High-resolution ROC curve saved: {output_path}")
@@ -88,34 +83,43 @@ def create_high_res_roc_plot(y_true, y_scores, output_path: Path, dpi: int = 300
 
 def create_high_res_confusion_matrix(metrics, output_path: Path, dpi: int = 300):
     """Create high-resolution confusion matrix plot."""
-    cm = np.array([
-        [metrics.true_negatives, metrics.false_positives],
-        [metrics.false_negatives, metrics.true_positives]
-    ])
+    cm = np.array(
+        [
+            [metrics.true_negatives, metrics.false_positives],
+            [metrics.false_negatives, metrics.true_positives],
+        ]
+    )
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    im = ax.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
     ax.figure.colorbar(im, ax=ax)
 
-    ax.set(xticks=np.arange(cm.shape[1]),
-           yticks=np.arange(cm.shape[0]),
-           xticklabels=['Negative', 'Positive'],
-           yticklabels=['Negative', 'Positive'],
-           title='Confusion Matrix',
-           ylabel='True Label',
-           xlabel='Predicted Label')
+    ax.set(
+        xticks=np.arange(cm.shape[1]),
+        yticks=np.arange(cm.shape[0]),
+        xticklabels=["Negative", "Positive"],
+        yticklabels=["Negative", "Positive"],
+        title="Confusion Matrix",
+        ylabel="True Label",
+        xlabel="Predicted Label",
+    )
 
     # Add text annotations
-    thresh = cm.max() / 2.
+    thresh = cm.max() / 2.0
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], 'd'),
-                   ha="center", va="center",
-                   color="white" if cm[i, j] > thresh else "black",
-                   fontsize=14)
+            ax.text(
+                j,
+                i,
+                format(cm[i, j], "d"),
+                ha="center",
+                va="center",
+                color="white" if cm[i, j] > thresh else "black",
+                fontsize=14,
+            )
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=dpi, bbox_inches='tight')
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close()
 
     logger.info(f"✅ High-resolution confusion matrix saved: {output_path}")
@@ -183,7 +187,9 @@ def test_statistical_comparison():
 
     # Generate baseline and improved metrics
     baseline_metrics, _, _ = create_sample_metrics(accuracy=0.85, n_samples=200)
-    improved_metrics, y_true, y_scores = create_sample_metrics(accuracy=0.92, n_samples=200)
+    improved_metrics, y_true, y_scores = create_sample_metrics(
+        accuracy=0.92, n_samples=200
+    )
 
     logger.info(f"Baseline 准确率: {baseline_metrics.accuracy:.4f}")
     logger.info(f"改进后准确率: {improved_metrics.accuracy:.4f}")
@@ -213,7 +219,7 @@ def test_statistical_comparison():
     logger.info(f"✅ 报告生成成功: {report_path}")
 
     # Read and display statistical tests section
-    with open(report_path, 'r', encoding='utf-8') as f:
+    with open(report_path, encoding="utf-8") as f:
         content = f.read()
         if "Statistical Significance Tests" in content:
             logger.info("✅ 统计检验部分已添加到报告")
@@ -271,7 +277,7 @@ def test_latex_output():
     logger.info(f"✅ LaTeX 报告生成成功: {latex_path}")
 
     # Display LaTeX table
-    with open(latex_path, 'r', encoding='utf-8') as f:
+    with open(latex_path, encoding="utf-8") as f:
         content = f.read()
         # Extract table
         start = content.find("\\begin{table}")

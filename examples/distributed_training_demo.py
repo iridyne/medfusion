@@ -57,8 +57,10 @@ def train_epoch(model, dataloader, criterion, optimizer, device, rank):
         total += target.size(0)
 
         if batch_idx % 10 == 0:
-            print(f"Rank {rank}: Batch {batch_idx}/{len(dataloader)}, "
-                  f"Loss: {loss.item():.4f}")
+            print(
+                f"Rank {rank}: Batch {batch_idx}/{len(dataloader)}, "
+                f"Loss: {loss.item():.4f}"
+            )
 
     avg_loss = total_loss / len(dataloader)
     accuracy = 100.0 * correct / total
@@ -135,8 +137,8 @@ def train_ddp(args):
                 optimizer,
                 epoch + 1,
                 f"outputs/checkpoint_ddp_epoch_{epoch + 1}.pt",
-                loss=avg_metrics['loss'].item(),
-                accuracy=avg_metrics['accuracy'].item(),
+                loss=avg_metrics["loss"].item(),
+                accuracy=avg_metrics["accuracy"].item(),
             )
 
     # 清理
@@ -219,8 +221,8 @@ def train_fsdp(args):
                 optimizer,
                 epoch + 1,
                 f"outputs/checkpoint_fsdp_epoch_{epoch + 1}.pt",
-                loss=avg_metrics['loss'].item(),
-                accuracy=avg_metrics['accuracy'].item(),
+                loss=avg_metrics["loss"].item(),
+                accuracy=avg_metrics["accuracy"].item(),
             )
 
     # 清理
@@ -273,33 +275,40 @@ def main():
     parser = argparse.ArgumentParser(description="分布式训练示例")
 
     # 训练参数
-    parser.add_argument("--strategy", type=str, default="ddp",
-                        choices=["ddp", "fsdp"],
-                        help="分布式策略")
-    parser.add_argument("--backend", type=str, default="nccl",
-                        choices=["nccl", "gloo", "mpi"],
-                        help="分布式后端")
-    parser.add_argument("--epochs", type=int, default=5,
-                        help="训练轮数")
-    parser.add_argument("--batch_size", type=int, default=32,
-                        help="批次大小")
-    parser.add_argument("--lr", type=float, default=0.001,
-                        help="学习率")
-    parser.add_argument("--num_samples", type=int, default=1000,
-                        help="样本数量")
-    parser.add_argument("--save_interval", type=int, default=2,
-                        help="保存间隔")
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        default="ddp",
+        choices=["ddp", "fsdp"],
+        help="分布式策略",
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default="nccl",
+        choices=["nccl", "gloo", "mpi"],
+        help="分布式后端",
+    )
+    parser.add_argument("--epochs", type=int, default=5, help="训练轮数")
+    parser.add_argument("--batch_size", type=int, default=32, help="批次大小")
+    parser.add_argument("--lr", type=float, default=0.001, help="学习率")
+    parser.add_argument("--num_samples", type=int, default=1000, help="样本数量")
+    parser.add_argument("--save_interval", type=int, default=2, help="保存间隔")
 
     # FSDP 参数
-    parser.add_argument("--sharding_strategy", type=str, default="FULL_SHARD",
-                        choices=["FULL_SHARD", "SHARD_GRAD_OP", "NO_SHARD", "HYBRID_SHARD"],
-                        help="FSDP 分片策略")
-    parser.add_argument("--min_num_params", type=int, default=1000,
-                        help="自动包装的最小参数数量")
+    parser.add_argument(
+        "--sharding_strategy",
+        type=str,
+        default="FULL_SHARD",
+        choices=["FULL_SHARD", "SHARD_GRAD_OP", "NO_SHARD", "HYBRID_SHARD"],
+        help="FSDP 分片策略",
+    )
+    parser.add_argument(
+        "--min_num_params", type=int, default=1000, help="自动包装的最小参数数量"
+    )
 
     # 其他
-    parser.add_argument("--demo", action="store_true",
-                        help="显示使用示例")
+    parser.add_argument("--demo", action="store_true", help="显示使用示例")
 
     args = parser.parse_args()
 

@@ -2,12 +2,14 @@
 """
 快速测试脚本 - 验证所有优化功能
 """
+
 import os
 import sys
 from datetime import UTC
 
 # 添加 backend 到 Python 路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+
 
 def test_auth():
     """测试认证模块"""
@@ -37,6 +39,7 @@ def test_auth():
     except Exception as e:
         print(f"  ❌ 认证模块测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -63,7 +66,6 @@ def test_database():
     """测试数据库配置"""
     print("\n💾 测试数据库配置...")
     try:
-
         from app.core.database import engine
         from app.models.database import utc_now
 
@@ -118,7 +120,7 @@ def test_workflow_engine():
             ],
             "edges": [
                 {"source": "node1", "target": "node2"},
-            ]
+            ],
         }
 
         engine = WorkflowEngine(workflow)
@@ -160,7 +162,7 @@ def main():
         print(f"{name:20s} {status}")
 
     print("-" * 60)
-    print(f"总计: {passed}/{total} 通过 ({passed/total*100:.0f}%)")
+    print(f"总计: {passed}/{total} 通过 ({passed / total * 100:.0f}%)")
     print("=" * 60)
 
     if passed == total:
