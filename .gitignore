@@ -83,6 +83,9 @@ continue.md
 .uv/
 .analysis_archive/
 
+# Claude Code
+.claude/
+
 # Rust
 med_core_rs/target/
 med_core_rs/Cargo.lock
