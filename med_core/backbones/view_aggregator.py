@@ -108,7 +108,9 @@ class MaxPoolAggregator(BaseViewAggregator):
     Simple but effective for capturing the most prominent features.
     """
 
-    def forward(self, view_features, view_mask=None):
+    def forward(
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
         # Apply mask if provided
@@ -130,7 +132,9 @@ class MeanPoolAggregator(BaseViewAggregator):
     through masking.
     """
 
-    def forward(self, view_features, view_mask=None):
+    def forward(
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
         if masks is not None:
@@ -181,7 +185,9 @@ class AttentionAggregator(BaseViewAggregator):
         # Layer norm
         self.norm = nn.LayerNorm(feature_dim)
 
-    def forward(self, view_features, view_mask=None):
+    def forward(
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         batch_size = next(iter(view_features.values())).size(0)
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
@@ -251,7 +257,9 @@ class CrossViewAttentionAggregator(BaseViewAggregator):
         # CLS token for aggregation
         self.cls_token = nn.Parameter(torch.randn(1, 1, feature_dim))
 
-    def forward(self, view_features, view_mask=None):
+    def forward(
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         batch_size = next(iter(view_features.values())).size(0)
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
@@ -307,7 +315,9 @@ class LearnedWeightAggregator(BaseViewAggregator):
         # Learnable weights (one per view)
         self.view_weights = nn.Parameter(torch.ones(self.num_views) / self.num_views)
 
-    def forward(self, view_features, view_mask=None):
+    def forward(
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
         # Ensure view order matches initialization

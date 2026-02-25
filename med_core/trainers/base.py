@@ -112,14 +112,14 @@ class BaseTrainer(ABC):
         """
         pass
 
-    def on_train_start(self):
+    def on_train_start(self) -> None:
         """Hook called at the start of training."""
         logger.info(f"Starting training on device: {self.device}")
         logger.info(
             f"Model parameters: {sum(p.numel() for p in self.model.parameters())}"
         )
 
-    def on_epoch_start(self):
+    def on_epoch_start(self) -> None:
         """Hook called at the start of each epoch."""
         # Provide a minimal non-empty default implementation to satisfy linters
         # and to give a useful debug message at runtime. Subclasses can override.
@@ -132,7 +132,7 @@ class BaseTrainer(ABC):
 
     def on_epoch_end(
         self, train_metrics: dict[str, float], val_metrics: dict[str, float]
-    ):
+    ) -> None:
         """
         Hook called at the end of each epoch.
 
@@ -269,7 +269,7 @@ class BaseTrainer(ABC):
 
         return {k: v / num_batches for k, v in metrics_sum.items()}
 
-    def _handle_checkpointing(self, val_metrics: dict[str, float]):
+    def _handle_checkpointing(self, val_metrics: dict[str, float]) -> None:
         """Handle model checkpointing and early stopping logic."""
         current_metric = val_metrics.get(
             self.config.training.monitor, val_metrics.get("loss")
@@ -302,7 +302,7 @@ class BaseTrainer(ABC):
         if self.config.training.save_last:
             self._save_checkpoint("last.pth", val_metrics)
 
-    def _save_checkpoint(self, filename: str, metrics: dict[str, float]):
+    def _save_checkpoint(self, filename: str, metrics: dict[str, float]) -> None:
         """Save model checkpoint with atomic write to prevent corruption."""
         checkpoint = {
             "epoch": self.current_epoch,
@@ -321,7 +321,7 @@ class BaseTrainer(ABC):
         # Atomic rename
         temp_path.replace(path)
 
-    def load_checkpoint(self, path: str | Path):
+    def load_checkpoint(self, path: str | Path) -> None:
         """Load model checkpoint."""
         path = Path(path)
         if not path.exists():

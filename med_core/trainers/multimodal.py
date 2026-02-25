@@ -71,7 +71,7 @@ class MultimodalTrainer(BaseTrainer):
                 )
                 self.use_attention_supervision = False
 
-    def on_epoch_start(self):
+    def on_epoch_start(self) -> None:
         """Handle progressive training stages."""
         super().on_epoch_start()
 
@@ -90,7 +90,7 @@ class MultimodalTrainer(BaseTrainer):
         else:
             self._set_stage_3()
 
-    def _set_stage_1(self):
+    def _set_stage_1(self) -> None:
         """Stage 1: Train vision backbone (or fusion), freeze tabular."""
         # This implementation depends on specific strategy requirements.
         # Here we implement a common strategy: Warmup vision, freeze tabular.
@@ -106,12 +106,12 @@ class MultimodalTrainer(BaseTrainer):
             for param in self.model.vision_backbone.parameters():
                 param.requires_grad = True
 
-    def _set_stage_2(self):
+    def _set_stage_2(self) -> None:
         """Stage 2: Full model fine-tuning."""
         for param in self.model.parameters():
             param.requires_grad = True
 
-    def _set_stage_3(self):
+    def _set_stage_3(self) -> None:
         """Stage 3: Fine-tune fusion layer only."""
         # Freeze backbones
         if hasattr(self.model, "vision_backbone"):

@@ -434,7 +434,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
 
         return features
 
-    def _load_pretrained_weights(self):
+    def _load_pretrained_weights(self) -> None:
         """Load pretrained weights from timm."""
         try:
             import timm
@@ -467,12 +467,12 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         except Exception as e:
             logger.error(f"Failed to load pretrained weights: {e}")
 
-    def freeze_backbone(self):
+    def freeze_backbone(self) -> None:
         """Freeze backbone parameters."""
         for param in self._backbone.parameters():
             param.requires_grad = False
 
-    def unfreeze_backbone(self):
+    def unfreeze_backbone(self) -> None:
         """Unfreeze backbone parameters."""
         for param in self._backbone.parameters():
             param.requires_grad = True
