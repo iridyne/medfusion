@@ -7,7 +7,7 @@ Provides configurable transforms for:
 - Medical-specific augmentations (e.g., intensity normalization)
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 from torchvision import transforms as T
@@ -56,7 +56,7 @@ class CLAHETransform:
         self.clip_limit = clip_limit
         self.tile_grid_size = tile_grid_size
 
-    def __call__(self, image):
+    def __call__(self, image: Any) -> Any:
         """Apply CLAHE to image."""
         try:
             import cv2
@@ -135,7 +135,7 @@ class RandomMedicalAugmentation:
             hue=0.0,
         )
 
-    def __call__(self, image):
+    def __call__(self, image: Any) -> Any:
         """Apply augmentations."""
         image = self.affine(image)
         image = self.flip(image)

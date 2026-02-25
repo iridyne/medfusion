@@ -90,7 +90,7 @@ class ResourceMonitor:
             except Exception as e:
                 logger.warning(f"Failed to initialize GPU monitoring: {e}")
 
-    def __del__(self):
+    def __del__(self) -> None:
         """清理资源"""
         if self.gpu_available and PYNVML_AVAILABLE:
             try:
@@ -358,7 +358,7 @@ class ResourceMonitor:
         cpu_values = [h["cpu_percent"] for h in history]
         memory_values = [h["memory_percent"] for h in history]
 
-        stats = {
+        stats: dict[str, Any] = {
             "cpu": {
                 "avg": sum(cpu_values) / len(cpu_values),
                 "max": max(cpu_values),
