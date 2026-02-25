@@ -395,7 +395,7 @@ class MultiViewError(MedCoreError):
         num_views: int | None = None,
         suggestion: str | None = None,
     ):
-        context = {}
+        context: dict[str, str | int] = {}
         if view_name:
             context["view_name"] = view_name
         if num_views is not None:

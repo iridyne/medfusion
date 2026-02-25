@@ -1,6 +1,7 @@
 """Web 配置管理"""
 
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -58,7 +59,7 @@ class Settings(BaseSettings):
         env_prefix = "MEDFUSION_"
         case_sensitive = False
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
         # 设置默认数据库 URL
@@ -70,7 +71,7 @@ class Settings(BaseSettings):
         if self.log_file is None:
             self.log_file = self.data_dir / "logs" / "web.log"
 
-    def initialize_directories(self):
+    def initialize_directories(self) -> None:
         """初始化数据目录"""
         directories = [
             self.data_dir,
