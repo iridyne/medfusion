@@ -284,7 +284,9 @@ class PerformanceLogger:
             self.logger.log(self.level, message, extra=extra)
 
 
-def log_function_call(logger: logging.Logger | None = None, level: int = logging.DEBUG):
+def log_function_call(
+    logger: logging.Logger | None = None, level: int = logging.DEBUG
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to log function calls with arguments and execution time.
 

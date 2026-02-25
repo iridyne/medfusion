@@ -141,7 +141,7 @@ class TabularPreprocessor:
                 le = self.label_encoders[col]
                 classes_set = set(le.classes_)
 
-                def encode_value(x, encoder=le, valid_classes=classes_set):
+                def encode_value(x, encoder=le, valid_classes=classes_set) -> int:
                     return encoder.transform([x])[0] if x in valid_classes else -1
 
                 X_cat[col] = X_cat[col].astype(str).apply(encode_value)

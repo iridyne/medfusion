@@ -93,7 +93,7 @@ class BaseMultiViewDataset(ABC, Dataset):
         # Validate samples
         self._validate_samples()
 
-    def _validate_samples(self):
+    def _validate_samples(self) -> None:
         """Validate that all samples meet the view requirements."""
         invalid_samples = []
 

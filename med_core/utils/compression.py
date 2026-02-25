@@ -113,10 +113,10 @@ class ModelQuantizer:
         self,
         original_model: nn.Module,
         quantized_model: nn.Module,
-    ):
+    ) -> None:
         """比较模型大小"""
 
-        def get_size(model):
+        def get_size(model: nn.Module) -> float:
             torch.save(model.state_dict(), "temp.pth")
             size = Path("temp.pth").stat().st_size / (1024 * 1024)
             Path("temp.pth").unlink()

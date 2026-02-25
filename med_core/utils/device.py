@@ -48,7 +48,7 @@ def get_device_info() -> dict[str, Any]:
     return info
 
 
-def move_to_device(obj, device: torch.device):
+def move_to_device(obj: Any, device: torch.device) -> Any:
     """
     Move tensor or model to device.
 

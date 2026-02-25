@@ -68,7 +68,7 @@ def setup_distributed(
     return rank, local_rank, world_size
 
 
-def cleanup_distributed():
+def cleanup_distributed() -> None:
     """
     清理分布式训练环境
 
@@ -118,7 +118,7 @@ def get_world_size() -> int:
     return dist.get_world_size()
 
 
-def barrier():
+def barrier() -> None:
     """
     同步所有进程
 
@@ -188,7 +188,7 @@ class DDPWrapper:
         device_ids: list[int] | None = None,
         output_device: int | None = None,
         find_unused_parameters: bool = False,
-    ):
+    ) -> None:
         self.model = model
 
         if dist.is_initialized():
@@ -215,24 +215,24 @@ class DDPWrapper:
         else:
             logger.info("DDP not initialized, using single-process model")
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """前向传播"""
         return self.model(*args, **kwargs)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """代理属性访问"""
         try:
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.model, name)
 
-    def state_dict(self):
+    def state_dict(self) -> dict[str, Any]:
         """获取状态字典"""
         if isinstance(self.model, DDP):
             return self.model.module.state_dict()
         return self.model.state_dict()
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict: dict[str, Any]) -> None:
         """加载状态字典"""
         if isinstance(self.model, DDP):
             self.model.module.load_state_dict(state_dict)
@@ -263,8 +263,8 @@ class FSDPWrapper:
         model: nn.Module,
         sharding_strategy: str = "FULL_SHARD",
         auto_wrap_policy: Callable | None = None,
-        min_num_params: int = 1e6,
-    ):
+        min_num_params: int = 1000000,
+    ) -> None:
         self.model = model
 
         if dist.is_initialized():
@@ -306,18 +306,18 @@ class FSDPWrapper:
         else:
             logger.info("FSDP not initialized, using single-process model")
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """前向传播"""
         return self.model(*args, **kwargs)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """代理属性访问"""
         try:
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.model, name)
 
-    def state_dict(self):
+    def state_dict(self) -> dict[str, Any]:
         """获取状态字典"""
         if isinstance(self.model, FSDP):
             # FSDP 需要特殊处理
@@ -331,7 +331,7 @@ class FSDPWrapper:
                 return self.model.state_dict()
         return self.model.state_dict()
 
-    def load_state_dict(self, state_dict):
+    def load_state_dict(self, state_dict: dict[str, Any]) -> None:
         """加载状态字典"""
         if isinstance(self.model, FSDP):
             # FSDP 需要特殊处理
@@ -350,7 +350,7 @@ class FSDPWrapper:
 def create_distributed_model(
     model: nn.Module,
     strategy: str = "ddp",
-    **kwargs,
+    **kwargs: Any,
 ) -> nn.Module:
     """
     创建分布式模型的工厂函数

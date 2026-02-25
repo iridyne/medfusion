@@ -5,6 +5,7 @@ Comprehensive metrics for binary and multi-class classification tasks.
 """
 
 import logging
+from collections.abc import ItemsView, KeysView, ValuesView
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -116,15 +117,15 @@ class BinaryMetrics:
         """Support 'in' operator for dict-like behavior."""
         return key in self.to_dict()
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         """Return dict keys for dict-like behavior."""
         return self.to_dict().keys()
 
-    def values(self):
+    def values(self) -> ValuesView[float]:
         """Return dict values for dict-like behavior."""
         return self.to_dict().values()
 
-    def items(self):
+    def items(self) -> ItemsView[str, float]:
         """Return dict items for dict-like behavior."""
         return self.to_dict().items()
 
