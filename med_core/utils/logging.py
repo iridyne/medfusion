@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 import time
+from collections.abc import Callable
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
@@ -199,12 +200,12 @@ class LogContext:
             # Logs will include experiment=exp1, epoch=5
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize with context key-value pairs."""
         self.context = kwargs
-        self.token = None
+        self.token: Any = None
 
-    def __enter__(self):
+    def __enter__(self) -> "LogContext":
         """Enter context and set context variables."""
         current = log_context.get()
         if current is None:
@@ -215,7 +216,7 @@ class LogContext:
         self.token = log_context.set(current)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Exit context and restore previous context."""
         if self.token:
             log_context.reset(self.token)
@@ -237,8 +238,8 @@ class PerformanceLogger:
         logger: logging.Logger | None = None,
         level: int = logging.INFO,
         log_args: bool = False,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize performance logger.
 
@@ -254,15 +255,18 @@ class PerformanceLogger:
         self.level = level
         self.log_args = log_args
         self.kwargs = kwargs
-        self.start_time = None
+        self.start_time: float | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> "PerformanceLogger":
         """Start timing."""
         self.start_time = time.perf_counter()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Stop timing and log performance."""
+        if self.start_time is None:
+            return
+
         elapsed = time.perf_counter() - self.start_time
 
         message = f"{self.operation} completed in {elapsed:.4f}s"
@@ -290,23 +294,21 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
             pass
     """
 
-    def decorator(func):
-        nonlocal logger
-        if logger is None:
-            logger = logging.getLogger(func.__module__)
+    def decorator(func: "Callable[..., Any]") -> "Callable[..., Any]":
+        func_logger = logger if logger is not None else logging.getLogger(func.__module__)
 
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             func_name = func.__qualname__
 
             # Log function call
-            logger.log(level, f"Calling {func_name}")
+            func_logger.log(level, f"Calling {func_name}")
 
             # Execute with performance tracking
             start_time = time.perf_counter()
             try:
                 result = func(*args, **kwargs)
                 elapsed = time.perf_counter() - start_time
-                logger.log(
+                func_logger.log(
                     level,
                     f"{func_name} completed in {elapsed:.4f}s",
                     extra={"function": func_name, "elapsed_time": elapsed},
@@ -314,7 +316,7 @@ def log_function_call(logger: logging.Logger | None = None, level: int = logging
                 return result
             except Exception as e:
                 elapsed = time.perf_counter() - start_time
-                logger.error(
+                func_logger.error(
                     f"{func_name} failed after {elapsed:.4f}s: {e}",
                     extra={
                         "function": func_name,
@@ -340,7 +342,7 @@ class MetricsLogger:
         metrics.log("accuracy", 0.85, step=100)
     """
 
-    def __init__(self, name: str, logger: logging.Logger | None = None):
+    def __init__(self, name: str, logger: logging.Logger | None = None) -> None:
         """
         Initialize metrics logger.
 
@@ -350,9 +352,11 @@ class MetricsLogger:
         """
         self.name = name
         self.logger = logger or logging.getLogger(f"metrics.{name}")
-        self.metrics = {}
+        self.metrics: dict[str, list[dict[str, Any]]] = {}
 
-    def log(self, metric_name: str, value: float, step: int | None = None, **kwargs):
+    def log(
+        self, metric_name: str, value: float, step: int | None = None, **kwargs: Any
+    ) -> None:
         """
         Log a metric value.
 

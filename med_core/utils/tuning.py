@@ -34,11 +34,11 @@ class HyperparameterTuner:
 
     def __init__(
         self,
-        objective_fn: Callable,
+        objective_fn: Callable[[Any], float],
         direction: str = "maximize",
         study_name: str | None = None,
         storage: str | None = None,
-    ):
+    ) -> None:
         try:
             import optuna
         except ImportError as e:
@@ -97,15 +97,15 @@ class HyperparameterTuner:
 
         return self.study.best_params
 
-    def get_best_trial(self):
+    def get_best_trial(self) -> Any:
         """获取最佳试验"""
         return self.study.best_trial
 
-    def get_trials_dataframe(self):
+    def get_trials_dataframe(self) -> Any:
         """获取试验数据框"""
         return self.study.trials_dataframe()
 
-    def plot_optimization_history(self, save_path: str | None = None):
+    def plot_optimization_history(self, save_path: str | None = None) -> None:
         """绘制优化历史"""
         try:
             import optuna.visualization as vis
@@ -121,7 +121,7 @@ class HyperparameterTuner:
         else:
             fig.show()
 
-    def plot_param_importances(self, save_path: str | None = None):
+    def plot_param_importances(self, save_path: str | None = None) -> None:
         """绘制参数重要性"""
         try:
             import optuna.visualization as vis
@@ -137,7 +137,7 @@ class HyperparameterTuner:
         else:
             fig.show()
 
-    def plot_parallel_coordinate(self, save_path: str | None = None):
+    def plot_parallel_coordinate(self, save_path: str | None = None) -> None:
         """绘制平行坐标图"""
         try:
             import optuna.visualization as vis
@@ -167,8 +167,8 @@ class SearchSpace:
         >>> space.add_categorical("optimizer", ["adam", "sgd", "adamw"])
     """
 
-    def __init__(self):
-        self.params = {}
+    def __init__(self) -> None:
+        self.params: dict[str, dict[str, Any]] = {}
 
     def add_float(
         self,
@@ -177,7 +177,7 @@ class SearchSpace:
         high: float,
         log: bool = False,
         step: float | None = None,
-    ):
+    ) -> "SearchSpace":
         """添加浮点参数"""
         self.params[name] = {
             "type": "float",
@@ -195,7 +195,7 @@ class SearchSpace:
         high: int,
         step: int = 1,
         log: bool = False,
-    ):
+    ) -> "SearchSpace":
         """添加整数参数"""
         self.params[name] = {
             "type": "int",
@@ -206,7 +206,7 @@ class SearchSpace:
         }
         return self
 
-    def add_categorical(self, name: str, choices: list):
+    def add_categorical(self, name: str, choices: list[Any]) -> "SearchSpace":
         """添加分类参数"""
         self.params[name] = {
             "type": "categorical",
@@ -214,7 +214,7 @@ class SearchSpace:
         }
         return self
 
-    def suggest(self, trial):
+    def suggest(self, trial: Any) -> dict[str, Any]:
         """从试验中建议参数"""
         suggested = {}
 
@@ -298,19 +298,19 @@ class ModelTuner:
 
     def __init__(
         self,
-        model_fn: Callable,
-        train_fn: Callable,
-        eval_fn: Callable,
+        model_fn: Callable[[dict[str, Any]], Any],
+        train_fn: Callable[[Any, dict[str, Any]], None],
+        eval_fn: Callable[[Any], float],
         search_space: SearchSpace | None = None,
         direction: str = "maximize",
-    ):
+    ) -> None:
         self.model_fn = model_fn
         self.train_fn = train_fn
         self.eval_fn = eval_fn
         self.search_space = search_space or create_default_search_space()
         self.direction = direction
 
-    def objective(self, trial):
+    def objective(self, trial: Any) -> float:
         """目标函数"""
         # 建议参数
         params = self.search_space.suggest(trial)
@@ -361,7 +361,7 @@ class ModelTuner:
 
         return best_params
 
-    def plot_results(self, output_dir: str = "outputs/tuning"):
+    def plot_results(self, output_dir: str = "outputs/tuning") -> None:
         """绘制结果"""
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 

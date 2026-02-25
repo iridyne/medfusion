@@ -32,7 +32,7 @@ class MetricsCalculator:
             Dictionary with formatted metrics
         """
 
-        def fmt_ci(ci):
+        def fmt_ci(ci: tuple[float, float] | None) -> str:
             return f"({ci[0]:.4f}, {ci[1]:.4f})" if ci else "-"
 
         return {
