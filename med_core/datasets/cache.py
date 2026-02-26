@@ -8,9 +8,9 @@
 """
 
 import threading
-import time
 from collections import OrderedDict
 from pathlib import Path
+from queue import Empty, Queue
 from typing import Any
 
 import numpy as np
@@ -213,9 +213,8 @@ class PrefetchDataset(Dataset):
         self.prefetch_cache: dict[int, Any] = {}
         self.prefetch_lock = threading.Lock()
 
-        # 预取队列
-        self.prefetch_queue: list[int] = []
-        self.queue_lock = threading.Lock()
+        # 使用 Queue 替代 list，避免 O(n) 的 pop(0) 操作
+        self.prefetch_queue: Queue[int] = Queue(maxsize=prefetch_size * 2)
 
         # 工作线程
         self.workers: list[threading.Thread] = []
@@ -234,13 +233,13 @@ class PrefetchDataset(Dataset):
     def _prefetch_worker(self) -> None:
         """预取工作线程函数"""
         while not self.stop_flag.is_set():
-            # 获取待预取的索引
-            with self.queue_lock:
-                if not self.prefetch_queue:
-                    time.sleep(0.01)  # 短暂休眠
-                    continue
-
-                idx = self.prefetch_queue.pop(0)
+            try:
+                # 使用阻塞式获取，避免 CPU 空转
+                # timeout=1.0 确保能及时响应 stop_flag
+                idx = self.prefetch_queue.get(timeout=1.0)
+            except Empty:
+                # 队列为空，继续等待
+                continue
 
             # 检查是否已缓存
             with self.prefetch_lock:
@@ -272,11 +271,15 @@ class PrefetchDataset(Dataset):
             idx: 当前索引
         """
         # 预取接下来的 N 个样本
-        with self.queue_lock:
-            for offset in range(1, self.prefetch_size + 1):
-                next_idx = idx + offset
-                if next_idx < len(self.dataset) and next_idx not in self.prefetch_queue:
-                    self.prefetch_queue.append(next_idx)
+        for offset in range(1, self.prefetch_size + 1):
+            next_idx = idx + offset
+            if next_idx < len(self.dataset):
+                # 使用非阻塞式 put，避免队列满时阻塞
+                try:
+                    self.prefetch_queue.put_nowait(next_idx)
+                except Exception:
+                    # 队列已满，跳过
+                    break
 
     def __len__(self) -> int:
         return len(self.dataset)

@@ -232,8 +232,8 @@ class TestPrefetchDataset:
         prefetch_dataset[0]
         time.sleep(0.1)  # 等待预取
 
-        # 检查预取队列
-        assert len(prefetch_dataset.prefetch_queue) <= 3
+        # 检查预取队列大小（Queue 使用 qsize() 方法）
+        assert prefetch_dataset.prefetch_queue.qsize() <= 3
 
     def test_sequential_access(self):
         """测试顺序访问性能"""
