@@ -396,10 +396,9 @@ def create_view_aggregator(
     filtered_kwargs = {}
     if aggregator_type in ["attention", "cross_attention"]:
         # Attention-based aggregators accept num_heads and dropout
-        if "num_heads" in kwargs:
-            filtered_kwargs["num_heads"] = kwargs["num_heads"]
-        if "dropout" in kwargs:
-            filtered_kwargs["dropout"] = kwargs["dropout"]
+        for key in ("num_heads", "dropout"):
+            if key in kwargs:
+                filtered_kwargs[key] = kwargs[key]
     elif aggregator_type == "learned_weight":
         # LearnedWeightAggregator accepts view_names
         if "view_names" in kwargs:
