@@ -4,6 +4,7 @@ Experiments Router - API endpoints for experiment comparison and reporting
 
 import logging
 from datetime import datetime
+from operator import attrgetter, itemgetter
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -296,11 +297,11 @@ async def list_experiments(
         # Sort
         reverse = order == "desc"
         if sort_by == "accuracy":
-            experiments.sort(key=lambda x: x.metrics.accuracy, reverse=reverse)
+            experiments.sort(key=attrgetter("metrics.accuracy"), reverse=reverse)
         elif sort_by == "name":
-            experiments.sort(key=lambda x: x.name, reverse=reverse)
+            experiments.sort(key=attrgetter("name"), reverse=reverse)
         else:  # created_at
-            experiments.sort(key=lambda x: x.created_at, reverse=reverse)
+            experiments.sort(key=attrgetter("created_at"), reverse=reverse)
 
         # Pagination
         total = len(experiments)
@@ -375,7 +376,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
             # Find best and worst
             is_lower_better = metric_name == "loss"
             sorted_items = sorted(
-                values.items(), key=lambda x: x[1], reverse=not is_lower_better,
+                values.items(), key=itemgetter(1), reverse=not is_lower_better,
             )
             best = sorted_items[0][0]
             worst = sorted_items[-1][0]
@@ -390,7 +391,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
             )
 
         # Build summary
-        best_overall = max(selected, key=lambda x: x.metrics.accuracy)
+        best_overall = max(selected, key=attrgetter("metrics.accuracy"))
         summary = {
             "best_experiment": best_overall.name,
             "best_accuracy": best_overall.metrics.accuracy,

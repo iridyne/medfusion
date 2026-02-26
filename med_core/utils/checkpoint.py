@@ -1,6 +1,7 @@
 """Checkpoint management utilities for model saving and loading."""
 
 import logging
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
@@ -181,14 +182,14 @@ def cleanup_checkpoints(
 
     # Sort by metric
     reverse = mode == "max"
-    checkpoint_data.sort(key=lambda x: x[1], reverse=reverse)
+    checkpoint_data.sort(key=itemgetter(1), reverse=reverse)
 
     # Keep top k
     to_keep = {item[0] for item in checkpoint_data[:keep_top_k]}
 
     # Keep last checkpoint
     if keep_last and checkpoint_data:
-        last_checkpoint = max(checkpoint_data, key=lambda x: x[2])[0]
+        last_checkpoint = max(checkpoint_data, key=itemgetter(2))[0]
         to_keep.add(last_checkpoint)
 
     # Remove others

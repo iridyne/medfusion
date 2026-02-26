@@ -8,6 +8,7 @@ Provides specialized loading and preprocessing for DICOM medical images:
 """
 
 import logging
+from operator import itemgetter
 from pathlib import Path
 from typing import Literal
 
@@ -244,7 +245,7 @@ def load_dicom_series(
             continue
 
     # Sort by position
-    metadata.sort(key=lambda x: x[0])
+    metadata.sort(key=itemgetter(0))
     sorted_slices = [s for _, s in metadata]
 
     # Stack into 3D array
