@@ -46,35 +46,35 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
         if "data" in data:
             if not isinstance(data["data"], dict):
                 raise TypeError(
-                    f"Expected dict for 'data', got {type(data['data']).__name__}"
+                    f"Expected dict for 'data', got {type(data['data']).__name__}",
                 )
             data["data"] = DataConfig(**data["data"])
 
         if "model" in data:
             if not isinstance(data["model"], dict):
                 raise TypeError(
-                    f"Expected dict for 'model', got {type(data['model']).__name__}"
+                    f"Expected dict for 'model', got {type(data['model']).__name__}",
                 )
             model_data = data["model"]
 
             if "vision" in model_data:
                 if not isinstance(model_data["vision"], dict):
                     raise TypeError(
-                        f"Expected dict for 'model.vision', got {type(model_data['vision']).__name__}"
+                        f"Expected dict for 'model.vision', got {type(model_data['vision']).__name__}",
                     )
                 model_data["vision"] = VisionConfig(**model_data["vision"])
 
             if "tabular" in model_data:
                 if not isinstance(model_data["tabular"], dict):
                     raise TypeError(
-                        f"Expected dict for 'model.tabular', got {type(model_data['tabular']).__name__}"
+                        f"Expected dict for 'model.tabular', got {type(model_data['tabular']).__name__}",
                     )
                 model_data["tabular"] = TabularConfig(**model_data["tabular"])
 
             if "fusion" in model_data:
                 if not isinstance(model_data["fusion"], dict):
                     raise TypeError(
-                        f"Expected dict for 'model.fusion', got {type(model_data['fusion']).__name__}"
+                        f"Expected dict for 'model.fusion', got {type(model_data['fusion']).__name__}",
                     )
                 model_data["fusion"] = FusionConfig(**model_data["fusion"])
 
@@ -83,26 +83,26 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
         if "training" in data:
             if not isinstance(data["training"], dict):
                 raise TypeError(
-                    f"Expected dict for 'training', got {type(data['training']).__name__}"
+                    f"Expected dict for 'training', got {type(data['training']).__name__}",
                 )
             training_data = data["training"]
 
             if "optimizer" in training_data:
                 if not isinstance(training_data["optimizer"], dict):
                     raise TypeError(
-                        f"Expected dict for 'training.optimizer', got {type(training_data['optimizer']).__name__}"
+                        f"Expected dict for 'training.optimizer', got {type(training_data['optimizer']).__name__}",
                     )
                 training_data["optimizer"] = OptimizerConfig(
-                    **training_data["optimizer"]
+                    **training_data["optimizer"],
                 )
 
             if "scheduler" in training_data:
                 if not isinstance(training_data["scheduler"], dict):
                     raise TypeError(
-                        f"Expected dict for 'training.scheduler', got {type(training_data['scheduler']).__name__}"
+                        f"Expected dict for 'training.scheduler', got {type(training_data['scheduler']).__name__}",
                     )
                 training_data["scheduler"] = SchedulerConfig(
-                    **training_data["scheduler"]
+                    **training_data["scheduler"],
                 )
 
             data["training"] = TrainingConfig(**training_data)
@@ -110,7 +110,7 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
         if "logging" in data:
             if not isinstance(data["logging"], dict):
                 raise TypeError(
-                    f"Expected dict for 'logging', got {type(data['logging']).__name__}"
+                    f"Expected dict for 'logging', got {type(data['logging']).__name__}",
                 )
             data["logging"] = LoggingConfig(**data["logging"])
 
@@ -170,7 +170,7 @@ def save_config(config: BaseConfig, output_path: str | Path) -> None:
 
     with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(
-            data, f, default_flow_style=False, allow_unicode=True, sort_keys=False
+            data, f, default_flow_style=False, allow_unicode=True, sort_keys=False,
         )
 
 

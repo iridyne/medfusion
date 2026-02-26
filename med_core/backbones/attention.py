@@ -8,7 +8,7 @@ Implements:
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class ChannelAttention(nn.Module):
@@ -28,7 +28,7 @@ class ChannelAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(
-        self, x: torch.Tensor, return_weights: bool = False
+        self, x: torch.Tensor, return_weights: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
@@ -45,8 +45,7 @@ class ChannelAttention(nn.Module):
 
         if return_weights:
             return weights, weights
-        else:
-            return weights
+        return weights
 
 
 class SpatialAttention(nn.Module):
@@ -59,7 +58,7 @@ class SpatialAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(
-        self, x: torch.Tensor, return_weights: bool = False
+        self, x: torch.Tensor, return_weights: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
@@ -77,8 +76,7 @@ class SpatialAttention(nn.Module):
 
         if return_weights:
             return weights, weights
-        else:
-            return weights
+        return weights
 
 
 class ROIGuidedSpatialAttention(nn.Module):
@@ -107,7 +105,7 @@ class ROIGuidedSpatialAttention(nn.Module):
         self._roi_mask = None
 
     def _create_roi_mask(
-        self, size: tuple[int, int], device: torch.device
+        self, size: tuple[int, int], device: torch.device,
     ) -> torch.Tensor:
         """Create ROI mask that suppresses artifact regions."""
         h, w = size
@@ -128,7 +126,7 @@ class ROIGuidedSpatialAttention(nn.Module):
         return mask
 
     def forward(
-        self, x: torch.Tensor, return_weights: bool = False
+        self, x: torch.Tensor, return_weights: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
@@ -155,8 +153,7 @@ class ROIGuidedSpatialAttention(nn.Module):
 
         if return_weights:
             return weights, weights
-        else:
-            return weights
+        return weights
 
 
 class CBAM(nn.Module):
@@ -196,7 +193,7 @@ class CBAM(nn.Module):
                 self.spatial_attention = SpatialAttention()
 
     def forward(
-        self, x: torch.Tensor
+        self, x: torch.Tensor,
     ) -> torch.Tensor | tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
         Args:
@@ -225,8 +222,7 @@ class CBAM(nn.Module):
                 "spatial_weights": spatial_weights,
             }
             return x, weights_dict
-        else:
-            return x
+        return x
 
 
 class SEBlock(nn.Module):
@@ -276,7 +272,7 @@ class ECABlock(nn.Module):
         super().__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.conv = nn.Conv1d(
-            1, 1, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, bias=False
+            1, 1, kernel_size=kernel_size, padding=(kernel_size - 1) // 2, bias=False,
         )
         self.sigmoid = nn.Sigmoid()
 
@@ -320,11 +316,10 @@ def create_attention_module(
             use_roi_guidance=use_roi_guidance,
             return_attention_weights=return_attention_weights,
         )
-    elif attention_type == "se":
+    if attention_type == "se":
         return SEBlock(in_channels)
-    elif attention_type == "eca":
+    if attention_type == "eca":
         return ECABlock(in_channels)
-    elif attention_type == "none" or attention_type is None:
+    if attention_type == "none" or attention_type is None:
         return None
-    else:
-        raise ValueError(f"Unknown attention type: {attention_type}")
+    raise ValueError(f"Unknown attention type: {attention_type}")

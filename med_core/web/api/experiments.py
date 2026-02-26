@@ -27,7 +27,7 @@ class ExperimentResponse(BaseModel):
 
 @router.get("")
 async def list_experiments(
-    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session),
 ) -> list[ExperimentResponse]:
     """获取实验列表"""
     experiments = (
@@ -52,7 +52,7 @@ async def list_experiments(
 
 @router.get("/{experiment_id}")
 async def get_experiment(
-    experiment_id: int, db: Session = Depends(get_db_session)
+    experiment_id: int, db: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
     """获取实验详情"""
     experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()
@@ -74,7 +74,7 @@ async def get_experiment(
 
 @router.delete("/{experiment_id}")
 async def delete_experiment(
-    experiment_id: int, db: Session = Depends(get_db_session)
+    experiment_id: int, db: Session = Depends(get_db_session),
 ) -> dict[str, str]:
     """删除实验"""
     experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()

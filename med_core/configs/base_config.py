@@ -123,7 +123,7 @@ class FusionConfig(BaseConfig):
     """Fusion module configuration."""
 
     fusion_type: Literal[
-        "concatenate", "gated", "attention", "cross_attention", "bilinear"
+        "concatenate", "gated", "attention", "cross_attention", "bilinear",
     ] = "gated"
     hidden_dim: int = 96
     dropout: float = 0.4
@@ -287,10 +287,9 @@ class ExperimentConfig(BaseConfig):
         """Detect available device."""
         if torch.cuda.is_available():
             return "cuda"
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return "mps"
-        else:
-            return "cpu"
+        return "cpu"
 
     @property
     def device_obj(self) -> torch.device:

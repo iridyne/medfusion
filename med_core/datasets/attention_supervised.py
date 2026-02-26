@@ -75,7 +75,7 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
             if len(mask_paths) != len(image_paths):
                 raise ValueError(
                     f"Mismatch between images ({len(image_paths)}) "
-                    f"and masks ({len(mask_paths)})"
+                    f"and masks ({len(mask_paths)})",
                 )
             self.mask_paths = [Path(p) if p is not None else None for p in mask_paths]
 
@@ -85,7 +85,7 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
             if len(bboxes) != len(image_paths):
                 raise ValueError(
                     f"Mismatch between images ({len(image_paths)}) "
-                    f"and bboxes ({len(bboxes)})"
+                    f"and bboxes ({len(bboxes)})",
                 )
             self.bboxes = bboxes
 
@@ -95,7 +95,7 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
             if len(keypoints) != len(image_paths):
                 raise ValueError(
                     f"Mismatch between images ({len(image_paths)}) "
-                    f"and keypoints ({len(keypoints)})"
+                    f"and keypoints ({len(keypoints)})",
                 )
             self.keypoints = keypoints
 
@@ -214,7 +214,7 @@ class AttentionSupervisedDataset(BaseMultimodalDataset):
                 "has_masks": self.has_masks(),
                 "has_bboxes": self.has_bboxes(),
                 "has_keypoints": self.has_keypoints(),
-            }
+            },
         )
 
         if self.has_masks():
@@ -288,11 +288,10 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         """
         if self.image_format == "dicom":
             return self._load_dicom(path)
-        elif self.image_format == "nifti":
+        if self.image_format == "nifti":
             return self._load_nifti(path)
-        else:
-            # 标准图像格式
-            return Image.open(path).convert("RGB")
+        # 标准图像格式
+        return Image.open(path).convert("RGB")
 
     def _load_dicom(self, path: Path) -> np.ndarray:
         """
@@ -309,7 +308,7 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         except ImportError as e:
             raise ImportError(
                 "pydicom is required to load DICOM files. "
-                "Install it with: pip install pydicom"
+                "Install it with: pip install pydicom",
             ) from e
 
         # 读取 DICOM
@@ -345,7 +344,7 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         except ImportError as e:
             raise ImportError(
                 "nibabel is required to load NIfTI files. "
-                "Install it with: pip install nibabel"
+                "Install it with: pip install nibabel",
             ) from e
 
         # 读取 NIfTI

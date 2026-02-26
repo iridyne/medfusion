@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class ModelExporter:
             import onnxruntime as ort
         except ImportError:
             logger.warning(
-                "⚠ ONNX or ONNXRuntime not installed. Skipping verification."
+                "⚠ ONNX or ONNXRuntime not installed. Skipping verification.",
             )
             return False
 
@@ -238,10 +238,9 @@ class ModelExporter:
             max_diff = np.abs(pytorch_output - ort_output).max()
             logger.info(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
             return True
-        else:
-            max_diff = np.abs(pytorch_output - ort_output).max()
-            logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
-            return False
+        max_diff = np.abs(pytorch_output - ort_output).max()
+        logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
+        return False
 
     def verify_torchscript(
         self,
@@ -293,10 +292,9 @@ class ModelExporter:
             max_diff = (original_output - loaded_output).abs().max().item()
             logger.info(f"  ✓ Outputs match (max diff: {max_diff:.6f})")
             return True
-        else:
-            max_diff = (original_output - loaded_output).abs().max().item()
-            logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
-            return False
+        max_diff = (original_output - loaded_output).abs().max().item()
+        logger.error(f"  ✗ Outputs differ (max diff: {max_diff:.6f})")
+        return False
 
 
 def export_model(

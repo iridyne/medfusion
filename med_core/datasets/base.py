@@ -50,13 +50,13 @@ class BaseMultimodalDataset(ABC, Dataset):
         if len(image_paths) != len(tabular_data):
             raise ValueError(
                 f"Mismatch between images ({len(image_paths)}) "
-                f"and tabular data ({len(tabular_data)})"
+                f"and tabular data ({len(tabular_data)})",
             )
 
         if len(image_paths) != len(labels):
             raise ValueError(
                 f"Mismatch between images ({len(image_paths)}) "
-                f"and labels ({len(labels)})"
+                f"and labels ({len(labels)})",
             )
 
         self.image_paths = [Path(p) for p in image_paths]
@@ -93,7 +93,6 @@ class BaseMultimodalDataset(ABC, Dataset):
         Returns:
             Loaded image
         """
-        pass
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """

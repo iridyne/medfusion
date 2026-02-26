@@ -10,7 +10,7 @@ import logging
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 from einops import rearrange
 
 from .base import BaseVisionBackbone
@@ -179,7 +179,7 @@ class BasicLayer2D(nn.Module):
                     drop_path=drop_path[i],
                 )
                 for i in range(depth)
-            ]
+            ],
         )
 
         # Patch merging layer
@@ -253,7 +253,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
 
         if variant not in self.VARIANTS:
             raise ValueError(
-                f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+                f"Unknown variant: {variant}. Choose from {list(self.VARIANTS.keys())}",
             )
 
         config = self.VARIANTS[variant]
@@ -282,7 +282,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
 
         # Dimension reduction
         self.dim_reduction = nn.Conv2d(
-            self._backbone_out_dim, feature_dim, kernel_size=1
+            self._backbone_out_dim, feature_dim, kernel_size=1,
         )
 
         # Projection head
@@ -338,7 +338,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
 
         # Create a new forward function
         def checkpointed_forward(
-            x: torch.Tensor, normalize: bool = True
+            x: torch.Tensor, normalize: bool = True,
         ) -> torch.Tensor:
             if not self.training or not self._gradient_checkpointing_enabled:
                 # Normal forward pass
@@ -385,7 +385,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
         return self._backbone(x, normalize=True)
 
     def forward(
-        self, x: torch.Tensor, return_intermediates: bool = False
+        self, x: torch.Tensor, return_intermediates: bool = False,
     ) -> torch.Tensor | dict:
         """
         Forward pass.

@@ -7,7 +7,7 @@ attention mechanisms.
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -71,7 +71,7 @@ class SelfAttentionFusion(nn.Module):
         )
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False
+        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -96,7 +96,7 @@ class SelfAttentionFusion(nn.Module):
 
         # Self-attention
         attn_out, attn_weights = self.self_attention(
-            x_seq, x_seq, x_seq, need_weights=return_attention
+            x_seq, x_seq, x_seq, need_weights=return_attention,
         )  # [B, 2, hidden_dim]
 
         # Residual connection and norm
@@ -159,7 +159,7 @@ class AdditiveAttentionFusion(nn.Module):
         )
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False
+        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -244,7 +244,7 @@ class BilinearAttentionFusion(nn.Module):
         )
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False
+        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -329,7 +329,7 @@ class GatedAttentionFusion(nn.Module):
         )
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor, return_gates: bool = False
+        self, x1: torch.Tensor, x2: torch.Tensor, return_gates: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """
         Forward pass.
@@ -403,7 +403,7 @@ class MultimodalSelfAttentionFusion(nn.Module):
         # Project all modalities to same dimension
         hidden_dim = max(modality_dims)
         self.projections = nn.ModuleList(
-            [nn.Linear(dim, hidden_dim) for dim in modality_dims]
+            [nn.Linear(dim, hidden_dim) for dim in modality_dims],
         )
 
         # Self-attention
@@ -425,7 +425,7 @@ class MultimodalSelfAttentionFusion(nn.Module):
         )
 
     def forward(
-        self, features: list[torch.Tensor], return_attention: bool = False
+        self, features: list[torch.Tensor], return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -440,7 +440,7 @@ class MultimodalSelfAttentionFusion(nn.Module):
         """
         if len(features) != self.num_modalities:
             raise ValueError(
-                f"Expected {self.num_modalities} modalities, got {len(features)}"
+                f"Expected {self.num_modalities} modalities, got {len(features)}",
             )
 
         batch_size = features[0].size(0)
@@ -455,7 +455,7 @@ class MultimodalSelfAttentionFusion(nn.Module):
 
         # Self-attention
         attn_out, attn_weights = self.self_attention(
-            x_seq, x_seq, x_seq, need_weights=return_attention
+            x_seq, x_seq, x_seq, need_weights=return_attention,
         )
 
         # Residual and norm

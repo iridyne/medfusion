@@ -52,7 +52,7 @@ class TrainingService:
 
         if future.running():
             return {"status": "running"}
-        elif future.done():
+        if future.done():
             try:
                 result = future.result()
                 return result

@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class BaseFusion(ABC, nn.Module):
@@ -55,7 +55,6 @@ class BaseFusion(ABC, nn.Module):
                 - Fused features tensor (B, output_dim)
                 - Optional dict of auxiliary outputs (attention weights, gates, etc.)
         """
-        pass
 
     def get_config(self) -> dict[str, Any]:
         """Return fusion configuration for serialization."""
@@ -193,7 +192,7 @@ class MultiModalFusionModel(nn.Module):
 
         # Fuse features
         fused_features, fusion_aux = self.fusion_module(
-            vision_features, tabular_features
+            vision_features, tabular_features,
         )
 
         # Main classification

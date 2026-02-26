@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.quantization as quant
 
 logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ class ModelPruner:
         Returns:
             剪枝后的模型
         """
-        import torch.nn.utils.prune as prune
+        from torch.nn.utils import prune
 
         parameters_to_prune = []
         for _name, module in self.model.named_modules():
@@ -209,7 +209,7 @@ class ModelPruner:
         Returns:
             剪枝后的模型
         """
-        import torch.nn.utils.prune as prune
+        from torch.nn.utils import prune
 
         for _name, module in self.model.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
@@ -272,12 +272,11 @@ def quantize_model(
 
     if method == "dynamic":
         return quantizer.dynamic_quantize()
-    elif method == "static":
+    if method == "static":
         if calibration_data is None:
             raise ValueError("Static quantization requires calibration_data")
         return quantizer.static_quantize(calibration_data)
-    else:
-        raise ValueError(f"Unknown method: {method}")
+    raise ValueError(f"Unknown method: {method}")
 
 
 def prune_model(
@@ -305,10 +304,9 @@ def prune_model(
 
     if method == "unstructured":
         return pruner.prune_unstructured(amount, **kwargs)
-    elif method == "structured":
+    if method == "structured":
         return pruner.prune_structured(amount, **kwargs)
-    else:
-        raise ValueError(f"Unknown method: {method}")
+    raise ValueError(f"Unknown method: {method}")
 
 
 def compress_model(

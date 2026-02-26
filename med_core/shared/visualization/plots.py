@@ -46,7 +46,7 @@ plt.rcParams.update(
         "figure.dpi": 150,
         "savefig.dpi": 300,
         "savefig.bbox": "tight",
-    }
+    },
 )
 
 
@@ -77,7 +77,7 @@ def plot_roc_curve(
     # Optimal threshold (Youden's J)
     optimal_idx = np.argmax(tpr - fpr)
     ax.scatter(
-        fpr[optimal_idx], tpr[optimal_idx], marker="o", color="red", s=100, zorder=5
+        fpr[optimal_idx], tpr[optimal_idx], marker="o", color="red", s=100, zorder=5,
     )
 
     ax.set_xlim([0.0, 1.0])
@@ -242,7 +242,7 @@ def plot_training_curves(
         best_epoch = np.argmin(val_losses) + 1
         ax_loss.axvline(x=best_epoch, color="gray", linestyle="--", alpha=0.5)
         ax_loss.scatter(
-            [best_epoch], [min(val_losses)], color="red", s=100, zorder=5, marker="*"
+            [best_epoch], [min(val_losses)], color="red", s=100, zorder=5, marker="*",
         )
 
     ax_loss.set_xlabel("Epoch")
@@ -315,7 +315,7 @@ def plot_calibration_curve(
     y_prob = np.asarray(y_prob).ravel()
 
     prob_true, prob_pred = calibration_curve(
-        y_true, y_prob, n_bins=n_bins, strategy="uniform"
+        y_true, y_prob, n_bins=n_bins, strategy="uniform",
     )
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -363,10 +363,10 @@ def plot_probability_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
     ax.hist(
-        y_prob[y_true == 0], bins=20, alpha=0.6, label="Negative (True)", color="blue"
+        y_prob[y_true == 0], bins=20, alpha=0.6, label="Negative (True)", color="blue",
     )
     ax.hist(
-        y_prob[y_true == 1], bins=20, alpha=0.6, label="Positive (True)", color="red"
+        y_prob[y_true == 1], bins=20, alpha=0.6, label="Positive (True)", color="red",
     )
 
     ax.set_xlabel("Predicted Probability (Positive)")

@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.datasets.multiview_types import ViewTensor
 
@@ -57,7 +57,6 @@ class BaseViewAggregator(ABC, nn.Module):
                 - aggregated_features: (B, feature_dim)
                 - aux_outputs: Dict with auxiliary outputs (e.g., attention weights)
         """
-        pass
 
     def _stack_views(
         self,
@@ -90,8 +89,8 @@ class BaseViewAggregator(ABC, nn.Module):
                     # Default to all valid
                     mask_list.append(
                         torch.ones(
-                            stacked.size(0), device=stacked.device, dtype=torch.bool
-                        )
+                            stacked.size(0), device=stacked.device, dtype=torch.bool,
+                        ),
                     )
             masks = torch.stack(mask_list, dim=1)  # (B, num_views)
         else:
@@ -109,7 +108,7 @@ class MaxPoolAggregator(BaseViewAggregator):
     """
 
     def forward(
-        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
@@ -133,7 +132,7 @@ class MeanPoolAggregator(BaseViewAggregator):
     """
 
     def forward(
-        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
@@ -142,7 +141,7 @@ class MeanPoolAggregator(BaseViewAggregator):
             masks_expanded = masks.unsqueeze(-1).float()  # (B, num_views, 1)
             masked_features = stacked * masks_expanded
             aggregated = masked_features.sum(dim=1) / masks_expanded.sum(dim=1).clamp(
-                min=1
+                min=1,
             )
         else:
             # Simple mean
@@ -186,7 +185,7 @@ class AttentionAggregator(BaseViewAggregator):
         self.norm = nn.LayerNorm(feature_dim)
 
     def forward(
-        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         batch_size = next(iter(view_features.values())).size(0)
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
@@ -258,7 +257,7 @@ class CrossViewAttentionAggregator(BaseViewAggregator):
         self.cls_token = nn.Parameter(torch.randn(1, 1, feature_dim))
 
     def forward(
-        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         batch_size = next(iter(view_features.values())).size(0)
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
@@ -316,14 +315,14 @@ class LearnedWeightAggregator(BaseViewAggregator):
         self.view_weights = nn.Parameter(torch.ones(self.num_views) / self.num_views)
 
     def forward(
-        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None
+        self, view_features: ViewTensor, view_mask: dict[str, torch.Tensor] | None = None,
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         stacked, view_names, masks = self._stack_views(view_features, view_mask)
 
         # Ensure view order matches initialization
         if view_names != self.view_names:
             raise ValueError(
-                f"View names mismatch. Expected {self.view_names}, got {view_names}"
+                f"View names mismatch. Expected {self.view_names}, got {view_names}",
             )
 
         # Softmax weights
@@ -359,7 +358,7 @@ AGGREGATOR_REGISTRY = {
 
 def create_view_aggregator(
     aggregator_type: Literal[
-        "max", "mean", "attention", "cross_attention", "learned_weight"
+        "max", "mean", "attention", "cross_attention", "learned_weight",
     ],
     feature_dim: int,
     **kwargs: Any,
@@ -388,7 +387,7 @@ def create_view_aggregator(
     if aggregator_type not in AGGREGATOR_REGISTRY:
         available = list(AGGREGATOR_REGISTRY.keys())
         raise ValueError(
-            f"Unknown aggregator type: {aggregator_type}. Available: {available}"
+            f"Unknown aggregator type: {aggregator_type}. Available: {available}",
         )
 
     aggregator_cls = AGGREGATOR_REGISTRY[aggregator_type]

@@ -13,7 +13,7 @@ framework features (gradient checkpointing, attention supervision, etc.).
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.models.builder import MultiModalModelBuilder
 
@@ -55,7 +55,7 @@ class SMuRFModel(nn.Module):
         radiology_backbone: dict,
         pathology_backbone: dict,
         fusion_strategy: Literal[
-            "concat", "kronecker", "fused_attention"
+            "concat", "kronecker", "fused_attention",
         ] = "fused_attention",
         num_classes: int = 4,
         radiology_feature_dim: int = 512,
@@ -85,7 +85,7 @@ class SMuRFModel(nn.Module):
         if fusion_strategy not in fusion_map:
             raise ValueError(
                 f"Invalid fusion strategy: {fusion_strategy}. "
-                f"Available: {list(fusion_map.keys())}"
+                f"Available: {list(fusion_map.keys())}",
             )
 
         builder = MultiModalModelBuilder()
@@ -152,8 +152,7 @@ class SMuRFModel(nn.Module):
                 "fused": features["fused_features"],
             }
             return logits, reformatted_features
-        else:
-            return self._model(inputs, return_features=False)
+        return self._model(inputs, return_features=False)
 
 
 class SMuRFWithMIL(nn.Module):
@@ -190,7 +189,7 @@ class SMuRFWithMIL(nn.Module):
         radiology_backbone: dict,
         pathology_backbone: dict,
         fusion_strategy: Literal[
-            "concat", "kronecker", "fused_attention"
+            "concat", "kronecker", "fused_attention",
         ] = "fused_attention",
         num_classes: int = 4,
         radiology_feature_dim: int = 512,
@@ -293,14 +292,13 @@ class SMuRFWithMIL(nn.Module):
                     "mil_attention_weights"
                 ].get("pathology")
             return logits, reformatted_features
-        else:
-            return self._model(inputs, return_features=False)
+        return self._model(inputs, return_features=False)
 
 
 def smurf_small(
     num_classes: int = 4,
     fusion_strategy: Literal[
-        "concat", "kronecker", "fused_attention"
+        "concat", "kronecker", "fused_attention",
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFModel:
@@ -333,7 +331,7 @@ def smurf_small(
 def smurf_base(
     num_classes: int = 4,
     fusion_strategy: Literal[
-        "concat", "kronecker", "fused_attention"
+        "concat", "kronecker", "fused_attention",
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFModel:
@@ -366,7 +364,7 @@ def smurf_base(
 def smurf_with_mil_small(
     num_classes: int = 4,
     fusion_strategy: Literal[
-        "concat", "kronecker", "fused_attention"
+        "concat", "kronecker", "fused_attention",
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFWithMIL:

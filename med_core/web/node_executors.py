@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class NodeExecutionError(Exception):
     """节点执行错误"""
 
-    pass
 
 
 class NodeExecutor:
@@ -83,7 +82,7 @@ class DataLoaderExecutor(NodeExecutor):
             seed = node_data.get("seed")
 
             logger.info(
-                f"Loading dataset {dataset_id}, split={split}, batch_size={batch_size}"
+                f"Loading dataset {dataset_id}, split={split}, batch_size={batch_size}",
             )
 
             # 数据集路径
@@ -97,7 +96,7 @@ class DataLoaderExecutor(NodeExecutor):
 
             # 创建数据集
             dataset = await asyncio.get_event_loop().run_in_executor(
-                None, create_dataset, str(dataset_path), split
+                None, create_dataset, str(dataset_path), split,
             )
 
             # 设置随机种子
@@ -115,7 +114,7 @@ class DataLoaderExecutor(NodeExecutor):
             )
 
             logger.info(
-                f"Dataset loaded: {len(dataset)} samples, {len(dataloader)} batches"
+                f"Dataset loaded: {len(dataset)} samples, {len(dataloader)} batches",
             )
 
             return {
@@ -180,7 +179,7 @@ class ModelExecutor(NodeExecutor):
 
             # 创建模型
             model = await asyncio.get_event_loop().run_in_executor(
-                None, ModelFactory.create, config
+                None, ModelFactory.create, config,
             )
 
             # 移动到设备
@@ -193,7 +192,7 @@ class ModelExecutor(NodeExecutor):
             )
 
             logger.info(
-                f"Model created: {total_params:,} params ({trainable_params:,} trainable)"
+                f"Model created: {total_params:,} params ({trainable_params:,} trainable)",
             )
 
             return {
@@ -251,7 +250,7 @@ class TrainingExecutor(NodeExecutor):
             checkpoint_dir = node_data.get("checkpointDir")
 
             logger.info(
-                f"Starting training: epochs={epochs}, lr={learning_rate}, optimizer={optimizer_name}"
+                f"Starting training: epochs={epochs}, lr={learning_rate}, optimizer={optimizer_name}",
             )
 
             # 动态导入
@@ -277,7 +276,7 @@ class TrainingExecutor(NodeExecutor):
 
             logger.info(
                 f"Training completed: final loss={history['loss'][-1]:.4f}, "
-                f"final acc={history.get('accuracy', [0])[-1]:.4f}"
+                f"final acc={history.get('accuracy', [0])[-1]:.4f}",
             )
 
             return {
@@ -348,7 +347,7 @@ class EvaluationExecutor(NodeExecutor):
 
             # 创建评估器
             evaluator = Evaluator(
-                model=model, test_loader=test_data, device=self.device
+                model=model, test_loader=test_data, device=self.device,
             )
 
             # 异步评估

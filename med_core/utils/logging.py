@@ -76,7 +76,7 @@ class JSONFormatter(logging.Formatter):
             "taskName",
         }
         log_data.update(
-            {k: v for k, v in record.__dict__.items() if k not in standard_fields}
+            {k: v for k, v in record.__dict__.items() if k not in standard_fields},
         )
 
         return json.dumps(log_data)
@@ -279,14 +279,14 @@ class PerformanceLogger:
         if exc_type is not None:
             extra["error"] = str(exc_val)
             self.logger.error(
-                f"{self.operation} failed after {elapsed:.4f}s", extra=extra
+                f"{self.operation} failed after {elapsed:.4f}s", extra=extra,
             )
         else:
             self.logger.log(self.level, message, extra=extra)
 
 
 def log_function_call(
-    logger: logging.Logger | None = None, level: int = logging.DEBUG
+    logger: logging.Logger | None = None, level: int = logging.DEBUG,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Decorator to log function calls with arguments and execution time.
@@ -358,7 +358,7 @@ class MetricsLogger:
         self.metrics: dict[str, list[dict[str, Any]]] = {}
 
     def log(
-        self, metric_name: str, value: float, step: int | None = None, **kwargs: Any
+        self, metric_name: str, value: float, step: int | None = None, **kwargs: Any,
     ) -> None:
         """
         Log a metric value.

@@ -209,10 +209,10 @@ class SpatialAttentionSupervision(BaseAttentionSupervision):
         if self.smoothness_weight > 0:
             # Total Variation
             diff_h = torch.abs(
-                attention_weights[:, :, 1:, :] - attention_weights[:, :, :-1, :]
+                attention_weights[:, :, 1:, :] - attention_weights[:, :, :-1, :],
             )
             diff_w = torch.abs(
-                attention_weights[:, :, :, 1:] - attention_weights[:, :, :, :-1]
+                attention_weights[:, :, :, 1:] - attention_weights[:, :, :, :-1],
             )
             smoothness_loss = diff_h.mean() + diff_w.mean()
 
@@ -288,7 +288,7 @@ class TransformerAttentionSupervision(BaseAttentionSupervision):
             diversity_loss = 0
             for b in range(B):
                 similarity = torch.mm(
-                    attn_norm[b], attn_norm[b].t()
+                    attn_norm[b], attn_norm[b].t(),
                 )  # (num_heads, num_heads)
 
                 # 去除对角线
@@ -421,7 +421,7 @@ class HybridAttentionSupervision(BaseAttentionSupervision):
                 targets.get("channel"),
             )
             components.update(
-                {f"channel_{k}": v for k, v in channel_loss.components.items()}
+                {f"channel_{k}": v for k, v in channel_loss.components.items()},
             )
             total_loss = total_loss + channel_loss.total_loss
 
@@ -433,7 +433,7 @@ class HybridAttentionSupervision(BaseAttentionSupervision):
                 targets.get("spatial"),
             )
             components.update(
-                {f"spatial_{k}": v for k, v in spatial_loss.components.items()}
+                {f"spatial_{k}": v for k, v in spatial_loss.components.items()},
             )
             total_loss = total_loss + spatial_loss.total_loss
 
@@ -445,7 +445,7 @@ class HybridAttentionSupervision(BaseAttentionSupervision):
                 targets.get("transformer"),
             )
             components.update(
-                {f"transformer_{k}": v for k, v in transformer_loss.components.items()}
+                {f"transformer_{k}": v for k, v in transformer_loss.components.items()},
             )
             total_loss = total_loss + transformer_loss.total_loss
 
@@ -485,11 +485,10 @@ def create_attention_supervision(
     """
     if supervision_type == "channel":
         return ChannelAttentionSupervision(loss_weight=loss_weight, **kwargs)
-    elif supervision_type == "spatial":
+    if supervision_type == "spatial":
         return SpatialAttentionSupervision(loss_weight=loss_weight, **kwargs)
-    elif supervision_type == "transformer":
+    if supervision_type == "transformer":
         return TransformerAttentionSupervision(loss_weight=loss_weight, **kwargs)
-    elif supervision_type == "hybrid":
+    if supervision_type == "hybrid":
         return HybridAttentionSupervision(loss_weight=loss_weight, **kwargs)
-    else:
-        raise ValueError(f"Unknown supervision type: {supervision_type}")
+    raise ValueError(f"Unknown supervision type: {supervision_type}")

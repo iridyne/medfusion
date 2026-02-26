@@ -30,7 +30,7 @@ class ModelResponse(BaseModel):
 
 @router.get("")
 async def list_models(
-    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session),
 ) -> list[ModelResponse]:
     """获取模型列表"""
     models = (
@@ -58,7 +58,7 @@ async def list_models(
 
 @router.get("/{model_id}")
 async def get_model(
-    model_id: int, db: Session = Depends(get_db_session)
+    model_id: int, db: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
     """获取模型详情"""
     model = db.query(ModelInfo).filter(ModelInfo.id == model_id).first()
@@ -89,7 +89,7 @@ async def get_model(
 
 @router.delete("/{model_id}")
 async def delete_model(
-    model_id: int, db: Session = Depends(get_db_session)
+    model_id: int, db: Session = Depends(get_db_session),
 ) -> dict[str, str]:
     """删除模型"""
     model = db.query(ModelInfo).filter(ModelInfo.id == model_id).first()

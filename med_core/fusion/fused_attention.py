@@ -10,7 +10,7 @@ Reference:
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -115,7 +115,7 @@ class FusedAttentionFusion(nn.Module):
         return sketch_matrix
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False
+        self, x1: torch.Tensor, x2: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Fuse two modality features using fused attention.
@@ -217,7 +217,7 @@ class CrossModalAttention(nn.Module):
         self.scale = self.head_dim**-0.5
 
     def forward(
-        self, x1: torch.Tensor, x2: torch.Tensor
+        self, x1: torch.Tensor, x2: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Apply cross-modal attention.
@@ -412,7 +412,7 @@ class MultimodalFusedAttention(nn.Module):
         """
         if len(features) != self.num_modalities:
             raise ValueError(
-                f"Expected {self.num_modalities} modalities, got {len(features)}"
+                f"Expected {self.num_modalities} modalities, got {len(features)}",
             )
 
         if self.fusion_strategy == "sequential":
@@ -421,7 +421,7 @@ class MultimodalFusedAttention(nn.Module):
                 fused = fusion_module(fused, features[i + 1])
             return fused
 
-        elif self.fusion_strategy == "pairwise":
+        if self.fusion_strategy == "pairwise":
             pair_features = []
             idx = 0
             for i in range(self.num_modalities):
@@ -433,7 +433,7 @@ class MultimodalFusedAttention(nn.Module):
             concatenated = torch.cat(pair_features, dim=1)
             return self.final_projection(concatenated)
 
-        elif self.fusion_strategy == "star":
+        if self.fusion_strategy == "star":
             star_features = []
             for i, fusion_module in enumerate(self.fusion_modules):
                 star_fused = fusion_module(features[0], features[i + 1])

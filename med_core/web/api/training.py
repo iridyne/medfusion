@@ -45,7 +45,7 @@ class TrainingJobResponse(BaseModel):
 
 @router.post("/start")
 async def start_training(
-    config: TrainingConfig, db: Session = Depends(get_db_session)
+    config: TrainingConfig, db: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
     """开始训练任务"""
     try:
@@ -77,7 +77,7 @@ async def start_training(
 
 @router.get("/jobs")
 async def list_training_jobs(
-    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session)
+    skip: int = 0, limit: int = 20, db: Session = Depends(get_db_session),
 ) -> list[TrainingJobResponse]:
     """获取训练任务列表"""
     jobs = (
@@ -106,7 +106,7 @@ async def list_training_jobs(
 
 @router.get("/{job_id}/status")
 async def get_training_status(
-    job_id: str, db: Session = Depends(get_db_session)
+    job_id: str, db: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
     """获取训练任务状态"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
@@ -131,7 +131,7 @@ async def get_training_status(
 
 @router.post("/{job_id}/pause")
 async def pause_training(
-    job_id: str, db: Session = Depends(get_db_session)
+    job_id: str, db: Session = Depends(get_db_session),
 ) -> dict[str, str]:
     """暂停训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
@@ -151,7 +151,7 @@ async def pause_training(
 
 @router.post("/{job_id}/resume")
 async def resume_training(
-    job_id: str, db: Session = Depends(get_db_session)
+    job_id: str, db: Session = Depends(get_db_session),
 ) -> dict[str, str]:
     """恢复训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
@@ -171,7 +171,7 @@ async def resume_training(
 
 @router.post("/{job_id}/stop")
 async def stop_training(
-    job_id: str, db: Session = Depends(get_db_session)
+    job_id: str, db: Session = Depends(get_db_session),
 ) -> dict[str, str]:
     """停止训练任务"""
     job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()

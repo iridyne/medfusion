@@ -11,7 +11,7 @@ from typing import Any
 
 import torch
 import torch.distributed as dist
-import torch.nn as nn
+from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp import ShardingStrategy
 from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
@@ -60,7 +60,7 @@ def setup_distributed(
 
         logger.info(
             f"Initialized distributed training: rank={rank}, "
-            f"local_rank={local_rank}, world_size={world_size}"
+            f"local_rank={local_rank}, world_size={world_size}",
         )
     else:
         logger.info("Running in single-process mode")
@@ -301,7 +301,7 @@ class FSDPWrapper:
 
             logger.info(
                 f"Wrapped model with FSDP (strategy={sharding_strategy}) "
-                f"on device {local_rank}"
+                f"on device {local_rank}",
             )
         else:
             logger.info("FSDP not initialized, using single-process model")
@@ -369,10 +369,9 @@ def create_distributed_model(
     """
     if strategy == "ddp":
         return DDPWrapper(model, **kwargs)
-    elif strategy == "fsdp":
+    if strategy == "fsdp":
         return FSDPWrapper(model, **kwargs)
-    else:
-        raise ValueError(f"Unknown strategy: {strategy}. Use 'ddp' or 'fsdp'.")
+    raise ValueError(f"Unknown strategy: {strategy}. Use 'ddp' or 'fsdp'.")
 
 
 def save_checkpoint(

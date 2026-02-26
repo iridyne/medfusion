@@ -108,7 +108,7 @@ class DICOMLoader:
         return windowed
 
     def _convert_to_hu(
-        self, ds: pydicom.Dataset, pixel_array: np.ndarray
+        self, ds: pydicom.Dataset, pixel_array: np.ndarray,
     ) -> np.ndarray:
         """
         Convert pixel values to Hounsfield Units.
@@ -122,7 +122,7 @@ class DICOMLoader:
 
         logger.debug(
             f"HU conversion: slope={slope}, intercept={intercept}, "
-            f"range=[{hu_array.min():.1f}, {hu_array.max():.1f}]"
+            f"range=[{hu_array.min():.1f}, {hu_array.max():.1f}]",
         )
 
         return hu_array
@@ -150,7 +150,7 @@ class DICOMLoader:
         return scaled
 
     def load_as_pil(
-        self, path: str | Path, mode: Literal["L", "RGB"] = "L"
+        self, path: str | Path, mode: Literal["L", "RGB"] = "L",
     ) -> Image.Image:
         """
         Load DICOM and return as PIL Image.

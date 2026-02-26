@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
+from torch import nn
+from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -58,7 +58,7 @@ class BaseTrainer(ABC):
                 weight_decay=weight_decay,
             )
             logger.info(
-                f"Auto-created AdamW optimizer with lr={lr}, weight_decay={weight_decay}"
+                f"Auto-created AdamW optimizer with lr={lr}, weight_decay={weight_decay}",
             )
         else:
             self.optimizer = optimizer
@@ -96,7 +96,6 @@ class BaseTrainer(ABC):
         Returns:
             Dictionary containing 'loss' and any other metrics to log
         """
-        pass
 
     @abstractmethod
     def validation_step(self, batch: Any, batch_idx: int) -> dict[str, torch.Tensor]:
@@ -110,13 +109,12 @@ class BaseTrainer(ABC):
         Returns:
             Dictionary containing metrics to aggregate
         """
-        pass
 
     def on_train_start(self) -> None:
         """Hook called at the start of training."""
         logger.info(f"Starting training on device: {self.device}")
         logger.info(
-            f"Model parameters: {sum(p.numel() for p in self.model.parameters())}"
+            f"Model parameters: {sum(p.numel() for p in self.model.parameters())}",
         )
 
     def on_epoch_start(self) -> None:
@@ -131,7 +129,7 @@ class BaseTrainer(ABC):
             pass
 
     def on_epoch_end(
-        self, train_metrics: dict[str, float], val_metrics: dict[str, float]
+        self, train_metrics: dict[str, float], val_metrics: dict[str, float],
     ) -> None:
         """
         Hook called at the end of each epoch.
@@ -161,7 +159,7 @@ class BaseTrainer(ABC):
             f"Epoch {self.current_epoch}: "
             f"Train Loss: {train_metrics.get('loss', 0):.4f} | "
             f"Val Loss: {val_metrics.get('loss', 0):.4f} | "
-            f"Val Metric ({self.config.training.monitor}): {val_metrics.get(self.config.training.monitor, 0):.4f}"
+            f"Val Metric ({self.config.training.monitor}): {val_metrics.get(self.config.training.monitor, 0):.4f}",
         )
 
         # Checkpointing & Early Stopping
@@ -247,7 +245,7 @@ class BaseTrainer(ABC):
                 # Gradient clipping
                 if self.config.training.gradient_clip:
                     nn.utils.clip_grad_norm_(
-                        self.model.parameters(), self.config.training.gradient_clip
+                        self.model.parameters(), self.config.training.gradient_clip,
                     )
 
                 # Optimizer step
@@ -264,7 +262,7 @@ class BaseTrainer(ABC):
 
             # Update progress bar
             pbar.set_postfix(
-                {k: f"{v.item():.4f}" for k, v in step_metrics.items() if k == "loss"}
+                {k: f"{v.item():.4f}" for k, v in step_metrics.items() if k == "loss"},
             )
 
         return {k: v / num_batches for k, v in metrics_sum.items()}
@@ -272,12 +270,12 @@ class BaseTrainer(ABC):
     def _handle_checkpointing(self, val_metrics: dict[str, float]) -> None:
         """Handle model checkpointing and early stopping logic."""
         current_metric = val_metrics.get(
-            self.config.training.monitor, val_metrics.get("loss")
+            self.config.training.monitor, val_metrics.get("loss"),
         )
 
         if current_metric is None:
             logger.warning(
-                f"Metric {self.config.training.monitor} not found in validation metrics."
+                f"Metric {self.config.training.monitor} not found in validation metrics.",
             )
             return
 
@@ -285,16 +283,15 @@ class BaseTrainer(ABC):
         if self.config.training.mode == "min":
             if current_metric < self.best_metric - self.config.training.min_delta:
                 is_improvement = True
-        else:
-            if current_metric > self.best_metric + self.config.training.min_delta:
-                is_improvement = True
+        elif current_metric > self.best_metric + self.config.training.min_delta:
+            is_improvement = True
 
         if is_improvement:
             self.best_metric = current_metric
             self.patience_counter = 0
             self._save_checkpoint("best.pth", val_metrics)
             logger.info(
-                f"New best model saved with {self.config.training.monitor}: {self.best_metric:.4f}"
+                f"New best model saved with {self.config.training.monitor}: {self.best_metric:.4f}",
             )
         else:
             self.patience_counter += 1

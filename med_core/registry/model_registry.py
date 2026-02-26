@@ -22,7 +22,7 @@ class ModelRegistry:
         self.registry_path.write_text(json.dumps(self.models, indent=2))
 
     def register(
-        self, name: str, version: str, path: str, metadata: dict[str, Any] | None = None
+        self, name: str, version: str, path: str, metadata: dict[str, Any] | None = None,
     ) -> None:
         key = f"{name}:{version}"
         self.models[key] = {"path": path, "metadata": metadata or {}}

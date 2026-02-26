@@ -74,13 +74,13 @@ class BaseMultiViewDataset(ABC, Dataset):
         if len(image_paths) != len(tabular_data):
             raise ValueError(
                 f"Mismatch between images ({len(image_paths)}) "
-                f"and tabular data ({len(tabular_data)})"
+                f"and tabular data ({len(tabular_data)})",
             )
 
         if len(image_paths) != len(labels):
             raise ValueError(
                 f"Mismatch between images ({len(image_paths)}) "
-                f"and labels ({len(labels)})"
+                f"and labels ({len(labels)})",
             )
 
         self.image_paths = image_paths
@@ -104,7 +104,7 @@ class BaseMultiViewDataset(ABC, Dataset):
         if invalid_samples:
             logger.warning(
                 f"Found {len(invalid_samples)} samples not meeting view requirements. "
-                f"First few indices: {invalid_samples[:5]}"
+                f"First few indices: {invalid_samples[:5]}",
             )
 
     @staticmethod
@@ -135,7 +135,6 @@ class BaseMultiViewDataset(ABC, Dataset):
         Returns:
             Loaded image
         """
-        pass
 
     def _handle_missing_view(
         self,
@@ -159,43 +158,38 @@ class BaseMultiViewDataset(ABC, Dataset):
         if strategy == "skip":
             return None
 
-        elif strategy == "zero":
+        if strategy == "zero":
             # Return zero tensor with same shape as reference
             if reference_image is not None:
                 if isinstance(reference_image, torch.Tensor):
                     return torch.zeros_like(reference_image)
-                else:
-                    # reference_image is PIL Image, convert to tensor first
-                    import torchvision.transforms.functional as F
+                # reference_image is PIL Image, convert to tensor first
+                import torchvision.transforms.functional as F
 
-                    ref_tensor = F.to_tensor(reference_image)
-                    return torch.zeros_like(ref_tensor)
-            else:
-                # Default shape (will need to be handled by model)
-                return torch.zeros(3, 224, 224)
+                ref_tensor = F.to_tensor(reference_image)
+                return torch.zeros_like(ref_tensor)
+            # Default shape (will need to be handled by model)
+            return torch.zeros(3, 224, 224)
 
-        elif strategy == "duplicate":
+        if strategy == "duplicate":
             # Duplicate the first available view
             if reference_image is not None:
                 if isinstance(reference_image, torch.Tensor):
                     return reference_image.clone()
-                else:
-                    # reference_image is PIL Image, return a copy
-                    return reference_image.copy()
-            else:
-                # Try to find any available view in this sample
-                view_dict = self.image_paths[idx]
-                for v_name in self.view_config.view_names:
-                    if v_name in view_dict and view_dict[v_name] is not None:
-                        img = self.load_image(view_dict[v_name])
-                        if self.transform:
-                            img = self.transform(img)
-                        return img
-                # No views available, return zero
-                return torch.zeros(3, 224, 224)
+                # reference_image is PIL Image, return a copy
+                return reference_image.copy()
+            # Try to find any available view in this sample
+            view_dict = self.image_paths[idx]
+            for v_name in self.view_config.view_names:
+                if v_name in view_dict and view_dict[v_name] is not None:
+                    img = self.load_image(view_dict[v_name])
+                    if self.transform:
+                        img = self.transform(img)
+                    return img
+            # No views available, return zero
+            return torch.zeros(3, 224, 224)
 
-        else:
-            raise ValueError(f"Unknown missing view strategy: {strategy}")
+        raise ValueError(f"Unknown missing view strategy: {strategy}")
 
     def __getitem__(self, idx: int) -> tuple[ViewTensor, torch.Tensor, torch.Tensor]:
         """

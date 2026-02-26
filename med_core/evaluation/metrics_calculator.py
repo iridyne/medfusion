@@ -97,7 +97,7 @@ class MetricsCalculator:
                 "Weighted F1": {
                     "value": f"{metrics.get('weighted_f1', 0.0):.4f}",
                 },
-            }
+            },
         }
 
         # Add per-class metrics if available

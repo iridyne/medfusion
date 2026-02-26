@@ -24,7 +24,7 @@ def find_free_port(start_port: int = 8000, max_attempts: int = 100) -> int:
         except OSError:
             continue
     raise RuntimeError(
-        f"无法在 {start_port}-{start_port + max_attempts} 范围内找到可用端口"
+        f"无法在 {start_port}-{start_port + max_attempts} 范围内找到可用端口",
     )
 
 
@@ -61,7 +61,6 @@ def initialize_web_server() -> None:
 @click.group()
 def web() -> None:
     """Web UI 管理命令"""
-    pass
 
 
 @web.command()
@@ -73,7 +72,6 @@ def web() -> None:
 @click.option("--reload", is_flag=True, help="开发模式（自动重载）")
 def start(host: str, port: int | None, auth: bool, token: str | None, no_browser: bool, reload: bool) -> None:
     """启动 MedFusion Web UI"""
-
     # 初始化
     console.print("\n[bold blue]MedFusion Web UI[/bold blue]")
     console.print(f"版本: {settings.version}\n")
@@ -143,7 +141,6 @@ def info() -> None:
 @click.group()
 def data() -> None:
     """数据管理命令"""
-    pass
 
 
 @data.command("info")

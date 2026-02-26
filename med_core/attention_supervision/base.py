@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -70,7 +70,6 @@ class BaseAttentionSupervision(ABC, nn.Module):
         Returns:
             AttentionLoss: 包含损失值和元数据的对象
         """
-        pass
 
     def forward(
         self,

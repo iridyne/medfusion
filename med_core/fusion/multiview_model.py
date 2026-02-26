@@ -8,7 +8,7 @@ while maintaining backward compatibility with single-view inputs.
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.backbones.multiview_vision import MultiViewVisionBackbone
 from med_core.datasets.multiview_types import ViewTensor
@@ -143,13 +143,13 @@ class MultiViewMultiModalFusionModel(nn.Module):
             view_aggregation_aux = None
             if hasattr(self.vision_backbone.aggregator, "last_attention_weights"):
                 view_aggregation_aux = {
-                    "view_attention_weights": self.vision_backbone.aggregator.last_attention_weights
+                    "view_attention_weights": self.vision_backbone.aggregator.last_attention_weights,
                 }
         else:
             # Single-view vision backbone (backward compatible)
             if isinstance(images, dict):
                 raise ValueError(
-                    "Multi-view input provided but vision_backbone is not MultiViewVisionBackbone"
+                    "Multi-view input provided but vision_backbone is not MultiViewVisionBackbone",
                 )
             vision_features = self.vision_backbone(images)
             view_aggregation_aux = None
@@ -158,7 +158,7 @@ class MultiViewMultiModalFusionModel(nn.Module):
 
         # Fuse features
         fused_features, fusion_aux = self.fusion_module(
-            vision_features, tabular_features
+            vision_features, tabular_features,
         )
 
         # Main classification
@@ -204,16 +204,16 @@ class MultiViewMultiModalFusionModel(nn.Module):
 
         # View aggregation attention
         if self.is_multiview and hasattr(
-            self.vision_backbone.aggregator, "last_attention_weights"
+            self.vision_backbone.aggregator, "last_attention_weights",
         ):
             attention_weights["view_attention"] = (
                 self.vision_backbone.aggregator.last_attention_weights
             )
 
-        return attention_weights if attention_weights else None
+        return attention_weights or None
 
     def freeze_vision_backbone(
-        self, strategy: str = "full", unfreeze_last_n: int = 2
+        self, strategy: str = "full", unfreeze_last_n: int = 2,
     ) -> None:
         """
         Freeze vision backbone parameters.

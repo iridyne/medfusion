@@ -216,7 +216,7 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
         # Extract and preprocess tabular features
         if data_cleaner is not None:
             tabular_data, feature_names, scaler = data_cleaner.prepare_tabular_features(
-                df, scaler
+                df, scaler,
             )
         else:
             tabular_data, feature_names, scaler = cls._prepare_tabular_features(
@@ -350,7 +350,7 @@ def split_dataset(
     random_seed: int = 42,
     stratify: bool = True,
 ) -> tuple[
-    MedicalMultimodalDataset, MedicalMultimodalDataset, MedicalMultimodalDataset
+    MedicalMultimodalDataset, MedicalMultimodalDataset, MedicalMultimodalDataset,
 ]:
     """
     Split dataset into train/val/test sets.
@@ -401,7 +401,7 @@ def split_dataset(
 
     logger.info(
         f"Split dataset: train={len(train_dataset)}, "
-        f"val={len(val_dataset)}, test={len(test_dataset)}"
+        f"val={len(val_dataset)}, test={len(test_dataset)}",
     )
 
     return train_dataset, val_dataset, test_dataset

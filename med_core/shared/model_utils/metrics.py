@@ -238,10 +238,10 @@ def calculate_multiclass_metrics(
     return {
         "accuracy": accuracy_score(y_true, y_pred),
         "macro_precision": precision_score(
-            y_true, y_pred, average="macro", zero_division=0.0
+            y_true, y_pred, average="macro", zero_division=0.0,
         ),
         "macro_recall": recall_score(
-            y_true, y_pred, average="macro", zero_division=0.0
+            y_true, y_pred, average="macro", zero_division=0.0,
         ),
         "macro_f1": f1_score(y_true, y_pred, average="macro", zero_division=0.0),
         "weighted_f1": f1_score(y_true, y_pred, average="weighted", zero_division=0.0),

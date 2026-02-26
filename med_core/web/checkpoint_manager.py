@@ -163,7 +163,7 @@ class CheckpointManager:
                             "timestamp": state_data.get("timestamp"),
                             "metadata": state_data.get("metadata", {}),
                             "size": self._get_dir_size(checkpoint_path),
-                        }
+                        },
                     )
             except Exception as e:
                 logger.warning(f"Failed to read checkpoint {checkpoint_path}: {e}")
@@ -216,7 +216,7 @@ class CheckpointManager:
                     logger.warning(f"Failed to cleanup checkpoint: {e}")
 
     def _serialize_execution_state(
-        self, execution_state: dict[str, Any]
+        self, execution_state: dict[str, Any],
     ) -> dict[str, Any]:
         """
         序列化执行状态
@@ -238,7 +238,7 @@ class CheckpointManager:
         return serialized
 
     def _save_models(
-        self, checkpoint_path: Path, execution_state: dict[str, Any]
+        self, checkpoint_path: Path, execution_state: dict[str, Any],
     ) -> None:
         """保存模型权重"""
         models_dir = checkpoint_path / "models"
@@ -307,7 +307,7 @@ class CheckpointManager:
         return total_size
 
     def resume_workflow(
-        self, workflow_id: str, checkpoint_path: Path | None = None
+        self, workflow_id: str, checkpoint_path: Path | None = None,
     ) -> dict[str, Any]:
         """
         恢复工作流执行

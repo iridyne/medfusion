@@ -9,7 +9,7 @@ import math
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class SEAttention(nn.Module):
@@ -62,12 +62,11 @@ class SEAttention(nn.Module):
         """获取激活函数"""
         if name == "relu":
             return nn.ReLU(inplace=True)
-        elif name == "gelu":
+        if name == "gelu":
             return nn.GELU()
-        elif name == "silu":
+        if name == "silu":
             return nn.SiLU(inplace=True)
-        else:
-            raise ValueError(f"Unknown activation: {name}")
+        raise ValueError(f"Unknown activation: {name}")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -537,13 +536,12 @@ def create_attention_module(
     """
     if attention_type == "se":
         return SEAttention(channels, **kwargs)
-    elif attention_type == "eca":
+    if attention_type == "eca":
         return ECAAttention(channels, **kwargs)
-    elif attention_type == "spatial":
+    if attention_type == "spatial":
         return SpatialAttention(**kwargs)
-    elif attention_type == "cbam":
+    if attention_type == "cbam":
         return CBAM(channels, **kwargs)
-    elif attention_type == "transformer":
+    if attention_type == "transformer":
         return TransformerAttention2D(channels, **kwargs)
-    else:
-        raise ValueError(f"Unknown attention type: {attention_type}")
+    raise ValueError(f"Unknown attention type: {attention_type}")

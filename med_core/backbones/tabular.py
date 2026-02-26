@@ -11,7 +11,7 @@ Provides a flexible MLP architecture that:
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.backbones.base import BaseTabularBackbone
 
@@ -65,7 +65,7 @@ class AdaptiveMLP(BaseTabularBackbone):
             input_dropout: Dropout rate applied to input (for regularization)
         """
         super().__init__(
-            input_dim=input_dim, output_dim=output_dim, hidden_dims=hidden_dims
+            input_dim=input_dim, output_dim=output_dim, hidden_dims=hidden_dims,
         )
 
         self.dropout_rate = dropout
@@ -76,7 +76,7 @@ class AdaptiveMLP(BaseTabularBackbone):
         # Get activation class
         if activation not in self.ACTIVATIONS:
             raise ValueError(
-                f"Unknown activation: {activation}. Choose from {list(self.ACTIVATIONS.keys())}"
+                f"Unknown activation: {activation}. Choose from {list(self.ACTIVATIONS.keys())}",
             )
         activation_cls = self.ACTIVATIONS[activation]
 
@@ -197,7 +197,7 @@ class ResidualMLP(BaseTabularBackbone):
         self._output_dim = output_dim
 
     def _make_residual_block(
-        self, dim: int, dropout: float, use_batch_norm: bool
+        self, dim: int, dropout: float, use_batch_norm: bool,
     ) -> nn.Module:
         """Create a single residual block."""
         layers = [
@@ -212,7 +212,7 @@ class ResidualMLP(BaseTabularBackbone):
             [
                 nn.Dropout(dropout),
                 nn.Linear(dim, dim),
-            ]
+            ],
         )
 
         if use_batch_norm:
@@ -271,7 +271,7 @@ class FeatureTokenizer(nn.Module):
         # For numerical features: linear projection per feature
         num_numerical = numerical_features or num_features
         self.numerical_embeddings = nn.ModuleList(
-            [nn.Linear(1, embedding_dim) for _ in range(num_numerical)]
+            [nn.Linear(1, embedding_dim) for _ in range(num_numerical)],
         )
 
         # For categorical features: embedding tables
@@ -279,7 +279,7 @@ class FeatureTokenizer(nn.Module):
         if categorical_cardinalities:
             for cardinality in categorical_cardinalities:
                 self.categorical_embeddings.append(
-                    nn.Embedding(cardinality, embedding_dim)
+                    nn.Embedding(cardinality, embedding_dim),
                 )
 
         # Learnable [CLS] token for aggregation
@@ -355,7 +355,7 @@ def create_tabular_backbone(
             hidden_dims=hidden_dims,
             **filtered_kwargs,
         )
-    elif backbone_type == "residual":
+    if backbone_type == "residual":
         hidden_dim = hidden_dims[0] if hidden_dims else 64
         num_blocks = len(hidden_dims) if hidden_dims else 3
         return ResidualMLP(
@@ -365,5 +365,4 @@ def create_tabular_backbone(
             num_blocks=num_blocks,
             **filtered_kwargs,
         )
-    else:
-        raise ValueError(f"Unknown backbone type: {backbone_type}")
+    raise ValueError(f"Unknown backbone type: {backbone_type}")

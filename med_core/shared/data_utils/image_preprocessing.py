@@ -60,7 +60,7 @@ def normalize_intensity(
             return (img - min_val) / (max_val - min_val)
         return np.zeros_like(img)
 
-    elif method == "zscore":
+    if method == "zscore":
         mean, std = img.mean(), img.std()
         if std > 0:
             normalized = (img - mean) / std
@@ -68,7 +68,7 @@ def normalize_intensity(
             return (normalized + 3) / 6
         return img - mean
 
-    elif method == "percentile":
+    if method == "percentile":
         p_low, p_high = percentile_range
         low, high = np.percentile(img, p_low), np.percentile(img, p_high)
         if high > low:
@@ -79,7 +79,7 @@ def normalize_intensity(
 
 
 def crop_center(
-    image: NPArray | Image.Image, size: int | tuple[int, int]
+    image: NPArray | Image.Image, size: int | tuple[int, int],
 ) -> Image.Image:
     """
     Crop center region of image.
@@ -96,13 +96,13 @@ def crop_center(
         arr = image
         if getattr(arr, "dtype", None) is not None and arr.dtype != np.uint8:
             arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(
-                np.uint8
+                np.uint8,
             )
         image = Image.fromarray(arr)
 
     if not isinstance(image, Image.Image):
         raise TypeError(
-            "`image` must be a PIL Image or numpy array convertible to one."
+            "`image` must be a PIL Image or numpy array convertible to one.",
         )
 
     width, height = image.size
@@ -191,7 +191,7 @@ class ImagePreprocessor:
     def __init__(
         self,
         normalize_method: Literal[
-            "minmax", "zscore", "percentile", "none"
+            "minmax", "zscore", "percentile", "none",
         ] = "percentile",
         apply_clahe: bool = False,
         remove_watermark: bool = False,
@@ -202,7 +202,7 @@ class ImagePreprocessor:
         if normalize_method not in valid_methods:
             raise ValueError(
                 f"Invalid normalize_method: {normalize_method}. "
-                f"Must be one of {valid_methods}"
+                f"Must be one of {valid_methods}",
             )
 
         self.normalize_method = normalize_method
@@ -226,13 +226,13 @@ class ImagePreprocessor:
             arr = image
             if arr.dtype != np.uint8:
                 arr = ((arr - arr.min()) / (arr.max() - arr.min() + 1e-8) * 255).astype(
-                    np.uint8
+                    np.uint8,
                 )
             image = Image.fromarray(arr)
 
         if not isinstance(image, Image.Image):
             raise TypeError(
-                "`image` must be a PIL Image or a numpy array convertible to one."
+                "`image` must be a PIL Image or a numpy array convertible to one.",
             )
 
         # Ensure RGB

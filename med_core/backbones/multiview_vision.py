@@ -10,7 +10,7 @@ Extends vision backbones to support multiple images per sample by:
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.backbones.base import BaseVisionBackbone
 from med_core.backbones.view_aggregator import (
@@ -87,7 +87,7 @@ class MultiViewVisionBackbone(nn.Module):
         # If not sharing weights, create separate backbones for each view
         if not share_weights and view_names is not None:
             self.view_backbones = nn.ModuleDict(
-                {view_name: self._clone_backbone(backbone) for view_name in view_names}
+                {view_name: self._clone_backbone(backbone) for view_name in view_names},
             )
         else:
             self.view_backbones = None
@@ -104,7 +104,7 @@ class MultiViewVisionBackbone(nn.Module):
         return copy.deepcopy(backbone)
 
     def _process_single_view(
-        self, view_name: str, view_tensor: torch.Tensor
+        self, view_name: str, view_tensor: torch.Tensor,
     ) -> torch.Tensor:
         """
         Process a single view through the backbone.
@@ -119,9 +119,8 @@ class MultiViewVisionBackbone(nn.Module):
         if self.view_backbones is not None and view_name in self.view_backbones:
             # Use view-specific backbone
             return self.view_backbones[view_name](view_tensor)
-        else:
-            # Use shared backbone
-            return self.backbone(view_tensor)
+        # Use shared backbone
+        return self.backbone(view_tensor)
 
     def forward(
         self,
@@ -157,7 +156,7 @@ class MultiViewVisionBackbone(nn.Module):
                 if unexpected_views:
                     raise ValueError(
                         f"Unexpected view names: {unexpected_views}. "
-                        f"Expected: {self.view_names}"
+                        f"Expected: {self.view_names}",
                     )
 
             # Process each view
@@ -168,7 +167,7 @@ class MultiViewVisionBackbone(nn.Module):
                 if view_tensor.dim() != 4:
                     raise ValueError(
                         f"Expected 4D tensor for view '{view_name}', "
-                        f"got shape {view_tensor.shape}"
+                        f"got shape {view_tensor.shape}",
                     )
 
                 features = self._process_single_view(view_name, view_tensor)
@@ -254,7 +253,7 @@ class MultiViewVisionBackbone(nn.Module):
                 f"  - dict[str, Tensor(B, C, H, W)]\n"
                 f"  - Tensor(B, N, C, H, W)\n"
                 f"  - Tensor(B, C, H, W) for single view\n"
-                f"Got: {type(x)} with shape {x.shape if isinstance(x, torch.Tensor) else 'N/A'}"
+                f"Got: {type(x)} with shape {x.shape if isinstance(x, torch.Tensor) else 'N/A'}",
             )
 
         # Aggregate view features

@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 
-import torch.optim as optim
+from torch import optim
 
 from med_core.backbones import (
     create_tabular_backbone,
@@ -37,7 +37,7 @@ def train() -> None:
     """Command-line entry point for training."""
     parser = argparse.ArgumentParser(description="Train a medical multimodal model")
     parser.add_argument(
-        "--config", type=str, required=True, help="Path to YAML configuration file"
+        "--config", type=str, required=True, help="Path to YAML configuration file",
     )
     parser.add_argument("--output-dir", type=str, help="Override output directory")
     args = parser.parse_args()
@@ -144,7 +144,7 @@ def train() -> None:
     )
 
     scheduler = optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=config.training.num_epochs
+        optimizer, T_max=config.training.num_epochs,
     )
 
     # 5. Trainer

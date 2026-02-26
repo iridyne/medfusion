@@ -7,7 +7,7 @@ Provides a unified interface for building multi-modal models from components.
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.aggregators import MILAggregator
 from med_core.backbones import (
@@ -130,7 +130,7 @@ class GenericMultiModalModel(nn.Module):
                     and "return_attention" in aggregator.forward.__code__.co_varnames
                 ):
                     aggregated_features, attention = aggregator(
-                        features, return_attention=True
+                        features, return_attention=True,
                     )
                     mil_attention_weights[modality_name] = attention
                 else:
@@ -165,7 +165,7 @@ class GenericMultiModalModel(nn.Module):
             # Stack features and use attention-based pooling
             feature_list = [modality_features[name] for name in self.modality_names]
             feature_tensor = torch.stack(
-                feature_list, dim=1
+                feature_list, dim=1,
             )  # [B, num_modalities, feature_dim]
 
             # Use learnable attention weights for weighted pooling
@@ -175,7 +175,7 @@ class GenericMultiModalModel(nn.Module):
                 self.multimodal_attention = nn.Sequential(
                     nn.Linear(feature_dim, feature_dim // 4),
                     nn.ReLU(),
-                    nn.Linear(feature_dim // 4, 1)
+                    nn.Linear(feature_dim // 4, 1),
                 ).to(feature_tensor.device)
 
             # Compute attention scores: [B, num_modalities, 1]
@@ -280,7 +280,7 @@ class MultiModalModelBuilder:
         self,
         modality_name: str,
         strategy: Literal[
-            "mean", "max", "attention", "gated", "deepsets", "transformer"
+            "mean", "max", "attention", "gated", "deepsets", "transformer",
         ] = "attention",
         **kwargs: Any,
     ) -> "MultiModalModelBuilder":
@@ -297,7 +297,7 @@ class MultiModalModelBuilder:
         """
         if modality_name not in self._modalities:
             raise ValueError(
-                f"Modality '{modality_name}' not found. Add it first with add_modality()"
+                f"Modality '{modality_name}' not found. Add it first with add_modality()",
             )
 
         self._mil_configs[modality_name] = {
@@ -338,7 +338,7 @@ class MultiModalModelBuilder:
     def set_head(
         self,
         task_type: Literal[
-            "classification", "survival_cox", "survival_deep", "survival_discrete"
+            "classification", "survival_cox", "survival_deep", "survival_discrete",
         ],
         **kwargs: Any,
     ) -> "MultiModalModelBuilder":
@@ -396,65 +396,64 @@ class MultiModalModelBuilder:
                     modality_dims[name] = feature_dim
                 else:
                     raise ValueError(
-                        f"Cannot determine output dimension for modality '{name}'"
+                        f"Cannot determine output dimension for modality '{name}'",
                     )
-            else:
-                # Create from string
-                if modality_type == "vision":
-                    # Handle Swin2D separately as it needs in_channels
-                    if "swin2d" in backbone.lower() or "swin_2d" in backbone.lower():
-                        variant = backbone.replace("swin2d_", "").replace(
-                            "swin_2d_", ""
-                        )
-                        bb = SwinTransformer2DBackbone(
-                            variant=variant,
-                            feature_dim=feature_dim or 512,
-                            **kwargs,
-                        )
-                        modality_backbones[name] = bb
-                        modality_dims[name] = bb.output_dim
-                    else:
-                        # Remove in_channels from kwargs for standard vision backbones
-                        vision_kwargs = {
-                            k: v for k, v in kwargs.items() if k != "in_channels"
-                        }
-                        bb = create_vision_backbone(
-                            backbone_name=backbone,
-                            feature_dim=feature_dim or 512,
-                            **vision_kwargs,
-                        )
-                        modality_backbones[name] = bb
-                        modality_dims[name] = bb.output_dim
-                elif modality_type == "vision3d":
-                    # Handle 3D backbones
-                    if "swin3d" in backbone.lower():
-                        variant = backbone.replace("swin3d_", "").replace(
-                            "swin_3d_", ""
-                        )
-                        bb = SwinTransformer3DBackbone(
-                            variant=variant,
-                            feature_dim=feature_dim or 512,
-                            **kwargs,
-                        )
-                        modality_backbones[name] = bb
-                        modality_dims[name] = bb.output_dim
-                    else:
-                        raise ValueError(f"Unsupported 3D backbone: {backbone}")
-                elif modality_type == "tabular":
-                    input_dim = kwargs.pop("input_dim", None)
-                    if input_dim is None:
-                        raise ValueError(
-                            f"input_dim required for tabular modality '{name}'"
-                        )
-                    bb = create_tabular_backbone(
-                        input_dim=input_dim,
-                        output_dim=feature_dim or 64,
+            # Create from string
+            elif modality_type == "vision":
+                # Handle Swin2D separately as it needs in_channels
+                if "swin2d" in backbone.lower() or "swin_2d" in backbone.lower():
+                    variant = backbone.replace("swin2d_", "").replace(
+                        "swin_2d_", "",
+                    )
+                    bb = SwinTransformer2DBackbone(
+                        variant=variant,
+                        feature_dim=feature_dim or 512,
                         **kwargs,
                     )
                     modality_backbones[name] = bb
                     modality_dims[name] = bb.output_dim
                 else:
-                    raise ValueError(f"Unsupported modality type: {modality_type}")
+                    # Remove in_channels from kwargs for standard vision backbones
+                    vision_kwargs = {
+                        k: v for k, v in kwargs.items() if k != "in_channels"
+                    }
+                    bb = create_vision_backbone(
+                        backbone_name=backbone,
+                        feature_dim=feature_dim or 512,
+                        **vision_kwargs,
+                    )
+                    modality_backbones[name] = bb
+                    modality_dims[name] = bb.output_dim
+            elif modality_type == "vision3d":
+                # Handle 3D backbones
+                if "swin3d" in backbone.lower():
+                    variant = backbone.replace("swin3d_", "").replace(
+                        "swin_3d_", "",
+                    )
+                    bb = SwinTransformer3DBackbone(
+                        variant=variant,
+                        feature_dim=feature_dim or 512,
+                        **kwargs,
+                    )
+                    modality_backbones[name] = bb
+                    modality_dims[name] = bb.output_dim
+                else:
+                    raise ValueError(f"Unsupported 3D backbone: {backbone}")
+            elif modality_type == "tabular":
+                input_dim = kwargs.pop("input_dim", None)
+                if input_dim is None:
+                    raise ValueError(
+                        f"input_dim required for tabular modality '{name}'",
+                    )
+                bb = create_tabular_backbone(
+                    input_dim=input_dim,
+                    output_dim=feature_dim or 64,
+                    **kwargs,
+                )
+                modality_backbones[name] = bb
+                modality_dims[name] = bb.output_dim
+            else:
+                raise ValueError(f"Unsupported modality type: {modality_type}")
 
         # Build MIL aggregators
         mil_aggregators = {}
@@ -505,7 +504,7 @@ class MultiModalModelBuilder:
             else:
                 raise ValueError(
                     f"Unknown fusion strategy: {fusion_strategy}. "
-                    f"Available: {list(fusion_alias_map.keys()) + ['kronecker', 'fused_attention']}"
+                    f"Available: {list(fusion_alias_map.keys()) + ['kronecker', 'fused_attention']}",
                 )
 
             # Determine output dimension
@@ -529,7 +528,7 @@ class MultiModalModelBuilder:
             dims = list(modality_dims.values())
             if len(set(dims)) > 1:
                 raise ValueError(
-                    f"For >2 modalities, all feature dimensions must match. Got: {modality_dims}"
+                    f"For >2 modalities, all feature dimensions must match. Got: {modality_dims}",
                 )
             fusion_dim = dims[0]
             fusion_module = nn.Identity()  # Placeholder
@@ -566,7 +565,7 @@ class MultiModalModelBuilder:
             modality_backbones=modality_backbones,
             fusion_module=fusion_module,
             head=head,
-            mil_aggregators=mil_aggregators if mil_aggregators else None,
+            mil_aggregators=mil_aggregators or None,
             modality_names=modality_names,
         )
 
@@ -608,7 +607,7 @@ class MultiModalModelBuilder:
             modality_type = mod_config.pop("modality_type", "vision")
             feature_dim = mod_config.pop("feature_dim", None)
             builder.add_modality(
-                name, backbone, modality_type, feature_dim, **mod_config
+                name, backbone, modality_type, feature_dim, **mod_config,
             )
 
         # Add MIL if configured

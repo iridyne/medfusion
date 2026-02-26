@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 logger = logging.getLogger(__name__)
@@ -541,7 +541,7 @@ def create_regression_test(
 
             if change < -tolerance:
                 logger.error(
-                    f"❌ Regression detected in {result.name}: {change * 100:.1f}%"
+                    f"❌ Regression detected in {result.name}: {change * 100:.1f}%",
                 )
                 has_regression = True
 

@@ -13,9 +13,9 @@ from collections.abc import Sequence
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
-import torch.utils.checkpoint as checkpoint
+from torch.utils import checkpoint
 from einops import rearrange
 
 
@@ -67,7 +67,7 @@ def window_partition(x: torch.Tensor, window_size: Sequence[int]) -> torch.Tenso
 
 
 def window_reverse(
-    windows: torch.Tensor, window_size: Sequence[int], dims: Sequence[int]
+    windows: torch.Tensor, window_size: Sequence[int], dims: Sequence[int],
 ) -> torch.Tensor:
     """
     Reverse window partition.
@@ -153,7 +153,7 @@ class WindowAttention(nn.Module):
                 * (2 * window_size[1] - 1)
                 * (2 * window_size[2] - 1),
                 num_heads,
-            )
+            ),
         )
 
         # QKV projection
@@ -165,7 +165,7 @@ class WindowAttention(nn.Module):
         nn.init.trunc_normal_(self.relative_position_bias_table, std=0.02)
 
     def forward(
-        self, x: torch.Tensor, mask: torch.Tensor | None = None
+        self, x: torch.Tensor, mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -190,7 +190,7 @@ class WindowAttention(nn.Module):
         if mask is not None:
             nW = mask.shape[0]
             attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(
-                1
+                1,
             ).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
 
@@ -297,7 +297,7 @@ class PatchMerging(nn.Module):
     """
 
     def __init__(
-        self, dim: int, norm_layer: type = nn.LayerNorm, spatial_dims: int = 3
+        self, dim: int, norm_layer: type = nn.LayerNorm, spatial_dims: int = 3,
     ) -> None:
         super().__init__()
         self.dim = dim
@@ -386,7 +386,7 @@ class BasicLayer(nn.Module):
                     use_checkpoint=use_checkpoint,
                 )
                 for i in range(depth)
-            ]
+            ],
         )
 
         self.downsample = downsample
@@ -457,7 +457,7 @@ class SwinTransformer3D(nn.Module):
             nn.Conv3d(in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
             if spatial_dims == 3
             else nn.Conv2d(
-                in_chans, embed_dim, kernel_size=patch_size[:2], stride=patch_size[:2]
+                in_chans, embed_dim, kernel_size=patch_size[:2], stride=patch_size[:2],
             )
         )
 
@@ -481,7 +481,7 @@ class SwinTransformer3D(nn.Module):
                 drop_path=dpr[sum(depths[:i_layer]) : sum(depths[: i_layer + 1])],
                 norm_layer=norm_layer,
                 downsample=PatchMerging(
-                    int(embed_dim * 2**i_layer), norm_layer, spatial_dims
+                    int(embed_dim * 2**i_layer), norm_layer, spatial_dims,
                 )
                 if i_layer < self.num_layers - 1
                 else None,
@@ -556,7 +556,7 @@ class PatchEmbed2D(nn.Module):
         self.embed_dim = embed_dim
 
         self.proj = nn.Conv2d(
-            in_channels, embed_dim, kernel_size=patch_size, stride=patch_size
+            in_channels, embed_dim, kernel_size=patch_size, stride=patch_size,
         )
         self.norm = nn.LayerNorm(embed_dim)
 
@@ -564,6 +564,7 @@ class PatchEmbed2D(nn.Module):
         """
         Args:
             x: [B, C, H, W]
+
         Returns:
             [B, H', W', embed_dim]
         """
@@ -591,6 +592,7 @@ class PatchMerging2D(nn.Module):
         """
         Args:
             x: [B, H, W, C]
+
         Returns:
             [B, H/2, W/2, 2*C]
         """
@@ -645,21 +647,21 @@ class WindowAttention2D(nn.Module):
 
         # Relative position bias
         self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads)
+            torch.zeros((2 * window_size[0] - 1) * (2 * window_size[1] - 1), num_heads),
         )
 
         # Get pair-wise relative position index
         coords_h = torch.arange(self.window_size[0])
         coords_w = torch.arange(self.window_size[1])
         coords = torch.stack(
-            torch.meshgrid([coords_h, coords_w], indexing="ij")
+            torch.meshgrid([coords_h, coords_w], indexing="ij"),
         )  # [2, Wh, Ww]
         coords_flatten = torch.flatten(coords, 1)  # [2, Wh*Ww]
         relative_coords = (
             coords_flatten[:, :, None] - coords_flatten[:, None, :]
         )  # [2, Wh*Ww, Wh*Ww]
         relative_coords = relative_coords.permute(
-            1, 2, 0
+            1, 2, 0,
         ).contiguous()  # [Wh*Ww, Wh*Ww, 2]
         relative_coords[:, :, 0] += self.window_size[0] - 1
         relative_coords[:, :, 1] += self.window_size[1] - 1
@@ -676,7 +678,7 @@ class WindowAttention2D(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(
-        self, x: torch.Tensor, mask: torch.Tensor | None = None
+        self, x: torch.Tensor, mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -710,7 +712,7 @@ class WindowAttention2D(nn.Module):
         if mask is not None:
             nW = mask.shape[0]
             attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(
-                1
+                1,
             ).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
@@ -779,6 +781,7 @@ class SwinTransformerBlock2D(nn.Module):
         """
         Args:
             x: [B, H, W, C]
+
         Returns:
             [B, H, W, C]
         """
@@ -798,7 +801,7 @@ class SwinTransformerBlock2D(nn.Module):
         # Cyclic shift
         if self.shift_size[0] > 0 or self.shift_size[1] > 0:
             shifted_x = torch.roll(
-                x, shifts=(-self.shift_size[0], -self.shift_size[1]), dims=(1, 2)
+                x, shifts=(-self.shift_size[0], -self.shift_size[1]), dims=(1, 2),
             )
             attn_mask = self._get_attn_mask(Hp, Wp, x.device)
         else:
@@ -813,13 +816,13 @@ class SwinTransformerBlock2D(nn.Module):
 
         # Merge windows
         shifted_x = window_reverse(
-            attn_windows, self.window_size, (B, Hp, Wp)
+            attn_windows, self.window_size, (B, Hp, Wp),
         )  # [B, Hp, Wp, C]
 
         # Reverse cyclic shift
         if self.shift_size[0] > 0 or self.shift_size[1] > 0:
             x = torch.roll(
-                shifted_x, shifts=(self.shift_size[0], self.shift_size[1]), dims=(1, 2)
+                shifted_x, shifts=(self.shift_size[0], self.shift_size[1]), dims=(1, 2),
             )
         else:
             x = shifted_x
@@ -856,7 +859,7 @@ class SwinTransformerBlock2D(nn.Module):
         mask_windows = mask_windows.view(-1, self.window_size[0] * self.window_size[1])
         attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
         attn_mask = attn_mask.masked_fill(attn_mask != 0, (-100.0)).masked_fill(
-            attn_mask == 0, 0.0
+            attn_mask == 0, 0.0,
         )
         return attn_mask
 

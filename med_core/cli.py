@@ -25,7 +25,6 @@ __all__ = ["train", "evaluate", "preprocess", "main"]
 @click.version_option(version="0.3.0", prog_name="MedFusion")
 def main():
     """MedFusion - 医学多模态深度学习框架"""
-    pass
 
 
 # 添加子命令

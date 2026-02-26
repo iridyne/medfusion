@@ -9,7 +9,7 @@ multiple regions of interest).
 from typing import Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -114,7 +114,7 @@ class AttentionAggregator(nn.Module):
         )
 
     def forward(
-        self, x: torch.Tensor, return_attention: bool = False
+        self, x: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -185,7 +185,7 @@ class GatedAttentionAggregator(nn.Module):
         self.attention_w = nn.Linear(attention_dim, 1)
 
     def forward(
-        self, x: torch.Tensor, return_attention: bool = False
+        self, x: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -384,7 +384,7 @@ class MILAggregator(nn.Module):
         self,
         input_dim: int,
         strategy: Literal[
-            "mean", "max", "attention", "gated", "deepsets", "transformer"
+            "mean", "max", "attention", "gated", "deepsets", "transformer",
         ] = "attention",
         attention_dim: int = 128,
         hidden_dim: int = 256,
@@ -408,15 +408,15 @@ class MILAggregator(nn.Module):
             self.aggregator = AttentionAggregator(input_dim, attention_dim, dropout)
         elif strategy == "gated":
             self.aggregator = GatedAttentionAggregator(
-                input_dim, attention_dim, dropout
+                input_dim, attention_dim, dropout,
             )
         elif strategy == "deepsets":
             self.aggregator = DeepSetsAggregator(
-                input_dim, hidden_dim, self.output_dim, dropout
+                input_dim, hidden_dim, self.output_dim, dropout,
             )
         elif strategy == "transformer":
             self.aggregator = TransformerAggregator(
-                input_dim, num_heads, num_layers, dropout
+                input_dim, num_heads, num_layers, dropout,
             )
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
@@ -428,7 +428,7 @@ class MILAggregator(nn.Module):
             self.output_proj = None
 
     def forward(
-        self, x: torch.Tensor, return_attention: bool = False
+        self, x: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.

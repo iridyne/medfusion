@@ -65,17 +65,17 @@ class MultiViewConfig:
         for view in self.required_views:
             if view not in self.view_names:
                 raise ValueError(
-                    f"Required view '{view}' not in view_names: {self.view_names}"
+                    f"Required view '{view}' not in view_names: {self.view_names}",
                 )
 
         if self.max_views < self.min_views:
             raise ValueError(
-                f"max_views ({self.max_views}) must be >= min_views ({self.min_views})"
+                f"max_views ({self.max_views}) must be >= min_views ({self.min_views})",
             )
 
         if len(self.view_names) > self.max_views:
             raise ValueError(
-                f"Number of view_names ({len(self.view_names)}) exceeds max_views ({self.max_views})"
+                f"Number of view_names ({len(self.view_names)}) exceeds max_views ({self.max_views})",
             )
 
     def is_view_required(self, view_name: str) -> bool:

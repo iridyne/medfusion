@@ -8,7 +8,7 @@ import logging
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.amp import autocast
 
 from med_core.datasets.multiview_types import ViewTensor
@@ -39,7 +39,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
 
         # Progressive view training settings
         self.use_progressive_views = getattr(
-            self.config.model.vision, "use_progressive_view_training", False
+            self.config.model.vision, "use_progressive_view_training", False,
         )
         if self.use_progressive_views:
             self.initial_views = self.config.model.vision.initial_views
@@ -64,7 +64,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         # Calculate how many views to activate
         views_to_add = epoch // self.add_views_every_n_epochs
         target_num_views = min(
-            len(self.initial_views) + views_to_add, len(self.all_view_names)
+            len(self.initial_views) + views_to_add, len(self.all_view_names),
         )
 
         # Add views progressively
@@ -79,7 +79,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
 
             logger.info(
                 f"Epoch {epoch}: Activated views {views_to_activate}. "
-                f"Active views: {sorted(self.current_active_views)}"
+                f"Active views: {sorted(self.current_active_views)}",
             )
 
     def _filter_views(self, images: ViewTensor) -> ViewTensor:
@@ -93,9 +93,8 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
                 for view_name, view_tensor in images.items()
                 if view_name in self.current_active_views
             }
-        else:
-            # For stacked tensor, we can't easily filter, so return as-is
-            return images
+        # For stacked tensor, we can't easily filter, so return as-is
+        return images
 
     def training_step(self, batch: Any, batch_idx: int) -> dict[str, torch.Tensor]:
         """
@@ -221,7 +220,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         return {"loss": loss, "accuracy": acc}
 
     def on_epoch_end(
-        self, train_metrics: dict[str, float], val_metrics: dict[str, float]
+        self, train_metrics: dict[str, float], val_metrics: dict[str, float],
     ) -> None:
         """Log additional multi-view specific metrics."""
         super().on_epoch_end(train_metrics, val_metrics)
@@ -230,7 +229,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         if self.use_progressive_views:
             logger.info(
                 f"Epoch {self.current_epoch} completed with active views: "
-                f"{sorted(self.current_active_views)}"
+                f"{sorted(self.current_active_views)}",
             )
 
 

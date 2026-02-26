@@ -7,7 +7,7 @@ hazards models and discrete-time survival analysis.
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -123,7 +123,7 @@ class DiscreteTimeSurvivalHead(nn.Module):
                     nn.Linear(prev_dim, hidden_dim),
                     nn.ReLU(inplace=True),
                     nn.Dropout(dropout),
-                ]
+                ],
             )
             prev_dim = hidden_dim
 
@@ -253,14 +253,14 @@ class DeepSurvivalHead(nn.Module):
 
         # Expand features for all time bins
         features = features.unsqueeze(1).expand(
-            -1, self.num_time_bins, -1
+            -1, self.num_time_bins, -1,
         )  # [B, T, hidden_dim]
 
         # Get time embeddings
         time_indices = torch.arange(self.num_time_bins, device=x.device)
         time_embeds = self.time_embedding(time_indices)  # [T, hidden_dim]
         time_embeds = time_embeds.unsqueeze(0).expand(
-            batch_size, -1, -1
+            batch_size, -1, -1,
         )  # [B, T, hidden_dim]
 
         # Concatenate features and time embeddings
@@ -429,7 +429,7 @@ class RankingSurvivalHead(nn.Module):
                     nn.Linear(prev_dim, hidden_dim),
                     nn.ReLU(inplace=True),
                     nn.Dropout(dropout),
-                ]
+                ],
             )
             prev_dim = hidden_dim
 

@@ -30,7 +30,7 @@ class MultiViewDataConfig(DataConfig):
     # Multi-view settings
     enable_multiview: bool = False
     view_names: list[str] = field(
-        default_factory=list
+        default_factory=list,
     )  # e.g., ["axial", "coronal", "sagittal"]
 
     # View path columns in CSV
@@ -69,7 +69,7 @@ class MultiViewVisionConfig(VisionConfig):
 
     # View aggregation
     aggregator_type: Literal[
-        "max", "mean", "attention", "cross_view_attention", "learned_weight"
+        "max", "mean", "attention", "cross_view_attention", "learned_weight",
     ] = "attention"
 
     # Aggregator-specific settings
@@ -144,13 +144,13 @@ class MultiViewExperimentConfig(BaseConfig):
         if self.data.enable_multiview:
             if not self.data.view_names:
                 raise ValueError(
-                    "view_names must be specified when enable_multiview=True"
+                    "view_names must be specified when enable_multiview=True",
                 )
 
             if not self.data.view_path_columns and not self.data.multiview_path_column:
                 raise ValueError(
                     "Either view_path_columns or multiview_path_column must be specified "
-                    "when enable_multiview=True"
+                    "when enable_multiview=True",
                 )
 
             # Enable multi-view in model config
@@ -171,10 +171,9 @@ class MultiViewExperimentConfig(BaseConfig):
 
         if torch.cuda.is_available():
             return "cuda"
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return "mps"
-        else:
-            return "cpu"
+        return "cpu"
 
     @property
     def device_obj(self) -> Any:

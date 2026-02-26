@@ -189,7 +189,7 @@ class ResourceMonitor:
                 # 温度
                 try:
                     temperature = pynvml.nvmlDeviceGetTemperature(
-                        handle, pynvml.NVML_TEMPERATURE_GPU
+                        handle, pynvml.NVML_TEMPERATURE_GPU,
                     )
                 except Exception as e:
                     logger.debug(f"Failed to get GPU temperature: {e}")
@@ -219,7 +219,7 @@ class ResourceMonitor:
                         "temperature": temperature,
                         "power_usage": power_usage,
                         "power_limit": power_limit,
-                    }
+                    },
                 )
 
         except Exception as e:
@@ -239,12 +239,12 @@ class ResourceMonitor:
         if snapshot.memory_percent >= self.thresholds.memory_critical:
             logger.critical(
                 f"Memory usage critical: {snapshot.memory_percent:.1f}% "
-                f"({snapshot.memory_used_gb:.1f}/{snapshot.memory_total_gb:.1f} GB)"
+                f"({snapshot.memory_used_gb:.1f}/{snapshot.memory_total_gb:.1f} GB)",
             )
         elif snapshot.memory_percent >= self.thresholds.memory_warning:
             logger.warning(
                 f"Memory usage high: {snapshot.memory_percent:.1f}% "
-                f"({snapshot.memory_used_gb:.1f}/{snapshot.memory_total_gb:.1f} GB)"
+                f"({snapshot.memory_used_gb:.1f}/{snapshot.memory_total_gb:.1f} GB)",
             )
 
         # GPU 检查
@@ -255,12 +255,12 @@ class ResourceMonitor:
             if memory_percent >= self.thresholds.gpu_memory_critical:
                 logger.critical(
                     f"GPU {gpu_idx} memory critical: {memory_percent:.1f}% "
-                    f"({gpu['memory_used_gb']:.1f}/{gpu['memory_total_gb']:.1f} GB)"
+                    f"({gpu['memory_used_gb']:.1f}/{gpu['memory_total_gb']:.1f} GB)",
                 )
             elif memory_percent >= self.thresholds.gpu_memory_warning:
                 logger.warning(
                     f"GPU {gpu_idx} memory high: {memory_percent:.1f}% "
-                    f"({gpu['memory_used_gb']:.1f}/{gpu['memory_total_gb']:.1f} GB)"
+                    f"({gpu['memory_used_gb']:.1f}/{gpu['memory_total_gb']:.1f} GB)",
                 )
 
     def get_current_status(self) -> dict[str, Any]:
@@ -391,7 +391,7 @@ class ResourceMonitor:
                             / len(gpu_memory_values),
                             "memory_max": max(gpu_memory_values),
                             "memory_min": min(gpu_memory_values),
-                        }
+                        },
                     )
 
         return stats

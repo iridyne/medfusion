@@ -44,7 +44,7 @@ class CLAHETransform:
     """
 
     def __init__(
-        self, clip_limit: float = 2.0, tile_grid_size: tuple[int, int] = (8, 8)
+        self, clip_limit: float = 2.0, tile_grid_size: tuple[int, int] = (8, 8),
     ):
         """
         Initialize CLAHE transform.
@@ -74,14 +74,14 @@ class CLAHETransform:
                 # Convert to LAB color space for color images
                 lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
                 clahe = cv2.createCLAHE(
-                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size
+                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size,
                 )
                 lab[:, :, 0] = clahe.apply(lab[:, :, 0])
                 result = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
             else:
                 # Grayscale
                 clahe = cv2.createCLAHE(
-                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size
+                    clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size,
                 )
                 result = clahe.apply(img_array)
 
@@ -178,7 +178,7 @@ def get_train_transforms(
             [
                 T.RandomHorizontalFlip(p=0.5),
                 T.RandomRotation(degrees=10),
-            ]
+            ],
         )
 
     elif augmentation_strength == "medium":
@@ -192,7 +192,7 @@ def get_train_transforms(
                     shear=5,
                 ),
                 T.ColorJitter(brightness=0.15, contrast=0.15),
-            ]
+            ],
         )
 
     elif augmentation_strength == "heavy":
@@ -208,7 +208,7 @@ def get_train_transforms(
                 ),
                 T.ColorJitter(brightness=0.2, contrast=0.25, saturation=0.1),
                 T.RandomPerspective(distortion_scale=0.1, p=0.3),
-            ]
+            ],
         )
 
     # Convert to tensor and normalize
@@ -216,7 +216,7 @@ def get_train_transforms(
         [
             T.ToTensor(),
             T.Normalize(mean=normalize_mean, std=normalize_std),
-        ]
+        ],
     )
 
     # Add Gaussian noise for medium/heavy augmentation
@@ -258,7 +258,7 @@ def get_val_transforms(
             T.Resize((image_size, image_size)),
             T.ToTensor(),
             T.Normalize(mean=normalize_mean, std=normalize_std),
-        ]
+        ],
     )
 
     return T.Compose(transform_list)

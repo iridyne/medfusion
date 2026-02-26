@@ -45,13 +45,13 @@ def evaluate() -> None:
         help="Path to config file used for training",
     )
     parser.add_argument(
-        "--checkpoint", type=str, required=True, help="Path to model checkpoint"
+        "--checkpoint", type=str, required=True, help="Path to model checkpoint",
     )
     parser.add_argument(
-        "--output-dir", type=str, default="evaluation_results", help="Output directory"
+        "--output-dir", type=str, default="evaluation_results", help="Output directory",
     )
     parser.add_argument(
-        "--split", type=str, default="test", choices=["val", "test", "train"]
+        "--split", type=str, default="test", choices=["val", "test", "train"],
     )
     args = parser.parse_args()
 
@@ -106,7 +106,7 @@ def evaluate() -> None:
 
     dataset.transform = val_transform
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=config.data.batch_size, shuffle=False
+        dataset, batch_size=config.data.batch_size, shuffle=False,
     )
 
     # Build Model structure

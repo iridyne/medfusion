@@ -16,7 +16,7 @@ Provides pluggable vision encoders including:
 from typing import Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torchvision import models
 
 from med_core.backbones.attention import create_attention_module
@@ -52,7 +52,7 @@ class ResNetBackbone(BaseVisionBackbone):
 
         if variant not in self.VARIANTS:
             raise ValueError(
-                f"Unknown ResNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+                f"Unknown ResNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}",
             )
 
         self.variant = variant
@@ -152,7 +152,7 @@ class ResNetBackbone(BaseVisionBackbone):
         return self._backbone(x)
 
     def forward(
-        self, x: torch.Tensor, return_intermediates: bool = False
+        self, x: torch.Tensor, return_intermediates: bool = False,
     ) -> torch.Tensor | dict[str, torch.Tensor]:
         """
         Forward pass through the backbone.
@@ -180,7 +180,7 @@ class ResNetBackbone(BaseVisionBackbone):
                 # CBAM returns (features, weights_dict)
                 feature_maps, weights_dict = self._attention(feature_maps)
                 attention_weights = weights_dict.get(
-                    "spatial_weights"
+                    "spatial_weights",
                 )  # (B, 1, H, W) or None
             else:
                 # Normal mode, just apply attention
@@ -200,8 +200,7 @@ class ResNetBackbone(BaseVisionBackbone):
                 "feature_maps": feature_maps,
                 "attention_weights": attention_weights,
             }
-        else:
-            return features
+        return features
 
 
 class MobileNetBackbone(BaseVisionBackbone):
@@ -232,7 +231,7 @@ class MobileNetBackbone(BaseVisionBackbone):
     def __init__(
         self,
         variant: Literal[
-            "mobilenetv2", "mobilenetv3_small", "mobilenetv3_large"
+            "mobilenetv2", "mobilenetv3_small", "mobilenetv3_large",
         ] = "mobilenetv2",
         pretrained: bool = True,
         freeze: bool = False,
@@ -357,7 +356,7 @@ class EfficientNetBackbone(BaseVisionBackbone):
     def __init__(
         self,
         variant: Literal[
-            "efficientnet_b0", "efficientnet_b1", "efficientnet_b2"
+            "efficientnet_b0", "efficientnet_b1", "efficientnet_b2",
         ] = "efficientnet_b0",
         pretrained: bool = True,
         freeze: bool = False,
@@ -685,7 +684,7 @@ class ConvNeXtBackbone(BaseVisionBackbone):
     def __init__(
         self,
         variant: Literal[
-            "convnext_tiny", "convnext_small", "convnext_base", "convnext_large"
+            "convnext_tiny", "convnext_small", "convnext_base", "convnext_large",
         ] = "convnext_tiny",
         pretrained: bool = True,
         freeze: bool = False,
@@ -699,7 +698,7 @@ class ConvNeXtBackbone(BaseVisionBackbone):
 
         if variant not in self.VARIANTS:
             raise ValueError(
-                f"Unknown ConvNeXt variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+                f"Unknown ConvNeXt variant: {variant}. Choose from {list(self.VARIANTS.keys())}",
             )
 
         self.variant = variant
@@ -824,7 +823,7 @@ class MaxViTBackbone(BaseVisionBackbone):
 
         if variant not in self.VARIANTS:
             raise ValueError(
-                f"Unknown MaxViT variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+                f"Unknown MaxViT variant: {variant}. Choose from {list(self.VARIANTS.keys())}",
             )
 
         self.variant = variant
@@ -943,7 +942,7 @@ class EfficientNetV2Backbone(BaseVisionBackbone):
     def __init__(
         self,
         variant: Literal[
-            "efficientnet_v2_s", "efficientnet_v2_m", "efficientnet_v2_l"
+            "efficientnet_v2_s", "efficientnet_v2_m", "efficientnet_v2_l",
         ] = "efficientnet_v2_s",
         pretrained: bool = True,
         freeze: bool = False,
@@ -1109,7 +1108,7 @@ class RegNetBackbone(BaseVisionBackbone):
 
         if variant not in self.VARIANTS:
             raise ValueError(
-                f"Unknown RegNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}"
+                f"Unknown RegNet variant: {variant}. Choose from {list(self.VARIANTS.keys())}",
             )
 
         self.variant = variant
@@ -1225,58 +1224,58 @@ BACKBONE_REGISTRY = {
     # MobileNet family
     "mobilenetv2": lambda **kwargs: MobileNetBackbone(variant="mobilenetv2", **kwargs),
     "mobilenetv3_small": lambda **kwargs: MobileNetBackbone(
-        variant="mobilenetv3_small", **kwargs
+        variant="mobilenetv3_small", **kwargs,
     ),
     "mobilenetv3_large": lambda **kwargs: MobileNetBackbone(
-        variant="mobilenetv3_large", **kwargs
+        variant="mobilenetv3_large", **kwargs,
     ),
     # EfficientNet family (V1)
     "efficientnet_b0": lambda **kwargs: EfficientNetBackbone(
-        variant="efficientnet_b0", **kwargs
+        variant="efficientnet_b0", **kwargs,
     ),
     "efficientnet_b1": lambda **kwargs: EfficientNetBackbone(
-        variant="efficientnet_b1", **kwargs
+        variant="efficientnet_b1", **kwargs,
     ),
     "efficientnet_b2": lambda **kwargs: EfficientNetBackbone(
-        variant="efficientnet_b2", **kwargs
+        variant="efficientnet_b2", **kwargs,
     ),
     # EfficientNetV2 family (NEW)
     "efficientnet_v2_s": lambda **kwargs: EfficientNetV2Backbone(
-        variant="efficientnet_v2_s", **kwargs
+        variant="efficientnet_v2_s", **kwargs,
     ),
     "efficientnet_v2_m": lambda **kwargs: EfficientNetV2Backbone(
-        variant="efficientnet_v2_m", **kwargs
+        variant="efficientnet_v2_m", **kwargs,
     ),
     "efficientnet_v2_l": lambda **kwargs: EfficientNetV2Backbone(
-        variant="efficientnet_v2_l", **kwargs
+        variant="efficientnet_v2_l", **kwargs,
     ),
     # ConvNeXt family (NEW)
     "convnext_tiny": lambda **kwargs: ConvNeXtBackbone(
-        variant="convnext_tiny", **kwargs
+        variant="convnext_tiny", **kwargs,
     ),
     "convnext_small": lambda **kwargs: ConvNeXtBackbone(
-        variant="convnext_small", **kwargs
+        variant="convnext_small", **kwargs,
     ),
     "convnext_base": lambda **kwargs: ConvNeXtBackbone(
-        variant="convnext_base", **kwargs
+        variant="convnext_base", **kwargs,
     ),
     "convnext_large": lambda **kwargs: ConvNeXtBackbone(
-        variant="convnext_large", **kwargs
+        variant="convnext_large", **kwargs,
     ),
     # MaxViT family (NEW)
     "maxvit_t": lambda **kwargs: MaxViTBackbone(variant="maxvit_t", **kwargs),
     # RegNet family (NEW)
     "regnet_y_400mf": lambda **kwargs: RegNetBackbone(
-        variant="regnet_y_400mf", **kwargs
+        variant="regnet_y_400mf", **kwargs,
     ),
     "regnet_y_800mf": lambda **kwargs: RegNetBackbone(
-        variant="regnet_y_800mf", **kwargs
+        variant="regnet_y_800mf", **kwargs,
     ),
     "regnet_y_1_6gf": lambda **kwargs: RegNetBackbone(
-        variant="regnet_y_1_6gf", **kwargs
+        variant="regnet_y_1_6gf", **kwargs,
     ),
     "regnet_y_3_2gf": lambda **kwargs: RegNetBackbone(
-        variant="regnet_y_3_2gf", **kwargs
+        variant="regnet_y_3_2gf", **kwargs,
     ),
     "regnet_y_8gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_8gf", **kwargs),
     "regnet_y_16gf": lambda **kwargs: RegNetBackbone(variant="regnet_y_16gf", **kwargs),

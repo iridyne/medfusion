@@ -10,7 +10,7 @@ Reference:
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class KroneckerFusion(nn.Module):
@@ -331,7 +331,7 @@ class MultimodalKroneckerFusion(nn.Module):
         """
         if len(features) != self.num_modalities:
             raise ValueError(
-                f"Expected {self.num_modalities} modalities, got {len(features)}"
+                f"Expected {self.num_modalities} modalities, got {len(features)}",
             )
 
         if self.fusion_strategy == "sequential":
@@ -341,7 +341,7 @@ class MultimodalKroneckerFusion(nn.Module):
                 fused = fusion_module(fused, features[i + 1])
             return fused
 
-        elif self.fusion_strategy == "pairwise":
+        if self.fusion_strategy == "pairwise":
             # Fuse all pairs and concatenate
             pair_features = []
             idx = 0
@@ -355,7 +355,7 @@ class MultimodalKroneckerFusion(nn.Module):
             concatenated = torch.cat(pair_features, dim=1)
             return self.final_projection(concatenated)
 
-        elif self.fusion_strategy == "star":
+        if self.fusion_strategy == "star":
             # Fuse each with the first modality
             star_features = []
             for i, fusion_module in enumerate(self.fusion_modules):

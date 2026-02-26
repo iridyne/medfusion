@@ -114,7 +114,7 @@ async def execute_workflow(request: WorkflowExecuteRequest) -> WorkflowExecuteRe
         is_valid, errors = engine.validate()
         if not is_valid:
             raise HTTPException(
-                status_code=400, detail=f"工作流验证失败: {', '.join(errors)}"
+                status_code=400, detail=f"工作流验证失败: {', '.join(errors)}",
             )
 
         # 保存到活动工作流
@@ -171,7 +171,7 @@ async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
         results = {node_id: node.result for node_id, node in engine.nodes.items()}
 
     return WorkflowStatusResponse(
-        workflow_id=workflow_id, status=status, results=results
+        workflow_id=workflow_id, status=status, results=results,
     )
 
 
@@ -214,12 +214,12 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) ->
                     "status": status.value,
                     "progress": progress,
                     "timestamp": asyncio.get_event_loop().time(),
-                }
+                },
             )
 
         # 发送初始状态
         await websocket.send_json(
-            {"type": "status", "data": engine.get_status(), "message": "连接成功"}
+            {"type": "status", "data": engine.get_status(), "message": "连接成功"},
         )
 
         # 执行工作流（如果还未执行）
@@ -227,11 +227,11 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) ->
             try:
                 results = await engine.execute(progress_callback=progress_callback)
                 await websocket.send_json(
-                    {"type": "completed", "results": results, "message": "执行完成"}
+                    {"type": "completed", "results": results, "message": "执行完成"},
                 )
             except WorkflowExecutionError as e:
                 await websocket.send_json(
-                    {"type": "error", "error": str(e), "message": "执行失败"}
+                    {"type": "error", "error": str(e), "message": "执行失败"},
                 )
         else:
             # 工作流已在执行，只发送当前状态
@@ -279,7 +279,7 @@ async def list_workflows() -> dict[str, Any]:
                 "progress": status["completed"] / status["total"]
                 if status["total"] > 0
                 else 0,
-            }
+            },
         )
 
     return {"workflows": workflows, "total": len(workflows)}

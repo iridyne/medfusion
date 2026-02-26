@@ -74,11 +74,10 @@ class LRUCache:
             if key in self.cache:
                 # 更新现有值
                 self.cache.move_to_end(key)
-            else:
-                # 添加新值
-                if len(self.cache) >= self.capacity:
-                    # 移除最旧的条目
-                    self.cache.popitem(last=False)
+            # 添加新值
+            elif len(self.cache) >= self.capacity:
+                # 移除最旧的条目
+                self.cache.popitem(last=False)
 
             self.cache[key] = value
 

@@ -6,7 +6,7 @@ This module provides extractors that can process multiple regions of interest
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -113,23 +113,22 @@ class MultiRegionExtractor(nn.Module):
                 region_features.append(pooled.view(batch_size, channels))
 
             return torch.stack(region_features, dim=1)  # [B, num_regions, C]
-        else:
-            # 2D case
-            h, w = features.shape[2:]
-            region_size = max(1, h // self.num_regions)
-            region_features = []
+        # 2D case
+        h, w = features.shape[2:]
+        region_size = max(1, h // self.num_regions)
+        region_features = []
 
-            for i in range(self.num_regions):
-                start = i * region_size
-                end = min((i + 1) * region_size, h)
-                region = features[:, :, start:end, :]
-                pooled = F.adaptive_avg_pool2d(region, (1, 1))
-                region_features.append(pooled.view(batch_size, channels))
+        for i in range(self.num_regions):
+            start = i * region_size
+            end = min((i + 1) * region_size, h)
+            region = features[:, :, start:end, :]
+            pooled = F.adaptive_avg_pool2d(region, (1, 1))
+            region_features.append(pooled.view(batch_size, channels))
 
-            return torch.stack(region_features, dim=1)
+        return torch.stack(region_features, dim=1)
 
     def _extract_masked_regions(
-        self, features: torch.Tensor, masks: torch.Tensor
+        self, features: torch.Tensor, masks: torch.Tensor,
     ) -> torch.Tensor:
         """
         Extract features from masked regions.
@@ -149,13 +148,13 @@ class MultiRegionExtractor(nn.Module):
             target_size = features.shape[2:]
             if masks.shape[2:] != target_size:
                 masks = F.interpolate(
-                    masks, size=target_size, mode="trilinear", align_corners=False
+                    masks, size=target_size, mode="trilinear", align_corners=False,
                 )
         else:
             target_size = features.shape[2:]
             if masks.shape[2:] != target_size:
                 masks = F.interpolate(
-                    masks, size=target_size, mode="bilinear", align_corners=False
+                    masks, size=target_size, mode="bilinear", align_corners=False,
                 )
 
         # Extract features for each region
@@ -268,7 +267,7 @@ class HierarchicalRegionExtractor(nn.Module):
 
         # Stack region features
         region_features = torch.stack(
-            region_features, dim=1
+            region_features, dim=1,
         )  # [B, num_regions, feature_dim]
 
         # Aggregate
@@ -352,7 +351,7 @@ class AdaptiveRegionExtractor(nn.Module):
         # Propose region coordinates
         region_coords = self.region_proposal(global_features)  # [B, num_regions * 3]
         region_coords = region_coords.view(
-            -1, self.num_regions, 3
+            -1, self.num_regions, 3,
         )  # [B, num_regions, 3]
         region_coords = torch.sigmoid(region_coords)  # Normalize to [0, 1]
 
@@ -403,7 +402,7 @@ class MultiScaleRegionExtractor(nn.Module):
             [
                 MultiRegionExtractor(backbone, num_regions=num_regions_per_scale)
                 for _ in scales
-            ]
+            ],
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -425,12 +424,12 @@ class MultiScaleRegionExtractor(nn.Module):
                 if is_3d:
                     size = tuple(int(s * scale) for s in x.shape[2:])
                     x_scaled = F.interpolate(
-                        x, size=size, mode="trilinear", align_corners=False
+                        x, size=size, mode="trilinear", align_corners=False,
                     )
                 else:
                     size = tuple(int(s * scale) for s in x.shape[2:])
                     x_scaled = F.interpolate(
-                        x, size=size, mode="bilinear", align_corners=False
+                        x, size=size, mode="bilinear", align_corners=False,
                     )
             else:
                 x_scaled = x

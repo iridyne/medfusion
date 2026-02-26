@@ -191,7 +191,7 @@ class MedicalMultiViewDataset(BaseMultiViewDataset):
         if set(view_columns.keys()) != set(view_config.view_names):
             raise ValueError(
                 f"View columns {set(view_columns.keys())} don't match "
-                f"config view names {set(view_config.view_names)}"
+                f"config view names {set(view_config.view_names)}",
             )
 
         # Handle missing tabular values
@@ -251,7 +251,7 @@ class MedicalMultiViewDataset(BaseMultiViewDataset):
         for view_name, count in view_counts.items():
             percentage = 100 * count / len(image_paths_list)
             logger.info(
-                f"  {view_name}: {count}/{len(image_paths_list)} ({percentage:.1f}%)"
+                f"  {view_name}: {count}/{len(image_paths_list)} ({percentage:.1f}%)",
             )
 
         # Extract and preprocess tabular features

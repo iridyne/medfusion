@@ -167,15 +167,15 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
         # 归一化��意力权重
         if self.loss_type == "kl":
             attention_norm = self.normalize_attention(
-                attention_weights, method="softmax"
+                attention_weights, method="softmax",
             )
         elif self.loss_type == "bce":
             attention_norm = self.normalize_attention(
-                attention_weights, method="sigmoid"
+                attention_weights, method="sigmoid",
             )
         else:  # mse
             attention_norm = self.normalize_attention(
-                attention_weights, method="minmax"
+                attention_weights, method="minmax",
             )
 
         # 计算主损失

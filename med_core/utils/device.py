@@ -18,10 +18,9 @@ def get_device(device: str = "auto") -> torch.device:
     if device == "auto":
         if torch.cuda.is_available():
             return torch.device("cuda")
-        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return torch.device("mps")
-        else:
-            return torch.device("cpu")
+        return torch.device("cpu")
     return torch.device(device)
 
 
@@ -61,8 +60,8 @@ def move_to_device(obj: Any, device: torch.device) -> Any:
     """
     if isinstance(obj, torch.Tensor) or isinstance(obj, torch.nn.Module):
         return obj.to(device)
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return {k: move_to_device(v, device) for k, v in obj.items()}
-    elif isinstance(obj, (list, tuple)):
+    if isinstance(obj, (list, tuple)):
         return type(obj)(move_to_device(item, device) for item in obj)
     return obj

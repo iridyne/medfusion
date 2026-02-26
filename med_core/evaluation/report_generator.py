@@ -196,10 +196,10 @@ class ReportGenerator:
         lines.append("| | Predicted Negative | Predicted Positive |\n")
         lines.append("| :--- | :---: | :---: |\n")
         lines.append(
-            f"| **Actual Negative** | {cm['true_negatives']} | {cm['false_positives']} |\n"
+            f"| **Actual Negative** | {cm['true_negatives']} | {cm['false_positives']} |\n",
         )
         lines.append(
-            f"| **Actual Positive** | {cm['false_negatives']} | {cm['true_positives']} |\n"
+            f"| **Actual Positive** | {cm['false_negatives']} | {cm['true_positives']} |\n",
         )
         lines.append("\n")
 
@@ -233,7 +233,7 @@ class ReportGenerator:
                 lines.append(
                     f"| {cls} | {metrics['precision']} | "
                     f"{metrics['recall']} | {metrics['f1']} | "
-                    f"{metrics['support']} |\n"
+                    f"{metrics['support']} |\n",
                 )
             lines.append("\n")
 

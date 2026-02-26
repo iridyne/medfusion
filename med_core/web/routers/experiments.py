@@ -349,7 +349,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
     try:
         if len(experiment_ids) < 2:
             raise HTTPException(
-                status_code=400, detail="At least 2 experiments required for comparison"
+                status_code=400, detail="At least 2 experiments required for comparison",
             )
 
         experiments = get_mock_experiments()
@@ -375,7 +375,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
             # Find best and worst
             is_lower_better = metric_name == "loss"
             sorted_items = sorted(
-                values.items(), key=lambda x: x[1], reverse=not is_lower_better
+                values.items(), key=lambda x: x[1], reverse=not is_lower_better,
             )
             best = sorted_items[0][0]
             worst = sorted_items[-1][0]
@@ -386,7 +386,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
                     experiments=values,
                     best_experiment=best,
                     worst_experiment=worst,
-                )
+                ),
             )
 
         # Build summary
@@ -448,7 +448,7 @@ async def get_metrics_history(experiment_id: str) -> MetricsHistoryResponse:
                     train_accuracy=round(train_acc, 4),
                     val_accuracy=round(val_acc, 4),
                     learning_rate=lr,
-                )
+                ),
             )
 
         return MetricsHistoryResponse(
@@ -538,7 +538,7 @@ async def get_roc_curve(experiment_id: str) -> ROCCurveData:
                     fpr=round(fpr, 3),
                     tpr=round(tpr, 3),
                     threshold=round(threshold, 3),
-                )
+                ),
             )
 
         return ROCCurveData(
@@ -566,7 +566,7 @@ async def generate_report(request: ReportRequest) -> ReportResponse:
 
         if not selected:
             raise HTTPException(
-                status_code=404, detail="No experiments found with provided IDs"
+                status_code=404, detail="No experiments found with provided IDs",
             )
 
         # Prepare data for report generation
@@ -577,12 +577,12 @@ async def generate_report(request: ReportRequest) -> ReportResponse:
             "statistical_tests": {
                 "t_test": {"p_value": 0.032, "statistic": 2.45},
                 "wilcoxon": {"p_value": 0.028, "statistic": 15.0},
-            }
+            },
         }
 
         # Generate report using ReportGenerator
         report_generator = ReportGenerator(
-            output_dir=Path.home() / ".medfusion" / "reports"
+            output_dir=Path.home() / ".medfusion" / "reports",
         )
 
         report_id = str(uuid4())
@@ -606,7 +606,7 @@ async def generate_report(request: ReportRequest) -> ReportResponse:
         download_url = f"/api/experiments/reports/{report_path.name}"
 
         logger.info(
-            f"Generated {request.format} report for {len(selected)} experiments: {report_path}"
+            f"Generated {request.format} report for {len(selected)} experiments: {report_path}",
         )
 
         return ReportResponse(

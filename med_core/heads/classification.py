@@ -7,7 +7,7 @@ multi-label classification, and ordinal classification.
 """
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 
@@ -134,7 +134,7 @@ class MultiLabelClassificationHead(nn.Module):
                             nn.Linear(prev_dim, hidden_dim),
                             nn.ReLU(inplace=True),
                             nn.Dropout(dropout),
-                        ]
+                        ],
                     )
                     prev_dim = hidden_dim
 
@@ -151,7 +151,7 @@ class MultiLabelClassificationHead(nn.Module):
                         nn.Linear(prev_dim, hidden_dim),
                         nn.ReLU(inplace=True),
                         nn.Dropout(dropout),
-                    ]
+                    ],
                 )
                 prev_dim = hidden_dim
 
@@ -224,7 +224,7 @@ class OrdinalClassificationHead(nn.Module):
                     nn.Linear(prev_dim, hidden_dim),
                     nn.ReLU(inplace=True),
                     nn.Dropout(dropout),
-                ]
+                ],
             )
             prev_dim = hidden_dim
 
@@ -337,7 +337,7 @@ class AttentionClassificationHead(nn.Module):
         )
 
     def forward(
-        self, x: torch.Tensor, return_attention: bool = False
+        self, x: torch.Tensor, return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -421,11 +421,11 @@ class EnsembleClassificationHead(nn.Module):
                     dropout=dropout,
                 )
                 for _ in range(num_heads)
-            ]
+            ],
         )
 
     def forward(
-        self, x: torch.Tensor, return_individual: bool = False
+        self, x: torch.Tensor, return_individual: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
@@ -440,7 +440,7 @@ class EnsembleClassificationHead(nn.Module):
         """
         # Get predictions from all heads
         predictions = torch.stack(
-            [head(x) for head in self.heads], dim=1
+            [head(x) for head in self.heads], dim=1,
         )  # [B, num_heads, num_classes]
 
         # Aggregate predictions

@@ -168,7 +168,7 @@ class ReportGenerator:
 
         # Add title
         elements.append(
-            Paragraph("MedFusion Experiment Comparison Report", title_style)
+            Paragraph("MedFusion Experiment Comparison Report", title_style),
         )
         elements.append(Spacer(1, 12))
 
@@ -193,7 +193,7 @@ class ReportGenerator:
         elements.append(PageBreak())
         elements.append(Paragraph("Performance Comparison", styles["Heading1"]))
         self._add_performance_comparison_pdf(
-            elements, styles, experiments, comparison_data
+            elements, styles, experiments, comparison_data,
         )
 
         # Visualizations
@@ -208,17 +208,17 @@ class ReportGenerator:
         return output_path
 
     def _add_executive_summary(
-        self, doc: Document, experiments: list[dict], comparison_data: dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict,
     ) -> None:
         """Add executive summary section to Word document."""
         # Find best performing experiment
         best_exp = max(
-            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0)
+            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0),
         )
 
         doc.add_paragraph(
             f"This report compares {len(experiments)} experiments conducted using the MedFusion framework. "
-            f"The best performing model achieved {best_exp['metrics']['accuracy']:.2%} accuracy."
+            f"The best performing model achieved {best_exp['metrics']['accuracy']:.2%} accuracy.",
         )
 
         # Key findings
@@ -264,7 +264,7 @@ class ReportGenerator:
         doc.add_paragraph()
 
     def _add_performance_comparison(
-        self, doc: Document, experiments: list[dict], comparison_data: dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict,
     ) -> None:
         """Add performance comparison table to Word document."""
         # Create metrics table
@@ -299,7 +299,7 @@ class ReportGenerator:
             return
 
         doc.add_paragraph(
-            "Statistical significance tests were performed to compare model performance:"
+            "Statistical significance tests were performed to compare model performance:",
         )
 
         # T-test results
@@ -314,7 +314,7 @@ class ReportGenerator:
                 else "not significant"
             )
             doc.add_paragraph(
-                f"  Result: Difference is {significance} (α=0.05)", style="List Bullet"
+                f"  Result: Difference is {significance} (α=0.05)", style="List Bullet",
             )
 
         # Wilcoxon test results
@@ -327,7 +327,7 @@ class ReportGenerator:
         doc.add_paragraph()
 
     def _add_visualizations_to_word(
-        self, doc: Document, experiments: list[dict], comparison_data: dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict,
     ) -> None:
         """Add visualizations to Word document."""
         # Generate metrics comparison chart
@@ -345,11 +345,11 @@ class ReportGenerator:
             doc.add_paragraph()
 
     def _add_conclusions(
-        self, doc: Document, experiments: list[dict], comparison_data: dict
+        self, doc: Document, experiments: list[dict], comparison_data: dict,
     ) -> None:
         """Add conclusions and recommendations section."""
         best_exp = max(
-            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0)
+            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0),
         )
 
         doc.add_paragraph("Based on the experimental results:")
@@ -381,7 +381,7 @@ class ReportGenerator:
     ) -> None:
         """Add executive summary to PDF."""
         best_exp = max(
-            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0)
+            experiments, key=lambda x: x.get("metrics", {}).get("accuracy", 0),
         )
 
         summary_text = f"""
@@ -398,7 +398,7 @@ class ReportGenerator:
         elements.append(Spacer(1, 20))
 
     def _add_experiment_details_pdf(
-        self, elements: list, styles: dict, experiments: list[dict]
+        self, elements: list, styles: dict, experiments: list[dict],
     ) -> None:
         """Add experiment details table to PDF."""
         # Prepare table data
@@ -417,7 +417,7 @@ class ReportGenerator:
 
         # Create table
         table = Table(
-            data, colWidths=[2 * inch, 1.5 * inch, 1.5 * inch, 1 * inch, 1 * inch]
+            data, colWidths=[2 * inch, 1.5 * inch, 1.5 * inch, 1 * inch, 1 * inch],
         )
         table.setStyle(
             TableStyle(
@@ -430,8 +430,8 @@ class ReportGenerator:
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
                     ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ]
-            )
+                ],
+            ),
         )
 
         elements.append(table)
@@ -458,7 +458,7 @@ class ReportGenerator:
                     f"{metrics['recall']:.2%}",
                     f"{metrics['f1_score']:.2%}",
                     f"{metrics['auc']:.3f}",
-                ]
+                ],
             )
 
         # Create table
@@ -477,22 +477,22 @@ class ReportGenerator:
                     ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
                     ("BACKGROUND", (0, 1), (-1, -1), colors.lightblue),
                     ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ]
-            )
+                ],
+            ),
         )
 
         elements.append(table)
         elements.append(Spacer(1, 20))
 
     def _add_visualizations_to_pdf(
-        self, elements: list, experiments: list[dict], comparison_data: dict
+        self, elements: list, experiments: list[dict], comparison_data: dict,
     ) -> None:
         """Add visualizations to PDF."""
         # Generate and add metrics chart
         chart_path = self._generate_metrics_chart(experiments)
         if chart_path:
             elements.append(
-                Paragraph("Metrics Comparison:", getSampleStyleSheet()["Heading2"])
+                Paragraph("Metrics Comparison:", getSampleStyleSheet()["Heading2"]),
             )
             elements.append(Image(str(chart_path), width=5 * inch, height=3 * inch))
             elements.append(Spacer(1, 20))
@@ -501,7 +501,7 @@ class ReportGenerator:
         curves_path = self._generate_training_curves(experiments)
         if curves_path:
             elements.append(
-                Paragraph("Training Curves:", getSampleStyleSheet()["Heading2"])
+                Paragraph("Training Curves:", getSampleStyleSheet()["Heading2"]),
             )
             elements.append(Image(str(curves_path), width=5 * inch, height=3 * inch))
             elements.append(Spacer(1, 20))

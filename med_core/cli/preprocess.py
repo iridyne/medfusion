@@ -21,7 +21,7 @@ def preprocess() -> None:
     parser = argparse.ArgumentParser(description="Preprocess medical images")
     parser.add_argument("--input-dir", type=str, required=True, help="Input directory")
     parser.add_argument(
-        "--output-dir", type=str, required=True, help="Output directory"
+        "--output-dir", type=str, required=True, help="Output directory",
     )
     parser.add_argument("--size", type=int, default=224, help="Target image size")
     parser.add_argument(
@@ -32,10 +32,10 @@ def preprocess() -> None:
         help="Normalization method",
     )
     parser.add_argument(
-        "--remove-artifacts", action="store_true", help="Remove artifacts"
+        "--remove-artifacts", action="store_true", help="Remove artifacts",
     )
     parser.add_argument(
-        "--enhance-contrast", action="store_true", help="Enhance contrast"
+        "--enhance-contrast", action="store_true", help="Enhance contrast",
     )
     args = parser.parse_args()
 

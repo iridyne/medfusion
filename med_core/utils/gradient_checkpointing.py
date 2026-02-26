@@ -20,7 +20,7 @@ from collections.abc import Callable
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.checkpoint import checkpoint
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def apply_gradient_checkpointing(
         logger.info(f"Enabled gradient checkpointing for {module.__class__.__name__}")
     else:
         logger.warning(
-            f"Gradient checkpointing already enabled for {module.__class__.__name__}"
+            f"Gradient checkpointing already enabled for {module.__class__.__name__}",
         )
 
 
@@ -265,16 +265,15 @@ def estimate_memory_savings(
             "savings": savings,
             "savings_percent": savings_percent,
         }
-    else:
-        logger.warning(
-            f"Model {model.__class__.__name__} does not support gradient checkpointing"
-        )
-        return {
-            "without_checkpoint": memory_without,
-            "with_checkpoint": memory_without,
-            "savings": 0.0,
-            "savings_percent": 0.0,
-        }
+    logger.warning(
+        f"Model {model.__class__.__name__} does not support gradient checkpointing",
+    )
+    return {
+        "without_checkpoint": memory_without,
+        "with_checkpoint": memory_without,
+        "savings": 0.0,
+        "savings_percent": 0.0,
+    }
 
 
 __all__ = [

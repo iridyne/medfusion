@@ -46,18 +46,18 @@ class ConfigValidator:
         # Validate num_classes
         if model.num_classes < 2:
             self.errors.append(
-                f"model.num_classes must be >= 2, got {model.num_classes}"
+                f"model.num_classes must be >= 2, got {model.num_classes}",
             )
 
         # Validate vision config
         if model.vision.feature_dim <= 0:
             self.errors.append(
-                f"model.vision.feature_dim must be positive, got {model.vision.feature_dim}"
+                f"model.vision.feature_dim must be positive, got {model.vision.feature_dim}",
             )
 
         if not 0 <= model.vision.dropout < 1:
             self.errors.append(
-                f"model.vision.dropout must be in [0, 1), got {model.vision.dropout}"
+                f"model.vision.dropout must be in [0, 1), got {model.vision.dropout}",
             )
 
         # Validate tabular config
@@ -66,18 +66,18 @@ class ConfigValidator:
 
         if any(dim <= 0 for dim in model.tabular.hidden_dims):
             self.errors.append(
-                "model.tabular.hidden_dims: all dimensions must be positive"
+                "model.tabular.hidden_dims: all dimensions must be positive",
             )
 
         if model.tabular.output_dim <= 0:
             self.errors.append(
-                f"model.tabular.output_dim must be positive, got {model.tabular.output_dim}"
+                f"model.tabular.output_dim must be positive, got {model.tabular.output_dim}",
             )
 
         # Validate fusion config
         if model.fusion.hidden_dim <= 0:
             self.errors.append(
-                f"model.fusion.hidden_dim must be positive, got {model.fusion.hidden_dim}"
+                f"model.fusion.hidden_dim must be positive, got {model.fusion.hidden_dim}",
             )
 
     def _validate_data_config(self, config: ExperimentConfig) -> None:
@@ -88,29 +88,29 @@ class ConfigValidator:
         total_ratio = data.train_ratio + data.val_ratio + data.test_ratio
         if not (0.99 <= total_ratio <= 1.01):  # Allow small floating point errors
             self.errors.append(
-                f"data split ratios must sum to 1.0, got {total_ratio:.4f}"
+                f"data split ratios must sum to 1.0, got {total_ratio:.4f}",
             )
 
         if data.batch_size <= 0:
             self.errors.append(
-                f"data.batch_size must be positive, got {data.batch_size}"
+                f"data.batch_size must be positive, got {data.batch_size}",
             )
 
         if data.image_size <= 0:
             self.errors.append(
-                f"data.image_size must be positive, got {data.image_size}"
+                f"data.image_size must be positive, got {data.image_size}",
             )
 
         if data.num_workers < 0:
             self.errors.append(
-                f"data.num_workers must be non-negative, got {data.num_workers}"
+                f"data.num_workers must be non-negative, got {data.num_workers}",
             )
 
         # Validate multiview config if enabled
         if hasattr(data, "enable_multiview") and data.enable_multiview:
             if hasattr(data, "view_names") and not data.view_names:
                 self.errors.append(
-                    "data.view_names cannot be empty when enable_multiview=True"
+                    "data.view_names cannot be empty when enable_multiview=True",
                 )
 
     def _validate_training_config(self, config: ExperimentConfig) -> None:
@@ -119,17 +119,17 @@ class ConfigValidator:
 
         if training.num_epochs <= 0:
             self.errors.append(
-                f"training.num_epochs must be positive, got {training.num_epochs}"
+                f"training.num_epochs must be positive, got {training.num_epochs}",
             )
 
         if training.gradient_clip is not None and training.gradient_clip <= 0:
             self.errors.append(
-                f"training.gradient_clip must be positive or None, got {training.gradient_clip}"
+                f"training.gradient_clip must be positive or None, got {training.gradient_clip}",
             )
 
         if not 0 <= training.label_smoothing < 1:
             self.errors.append(
-                f"training.label_smoothing must be in [0, 1), got {training.label_smoothing}"
+                f"training.label_smoothing must be in [0, 1), got {training.label_smoothing}",
             )
 
         # Validate progressive training
@@ -139,13 +139,13 @@ class ConfigValidator:
             )
             if total_epochs != training.num_epochs:
                 self.errors.append(
-                    f"training stage epochs sum ({total_epochs}) must equal num_epochs ({training.num_epochs})"
+                    f"training stage epochs sum ({total_epochs}) must equal num_epochs ({training.num_epochs})",
                 )
 
         # Validate optimizer
         if training.optimizer.learning_rate <= 0:
             self.errors.append(
-                f"training.optimizer.learning_rate must be positive, got {training.optimizer.learning_rate}"
+                f"training.optimizer.learning_rate must be positive, got {training.optimizer.learning_rate}",
             )
 
         # Validate attention supervision
@@ -153,7 +153,7 @@ class ConfigValidator:
             if hasattr(training, "attention_loss_weight"):
                 if not 0 <= training.attention_loss_weight <= 1:
                     self.errors.append(
-                        f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}"
+                        f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}",
                     )
 
     def _validate_logging_config(self, config: ExperimentConfig) -> None:
@@ -162,12 +162,12 @@ class ConfigValidator:
 
         if logging.log_every_n_steps <= 0:
             self.errors.append(
-                f"logging.log_every_n_steps must be positive, got {logging.log_every_n_steps}"
+                f"logging.log_every_n_steps must be positive, got {logging.log_every_n_steps}",
             )
 
         if logging.save_every_n_epochs <= 0:
             self.errors.append(
-                f"logging.save_every_n_epochs must be positive, got {logging.save_every_n_epochs}"
+                f"logging.save_every_n_epochs must be positive, got {logging.save_every_n_epochs}",
             )
 
     def _validate_cross_dependencies(self, config: ExperimentConfig) -> None:
@@ -176,7 +176,7 @@ class ConfigValidator:
         if config.training.use_attention_supervision:
             if not config.model.vision.enable_attention_supervision:
                 self.errors.append(
-                    "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True"
+                    "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
                 )
 
         # Multiview requires consistent configuration
@@ -184,7 +184,7 @@ class ConfigValidator:
             if hasattr(config.model.vision, "enable_multiview"):
                 if not config.model.vision.enable_multiview:
                     self.errors.append(
-                        "data.enable_multiview=True requires model.vision.enable_multiview=True"
+                        "data.enable_multiview=True requires model.vision.enable_multiview=True",
                     )
 
 

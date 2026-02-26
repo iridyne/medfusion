@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.amp import GradScaler, autocast
 
 from med_core.trainers.base import BaseTrainer
@@ -62,12 +62,12 @@ class MultimodalTrainer(BaseTrainer):
             if not self.config.model.vision.enable_attention_supervision:
                 logger.warning(
                     "use_attention_supervision=True but vision.enable_attention_supervision=False. "
-                    "Attention supervision will not work. Set vision.enable_attention_supervision=True."
+                    "Attention supervision will not work. Set vision.enable_attention_supervision=True.",
                 )
             if self.config.model.vision.attention_type != "cbam":
                 logger.warning(
                     f"Attention supervision only works with CBAM, but attention_type={self.config.model.vision.attention_type}. "
-                    "Attention supervision will be disabled."
+                    "Attention supervision will be disabled.",
                 )
                 self.use_attention_supervision = False
 
@@ -161,7 +161,7 @@ class MultimodalTrainer(BaseTrainer):
                     if self.config.training.gradient_clip:
                         self.scaler.unscale_(self.optimizer)
                         nn.utils.clip_grad_norm_(
-                            self.model.parameters(), self.config.training.gradient_clip
+                            self.model.parameters(), self.config.training.gradient_clip,
                         )
 
                     self.scaler.step(self.optimizer)
@@ -170,7 +170,7 @@ class MultimodalTrainer(BaseTrainer):
                     loss.backward()
                     if self.config.training.gradient_clip:
                         nn.utils.clip_grad_norm_(
-                            self.model.parameters(), self.config.training.gradient_clip
+                            self.model.parameters(), self.config.training.gradient_clip,
                         )
                     self.optimizer.step()
 
@@ -192,7 +192,7 @@ class MultimodalTrainer(BaseTrainer):
 
             # Update progress bar
             pbar.set_postfix(
-                {k: f"{v.item():.4f}" for k, v in step_metrics.items() if k == "loss"}
+                {k: f"{v.item():.4f}" for k, v in step_metrics.items() if k == "loss"},
             )
 
         return {k: v / num_batches for k, v in metrics_sum.items()}
@@ -259,7 +259,7 @@ class MultimodalTrainer(BaseTrainer):
         return {"loss": loss}
 
     def _forward_with_attention(
-        self, images: torch.Tensor, tabular: torch.Tensor
+        self, images: torch.Tensor, tabular: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         """
         Forward pass that extracts attention weights from vision backbone.
@@ -270,7 +270,7 @@ class MultimodalTrainer(BaseTrainer):
         # Check if model has vision_backbone attribute
         if not hasattr(self.model, "vision_backbone"):
             logger.warning(
-                "Model does not have vision_backbone attribute. Falling back to standard forward."
+                "Model does not have vision_backbone attribute. Falling back to standard forward.",
             )
             return self.model(images, tabular)
 
@@ -296,7 +296,7 @@ class MultimodalTrainer(BaseTrainer):
         # Fusion
         if hasattr(self.model, "fusion_module"):
             fused_features, fusion_aux = self.model.fusion_module(
-                vision_features, tabular_features
+                vision_features, tabular_features,
             )
         else:
             fused_features = torch.cat([vision_features, tabular_features], dim=1)
@@ -355,7 +355,7 @@ class MultimodalTrainer(BaseTrainer):
             # Mask-based supervision: requires ground truth masks
             if masks is None or attention_weights is None:
                 logger.warning(
-                    "Mask-based attention supervision requires masks in dataset. Skipping."
+                    "Mask-based attention supervision requires masks in dataset. Skipping.",
                 )
                 return None
 
@@ -370,23 +370,23 @@ class MultimodalTrainer(BaseTrainer):
 
             # Binary cross-entropy loss between attention and masks
             loss = torch.nn.functional.binary_cross_entropy(
-                attention_weights, masks, reduction="mean"
+                attention_weights, masks, reduction="mean",
             )
             return loss
 
-        elif self.attention_supervision_method == "cam":
+        if self.attention_supervision_method == "cam":
             # CAM-based supervision: generate CAM from feature_maps
             if feature_maps is None:
                 logger.warning(
-                    "CAM-based attention supervision requires feature_maps. Skipping."
+                    "CAM-based attention supervision requires feature_maps. Skipping.",
                 )
                 return None
 
             if not hasattr(self.model, "classifier") or not hasattr(
-                self.model.classifier, "weight"
+                self.model.classifier, "weight",
             ):
                 logger.warning(
-                    "CAM requires classifier with weight attribute. Skipping."
+                    "CAM requires classifier with weight attribute. Skipping.",
                 )
                 return None
 
@@ -407,14 +407,14 @@ class MultimodalTrainer(BaseTrainer):
 
             # MSE loss between attention and CAM
             loss = torch.nn.functional.mse_loss(
-                attention_weights, cam, reduction="mean"
+                attention_weights, cam, reduction="mean",
             )
             return loss
 
         return None
 
     def _generate_cam(
-        self, feature_maps: torch.Tensor, labels: torch.Tensor
+        self, feature_maps: torch.Tensor, labels: torch.Tensor,
     ) -> torch.Tensor | None:
         """
         Generate Class Activation Map (CAM) from feature maps.
@@ -447,7 +447,7 @@ class MultimodalTrainer(BaseTrainer):
 
             # Simple approach: use global average pooling on feature_maps
             pooled_features = torch.nn.functional.adaptive_avg_pool2d(
-                feature_maps, 1
+                feature_maps, 1,
             )  # (B, C, 1, 1)
             pooled_features = pooled_features.view(batch_size, -1)  # (B, C)
 
@@ -455,7 +455,7 @@ class MultimodalTrainer(BaseTrainer):
             if pooled_features.size(1) != class_weights.size(1):
                 logger.warning(
                     f"Dimension mismatch: pooled_features {pooled_features.shape} vs "
-                    f"class_weights {class_weights.shape}. Cannot generate CAM."
+                    f"class_weights {class_weights.shape}. Cannot generate CAM.",
                 )
                 return None
 

@@ -159,6 +159,6 @@ class DataCleaner:
         """
         cleaned_df = self.handle_missing_values(df)
         tabular_data, feature_names, fitted_scaler = self.prepare_tabular_features(
-            cleaned_df, scaler
+            cleaned_df, scaler,
         )
         return cleaned_df, tabular_data, feature_names, fitted_scaler

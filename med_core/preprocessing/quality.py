@@ -309,7 +309,7 @@ def detect_watermark(
     # Check for unusual patterns in suspected watermark regions
     for x_start, x_end, y_start, y_end in check_regions:
         region = image[
-            int(y_start * h) : int(y_end * h), int(x_start * w) : int(x_end * w)
+            int(y_start * h) : int(y_end * h), int(x_start * w) : int(x_end * w),
         ]
 
         if region.size == 0:
@@ -383,7 +383,7 @@ def assess_image_quality(
         warnings.append("Motion blur detected - image may be too blurry for analysis")
     if metrics.has_compression_artifacts:
         warnings.append(
-            "Compression artifacts detected - consider using higher quality images"
+            "Compression artifacts detected - consider using higher quality images",
         )
     if metrics.has_watermark:
         warnings.append("Possible watermark detected in image")
@@ -458,7 +458,6 @@ def filter_by_quality(
     Returns:
         List of paths to acceptable images (and optionally their metrics)
     """
-
     accepted_paths = []
     accepted_metrics = []
 
@@ -472,14 +471,14 @@ def filter_by_quality(
                 accepted_metrics.append(metrics)
             else:
                 logger.debug(
-                    f"Rejected {path}: quality score {metrics.overall_score:.2f} < {min_score}"
+                    f"Rejected {path}: quality score {metrics.overall_score:.2f} < {min_score}",
                 )
 
         except Exception as e:
             logger.warning(f"Failed to assess quality of {path}: {e}")
 
     logger.info(
-        f"Accepted {len(accepted_paths)}/{len(image_paths)} images based on quality"
+        f"Accepted {len(accepted_paths)}/{len(image_paths)} images based on quality",
     )
 
     if return_metrics:

@@ -7,7 +7,7 @@
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 from med_core.attention_supervision.base import (
@@ -55,7 +55,7 @@ def extract_patches(
 
     # 重排维度
     patches = patches.contiguous().view(
-        B, C, num_patches_h * num_patches_w, patch_size, patch_size
+        B, C, num_patches_h * num_patches_w, patch_size, patch_size,
     )
     patches = patches.permute(0, 2, 1, 3, 4)
     # (B, num_patches, C, patch_size, patch_size)
@@ -397,16 +397,16 @@ class AttentionMIL(nn.Module):
 
         # 批量提取特征
         patches_flat = patches.view(
-            B * num_patches, C, self.patch_size, self.patch_size
+            B * num_patches, C, self.patch_size, self.patch_size,
         )
         patch_features_flat = self.backbone(
-            patches_flat
+            patches_flat,
         )  # (B*num_patches, feature_dim, h, w)
 
         # 全局平均池化
         patch_features_flat = F.adaptive_avg_pool2d(patch_features_flat, 1)
         patch_features_flat = patch_features_flat.flatten(
-            1
+            1,
         )  # (B*num_patches, feature_dim)
 
         # 重塑
@@ -418,7 +418,7 @@ class AttentionMIL(nn.Module):
 
         # 转换为空间注意力图
         attention_map = mil_outputs["attention_weights"].view(
-            B, grid_size[0], grid_size[1]
+            B, grid_size[0], grid_size[1],
         )
 
         return {

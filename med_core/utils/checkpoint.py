@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +172,7 @@ def cleanup_checkpoints(
             checkpoint = torch.load(ckpt_path, map_location="cpu")
             metrics = checkpoint.get("metrics", {})
             value = metrics.get(
-                metric_name, float("-inf") if mode == "max" else float("inf")
+                metric_name, float("-inf") if mode == "max" else float("inf"),
             )
             epoch = checkpoint.get("epoch", 0)
             checkpoint_data.append((ckpt_path, value, epoch))

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 class BaseBackbone(ABC, nn.Module):
@@ -41,7 +41,6 @@ class BaseBackbone(ABC, nn.Module):
         Returns:
             Feature tensor
         """
-        pass
 
     def get_config(self) -> dict[str, Any]:
         """Return backbone configuration for serialization."""
@@ -82,7 +81,6 @@ class BaseVisionBackbone(BaseBackbone):
     @abstractmethod
     def backbone_output_dim(self) -> int:
         """Return the raw backbone output dimension before projection."""
-        pass
 
     def freeze_backbone(self, strategy: str = "full", unfreeze_last_n: int = 2) -> None:
         """
@@ -162,10 +160,9 @@ class BaseVisionBackbone(BaseBackbone):
         Returns:
             Feature map tensor
         """
-        pass
 
     def forward(
-        self, x: torch.Tensor, return_intermediates: bool = False
+        self, x: torch.Tensor, return_intermediates: bool = False,
     ) -> torch.Tensor | dict[str, torch.Tensor]:
         """
         Forward pass through vision backbone.
@@ -220,8 +217,7 @@ class BaseVisionBackbone(BaseBackbone):
                 "feature_maps": feature_maps,
                 "attention_weights": attention_weights,
             }
-        else:
-            return features
+        return features
 
 
 class BaseTabularBackbone(BaseBackbone):
@@ -254,7 +250,6 @@ class BaseTabularBackbone(BaseBackbone):
         Returns:
             Feature vector (B, output_dim)
         """
-        pass
 
     @classmethod
     def auto_infer_input_dim(

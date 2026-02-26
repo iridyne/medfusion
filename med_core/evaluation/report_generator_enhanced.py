@@ -75,7 +75,7 @@ class EnhancedReportGenerator(ReportGenerator):
         plt.rcParams["legend.fontsize"] = 9
 
     def add_comparison_metrics(
-        self, baseline_metrics: Any, comparison_name: str = "Baseline"
+        self, baseline_metrics: Any, comparison_name: str = "Baseline",
     ) -> None:
         """
         Add baseline metrics for statistical comparison.
@@ -107,7 +107,7 @@ class EnhancedReportGenerator(ReportGenerator):
         for baseline_name, baseline in self.baseline_metrics.items():
             # McNemar's test for paired binary classification
             if hasattr(self.metrics, "true_positives") and hasattr(
-                baseline, "true_positives"
+                baseline, "true_positives",
             ):
                 # Construct contingency table
                 # [both_correct, current_correct_baseline_wrong]
@@ -131,7 +131,7 @@ class EnhancedReportGenerator(ReportGenerator):
                         current_acc * (1 - current_acc)
                         + baseline_acc * (1 - baseline_acc)
                     )
-                    / n_samples
+                    / n_samples,
                 )
                 z_score = (current_acc - baseline_acc) / se if se > 0 else 0
                 p_value = 2 * (1 - stats.norm.cdf(abs(z_score)))
@@ -185,16 +185,16 @@ class EnhancedReportGenerator(ReportGenerator):
                 return "-"
 
             lines.append(
-                f"AUC-ROC & {metrics.auc_roc:.3f} & {fmt_ci(metrics.ci_auc_roc)} \\\\"
+                f"AUC-ROC & {metrics.auc_roc:.3f} & {fmt_ci(metrics.ci_auc_roc)} \\\\",
             )
             lines.append(
-                f"Accuracy & {metrics.accuracy:.3f} & {fmt_ci(metrics.ci_accuracy)} \\\\"
+                f"Accuracy & {metrics.accuracy:.3f} & {fmt_ci(metrics.ci_accuracy)} \\\\",
             )
             lines.append(
-                f"Sensitivity & {metrics.sensitivity:.3f} & {fmt_ci(metrics.ci_sensitivity)} \\\\"
+                f"Sensitivity & {metrics.sensitivity:.3f} & {fmt_ci(metrics.ci_sensitivity)} \\\\",
             )
             lines.append(
-                f"Specificity & {metrics.specificity:.3f} & {fmt_ci(metrics.ci_specificity)} \\\\"
+                f"Specificity & {metrics.specificity:.3f} & {fmt_ci(metrics.ci_specificity)} \\\\",
             )
             lines.append(f"F1 Score & {metrics.f1:.3f} & - \\\\")
             lines.append(f"Precision (PPV) & {metrics.ppv:.3f} & - \\\\")
@@ -259,7 +259,7 @@ class EnhancedReportGenerator(ReportGenerator):
                 for name, test in self.statistical_tests.items():
                     sig = "Yes" if test["significant"] else "No"
                     f.write(
-                        f"{name} & {test['difference']:.4f} & {test['p_value']:.4f} & {sig} \\\\\\n"
+                        f"{name} & {test['difference']:.4f} & {test['p_value']:.4f} & {sig} \\\\\\n",
                     )
 
                 f.write("\\hline\n")
@@ -316,7 +316,7 @@ class EnhancedReportGenerator(ReportGenerator):
 
         lines = ["## Statistical Significance Tests\n\n"]
         lines.append(
-            "| Comparison | Current | Baseline | Difference | p-value | Significant |\n"
+            "| Comparison | Current | Baseline | Difference | p-value | Significant |\n",
         )
         lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
@@ -325,7 +325,7 @@ class EnhancedReportGenerator(ReportGenerator):
             lines.append(
                 f"| {name} | {test['current_accuracy']:.4f} | "
                 f"{test['baseline_accuracy']:.4f} | {test['difference']:.4f} | "
-                f"{test['p_value']:.4f} | {sig} |\n"
+                f"{test['p_value']:.4f} | {sig} |\n",
             )
 
         lines.append("\n")

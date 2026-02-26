@@ -74,7 +74,7 @@ async def version_check_middleware(request: Request, call_next: Any) -> Response
         client_version = request.headers.get("X-Client-Version")
         if client_version and client_version != settings.version:
             logger.warning(
-                f"版本不匹配: 客户端 {client_version}, 服务端 {settings.version}"
+                f"版本不匹配: 客户端 {client_version}, 服务端 {settings.version}",
             )
 
     response = await call_next(request)

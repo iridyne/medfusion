@@ -160,8 +160,7 @@ class TabularPreprocessor:
 
         if fit:
             return self.scaler.fit_transform(X_num).astype(np.float32)
-        else:
-            return self.scaler.transform(X_num).astype(np.float32)
+        return self.scaler.transform(X_num).astype(np.float32)
 
 
 def clean_dataframe(

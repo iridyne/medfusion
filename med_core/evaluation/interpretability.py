@@ -11,7 +11,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class GradCAM:
         else:
             # Create dummy tabular input if not provided
             tabular_input = torch.zeros(
-                input_tensor.size(0), 1, device=input_tensor.device
+                input_tensor.size(0), 1, device=input_tensor.device,
             )
 
         # Forward pass
@@ -156,7 +156,7 @@ class GradCAM:
 
         if self.gradients is None or self.activations is None:
             raise RuntimeError(
-                "Gradients or activations not captured. Check target layer."
+                "Gradients or activations not captured. Check target layer.",
             )
 
         # Compute Grad-CAM

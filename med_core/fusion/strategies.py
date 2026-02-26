@@ -12,7 +12,7 @@ Provides various strategies for combining vision and tabular features:
 from typing import Any, Literal
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from med_core.fusion.base import BaseFusion
 
@@ -249,7 +249,7 @@ class AttentionFusion(BaseFusion):
 
         # Self-attention
         attended, attn_weights = self.self_attention(
-            tokens, tokens, tokens, need_weights=True
+            tokens, tokens, tokens, need_weights=True,
         )
 
         # Residual + LayerNorm
@@ -351,13 +351,13 @@ class CrossAttentionFusion(BaseFusion):
 
         # Vision attends to tabular
         v2t, v2t_attn = self.vision_to_tabular(
-            h_vision, h_tabular, h_tabular, need_weights=True
+            h_vision, h_tabular, h_tabular, need_weights=True,
         )
         v2t = self.norm_v2t(h_vision + v2t)
 
         # Tabular attends to vision
         t2v, t2v_attn = self.tabular_to_vision(
-            h_tabular, h_vision, h_vision, need_weights=True
+            h_tabular, h_vision, h_vision, need_weights=True,
         )
         t2v = self.norm_t2v(h_tabular + t2v)
 
@@ -464,7 +464,7 @@ FUSION_REGISTRY = {
 
 def create_fusion_module(
     fusion_type: Literal[
-        "concatenate", "gated", "attention", "cross_attention", "bilinear"
+        "concatenate", "gated", "attention", "cross_attention", "bilinear",
     ],
     vision_dim: int,
     tabular_dim: int,
