@@ -21,82 +21,77 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environments
+# Virtual environments
 .venv/
 venv/
 ENV/
 env/
-.env
 
-# PyCharm
-.idea/
-
-# VSCode
+# IDEs
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pytest
+# Testing
 .pytest_cache/
 .coverage
 htmlcov/
-*.cover
-.hypothesis/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data and outputs
+data/raw/
+data/processed/
+outputs/
+*.pth
+*.ckpt
+*.h5
+*.pkl
+*.joblib
 
 # Logs
 *.log
 logs/
-
-# Outputs
-outputs/
-checkpoints/
-models/
-evaluation_results/
-
-# Data
-/data/
-*.npy
-*.dcm
-*.h5
-*.hdf5
-
-# TensorBoard
-runs/
-events.out.tfevents.*
-
-# System
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-# Temporary
-*.tmp
-*.bak
-*.cache
-backups/
-continue.md
-
-# uv
-.uv/
-.analysis_archive/
+tensorboard/
 
 # Claude Code
 .claude/
 
-# Rust
-med_core_rs/target/
-med_core_rs/Cargo.lock
-med_core_rs/**/*.rs.bk
-med_core_rs/*.so
-med_core_rs/*.pyd
+# Archives and backups
+.archive/
+backups/
 
-# Caches
-.ruff_cache/
-.mypy_cache/
+# Temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
 
-# Documentation build
-docs/_build/
-web/frontend/package-lock.json
+# Environment
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node.js (for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+*.wasm
+target/
+Cargo.lock
+data/
