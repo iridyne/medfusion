@@ -200,6 +200,27 @@ mypy med_core/
 
 详细开发指南请参考 [CLAUDE.md](CLAUDE.md)。
 
+## ⚡ 性能优化
+
+### 优化优先级
+
+遇到性能问题时，按以下顺序优化：
+
+1. **算法层面**：混合精度训练、梯度累积、模型剪枝/量化
+2. **工程层面**：数据缓存、预计算特征、优化 DataLoader
+3. **基础设施**：更好的 GPU、分布式训练、NVMe SSD
+4. **部署优化**：TorchScript、ONNX、TensorRT
+5. **自定义���核**：Triton CUDA kernel、C++ 扩展
+
+### 常见瓶颈解决方案
+
+- **数据加载慢**：增加 `num_workers`、使用数据缓存、更快的存储
+- **GPU 利用率低**：增大 batch size、优化 DataLoader、检查 CPU 预处理
+- **显存不足**：梯度累积、混合精度、减小 batch size
+- **训练时间长**：分布式训练、更好的 GPU、优化模型架构
+
+**注意**：不建议过早迁移到 Rust。PyTorch 核心已经是 C++/CUDA 优化的，大部分性能瓶颈在 I/O 和 GPU 利用率，而非 Python 开销。详见 [CLAUDE.md](CLAUDE.md) 的性能优化章节。
+
 ## 🤝 贡献
 
 欢迎贡献！请查看 [贡献指南](CONTRIBUTING.md)。

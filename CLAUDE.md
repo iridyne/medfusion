@@ -262,6 +262,59 @@ logits, aux = model(inputs)
 - Cache preprocessed data with `DatasetCache`
 - Profile with `torch.profiler` for bottlenecks
 
+### Performance Optimization Strategy
+
+**When facing performance issues, follow this priority order:**
+
+**1. Algorithm-Level Optimization (Highest Priority)**
+- Mixed precision training (already supported via `training.mixed_precision: true`)
+- Gradient accumulation to reduce memory usage
+- Model pruning and quantization
+- More efficient data augmentation strategies
+- Optimize model architecture (reduce parameters, use efficient blocks)
+
+**2. Engineering-Level Optimization**
+- Data caching (use `DatasetCache` for preprocessed data)
+- Precompute and save features when possible
+- Use faster data formats (HDF5, LMDB instead of individual files)
+- Optimize DataLoader `num_workers` (typically 4-8 per GPU)
+- Enable persistent workers: `persistent_workers=True`
+- Use faster image loading libraries (e.g., `pillow-simd`, `opencv`)
+
+**3. Infrastructure Optimization**
+- Use better GPUs (A100 > V100 > RTX 3090)
+- Distributed training (multi-GPU via DDP, multi-node)
+- Use NVMe SSDs for faster I/O
+- Increase system RAM to cache more data
+- Use faster network for distributed training
+
+**4. Model Deployment Optimization**
+- TorchScript compilation: `torch.jit.script(model)`
+- ONNX export for cross-platform inference
+- TensorRT for NVIDIA GPU inference acceleration
+- Model quantization (INT8/FP16) for faster inference
+
+**5. Custom Kernel Optimization (Last Resort)**
+- Write custom CUDA kernels with Triton
+- Use PyTorch C++ extensions for critical paths
+- Consider Rust only if:
+  - Profiling shows a specific Python function is the bottleneck (>20% time)
+  - The function is pure CPU computation (not PyTorch ops)
+  - No existing C++ library can replace it
+  - You have Rust expertise in the team
+
+**Important Notes:**
+- **Do NOT migrate to Rust prematurely**: PyTorch core is already C++/CUDA optimized
+- **Profile first**: Use `torch.profiler` or `cProfile` to identify actual bottlenecks
+- **Most bottlenecks are I/O or GPU utilization**, not Python overhead
+- **Rust migration has high cost**: Maintenance burden, ecosystem immaturity, limited benefit
+
+**Common Bottlenecks and Solutions:**
+- **Slow data loading**: Increase `num_workers`, use data caching, faster storage
+- **Low GPU utilization**: Increase batch size, optimize DataLoader, check CPU preprocessing
+- **Out of memory**: Use gradient accumulation, mixed precision, smaller batch size
+- **Long training time**: Distributed training, better GPU, model architecture optimization
+
 ## Project-Specific Conventions
 
 ### Naming Conventions
