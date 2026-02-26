@@ -42,6 +42,8 @@ htmlcov/
 .tox/
 .mypy_cache/
 .ruff_cache/
+bandit-report.json
+coverage.xml
 
 # Jupyter
 .ipynb_checkpoints/
