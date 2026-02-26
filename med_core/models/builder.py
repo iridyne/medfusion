@@ -4,7 +4,7 @@ Generic Multi-Modal Model Builder
 Provides a unified interface for building multi-modal models from components.
 """
 
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -56,11 +56,11 @@ class GenericMultiModalModel(nn.Module):
 
     def __init__(
         self,
-        modality_backbones: Dict[str, nn.Module],
+        modality_backbones: dict[str, nn.Module],
         fusion_module: nn.Module,
         head: nn.Module,
-        mil_aggregators: Optional[Dict[str, nn.Module]] = None,
-        modality_names: Optional[List[str]] = None,
+        mil_aggregators: dict[str, nn.Module] | None = None,
+        modality_names: list[str] | None = None,
     ):
         super().__init__()
 
@@ -76,9 +76,9 @@ class GenericMultiModalModel(nn.Module):
 
     def forward(
         self,
-        inputs: Dict[str, torch.Tensor],
+        inputs: dict[str, torch.Tensor],
         return_features: bool = False,
-    ) -> Union[torch.Tensor, tuple[torch.Tensor, Dict[str, Any]]]:
+    ) -> torch.Tensor | tuple[torch.Tensor, dict[str, Any]]:
         """
         Forward pass through the multi-modal model.
 
@@ -203,7 +203,7 @@ class GenericMultiModalModel(nn.Module):
 
         return output
 
-    def get_modality_contribution(self) -> Dict[str, float]:
+    def get_modality_contribution(self) -> dict[str, float]:
         """
         Get the contribution of each modality to the final prediction.
 
@@ -221,7 +221,7 @@ class GenericMultiModalModel(nn.Module):
 
         # Default: equal contribution
         equal_contrib = 1.0 / len(self.modality_names)
-        return {name: equal_contrib for name in self.modality_names}
+        return dict.fromkeys(self.modality_names, equal_contrib)
 
 
 class MultiModalModelBuilder:
@@ -242,17 +242,17 @@ class MultiModalModelBuilder:
     """
 
     def __init__(self) -> None:
-        self._modalities: Dict[str, Dict[str, Any]] = {}
-        self._fusion_config: Optional[Dict[str, Any]] = None
-        self._head_config: Optional[Dict[str, Any]] = None
-        self._mil_configs: Dict[str, Dict[str, Any]] = {}
+        self._modalities: dict[str, dict[str, Any]] = {}
+        self._fusion_config: dict[str, Any] | None = None
+        self._head_config: dict[str, Any] | None = None
+        self._mil_configs: dict[str, dict[str, Any]] = {}
 
     def add_modality(
         self,
         name: str,
-        backbone: Union[str, nn.Module],
+        backbone: str | nn.Module,
         modality_type: Literal["vision", "vision3d", "tabular", "custom"] = "vision",
-        feature_dim: Optional[int] = None,
+        feature_dim: int | None = None,
         **kwargs: Any,
     ) -> "MultiModalModelBuilder":
         """
@@ -573,7 +573,7 @@ class MultiModalModelBuilder:
         return model
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "MultiModalModelBuilder":
+    def from_config(cls, config: dict[str, Any]) -> "MultiModalModelBuilder":
         """
         Create builder from configuration dict.
 
@@ -632,7 +632,7 @@ class MultiModalModelBuilder:
 
 
 def build_model_from_config(
-    config: Union[str, Dict[str, Any]],
+    config: str | dict[str, Any],
 ) -> GenericMultiModalModel:
     """
     Build a multi-modal model from configuration.
@@ -655,7 +655,7 @@ def build_model_from_config(
         # Load from YAML file
         import yaml
 
-        with open(config, "r") as f:
+        with open(config) as f:
             config = yaml.safe_load(f)
 
     # Extract model config if nested

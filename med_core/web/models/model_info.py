@@ -1,7 +1,8 @@
 """模型信息模型"""
 
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, Text
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, Float, Integer, String, Text
 
 from ..database import Base
 

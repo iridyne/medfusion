@@ -1,6 +1,7 @@
 """系统信息 API"""
 
 import platform
+from pathlib import Path
 from typing import Any
 
 import psutil

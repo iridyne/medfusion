@@ -1,7 +1,8 @@
 """训练任务模型"""
 
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, ForeignKey, Text
 from datetime import datetime
+
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 
 from ..database import Base
 

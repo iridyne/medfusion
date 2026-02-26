@@ -10,12 +10,12 @@ internally, eliminating code duplication and automatically benefiting from all
 framework features (gradient checkpointing, attention supervision, etc.).
 """
 
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
 
-from med_core.models.builder import GenericMultiModalModel, MultiModalModelBuilder
+from med_core.models.builder import MultiModalModelBuilder
 
 
 class SMuRFModel(nn.Module):
@@ -125,7 +125,7 @@ class SMuRFModel(nn.Module):
         radiology: torch.Tensor,
         pathology: torch.Tensor,
         return_features: bool = False,
-    ) -> Union[torch.Tensor, tuple[torch.Tensor, Dict]]:
+    ) -> torch.Tensor | tuple[torch.Tensor, dict]:
         """
         Forward pass.
 
@@ -261,7 +261,7 @@ class SMuRFWithMIL(nn.Module):
         radiology: torch.Tensor,
         pathology_patches: torch.Tensor,
         return_features: bool = False,
-    ) -> Union[torch.Tensor, tuple[torch.Tensor, Dict]]:
+    ) -> torch.Tensor | tuple[torch.Tensor, dict]:
         """
         Forward pass with MIL aggregation.
 
