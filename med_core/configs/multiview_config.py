@@ -5,7 +5,8 @@ Extends base configuration classes to support multi-view imaging scenarios.
 """
 
 from dataclasses import dataclass, field
-from typing import Literal
+from pathlib import Path
+from typing import Any, Literal
 
 from med_core.configs.base_config import (
     BaseConfig,
@@ -135,7 +136,7 @@ class MultiViewExperimentConfig(BaseConfig):
     training: TrainingConfig = field(default_factory=TrainingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Post-initialization validation and setup."""
         from pathlib import Path
 
@@ -176,14 +177,14 @@ class MultiViewExperimentConfig(BaseConfig):
             return "cpu"
 
     @property
-    def device_obj(self):
+    def device_obj(self) -> Any:
         """Get torch device object."""
         import torch
 
         return torch.device(self.device)
 
     @property
-    def checkpoint_dir(self):
+    def checkpoint_dir(self) -> Path:
         """Get checkpoint directory path."""
         from pathlib import Path
 
@@ -192,7 +193,7 @@ class MultiViewExperimentConfig(BaseConfig):
         return path
 
     @property
-    def log_dir(self):
+    def log_dir(self) -> Path:
         """Get log directory path."""
         from pathlib import Path
 
@@ -201,7 +202,7 @@ class MultiViewExperimentConfig(BaseConfig):
         return path
 
     @property
-    def results_dir(self):
+    def results_dir(self) -> Path:
         """Get results directory path."""
         from pathlib import Path
 

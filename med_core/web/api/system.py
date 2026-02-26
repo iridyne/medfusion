@@ -80,7 +80,7 @@ async def get_storage_info() -> dict[str, Any]:
     data_dir = settings.data_dir
 
     # 计算各目录大小
-    def get_dir_size(path):
+    def get_dir_size(path: Path) -> float:
         total = 0
         try:
             for entry in path.rglob("*"):

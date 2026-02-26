@@ -282,7 +282,7 @@ async def list_experiments(
     status: str | None = Query(None, pattern="^(completed|running|failed|pending)$"),
     sort_by: str | None = Query("created_at", pattern="^(created_at|accuracy|name)$"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
-):
+) -> ExperimentListResponse:
     """
     List all experiments with pagination and filtering
     """
@@ -321,7 +321,7 @@ async def list_experiments(
 
 
 @router.get("/{experiment_id}", response_model=Experiment)
-async def get_experiment(experiment_id: str):
+async def get_experiment(experiment_id: str) -> Experiment:
     """
     Get details of a specific experiment
     """
@@ -342,7 +342,7 @@ async def get_experiment(experiment_id: str):
 
 
 @router.post("/compare", response_model=ComparisonResponse)
-async def compare_experiments(experiment_ids: list[str]):
+async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
     """
     Compare multiple experiments
     """
@@ -414,7 +414,7 @@ async def compare_experiments(experiment_ids: list[str]):
 
 
 @router.get("/{experiment_id}/metrics", response_model=MetricsHistoryResponse)
-async def get_metrics_history(experiment_id: str):
+async def get_metrics_history(experiment_id: str) -> MetricsHistoryResponse:
     """
     Get training metrics history for an experiment
     """
@@ -465,7 +465,7 @@ async def get_metrics_history(experiment_id: str):
 
 
 @router.get("/{experiment_id}/confusion-matrix", response_model=ConfusionMatrixData)
-async def get_confusion_matrix(experiment_id: str):
+async def get_confusion_matrix(experiment_id: str) -> ConfusionMatrixData:
     """
     Get confusion matrix for an experiment
     """
@@ -510,7 +510,7 @@ async def get_confusion_matrix(experiment_id: str):
 
 
 @router.get("/{experiment_id}/roc-curve", response_model=ROCCurveData)
-async def get_roc_curve(experiment_id: str):
+async def get_roc_curve(experiment_id: str) -> ROCCurveData:
     """
     Get ROC curve data for an experiment
     """
@@ -556,7 +556,7 @@ async def get_roc_curve(experiment_id: str):
 
 
 @router.post("/report", response_model=ReportResponse)
-async def generate_report(request: ReportRequest):
+async def generate_report(request: ReportRequest) -> ReportResponse:
     """
     Generate comparison report (Word or PDF)
     """
@@ -624,7 +624,7 @@ async def generate_report(request: ReportRequest):
 
 
 @router.get("/reports/{filename}")
-async def download_report(filename: str):
+async def download_report(filename: str) -> FileResponse:
     """
     Download a generated report file
     """
@@ -655,7 +655,7 @@ async def download_report(filename: str):
 
 
 @router.patch("/{experiment_id}/favorite")
-async def toggle_favorite(experiment_id: str):
+async def toggle_favorite(experiment_id: str) -> dict[str, Any]:
     """
     Toggle favorite status of an experiment
     """
@@ -669,7 +669,7 @@ async def toggle_favorite(experiment_id: str):
 
 
 @router.delete("/{experiment_id}")
-async def delete_experiment(experiment_id: str):
+async def delete_experiment(experiment_id: str) -> dict[str, Any]:
     """
     Delete an experiment
     """

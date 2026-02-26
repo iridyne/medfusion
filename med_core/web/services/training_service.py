@@ -12,7 +12,7 @@ class TrainingService:
 
     def __init__(self) -> None:
         self.executor = ProcessPoolExecutor(max_workers=4)
-        self.jobs = {}
+        self.jobs: dict[str, Any] = {}
 
     def submit_job(self, job_id: str, config: dict[str, Any]) -> None:
         """提交训练任务"""

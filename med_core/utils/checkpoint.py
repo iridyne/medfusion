@@ -17,7 +17,7 @@ def save_checkpoint(
     filepath: str | Path,
     metrics: dict[str, float] | None = None,
     scheduler: Any | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     Save model checkpoint.

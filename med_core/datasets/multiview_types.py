@@ -56,7 +56,7 @@ class MultiViewConfig:
     min_views: int = 1
     """Minimum number of views required per sample"""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate configuration."""
         if self.required_views is None:
             self.required_views = []

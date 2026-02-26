@@ -380,8 +380,8 @@ def save_checkpoint(
     optimizer: torch.optim.Optimizer,
     epoch: int,
     filepath: str,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> None:
     """
     保存检查点（仅在主进程）
 

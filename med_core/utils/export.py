@@ -54,7 +54,7 @@ class ModelExporter:
         output_names: list[str] | None = None,
         dynamic_axes: dict[str, dict[int, str]] | None = None,
         verbose: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         导出为 ONNX 格式
@@ -123,7 +123,7 @@ class ModelExporter:
         output_path: str | Path,
         method: str = "trace",
         optimize: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         导出为 TorchScript 格式
@@ -305,7 +305,7 @@ def export_model(
     input_shape: tuple[int, ...],
     format: str = "onnx",
     verify: bool = True,
-    **kwargs,
+    **kwargs: Any,
 ) -> None:
     """
     导出模型的便捷函数
@@ -386,7 +386,7 @@ class MultiModalExporter(ModelExporter):
         output_names: list[str] | None = None,
         dynamic_axes: dict[str, dict[int, str]] | None = None,
         verbose: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """导出为 ONNX 格式"""
         output_path = Path(output_path)
@@ -434,7 +434,7 @@ class MultiModalExporter(ModelExporter):
         output_path: str | Path,
         method: str = "trace",
         optimize: bool = True,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """导出为 TorchScript 格式"""
         output_path = Path(output_path)

@@ -88,9 +88,9 @@ class PerformanceBenchmark:
 
     def run(
         self,
-        func: Callable,
-        *args,
-        **kwargs,
+        func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
     ) -> BenchmarkResult:
         """
         运行基准测试

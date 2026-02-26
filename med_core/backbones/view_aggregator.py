@@ -13,7 +13,7 @@ Available aggregators:
 """
 
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -362,7 +362,7 @@ def create_view_aggregator(
         "max", "mean", "attention", "cross_attention", "learned_weight"
     ],
     feature_dim: int,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseViewAggregator:
     """
     Factory function to create view aggregators.

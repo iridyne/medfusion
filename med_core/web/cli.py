@@ -59,7 +59,7 @@ def initialize_web_server() -> None:
 
 
 @click.group()
-def web():
+def web() -> None:
     """Web UI 管理命令"""
     pass
 
@@ -141,7 +141,7 @@ def info() -> None:
 
 
 @click.group()
-def data():
+def data() -> None:
     """数据管理命令"""
     pass
 

@@ -3,11 +3,13 @@
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 
 from .config import settings
 from .database import close_db, init_db
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理"""
     # 启动时
     logger.info("正在初始化 MedFusion Web UI...")
@@ -65,7 +67,7 @@ app.add_middleware(
 
 # 版本检查中间件
 @app.middleware("http")
-async def version_check_middleware(request: Request, call_next):
+async def version_check_middleware(request: Request, call_next: Any) -> Response:
     """检查前后端版本兼容性"""
     if request.url.path.startswith("/api/"):
         client_version = request.headers.get("X-Client-Version")
@@ -81,7 +83,7 @@ async def version_check_middleware(request: Request, call_next):
 
 # 全局异常处理
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """全局异常处理器"""
     logger.error(f"未处理的异常: {exc}", exc_info=True)
     return JSONResponse(
@@ -95,7 +97,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # 健康检查端点
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, Any]:
     """健康检查"""
     return {
         "status": "healthy",
@@ -125,7 +127,7 @@ else:
     logger.warning(f"前端静态文件不存在: {static_dir}")
 
     @app.get("/")
-    async def root():
+    async def root() -> dict[str, str]:
         """根路径"""
         return {
             "message": "MedFusion Web UI",

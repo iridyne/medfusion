@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ConfigValidator:
     """Validates experiment configurations with basic checks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.errors: list[str] = []
 
     def validate(self, config: ExperimentConfig) -> list[str]:

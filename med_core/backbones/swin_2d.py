@@ -7,7 +7,7 @@ and is compatible with the timm library.
 """
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -492,7 +492,7 @@ def swin2d_tiny(
     in_channels: int = 3,
     feature_dim: int = 512,
     pretrained: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> SwinTransformer2DBackbone:
     """Create Swin Transformer 2D Tiny variant."""
     return SwinTransformer2DBackbone(
@@ -508,7 +508,7 @@ def swin2d_small(
     in_channels: int = 3,
     feature_dim: int = 512,
     pretrained: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> SwinTransformer2DBackbone:
     """Create Swin Transformer 2D Small variant."""
     return SwinTransformer2DBackbone(
@@ -524,7 +524,7 @@ def swin2d_base(
     in_channels: int = 3,
     feature_dim: int = 512,
     pretrained: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> SwinTransformer2DBackbone:
     """Create Swin Transformer 2D Base variant."""
     return SwinTransformer2DBackbone(

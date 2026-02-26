@@ -10,6 +10,7 @@ Reference:
 """
 
 from collections.abc import Sequence
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -440,7 +441,7 @@ class SwinTransformer3D(nn.Module):
         norm_layer: type = nn.LayerNorm,
         use_checkpoint: bool = False,
         spatial_dims: int = 3,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__()
         if window_size is None:

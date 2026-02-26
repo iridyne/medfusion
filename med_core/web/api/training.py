@@ -190,7 +190,7 @@ async def stop_training(
 
 
 @router.websocket("/ws/{job_id}")
-async def training_websocket(websocket: WebSocket, job_id: str):
+async def training_websocket(websocket: WebSocket, job_id: str) -> None:
     """训练任务 WebSocket 连接"""
     await websocket.accept()
     logger.info(f"WebSocket 连接已建立: {job_id}")

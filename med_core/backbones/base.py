@@ -21,7 +21,7 @@ class BaseBackbone(ABC, nn.Module):
     - output_dim: Property returning the output feature dimension
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._output_dim: int = 0
 

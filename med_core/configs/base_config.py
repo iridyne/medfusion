@@ -272,7 +272,7 @@ class ExperimentConfig(BaseConfig):
     training: TrainingConfig = field(default_factory=TrainingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Post-initialization setup."""
         # Create output directories
         output_path = Path(self.logging.output_dir)

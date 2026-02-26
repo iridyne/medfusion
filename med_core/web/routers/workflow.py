@@ -71,7 +71,7 @@ class WorkflowStatusResponse(BaseModel):
 
 
 @router.post("/validate", response_model=WorkflowValidateResponse)
-async def validate_workflow(request: WorkflowValidateRequest):
+async def validate_workflow(request: WorkflowValidateRequest) -> WorkflowValidateResponse:
     """
     验证工作流合法性
 
@@ -95,7 +95,7 @@ async def validate_workflow(request: WorkflowValidateRequest):
 
 
 @router.post("/execute", response_model=WorkflowExecuteResponse)
-async def execute_workflow(request: WorkflowExecuteRequest):
+async def execute_workflow(request: WorkflowExecuteRequest) -> WorkflowExecuteResponse:
     """
     执行工作流
 
@@ -136,7 +136,7 @@ async def execute_workflow(request: WorkflowExecuteRequest):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-async def _execute_workflow_background(workflow_id: str, engine: WorkflowEngine):
+async def _execute_workflow_background(workflow_id: str, engine: WorkflowEngine) -> None:
     """后台执行工作流"""
     try:
         logger.info(f"Starting background execution for workflow {workflow_id}")
@@ -147,7 +147,7 @@ async def _execute_workflow_background(workflow_id: str, engine: WorkflowEngine)
 
 
 @router.get("/{workflow_id}/status", response_model=WorkflowStatusResponse)
-async def get_workflow_status(workflow_id: str):
+async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     """
     查询工作流执行状态
 
@@ -176,7 +176,7 @@ async def get_workflow_status(workflow_id: str):
 
 
 @router.delete("/{workflow_id}")
-async def delete_workflow(workflow_id: str):
+async def delete_workflow(workflow_id: str) -> dict[str, str]:
     """
     删除工作流执行记录
 
@@ -190,7 +190,7 @@ async def delete_workflow(workflow_id: str):
 
 
 @router.websocket("/{workflow_id}/progress")
-async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str):
+async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) -> None:
     """
     工作流执行进度 WebSocket
 
@@ -261,7 +261,7 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str):
 
 
 @router.get("/")
-async def list_workflows():
+async def list_workflows() -> dict[str, Any]:
     """
     列出所有活动的工作流
 
@@ -286,7 +286,7 @@ async def list_workflows():
 
 
 @router.get("/{workflow_id}/resources")
-async def get_workflow_resources(workflow_id: str, duration: int | None = None):
+async def get_workflow_resources(workflow_id: str, duration: int | None = None) -> dict[str, Any]:
     """
     获取工作流执行期间的资源使用统计
 
@@ -324,7 +324,7 @@ async def get_workflow_resources(workflow_id: str, duration: int | None = None):
 
 
 @router.get("/{workflow_id}/checkpoints")
-async def list_workflow_checkpoints(workflow_id: str):
+async def list_workflow_checkpoints(workflow_id: str) -> dict[str, Any]:
     """
     列出工作流的所有检查点
 
@@ -352,7 +352,7 @@ async def list_workflow_checkpoints(workflow_id: str):
 
 
 @router.post("/{workflow_id}/resume")
-async def resume_workflow(workflow_id: str, checkpoint_path: str | None = None):
+async def resume_workflow(workflow_id: str, checkpoint_path: str | None = None) -> dict[str, Any]:
     """
     从检查点恢复工作流执行
 

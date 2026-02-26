@@ -9,7 +9,7 @@ Reference:
     https://arxiv.org/abs/2103.14030
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -317,7 +317,7 @@ class SwinTransformer3DBackbone(BaseVisionBackbone):
 
 # Convenience functions for creating common configurations
 def swin3d_tiny(
-    in_channels: int = 1, feature_dim: int = 128, **kwargs
+    in_channels: int = 1, feature_dim: int = 128, **kwargs: Any
 ) -> SwinTransformer3DBackbone:
     """Create a tiny 3D Swin Transformer (fastest, lowest memory)."""
     return SwinTransformer3DBackbone(
@@ -326,7 +326,7 @@ def swin3d_tiny(
 
 
 def swin3d_small(
-    in_channels: int = 1, feature_dim: int = 128, **kwargs
+    in_channels: int = 1, feature_dim: int = 128, **kwargs: Any
 ) -> SwinTransformer3DBackbone:
     """Create a small 3D Swin Transformer (balanced)."""
     return SwinTransformer3DBackbone(
@@ -335,7 +335,7 @@ def swin3d_small(
 
 
 def swin3d_base(
-    in_channels: int = 1, feature_dim: int = 128, **kwargs
+    in_channels: int = 1, feature_dim: int = 128, **kwargs: Any
 ) -> SwinTransformer3DBackbone:
     """Create a base 3D Swin Transformer (highest capacity)."""
     return SwinTransformer3DBackbone(

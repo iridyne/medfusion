@@ -272,7 +272,7 @@ class CheckpointManager:
 
     def _load_models(self, checkpoint_path: Path) -> dict[str, Any]:
         """加载模型权重"""
-        models = {}
+        models: dict[str, Any] = {}
         models_dir = checkpoint_path / "models"
 
         if not models_dir.exists():

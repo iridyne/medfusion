@@ -179,7 +179,7 @@ class EnhancedReportGenerator(ReportGenerator):
             lines.append("\\hline")
 
             # Format metrics
-            def fmt_ci(ci):
+            def fmt_ci(ci: tuple[float, float] | None) -> str:
                 if ci:
                     return f"({ci[0]:.3f}, {ci[1]:.3f})"
                 return "-"

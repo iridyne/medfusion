@@ -6,6 +6,7 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -250,7 +251,7 @@ def quantize_model(
     model: nn.Module,
     method: str = "dynamic",
     calibration_data: torch.utils.data.DataLoader | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> nn.Module:
     """
     量化模型的便捷函数
@@ -283,7 +284,7 @@ def prune_model(
     model: nn.Module,
     amount: float = 0.3,
     method: str = "unstructured",
-    **kwargs,
+    **kwargs: Any,
 ) -> nn.Module:
     """
     剪枝模型的便捷函数

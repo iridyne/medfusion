@@ -236,7 +236,7 @@ class ReportGenerator:
             style="List Bullet",
         )
 
-    def _add_experiment_details(self, doc: Document, experiments: list[dict]):
+    def _add_experiment_details(self, doc: Document, experiments: list[dict[str, Any]]) -> None:
         """Add experiment details table to Word document."""
         # Create table
         table = doc.add_table(rows=1, cols=5)
@@ -290,7 +290,7 @@ class ReportGenerator:
 
         doc.add_paragraph()
 
-    def _add_statistical_analysis(self, doc: Document, comparison_data: dict):
+    def _add_statistical_analysis(self, doc: Document, comparison_data: dict[str, Any]) -> None:
         """Add statistical analysis section to Word document."""
         stats = comparison_data.get("statistical_tests", {})
 

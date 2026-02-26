@@ -5,7 +5,7 @@ Common preprocessing functions for tabular medical data.
 """
 
 import logging
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ class TabularPreprocessor:
         self.categorical_features = categorical_features or []
         self.scaling_method = scaling_method
 
-        self.label_encoders = {}
+        self.label_encoders: dict[str, Any] = {}
         self.scaler = (
             StandardScaler() if scaling_method == "standard" else MinMaxScaler()
         )
@@ -141,7 +141,7 @@ class TabularPreprocessor:
                 le = self.label_encoders[col]
                 classes_set = set(le.classes_)
 
-                def encode_value(x, encoder=le, valid_classes=classes_set) -> int:
+                def encode_value(x: Any, encoder: Any = le, valid_classes: set[Any] = classes_set) -> int:
                     return encoder.transform([x])[0] if x in valid_classes else -1
 
                 X_cat[col] = X_cat[col].astype(str).apply(encode_value)

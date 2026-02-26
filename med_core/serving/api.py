@@ -11,12 +11,12 @@ class ModelServer:
         self.model = model
         self.model.eval()
 
-    def predict(self, data: list[float]):
+    def predict(self, data: list[float]) -> list[float]:
         with torch.no_grad():
             x = torch.tensor(data).unsqueeze(0)
             output = self.model(x)
             return output.squeeze().tolist()
 
 
-def create_server(model: nn.Module):
+def create_server(model: nn.Module) -> ModelServer:
     return ModelServer(model)

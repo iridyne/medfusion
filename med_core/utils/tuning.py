@@ -331,7 +331,7 @@ class ModelTuner:
         n_trials: int = 100,
         timeout: float | None = None,
         study_name: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         运行调优
@@ -376,12 +376,12 @@ class ModelTuner:
 
 
 def tune_hyperparameters(
-    objective_fn: Callable,
+    objective_fn: Callable[..., float],
     search_space: SearchSpace | None = None,
     n_trials: int = 100,
     direction: str = "maximize",
     study_name: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """
     超参数调优的便捷函数

@@ -8,7 +8,7 @@ Provides a flexible MLP architecture that:
 - Handles both numerical and categorical features
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -330,7 +330,7 @@ def create_tabular_backbone(
     output_dim: int = 32,
     hidden_dims: list[int] | None = None,
     backbone_type: Literal["mlp", "residual"] = "mlp",
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseTabularBackbone:
     """
     Factory function to create tabular backbones.

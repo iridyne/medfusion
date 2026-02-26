@@ -420,7 +420,7 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         image_paths = [image_dir / p for p in df[image_col]]
 
         # 掩码路径
-        mask_paths = None
+        mask_paths: list[Path | None] | None = None
         if mask_dir is not None and mask_col in df.columns:
             mask_dir = Path(mask_dir)
             mask_paths = []

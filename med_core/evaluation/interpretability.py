@@ -94,13 +94,13 @@ class GradCAM:
                 current = getattr(current, part)
         return current
 
-    def _register_hooks(self):
+    def _register_hooks(self) -> None:
         """Register forward and backward hooks."""
 
-        def forward_hook(module, input, output):
+        def forward_hook(module: Any, input: Any, output: Any) -> None:
             self.activations = output.detach()
 
-        def backward_hook(module, grad_input, grad_output):
+        def backward_hook(module: Any, grad_input: Any, grad_output: Any) -> None:
             self.gradients = grad_output[0].detach()
 
         self.target_layer.register_forward_hook(forward_hook)
