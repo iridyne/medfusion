@@ -135,7 +135,7 @@ class ResNetBackbone(BaseVisionBackbone):
 
             # Main stages (layer1-4) - use checkpointing
             main_layers = original_layers[4:]
-            if len(main_layers) > 0:
+            if main_layers:
                 x = checkpoint_sequential(
                     main_layers,
                     segments=min(segments, len(main_layers)),

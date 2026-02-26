@@ -95,11 +95,11 @@ class BaseMultiViewDataset(ABC, Dataset):
 
     def _validate_samples(self) -> None:
         """Validate that all samples meet the view requirements."""
-        invalid_samples = []
-
-        for idx, view_dict in enumerate(self.image_paths):
-            if not self.view_config.validate_sample(view_dict):
-                invalid_samples.append(idx)
+        invalid_samples = [
+            idx
+            for idx, view_dict in enumerate(self.image_paths)
+            if not self.view_config.validate_sample(view_dict)
+        ]
 
         if invalid_samples:
             logger.warning(

@@ -146,7 +146,7 @@ def visualize_attention_comparison(
     )
 
     # 确定子图数量
-    num_plots = 3 if target is None else 4
+    num_plots = 4 if target is not None else 3
 
     # 默认标题
     if titles is None:

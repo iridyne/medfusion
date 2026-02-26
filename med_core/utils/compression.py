@@ -166,10 +166,11 @@ class ModelPruner:
         """
         from torch.nn.utils import prune
 
-        parameters_to_prune = []
-        for _name, module in self.model.named_modules():
-            if isinstance(module, (nn.Linear, nn.Conv2d)):
-                parameters_to_prune.append((module, "weight"))
+        parameters_to_prune = [
+            (module, "weight")
+            for _name, module in self.model.named_modules()
+            if isinstance(module, (nn.Linear, nn.Conv2d))
+        ]
 
         if method == "l1":
             prune.global_unstructured(

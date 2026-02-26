@@ -63,10 +63,9 @@ def preprocess() -> None:
         sys.exit(1)
 
     image_paths = list(input_path.glob("*.*"))
+    valid_extensions = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"}
     image_paths = [
-        p
-        for p in image_paths
-        if p.suffix.lower() in [".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp"]
+        p for p in image_paths if p.suffix.lower() in valid_extensions
     ]
 
     if not image_paths:

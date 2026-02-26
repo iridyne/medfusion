@@ -53,11 +53,11 @@ class ConfigurationError(MedCoreError):
         invalid_value: Any = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if config_path:
-            context["config_path"] = config_path
-        if invalid_value is not None:
-            context["invalid_value"] = invalid_value
+        context = {
+            k: v
+            for k, v in [("config_path", config_path), ("invalid_value", invalid_value)]
+            if v is not None or k == "invalid_value"
+        }
 
         super().__init__(
             message=message,
@@ -77,11 +77,11 @@ class DatasetError(MedCoreError):
         sample_id: str | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if dataset_path:
-            context["dataset_path"] = dataset_path
-        if sample_id:
-            context["sample_id"] = sample_id
+        context = {
+            k: v
+            for k, v in [("dataset_path", dataset_path), ("sample_id", sample_id)]
+            if v
+        }
 
         super().__init__(
             message=message,
@@ -125,9 +125,7 @@ class ModelError(MedCoreError):
         model_name: str | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if model_name:
-            context["model_name"] = model_name
+        context = {"model_name": model_name} if model_name else {}
 
         super().__init__(
             message=message,
@@ -201,11 +199,11 @@ class TrainingError(MedCoreError):
         step: int | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if epoch is not None:
-            context["epoch"] = epoch
-        if step is not None:
-            context["step"] = step
+        context = {
+            k: v
+            for k, v in [("epoch", epoch), ("step", step)]
+            if v is not None
+        }
 
         super().__init__(
             message=message,
@@ -224,9 +222,7 @@ class CheckpointError(MedCoreError):
         checkpoint_path: str | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if checkpoint_path:
-            context["checkpoint_path"] = checkpoint_path
+        context = {"checkpoint_path": checkpoint_path} if checkpoint_path else {}
 
         super().__init__(
             message=message,
@@ -257,9 +253,7 @@ class PreprocessingError(MedCoreError):
         image_path: str | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if image_path:
-            context["image_path"] = image_path
+        context = {"image_path": image_path} if image_path else {}
 
         super().__init__(
             message=message,
@@ -278,9 +272,7 @@ class EvaluationError(MedCoreError):
         metric_name: str | None = None,
         suggestion: str | None = None,
     ) -> None:
-        context = {}
-        if metric_name:
-            context["metric_name"] = metric_name
+        context = {"metric_name": metric_name} if metric_name else {}
 
         super().__init__(
             message=message,

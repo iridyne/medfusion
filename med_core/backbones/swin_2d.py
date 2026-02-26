@@ -355,7 +355,7 @@ class SwinTransformer2DBackbone(BaseVisionBackbone):
             x = pos_drop(x)
 
             # Apply checkpointing to transformer stages
-            if len(layers) > 0:
+            if layers:
                 x = checkpoint_sequential(
                     layers,
                     segments=min(segments, len(layers)),

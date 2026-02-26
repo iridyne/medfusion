@@ -422,12 +422,10 @@ class MedicalAttentionSupervisedDataset(AttentionSupervisedDataset):
         mask_paths: list[Path | None] | None = None
         if mask_dir is not None and mask_col in df.columns:
             mask_dir = Path(mask_dir)
-            mask_paths = []
-            for mask_name in df[mask_col]:
-                if pd.isna(mask_name) or mask_name == "":
-                    mask_paths.append(None)
-                else:
-                    mask_paths.append(mask_dir / mask_name)
+            mask_paths = [
+                None if pd.isna(mask_name) or not mask_name else mask_dir / mask_name
+                for mask_name in df[mask_col]
+            ]
 
         # 标签
         labels = df[label_col].values

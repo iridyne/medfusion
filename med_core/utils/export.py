@@ -370,11 +370,10 @@ class MultiModalExporter(ModelExporter):
 
     def _create_dummy_inputs(self) -> tuple[Any, ...]:
         """创建示例输入"""
-        dummy_inputs = []
-        for shape in self.input_shapes.values():
-            dummy_input = torch.randn(1, *shape).to(self.device)
-            dummy_inputs.append(dummy_input)
-        return tuple(dummy_inputs)
+        return tuple(
+            torch.randn(1, *shape).to(self.device)
+            for shape in self.input_shapes.values()
+        )
 
     def export_onnx(
         self,

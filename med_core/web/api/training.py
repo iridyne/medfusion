@@ -179,7 +179,7 @@ async def stop_training(
     if not job:
         raise HTTPException(status_code=404, detail="训练任务不存在")
 
-    if job.status not in ["running", "paused", "queued"]:
+    if job.status not in {"running", "paused", "queued"}:
         raise HTTPException(status_code=400, detail="无法停止该任务")
 
     # TODO: 实现停止逻辑

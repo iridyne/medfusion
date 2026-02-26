@@ -209,7 +209,7 @@ class LogContext:
     def __enter__(self) -> "LogContext":
         """Enter context and set context variables."""
         current = log_context.get()
-        current = {} if current is None else current.copy()
+        current = current.copy() if current is not None else {}
         current.update(self.context)
         self.token = log_context.set(current)
         return self

@@ -482,20 +482,14 @@ async def get_confusion_matrix(experiment_id: str) -> ConfusionMatrixData:
         accuracy = experiment.metrics.accuracy
 
         # Generate realistic confusion matrix based on accuracy
-        matrix = []
-        total = 0
-        for i in range(len(classes)):
-            row = []
-            for j in range(len(classes)):
-                if i == j:
-                    # Diagonal (correct predictions)
-                    value = int(150 * accuracy)
-                else:
-                    # Off-diagonal (misclassifications)
-                    value = int(150 * (1 - accuracy) / (len(classes) - 1))
-                row.append(value)
-                total += value
-            matrix.append(row)
+        matrix = [
+            [
+                int(150 * accuracy) if i == j else int(150 * (1 - accuracy) / (len(classes) - 1))
+                for j in range(len(classes))
+            ]
+            for i in range(len(classes))
+        ]
+        total = sum(sum(row) for row in matrix)
 
         return ConfusionMatrixData(
             classes=classes,

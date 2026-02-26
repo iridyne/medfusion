@@ -214,7 +214,7 @@ class MedicalMultiViewDataset(BaseMultiViewDataset):
                 img_name = row[col_name]
 
                 # Handle missing view (NaN or empty string)
-                if pd.isna(img_name) or str(img_name).strip() == "":
+                if pd.isna(img_name) or not str(img_name).strip():
                     view_dict[view_name] = None
                     continue
 

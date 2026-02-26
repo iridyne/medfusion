@@ -90,7 +90,10 @@ class MultiViewConfig:
             True if sample is valid, False otherwise
         """
         # Check required views
-        if not all(view in view_dict and view_dict[view] is not None for view in self.required_views):
+        if not all(
+            view in view_dict and view_dict[view] is not None
+            for view in self.required_views
+        ):
             return False
 
         # Check minimum views

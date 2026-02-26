@@ -81,17 +81,12 @@ class BaseViewAggregator(ABC, nn.Module):
         stacked = torch.stack(features_list, dim=1)  # (B, num_views, D)
 
         if view_mask is not None:
-            mask_list = []
-            for name in view_names:
-                if name in view_mask:
-                    mask_list.append(view_mask[name])
-                else:
-                    # Default to all valid
-                    mask_list.append(
-                        torch.ones(
-                            stacked.size(0), device=stacked.device, dtype=torch.bool,
-                        ),
-                    )
+            mask_list = [
+                view_mask[name]
+                if name in view_mask
+                else torch.ones(stacked.size(0), device=stacked.device, dtype=torch.bool)
+                for name in view_names
+            ]
             masks = torch.stack(mask_list, dim=1)  # (B, num_views)
         else:
             masks = None
