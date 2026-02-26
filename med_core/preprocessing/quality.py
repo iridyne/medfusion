@@ -89,11 +89,14 @@ def compute_laplacian_variance(image: np.ndarray) -> float:
     # Pad image
     padded = np.pad(image, 1, mode="reflect")
 
-    # Apply Laplacian
-    laplacian = np.zeros_like(image)
-    for i in range(3):
-        for j in range(3):
-            laplacian += laplacian_kernel[i, j] * padded[i : i + h, j : j + w]
+    # Apply Laplacian (vectorized)
+    laplacian = (
+        laplacian_kernel[0, 1] * padded[0:h, 1 : w + 1]
+        + laplacian_kernel[1, 0] * padded[1 : h + 1, 0:w]
+        + laplacian_kernel[1, 1] * padded[1 : h + 1, 1 : w + 1]
+        + laplacian_kernel[1, 2] * padded[1 : h + 1, 2 : w + 2]
+        + laplacian_kernel[2, 1] * padded[2 : h + 2, 1 : w + 1]
+    )
 
     return float(laplacian.var())
 
@@ -186,18 +189,24 @@ def estimate_noise(image: np.ndarray) -> float:
         image = image / 255.0
 
     # Simple noise estimation using local variance
-    # Compute variance in small windows
+    # Compute variance in small windows (vectorized)
     h, w = image.shape
     window_size = 3
 
-    local_vars = []
-    for i in range(0, h - window_size, window_size):
-        for j in range(0, w - window_size, window_size):
-            window = image[i : i + window_size, j : j + window_size]
-            local_vars.append(window.var())
+    # Reshape into non-overlapping blocks
+    h_blocks = h // window_size
+    w_blocks = w // window_size
 
-    # Use median of local variances as noise estimate
-    noise = float(np.sqrt(np.median(local_vars))) if local_vars else 0.0
+    if h_blocks > 0 and w_blocks > 0:
+        # Trim to fit exact blocks
+        trimmed = image[: h_blocks * window_size, : w_blocks * window_size]
+        # Reshape to (h_blocks, window_size, w_blocks, window_size)
+        blocks = trimmed.reshape(h_blocks, window_size, w_blocks, window_size)
+        # Compute variance for each block
+        local_vars = blocks.var(axis=(1, 3)).ravel()
+        noise = float(np.sqrt(np.median(local_vars)))
+    else:
+        noise = 0.0
 
     return noise
 
@@ -247,22 +256,22 @@ def detect_compression_artifacts(
     h, w = image.shape
     block_size = 8
 
-    # Compute differences at block boundaries
-    boundary_diffs = []
+    # Compute differences at block boundaries (vectorized)
+    h_boundaries = range(block_size, h - block_size, block_size)
+    v_boundaries = range(block_size, w - block_size, block_size)
 
-    # Horizontal boundaries
-    for i in range(block_size, h - block_size, block_size):
-        diff = np.abs(image[i - 1, :] - image[i, :]).mean()
-        boundary_diffs.append(diff)
+    if h_boundaries and v_boundaries:
+        # Horizontal boundaries - vectorized
+        h_indices = np.array(list(h_boundaries))
+        h_diffs = np.abs(image[h_indices - 1, :] - image[h_indices, :]).mean(axis=1)
 
-    # Vertical boundaries
-    for j in range(block_size, w - block_size, block_size):
-        diff = np.abs(image[:, j - 1] - image[:, j]).mean()
-        boundary_diffs.append(diff)
+        # Vertical boundaries - vectorized
+        v_indices = np.array(list(v_boundaries))
+        v_diffs = np.abs(image[:, v_indices - 1] - image[:, v_indices]).mean(axis=0)
 
-    if boundary_diffs:
-        # Compare boundary differences to non-boundary differences
-        avg_boundary_diff = np.mean(boundary_diffs)
+        # Combine all boundary differences
+        boundary_diffs = np.concatenate([h_diffs, v_diffs])
+        avg_boundary_diff = boundary_diffs.mean()
         overall_diff = compute_gradient_magnitude(image)
 
         if overall_diff > 0:
