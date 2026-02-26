@@ -150,7 +150,7 @@ def reduce_dict(input_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     if world_size == 1:
         return input_dict
 
-    with torch.no_grad():
+    with torch.inference_mode():
         names = sorted(input_dict.keys())
         values = [input_dict[k] for k in names]
 

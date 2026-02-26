@@ -213,7 +213,7 @@ class HierarchicalRegionExtractor(nn.Module):
             self.feature_dim = backbone.backbone_output_dim
         else:
             # Try to infer from a dummy forward pass
-            with torch.no_grad():
+            with torch.inference_mode():
                 dummy_input = torch.randn(1, 1, 32, 32, 32)
                 try:
                     dummy_output = backbone(dummy_input)

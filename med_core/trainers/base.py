@@ -189,7 +189,7 @@ class BaseTrainer(ABC):
 
             # Validation Loop
             self.model.eval()
-            with torch.no_grad():
+            with torch.inference_mode():
                 val_metrics = self._run_epoch(self.val_loader, training=False)
 
             self.on_epoch_end(train_metrics, val_metrics)

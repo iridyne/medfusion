@@ -152,7 +152,7 @@ def evaluate() -> None:
     all_labels = []
     all_probs = []
 
-    with torch.no_grad():
+    with torch.inference_mode():
         for images, tabular, labels in dataloader:
             images = images.to(device)
             tabular = tabular.to(device)

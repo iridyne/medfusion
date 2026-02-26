@@ -12,7 +12,7 @@ class ModelServer:
         self.model.eval()
 
     def predict(self, data: list[float]) -> list[float]:
-        with torch.no_grad():
+        with torch.inference_mode():
             x = torch.tensor(data).unsqueeze(0)
             output = self.model(x)
             return output.squeeze().tolist()

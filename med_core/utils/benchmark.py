@@ -294,7 +294,7 @@ class ModelBenchmark:
         dummy_input = torch.randn(batch_size, *self.input_shape).to(self.device)
 
         # 预热
-        with torch.no_grad():
+        with torch.inference_mode():
             for _ in range(10):
                 self.model(dummy_input)
 
@@ -306,7 +306,7 @@ class ModelBenchmark:
         # 测试
         start_time = time.time()
 
-        with torch.no_grad():
+        with torch.inference_mode():
             for _ in range(num_iterations):
                 self.model(dummy_input)
 

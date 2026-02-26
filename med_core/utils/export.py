@@ -218,7 +218,7 @@ class ModelExporter:
         dummy_input = torch.randn(1, *self.input_shape).to(self.device)
 
         # PyTorch 输出
-        with torch.no_grad():
+        with torch.inference_mode():
             pytorch_output = self.model(dummy_input)
 
         if isinstance(pytorch_output, tuple):
@@ -274,14 +274,14 @@ class ModelExporter:
         dummy_input = torch.randn(1, *self.input_shape).to(self.device)
 
         # 原始模型输出
-        with torch.no_grad():
+        with torch.inference_mode():
             original_output = self.model(dummy_input)
 
         if isinstance(original_output, tuple):
             original_output = original_output[0]
 
         # TorchScript 模型输出
-        with torch.no_grad():
+        with torch.inference_mode():
             loaded_output = loaded_model(dummy_input)
 
         if isinstance(loaded_output, tuple):

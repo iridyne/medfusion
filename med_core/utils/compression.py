@@ -94,7 +94,7 @@ class ModelQuantizer:
 
         # 校准
         logger.info("Calibrating model...")
-        with torch.no_grad():
+        with torch.inference_mode():
             for data, _ in calibration_data:
                 model_prepared(data)
 
