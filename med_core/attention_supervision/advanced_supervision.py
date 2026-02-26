@@ -4,6 +4,8 @@
 为 SE、ECA 和 Transformer 注意力提供监督损失。
 """
 
+from typing import Any
+
 import torch
 import torch.nn.functional as F
 
