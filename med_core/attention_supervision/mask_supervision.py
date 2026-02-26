@@ -370,7 +370,7 @@ class BBoxSupervisedAttention(MaskSupervisedAttention):
             attention_weights=attention_weights,
             features=features,
             targets=masks,
-            **kwargs: Any,
+            **kwargs,
         )
 
 
@@ -515,5 +515,5 @@ class KeypointSupervisedAttention(MaskSupervisedAttention):
             attention_weights=attention_weights,
             features=features,
             targets=masks,
-            **kwargs: Any,
+            **kwargs,
         )
