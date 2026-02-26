@@ -13,7 +13,7 @@ from med_core.shared.data_utils import (
 
 __all__ = [
     "ImagePreprocessor",
-    "normalize_intensity",
-    "crop_center",
     "apply_clahe",
+    "crop_center",
+    "normalize_intensity",
 ]

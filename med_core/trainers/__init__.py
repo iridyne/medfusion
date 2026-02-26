@@ -16,8 +16,8 @@ from med_core.trainers.multiview_trainer import (
 
 __all__ = [
     "BaseTrainer",
-    "MultimodalTrainer",
-    "create_trainer",
     "MultiViewMultimodalTrainer",
+    "MultimodalTrainer",
     "create_multiview_trainer",
+    "create_trainer",
 ]

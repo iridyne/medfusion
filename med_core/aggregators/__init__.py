@@ -13,11 +13,11 @@ from .mil import (
 )
 
 __all__ = [
-    "MeanPoolingAggregator",
-    "MaxPoolingAggregator",
     "AttentionAggregator",
-    "GatedAttentionAggregator",
     "DeepSetsAggregator",
-    "TransformerAggregator",
+    "GatedAttentionAggregator",
     "MILAggregator",
+    "MaxPoolingAggregator",
+    "MeanPoolingAggregator",
+    "TransformerAggregator",
 ]

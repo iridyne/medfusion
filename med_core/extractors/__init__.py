@@ -10,8 +10,8 @@ from .multi_region import (
 )
 
 __all__ = [
-    "MultiRegionExtractor",
-    "HierarchicalRegionExtractor",
     "AdaptiveRegionExtractor",
+    "HierarchicalRegionExtractor",
+    "MultiRegionExtractor",
     "MultiScaleRegionExtractor",
 ]

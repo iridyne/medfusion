@@ -2,4 +2,4 @@
 
 from . import datasets, experiments, models, system, training
 
-__all__ = ["system", "training", "models", "datasets", "experiments"]
+__all__ = ["datasets", "experiments", "models", "system", "training"]

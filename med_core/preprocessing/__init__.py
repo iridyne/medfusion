@@ -22,10 +22,10 @@ from med_core.preprocessing.quality import (
 
 __all__ = [
     "ImagePreprocessor",
-    "normalize_intensity",
-    "crop_center",
+    "QualityMetrics",
     "apply_clahe",
     "assess_image_quality",
+    "crop_center",
     "detect_artifacts",
-    "QualityMetrics",
+    "normalize_intensity",
 ]

@@ -277,9 +277,9 @@ def estimate_memory_savings(
 
 
 __all__ = [
+    "CheckpointedSequential",
     "apply_gradient_checkpointing",
     "checkpoint_sequential",
     "create_checkpoint_wrapper",
-    "CheckpointedSequential",
     "estimate_memory_savings",
 ]

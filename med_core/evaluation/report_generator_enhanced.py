@@ -236,8 +236,7 @@ class EnhancedReportGenerator(ReportGenerator):
             # System info
             f.write("\\subsection*{System Information}\n\n")
             f.write("\\begin{itemize}\n")
-            for k, v in self.system_info.items():
-                f.write(f"  \\item \\textbf{{{k}:}} {v}\n")
+            f.writelines(f"  \\item \\textbf{{{k}:}} {v}\n" for k, v in self.system_info.items())
             f.write("\\end{itemize}\n\n")
 
             # Metrics table

@@ -18,7 +18,7 @@ from med_core.cli.evaluate import evaluate
 from med_core.cli.preprocess import preprocess
 from med_core.cli.train import train
 
-__all__ = ["train", "evaluate", "preprocess", "main"]
+__all__ = ["evaluate", "main", "preprocess", "train"]
 
 
 @click.group()

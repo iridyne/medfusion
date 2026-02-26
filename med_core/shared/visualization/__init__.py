@@ -14,10 +14,10 @@ from .plots import (
 )
 
 __all__ = [
-    "plot_roc_curve",
-    "plot_pr_curve",
-    "plot_confusion_matrix",
-    "plot_training_curves",
     "plot_calibration_curve",
+    "plot_confusion_matrix",
+    "plot_pr_curve",
     "plot_probability_distribution",
+    "plot_roc_curve",
+    "plot_training_curves",
 ]

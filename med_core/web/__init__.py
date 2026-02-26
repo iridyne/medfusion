@@ -8,4 +8,4 @@ __version__ = "0.3.0"
 from .app import app
 from .config import settings
 
-__all__ = ["app", "settings", "__version__"]
+__all__ = ["__version__", "app", "settings"]

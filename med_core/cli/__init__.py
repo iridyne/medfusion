@@ -11,4 +11,4 @@ from med_core.cli.evaluate import evaluate
 from med_core.cli.preprocess import preprocess
 from med_core.cli.train import train
 
-__all__ = ["train", "evaluate", "preprocess"]
+__all__ = ["evaluate", "preprocess", "train"]
