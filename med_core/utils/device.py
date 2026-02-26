@@ -1,5 +1,6 @@
 """Device management utilities for PyTorch."""
 
+from functools import lru_cache
 from typing import Any
 
 import torch
@@ -24,6 +25,7 @@ def get_device(device: str = "auto") -> torch.device:
     return torch.device(device)
 
 
+@lru_cache(maxsize=1)
 def get_device_info() -> dict[str, Any]:
     """
     Get information about available devices.
