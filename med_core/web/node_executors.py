@@ -406,6 +406,6 @@ class ExecutorFactory:
         return executor_class(data_dir)
 
     @classmethod
-    def register(cls, node_type: str, executor_class: type):
+    def register(cls, node_type: str, executor_class: type) -> None:
         """注册新的执行器"""
         cls._executors[node_type] = executor_class
