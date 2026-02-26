@@ -50,7 +50,7 @@ class ChannelAttentionSupervision(BaseAttentionSupervision):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算通道注意力监督损失
@@ -150,7 +150,7 @@ class SpatialAttentionSupervision(BaseAttentionSupervision):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算空间注意力监督损失
@@ -258,7 +258,7 @@ class TransformerAttentionSupervision(BaseAttentionSupervision):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算 Transformer 注意力监督损失
@@ -390,7 +390,7 @@ class HybridAttentionSupervision(BaseAttentionSupervision):
         attention_weights: dict[str, torch.Tensor],
         features: torch.Tensor,
         targets: dict[str, torch.Tensor] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算混合注意力监督损失
@@ -457,7 +457,7 @@ class HybridAttentionSupervision(BaseAttentionSupervision):
 def create_attention_supervision(
     supervision_type: str,
     loss_weight: float = 0.1,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseAttentionSupervision:
     """
     创建注意力监督的工厂函数

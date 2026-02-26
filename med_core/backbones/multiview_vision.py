@@ -306,7 +306,7 @@ def create_multiview_vision_backbone(
     aggregator_type: str = "attention",
     share_weights: bool = True,
     view_names: list[str] | None = None,
-    **backbone_kwargs,
+    **backbone_kwargs: Any,
 ) -> MultiViewVisionBackbone:
     """
     Factory function to create a multi-view vision backbone.

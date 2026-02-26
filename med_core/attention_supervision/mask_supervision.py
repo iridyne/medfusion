@@ -4,6 +4,8 @@
 使用数据集中的分割掩码来监督模型的注意力权重。
 """
 
+from typing import Any
+
 import torch
 import torch.nn.functional as F
 
@@ -128,7 +130,7 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失
@@ -331,7 +333,7 @@ class BBoxSupervisedAttention(MaskSupervisedAttention):
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
         image_size: tuple[int, int] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失
@@ -368,7 +370,7 @@ class BBoxSupervisedAttention(MaskSupervisedAttention):
             attention_weights=attention_weights,
             features=features,
             targets=masks,
-            **kwargs,
+            **kwargs: Any,
         )
 
 
@@ -478,7 +480,7 @@ class KeypointSupervisedAttention(MaskSupervisedAttention):
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
         image_size: tuple[int, int] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失
@@ -513,5 +515,5 @@ class KeypointSupervisedAttention(MaskSupervisedAttention):
             attention_weights=attention_weights,
             features=features,
             targets=masks,
-            **kwargs,
+            **kwargs: Any,
         )

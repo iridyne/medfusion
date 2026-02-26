@@ -31,7 +31,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
     Single-view inputs are still supported for backward compatibility.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         # Track if we're using multi-view
@@ -49,7 +49,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
             self.all_view_names = self.config.data.view_names
             self.current_active_views = set(self.initial_views)
 
-    def on_epoch_start(self):
+    def on_epoch_start(self) -> None:
         """Handle progressive training stages and progressive view training."""
         super().on_epoch_start()
 
@@ -57,7 +57,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
         if self.use_progressive_views:
             self._update_active_views()
 
-    def _update_active_views(self):
+    def _update_active_views(self) -> None:
         """Update active views based on current epoch."""
         epoch = self.current_epoch
 

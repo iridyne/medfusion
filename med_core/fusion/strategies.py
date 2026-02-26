@@ -9,7 +9,7 @@ Provides various strategies for combining vision and tabular features:
 - BilinearFusion: Bilinear pooling
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn as nn
@@ -469,7 +469,7 @@ def create_fusion_module(
     vision_dim: int,
     tabular_dim: int,
     output_dim: int = 96,
-    **kwargs,
+    **kwargs: Any,
 ) -> BaseFusion:
     """
     Factory function to create fusion modules.

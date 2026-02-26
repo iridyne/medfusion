@@ -207,7 +207,7 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) ->
 
     try:
         # 定义进度回调
-        async def progress_callback(node_id: str, status: NodeStatus, progress: float):
+        async def progress_callback(node_id: str, status: NodeStatus, progress: float) -> None:
             await websocket.send_json(
                 {
                     "node_id": node_id,

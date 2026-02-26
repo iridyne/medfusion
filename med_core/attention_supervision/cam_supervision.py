@@ -4,6 +4,8 @@
 使用类激活图来自监督注意力，无需分割掩码标注。
 """
 
+from typing import Any
+
 import torch
 import torch.nn.functional as F
 
@@ -126,7 +128,7 @@ class CAMSelfSupervision(BaseAttentionSupervision):
         targets: torch.Tensor | None = None,
         classifier_weights: torch.Tensor | None = None,
         predicted_class: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力自监督损失
@@ -289,7 +291,7 @@ class GradCAMSupervision(BaseAttentionSupervision):
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
         feature_gradients: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失

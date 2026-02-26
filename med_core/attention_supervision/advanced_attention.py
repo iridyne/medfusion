@@ -512,7 +512,7 @@ class TransformerAttention2D(nn.Module):
 def create_attention_module(
     attention_type: str,
     channels: int,
-    **kwargs,
+    **kwargs: Any,
 ) -> nn.Module:
     """
     创建注意力模块的工厂函数

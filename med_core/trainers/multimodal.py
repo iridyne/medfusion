@@ -28,7 +28,7 @@ class MultimodalTrainer(BaseTrainer):
     - Dictionary outputs from MultimodalFusionModel
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # Filter out parameters that should come from config
         kwargs.pop("log_dir", None)
         super().__init__(*args, **kwargs)

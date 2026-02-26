@@ -236,7 +236,7 @@ def create_fusion_model(
     dropout: float = 0.4,
     use_auxiliary_heads: bool = True,
     pretrained: bool = True,
-    **kwargs,
+    **kwargs: Any,
 ) -> MultiModalFusionModel:
     """
     Factory function to create a complete multimodal fusion model.

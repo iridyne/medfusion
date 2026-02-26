@@ -258,7 +258,7 @@ def create_multiview_fusion_model(
     aggregator_type: str = "attention",
     share_weights: bool = True,
     view_names: list[str] | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> MultiViewMultiModalFusionModel:
     """
     Factory function to create a complete multi-view multimodal fusion model.

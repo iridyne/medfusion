@@ -4,6 +4,8 @@
 将图像分成多个patches，自动学习哪些patches重要。
 """
 
+from typing import Any
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -273,7 +275,7 @@ class MILSupervision(BaseAttentionSupervision):
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
         grid_size: tuple[int, int] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失

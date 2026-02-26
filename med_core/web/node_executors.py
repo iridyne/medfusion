@@ -294,7 +294,7 @@ class TrainingExecutor(NodeExecutor):
             logger.error(f"Training execution failed: {e}")
             raise NodeExecutionError(f"训练失败: {e}") from e
 
-    async def _train_async(self, trainer, progress_callback: Callable | None = None):
+    async def _train_async(self, trainer: Any, progress_callback: Callable | None = None) -> Any:
         """异步训练"""
         loop = asyncio.get_event_loop()
 
@@ -369,7 +369,7 @@ class EvaluationExecutor(NodeExecutor):
             logger.error(f"Evaluation execution failed: {e}")
             raise NodeExecutionError(f"评估失败: {e}") from e
 
-    async def _evaluate_async(self, evaluator, metrics):
+    async def _evaluate_async(self, evaluator: Any, metrics: Any) -> Any:
         """异步评估"""
         loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(None, evaluator.evaluate, metrics)

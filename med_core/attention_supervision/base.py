@@ -56,7 +56,7 @@ class BaseAttentionSupervision(ABC, nn.Module):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         计算注意力监督损失
@@ -77,7 +77,7 @@ class BaseAttentionSupervision(ABC, nn.Module):
         attention_weights: torch.Tensor,
         features: torch.Tensor,
         targets: torch.Tensor | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> AttentionLoss:
         """
         前向传播
