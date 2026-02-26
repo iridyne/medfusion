@@ -37,8 +37,8 @@ class MultiViewConfig:
     view_names: list[str] = field(default_factory=lambda: ["default"])
     """List of expected view names (e.g., ["axial", "coronal", "sagittal"])"""
 
-    required_views: list[str] | None = None
-    """Views that must be present. None means all views are optional."""
+    required_views: list[str] = field(default_factory=list)
+    """Views that must be present. Empty list means all views are optional."""
 
     # Missing view handling
     handle_missing: Literal["skip", "zero", "duplicate"] = "zero"
@@ -58,9 +58,6 @@ class MultiViewConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration."""
-        if self.required_views is None:
-            self.required_views = []
-
         # Validate required views are in view_names
         for view in self.required_views:
             if view not in self.view_names:
@@ -93,9 +90,8 @@ class MultiViewConfig:
             True if sample is valid, False otherwise
         """
         # Check required views
-        for view in self.required_views:
-            if view not in view_dict or view_dict[view] is None:
-                return False
+        if not all(view in view_dict and view_dict[view] is not None for view in self.required_views):
+            return False
 
         # Check minimum views
         available_views = sum(1 for v in view_dict.values() if v is not None)
