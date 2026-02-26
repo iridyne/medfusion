@@ -12,8 +12,8 @@ Reference:
 from typing import Any, Literal
 
 import torch
-from torch import nn
 from einops import rearrange
+from torch import nn
 
 from med_core.backbones.base import BaseVisionBackbone
 

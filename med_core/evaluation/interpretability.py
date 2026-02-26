@@ -11,8 +11,8 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 logger = logging.getLogger(__name__)
 

@@ -5,6 +5,7 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections import deque
@@ -116,10 +117,8 @@ class ResourceMonitor:
         self.monitoring = False
         if self.monitor_task:
             self.monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.monitor_task
-            except asyncio.CancelledError:
-                pass
         logger.info("Resource monitor stopped")
 
     async def _monitor_loop(self) -> None:

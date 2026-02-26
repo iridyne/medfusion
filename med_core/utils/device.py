@@ -58,7 +58,7 @@ def move_to_device(obj: Any, device: torch.device) -> Any:
     Returns:
         Object moved to device
     """
-    if isinstance(obj, torch.Tensor) or isinstance(obj, torch.nn.Module):
+    if isinstance(obj, (torch.Tensor, torch.nn.Module)):
         return obj.to(device)
     if isinstance(obj, dict):
         return {k: move_to_device(v, device) for k, v in obj.items()}

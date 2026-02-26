@@ -7,8 +7,8 @@ multi-label classification, and ordinal classification.
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class ClassificationHead(nn.Module):

@@ -77,7 +77,7 @@ class DataLoaderExecutor(NodeExecutor):
 
             split = node_data.get("split", "train")
             batch_size = node_data.get("batchSize", 32)
-            shuffle = node_data.get("shuffle", True if split == "train" else False)
+            shuffle = node_data.get("shuffle", split == "train")
             num_workers = node_data.get("numWorkers", 4)
             seed = node_data.get("seed")
 
@@ -109,7 +109,7 @@ class DataLoaderExecutor(NodeExecutor):
                 batch_size=batch_size,
                 shuffle=shuffle,
                 num_workers=num_workers,
-                pin_memory=True if self.device.type == "cuda" else False,
+                pin_memory=self.device.type == "cuda",
                 drop_last=False,
             )
 

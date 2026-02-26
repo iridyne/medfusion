@@ -99,10 +99,7 @@ class MultiViewConfig:
 
         # Check minimum views
         available_views = sum(1 for v in view_dict.values() if v is not None)
-        if available_views < self.min_views:
-            return False
-
-        return True
+        return available_views >= self.min_views
 
     def get_available_views(self, view_dict: ViewDict) -> list[str]:
         """Get list of available (non-None) views in a sample."""

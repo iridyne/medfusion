@@ -1,5 +1,6 @@
 """Web UI CLI 命令"""
 
+import contextlib
 import socket
 import webbrowser
 from pathlib import Path
@@ -102,10 +103,8 @@ def start(host: str, port: int | None, auth: bool, token: str | None, no_browser
 
     # 自动打开浏览器
     if not no_browser and host == "127.0.0.1":
-        try:
+        with contextlib.suppress(Exception):
             webbrowser.open(f"http://{host}:{port}")
-        except Exception:
-            pass
 
     # 启动服务器
     try:

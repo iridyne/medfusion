@@ -12,8 +12,10 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
 
+from .api import datasets, models, system, training
 from .config import settings
 from .database import close_db, init_db
+from .routers import experiments, workflow_router
 
 # 配置日志
 logging.basicConfig(
@@ -108,9 +110,6 @@ async def health_check() -> dict[str, Any]:
 
 
 # API 路由
-from .api import datasets, models, system, training
-from .routers import experiments, workflow_router
-
 app.include_router(system.router, prefix="/api/system", tags=["系统"])
 app.include_router(training.router, prefix="/api/training", tags=["训练"])
 app.include_router(models.router, prefix="/api/models", tags=["模型"])

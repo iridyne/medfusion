@@ -7,8 +7,8 @@
 from typing import Any
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 from med_core.attention_supervision.base import (
     AttentionLoss,

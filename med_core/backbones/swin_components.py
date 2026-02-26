@@ -13,10 +13,10 @@ from collections.abc import Sequence
 from typing import Any
 
 import torch
-from torch import nn
 import torch.nn.functional as F
-from torch.utils import checkpoint
 from einops import rearrange
+from torch import nn
+from torch.utils import checkpoint
 
 
 def window_partition(x: torch.Tensor, window_size: Sequence[int]) -> torch.Tensor:

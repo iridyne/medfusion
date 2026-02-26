@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from torch import nn
 import torch.quantization as quant
+from torch import nn
 
 logger = logging.getLogger(__name__)
 

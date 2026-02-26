@@ -297,7 +297,7 @@ class MultimodalTrainer(BaseTrainer):
             )
         else:
             fused_features = torch.cat([vision_features, tabular_features], dim=1)
-            fusion_aux = {}
+            _ = {}  # fusion_aux placeholder
 
         # Classification
         if hasattr(self.model, "classifier"):

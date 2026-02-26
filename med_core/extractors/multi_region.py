@@ -6,8 +6,8 @@ This module provides extractors that can process multiple regions of interest
 """
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class MultiRegionExtractor(nn.Module):

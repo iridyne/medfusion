@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 
 @dataclass
