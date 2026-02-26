@@ -138,7 +138,7 @@ jobs:
           extras: "dev"
 
       - name: Install security tools
-        run: uv pip install bandit==1.7.5 safety==3.0.1
+        run: uv pip install pbr bandit==1.7.5 safety
 
       - name: Run bandit (security linter)
         run: |
