@@ -23,28 +23,73 @@
 git clone https://github.com/yourusername/medfusion.git
 cd medfusion
 
-# 安装依赖（使用 uv）
+# 安装依赖（推荐使用 uv）
 uv sync
 
+# 安装开发依赖
+uv sync --extra dev
+
+# 安装 Web UI 依赖
+uv sync --extra web
+
 # 或使用 pip
-pip install -e .
+pip install -e ".[dev,web]"
 ```
 
-### 训练模型
+### 基础使用
 
 ```bash
-# 使用默认配置训练
-uv run medfusion-train --config configs/default.yaml
+# 训练模型
+uv run med-train --config configs/default.yaml
 
-# 自定义配置
-uv run medfusion-train --config configs/multiview_resnet.yaml
+# 评估模型
+uv run med-evaluate --checkpoint outputs/best_model.pth
+
+# 数据预处理
+uv run med-preprocess --data-dir data/raw
 ```
 
 ### 启动 Web UI
 
 ```bash
+# 使用启动脚本
 ./start-webui.sh
+
+# 或手动启动
+uv run python -m med_core.web.cli web
+
 # 访问 http://localhost:8000
+```
+
+### 代码示例
+
+**使用模型构建器创建多模态模型：**
+
+```python
+from med_core.models import MultiModalModelBuilder
+
+# 构建模型
+builder = MultiModalModelBuilder(num_classes=2)
+builder.add_modality("ct", backbone="swin3d_tiny", input_channels=1)
+builder.add_modality("pathology", backbone="resnet50", pretrained=True)
+builder.set_fusion("attention", hidden_dim=256)
+builder.set_head("classification")
+model = builder.build()
+
+# 训练
+outputs = model({"ct": ct_tensor, "pathology": path_tensor})
+```
+
+**从配置文件构建模型：**
+
+```python
+from med_core.models import build_model_from_config
+import yaml
+
+with open("configs/smurf_config.yaml") as f:
+    config = yaml.safe_load(f)
+
+model = build_model_from_config(config)
 ```
 
 ## 📖 文档
@@ -56,18 +101,53 @@ uv run medfusion-train --config configs/multiview_resnet.yaml
 
 ## 🏗️ 架构
 
+### 核心组件
+
+MedFusion 采用高度模块化的设计，核心公式为：
+
+```
+Model = Backbones + Fusion + Head + (Optional) MIL Aggregators
+```
+
+**组件说明：**
+
+- **Backbones** (`med_core/backbones/`): 特征提取器
+  - 视觉：ResNet, EfficientNet, ViT, Swin Transformer (2D/3D), DenseNet 等 29+ 种
+  - 表格：MLP 网络，支持批归一化和 Dropout
+
+- **Fusion** (`med_core/fusion/`): 多模态融合策略
+  - 8 种融合方式：Concatenate, Gated, Attention, Cross-Attention, Bilinear, Kronecker, Fused-Attention, Self-Attention
+
+- **Heads** (`med_core/heads/`): 任务特定输出层
+  - 分类：ClassificationHead
+  - 生存分析：CoxSurvivalHead, DeepSurvivalHead, DiscreteTimeSurvivalHead
+
+- **MIL Aggregators** (`med_core/aggregators/`): 多实例学习聚合器
+  - Mean, Max, Attention-based, Gated Attention
+
+### 目录结构
+
 ```
 medfusion/
-├── med_core/              # 核心 Python 库
-│   ├── models/            # 模型架构
-│   ├── datasets/          # 数据加载器
-│   ├── trainers/          # 训练逻辑
-│   └── web/               # Web 服务
-├── med_core_rs/           # Rust 加速模块
-├── web/frontend/          # React 前端
-├── configs/               # 配置模板
-├── examples/              # 使用示例
-└── tests/                 # 测试套件
+├── med_core/                    # 核心 Python 库
+│   ├── models/                  # 模型架构（Builder, SMuRF）
+│   ├── backbones/               # 骨干网络（Vision, Tabular）
+│   ├── fusion/                  # 融合策略
+│   ├── heads/                   # 任务头（分类、生存分析）
+│   ├── aggregators/             # MIL 聚合器
+│   ├── attention_supervision/   # 注意力监督
+│   ├── datasets/                # 数据加载器
+│   ├── trainers/                # 训练器（Multimodal, MultiView）
+│   ├── evaluation/              # 评估指标和可视化
+│   ├── preprocessing/           # 数据预处理
+│   ├── utils/                   # 工具函数
+│   ├── configs/                 # 配置验证
+│   ├── web/                     # Web 服务（FastAPI）
+│   └── cli/                     # 命令行接口
+├── configs/                     # 配置模板
+├── tests/                       # 测试套件
+├── examples/                    # 使用示例
+└── docs/                        # 文档
 ```
 
 ## 🧪 测试
@@ -76,12 +156,49 @@ medfusion/
 # 运行所有测试
 uv run pytest
 
-# 运行特定测试
+# 运行特定测试文件
 uv run pytest tests/test_models.py
+
+# 运行特定测试函数
+uv run pytest tests/test_models.py::test_model_builder
+
+# 运行匹配模式的测试
+uv run pytest -k "fusion"
 
 # 生成覆盖率报告
 uv run pytest --cov=med_core --cov-report=html
+
+# 查看详细输出
+uv run pytest -v
 ```
+
+## 🔧 开发
+
+### 代码质量检查
+
+```bash
+# 代码检查
+ruff check med_core/
+
+# 自动修复问题
+ruff check med_core/ --fix
+
+# 代码格式化
+ruff format med_core/
+
+# 类型检查
+mypy med_core/
+```
+
+### 项目要求
+
+- Python 3.11+
+- PyTorch 2.0+
+- 使用现代类型注解（PEP 585/604）
+- 所有函数必须有完整的类型注解
+- 遵循 88 字符行长度限制
+
+详细开发指南请参考 [CLAUDE.md](CLAUDE.md)。
 
 ## 🤝 贡献
 
