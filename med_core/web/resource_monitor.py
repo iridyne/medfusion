@@ -270,10 +270,7 @@ class ResourceMonitor:
         Returns:
             包含 CPU、内存、GPU 信息的字典
         """
-        if not self.history:
-            snapshot = self._capture_snapshot()
-        else:
-            snapshot = self.history[-1]
+        snapshot = self._capture_snapshot() if not self.history else self.history[-1]
 
         return {
             "timestamp": datetime.fromtimestamp(snapshot.timestamp).isoformat(),

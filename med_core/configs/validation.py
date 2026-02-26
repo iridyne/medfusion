@@ -142,12 +142,14 @@ class ConfigValidator:
             )
 
         # Validate attention supervision
-        if training.use_attention_supervision:
-            if hasattr(training, "attention_loss_weight"):
-                if not 0 <= training.attention_loss_weight <= 1:
-                    self.errors.append(
-                        f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}",
-                    )
+        if (
+            training.use_attention_supervision
+            and hasattr(training, "attention_loss_weight")
+            and not 0 <= training.attention_loss_weight <= 1
+        ):
+            self.errors.append(
+                f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}",
+            )
 
     def _validate_logging_config(self, config: ExperimentConfig) -> None:
         """Validate logging configuration."""
@@ -161,10 +163,12 @@ class ConfigValidator:
     def _validate_cross_dependencies(self, config: ExperimentConfig) -> None:
         """Validate cross-dependencies between config sections."""
         # Attention supervision requires attention to be enabled
-        if config.training.use_attention_supervision:
-            if not config.model.vision.enable_attention_supervision:
-                self.errors.append(
-                    "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
+        if (
+            config.training.use_attention_supervision
+            and not config.model.vision.enable_attention_supervision
+        ):
+            self.errors.append(
+                "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
                 )
 
 

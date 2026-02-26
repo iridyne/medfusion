@@ -393,10 +393,7 @@ class BasicLayer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         for blk in self.blocks:
-            if self.use_checkpoint:
-                x = checkpoint.checkpoint(blk, x)
-            else:
-                x = blk(x)
+            x = checkpoint.checkpoint(blk, x) if self.use_checkpoint else blk(x)
 
         if self.downsample is not None:
             x = self.downsample(x)

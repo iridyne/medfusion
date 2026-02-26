@@ -275,9 +275,8 @@ class PrefetchDataset(Dataset):
         with self.queue_lock:
             for offset in range(1, self.prefetch_size + 1):
                 next_idx = idx + offset
-                if next_idx < len(self.dataset):
-                    if next_idx not in self.prefetch_queue:
-                        self.prefetch_queue.append(next_idx)
+                if next_idx < len(self.dataset) and next_idx not in self.prefetch_queue:
+                    self.prefetch_queue.append(next_idx)
 
     def __len__(self) -> int:
         return len(self.dataset)

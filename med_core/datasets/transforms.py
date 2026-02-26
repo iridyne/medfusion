@@ -64,10 +64,7 @@ class CLAHETransform:
             from PIL import Image
 
             # Convert PIL to numpy
-            if isinstance(image, Image.Image):
-                img_array = np.array(image)
-            else:
-                img_array = image
+            img_array = np.array(image) if isinstance(image, Image.Image) else image
 
             # Apply CLAHE
             if len(img_array.shape) == 3:

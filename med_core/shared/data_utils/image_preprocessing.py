@@ -133,10 +133,7 @@ def apply_clahe(
         Enhanced image as NumPy array (dtype uint8)
     """
     # Ensure we have a NumPy array (uint8)
-    if isinstance(image, Image.Image):
-        arr = np.array(image)
-    else:
-        arr = np.asarray(image)
+    arr = np.array(image) if isinstance(image, Image.Image) else np.asarray(image)
 
     if arr.dtype != np.uint8:
         arr = arr.astype(np.uint8)
@@ -292,10 +289,7 @@ class ImagePreprocessor:
         # If original input was 2D, convert to 2D grayscale by averaging channels
         if orig_was_numpy and orig_shape is not None and (len(orig_shape) == 2):
             # Convert RGB to grayscale preserving spatial dims
-            if arr.ndim == 3:
-                arr_gray = arr.mean(axis=2).astype(arr.dtype)
-            else:
-                arr_gray = arr
+            arr_gray = arr.mean(axis=2).astype(arr.dtype) if arr.ndim == 3 else arr
             # Ensure shape matches original spatial dims
             return arr_gray.reshape(orig_shape)
 

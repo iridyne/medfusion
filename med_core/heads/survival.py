@@ -493,10 +493,9 @@ class RankingSurvivalHead(nn.Module):
                     # Both events: rank by time
                     if survival_times[i] < survival_times[j]:
                         should_rank = True
-                elif events[i] == 1 and events[j] == 0:
+                elif events[i] == 1 and events[j] == 0 and survival_times[i] < survival_times[j]:
                     # i event, j censored: rank if t_i < t_j
-                    if survival_times[i] < survival_times[j]:
-                        should_rank = True
+                    should_rank = True
 
                 if should_rank:
                     # Hinge loss: max(0, margin - (risk_i - risk_j))

@@ -107,11 +107,15 @@ class ConfigValidator:
             )
 
         # Validate multiview config if enabled
-        if hasattr(data, "enable_multiview") and data.enable_multiview:
-            if hasattr(data, "view_names") and not data.view_names:
-                self.errors.append(
-                    "data.view_names cannot be empty when enable_multiview=True",
-                )
+        if (
+            hasattr(data, "enable_multiview")
+            and data.enable_multiview
+            and hasattr(data, "view_names")
+            and not data.view_names
+        ):
+            self.errors.append(
+                "data.view_names cannot be empty when enable_multiview=True",
+            )
 
     def _validate_training_config(self, config: ExperimentConfig) -> None:
         """Validate training configuration."""
@@ -149,12 +153,14 @@ class ConfigValidator:
             )
 
         # Validate attention supervision
-        if training.use_attention_supervision:
-            if hasattr(training, "attention_loss_weight"):
-                if not 0 <= training.attention_loss_weight <= 1:
-                    self.errors.append(
-                        f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}",
-                    )
+        if (
+            training.use_attention_supervision
+            and hasattr(training, "attention_loss_weight")
+            and not 0 <= training.attention_loss_weight <= 1
+        ):
+            self.errors.append(
+                f"training.attention_loss_weight must be in [0, 1], got {training.attention_loss_weight}",
+            )
 
     def _validate_logging_config(self, config: ExperimentConfig) -> None:
         """Validate logging configuration."""
@@ -173,19 +179,24 @@ class ConfigValidator:
     def _validate_cross_dependencies(self, config: ExperimentConfig) -> None:
         """Validate cross-dependencies between config sections."""
         # Attention supervision requires attention to be enabled
-        if config.training.use_attention_supervision:
-            if not config.model.vision.enable_attention_supervision:
-                self.errors.append(
-                    "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
-                )
+        if (
+            config.training.use_attention_supervision
+            and not config.model.vision.enable_attention_supervision
+        ):
+            self.errors.append(
+                "training.use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
+            )
 
         # Multiview requires consistent configuration
-        if hasattr(config.data, "enable_multiview") and config.data.enable_multiview:
-            if hasattr(config.model.vision, "enable_multiview"):
-                if not config.model.vision.enable_multiview:
-                    self.errors.append(
-                        "data.enable_multiview=True requires model.vision.enable_multiview=True",
-                    )
+        if (
+            hasattr(config.data, "enable_multiview")
+            and config.data.enable_multiview
+            and hasattr(config.model.vision, "enable_multiview")
+            and not config.model.vision.enable_multiview
+        ):
+            self.errors.append(
+                "data.enable_multiview=True requires model.vision.enable_multiview=True",
+            )
 
 
 def validate_config(config: ExperimentConfig) -> list[str]:

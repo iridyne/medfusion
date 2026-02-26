@@ -158,10 +158,7 @@ def evaluate() -> None:
             tabular = tabular.to(device)
 
             outputs = model(images, tabular)
-            if isinstance(outputs, dict):
-                logits = outputs["logits"]
-            else:
-                logits = outputs
+            logits = outputs["logits"] if isinstance(outputs, dict) else outputs
 
             probs = torch.softmax(logits, dim=1)
             preds = torch.argmax(logits, dim=1)

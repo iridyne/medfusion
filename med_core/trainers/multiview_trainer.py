@@ -206,10 +206,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
             else:
                 outputs = self.model(images, tabular)
 
-            if isinstance(outputs, dict):
-                logits = outputs["logits"]
-            else:
-                logits = outputs
+            logits = outputs["logits"] if isinstance(outputs, dict) else outputs
 
             loss = self.criterion(logits, labels)
 

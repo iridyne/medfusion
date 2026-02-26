@@ -182,10 +182,7 @@ class MultimodalTrainer(BaseTrainer):
 
             # Aggregate metrics
             for k, v in step_metrics.items():
-                if isinstance(v, torch.Tensor):
-                    val = v.item()
-                else:
-                    val = v
+                val = v.item() if isinstance(v, torch.Tensor) else v
                 # Only aggregate scalar metrics
                 if isinstance(val, (int, float)):
                     metrics_sum[k] = metrics_sum.get(k, 0.0) + val
@@ -502,10 +499,7 @@ class MultimodalTrainer(BaseTrainer):
         with autocast(self.amp_device, enabled=self.use_amp):
             outputs = self.model(images, tabular)
 
-            if isinstance(outputs, dict):
-                logits = outputs["logits"]
-            else:
-                logits = outputs
+            logits = outputs["logits"] if isinstance(outputs, dict) else outputs
 
             loss = self.criterion(logits, labels)
 

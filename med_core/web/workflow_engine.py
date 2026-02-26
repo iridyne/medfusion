@@ -283,12 +283,10 @@ class WorkflowEngine:
 
         # 检查必需的输入
         for node in self.nodes.values():
-            if node.type == "training":
-                if not self.reverse_adjacency_list.get(node.id):
-                    errors.append(f"训练节点 {node.id} 缺少输入连接")
-            elif node.type == "evaluation":
-                if not self.reverse_adjacency_list.get(node.id):
-                    errors.append(f"评估节点 {node.id} 缺少输入连接")
+            if node.type == "training" and not self.reverse_adjacency_list.get(node.id):
+                errors.append(f"训练节点 {node.id} 缺少输入连接")
+            elif node.type == "evaluation" and not self.reverse_adjacency_list.get(node.id):
+                errors.append(f"评估节点 {node.id} 缺少输入连接")
 
         return len(errors) == 0, errors
 

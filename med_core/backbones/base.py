@@ -205,10 +205,7 @@ class BaseVisionBackbone(BaseBackbone):
             pooled = feature_maps
 
         # Project to target dimension
-        if self._projection is not None:
-            features = self._projection(pooled)
-        else:
-            features = pooled
+        features = self._projection(pooled) if self._projection is not None else pooled
 
         # Return based on request
         if return_intermediates:

@@ -88,10 +88,7 @@ class GradCAM:
         parts = layer_name.split(".")
         current = self.model
         for part in parts:
-            if part.isdigit():
-                current = current[int(part)]  # type: ignore
-            else:
-                current = getattr(current, part)
+            current = current[int(part)] if part.isdigit() else getattr(current, part)  # type: ignore
         return current
 
     def _register_hooks(self) -> None:
@@ -140,10 +137,7 @@ class GradCAM:
         output = self.model(input_tensor, tabular_input)
 
         # Handle different output formats
-        if isinstance(output, dict):
-            logits = output["logits"]
-        else:
-            logits = output
+        logits = output["logits"] if isinstance(output, dict) else output
 
         if target_class is None:
             target_class = int(logits.argmax(dim=1).item())

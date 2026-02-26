@@ -196,11 +196,8 @@ def estimate_noise(image: np.ndarray) -> float:
             window = image[i : i + window_size, j : j + window_size]
             local_vars.append(window.var())
 
-    if local_vars:
-        # Use median of local variances as noise estimate
-        noise = float(np.sqrt(np.median(local_vars)))
-    else:
-        noise = 0.0
+    # Use median of local variances as noise estimate
+    noise = float(np.sqrt(np.median(local_vars))) if local_vars else 0.0
 
     return noise
 
@@ -350,10 +347,7 @@ def assess_image_quality(
         QualityMetrics object with all computed metrics
     """
     # Convert to numpy
-    if isinstance(image, Image.Image):
-        img_array = np.array(image)
-    else:
-        img_array = image
+    img_array = np.array(image) if isinstance(image, Image.Image) else image
 
     metrics = QualityMetrics()
     warnings = []
@@ -430,10 +424,7 @@ def detect_artifacts(
     Returns:
         Dictionary with artifact detection results
     """
-    if isinstance(image, Image.Image):
-        img_array = np.array(image)
-    else:
-        img_array = image
+    img_array = np.array(image) if isinstance(image, Image.Image) else image
 
     return {
         "motion_blur": detect_motion_blur(img_array),
