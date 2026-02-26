@@ -154,7 +154,7 @@ class MultiViewMultimodalTrainer(MultimodalTrainer):
 
             # View-specific auxiliary losses (if available)
             if "view_logits" in aux_outputs:
-                for _, view_logits in aux_outputs["view_logits"].items():
+                for view_logits in aux_outputs["view_logits"].values():
                     loss += 0.1 * self.criterion(view_logits, labels)
 
         metrics = {"loss": loss}

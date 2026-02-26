@@ -448,4 +448,4 @@ def format_error_report(error: Exception) -> str:
 
         return report
     else:
-        return f"❌ Error: {str(error)}\n"
+        return f"❌ Error: {error!s}\n"

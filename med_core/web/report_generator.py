@@ -404,16 +404,16 @@ class ReportGenerator:
         # Prepare table data
         data = [["Experiment", "Backbone", "Fusion", "Status", "Duration"]]
 
-        for exp in experiments:
-            data.append(
-                [
-                    exp["name"],
-                    exp["config"].get("backbone", "N/A"),
-                    exp["config"].get("fusion", "N/A"),
-                    exp["status"],
-                    f"{exp.get('training_time', exp.get('duration', 0)):.1f}s",
-                ]
-            )
+        data.extend(
+            [
+                exp["name"],
+                exp["config"].get("backbone", "N/A"),
+                exp["config"].get("fusion", "N/A"),
+                exp["status"],
+                f"{exp.get('training_time', exp.get('duration', 0)):.1f}s",
+            ]
+            for exp in experiments
+        )
 
         # Create table
         table = Table(

@@ -48,17 +48,17 @@ async def get_system_resources() -> dict[str, Any]:
     # GPU 信息
     gpu_info = []
     if torch.cuda.is_available():
-        for i in range(torch.cuda.device_count()):
-            gpu_info.append(
-                {
-                    "id": i,
-                    "name": torch.cuda.get_device_name(i),
-                    "memory_total": torch.cuda.get_device_properties(i).total_memory
-                    / 1024**3,  # GB
-                    "memory_allocated": torch.cuda.memory_allocated(i) / 1024**3,  # GB
-                    "memory_reserved": torch.cuda.memory_reserved(i) / 1024**3,  # GB
-                }
-            )
+        gpu_info = [
+            {
+                "id": i,
+                "name": torch.cuda.get_device_name(i),
+                "memory_total": torch.cuda.get_device_properties(i).total_memory
+                / 1024**3,  # GB
+                "memory_allocated": torch.cuda.memory_allocated(i) / 1024**3,  # GB
+                "memory_reserved": torch.cuda.memory_reserved(i) / 1024**3,  # GB
+            }
+            for i in range(torch.cuda.device_count())
+        ]
 
     return {
         "cpu": {
