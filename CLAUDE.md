@@ -164,6 +164,12 @@ Configs are in `configs/` directory. Key sections:
 
 **Important**: The config system uses `med_core/configs/base_config.py` for validation. All configs must conform to the schema defined there.
 
+**Validation System**: The `ConfigValidator` in `med_core/configs/validation.py` provides structured error reporting with:
+- Error codes (E001-E028) for different validation failures
+- Detailed error messages with context paths
+- Actionable suggestions for fixing issues
+- Use `validate_config_or_exit()` to validate configs before training
+
 ### Dataset System
 
 **Base Classes:**
@@ -219,8 +225,9 @@ Configs are in `configs/` directory. Key sections:
 ### Code Quality Standards
 - Line length: 88 characters (Black-compatible)
 - Target Python: 3.11+
-- Linting: ruff with E, W, F, I, B, C4, UP rules
+- Linting: ruff with E, W, F, I, B, C4, UP rules (currently 0 errors)
 - Type checking: mypy with strict settings (see pyproject.toml)
+- Current type coverage: ~488 type errors remaining (down from 678)
 
 ### Common Patterns
 
@@ -254,15 +261,20 @@ logits, aux = model(inputs)
 - End-to-end tests are in `test_end_to_end.py`
 - Mock external dependencies (file I/O, network calls)
 
-### Performance Considerations
+**Test Coverage:**
+- Total: 699 tests collected
+- Core modules: 251+ tests passing
+- Known issues: `test_export.py` requires `onnxscript` dependency
+- Run with: `uv run pytest -q` for minimal output
 
+### Performance Optimization
+
+**Quick Tips:**
 - Use `torch.cuda.amp` for mixed precision training
 - Enable `pin_memory=True` for data loaders on GPU
 - Use `num_workers > 0` for parallel data loading
 - Cache preprocessed data with `DatasetCache`
 - Profile with `torch.profiler` for bottlenecks
-
-### Performance Optimization Strategy
 
 **When facing performance issues, follow this priority order:**
 

@@ -1,0 +1,63 @@
+# 快速入门配置 - 最小化配置用于新手测试
+project_name: "quickstart"
+experiment_name: "first_test"
+seed: 42
+device: "auto"
+
+# 数据配置 - 使用 mock 数据
+data:
+  csv_path: "data/mock/metadata.csv"
+  image_dir: "data/mock"
+  image_path_column: "image_path"
+  target_column: "diagnosis"
+  numerical_features:
+    - "age"
+  categorical_features:
+    - "gender"
+
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+  image_size: 224
+  batch_size: 4  # 小 batch size 用于快速测试
+  num_workers: 0  # 避免多进程问题
+
+# 模型配置 - 最简单的架构
+model:
+  num_classes: 2
+
+  vision:
+    backbone: "resnet18"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 128
+    dropout: 0.3
+
+  tabular:
+    hidden_dims: [32]
+    output_dim: 16
+    dropout: 0.2
+
+  fusion:
+    fusion_type: "concatenate"  # 注意：不是 "concat"，而是 "concatenate"
+    hidden_dim: 144  # 128 + 16
+
+# 训练配置 - 快速测试
+training:
+  num_epochs: 3  # 只训练 3 个 epoch
+  mixed_precision: false  # 避免混合精度问题
+
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.001
+
+  scheduler:
+    scheduler: "step"
+    step_size: 1
+
+# 日志配置
+logging:
+  output_dir: "outputs/quickstart"
+  use_tensorboard: false
+  use_wandb: false

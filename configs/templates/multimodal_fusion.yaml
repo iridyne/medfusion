@@ -1,0 +1,200 @@
+# 多模态融合模板
+# 适用场景：结合多种模态数据（影像 + 病理 + 临床 + 基因组）
+# 推荐用于：综合诊断、精准医疗、多组学研究
+
+project_name: "multimodal-fusion"
+experiment_name: "multimodal_attention_v1"
+description: "多模态数据融合模型"
+tags: ["multimodal", "fusion", "comprehensive"]
+
+# 全局设置
+seed: 42
+deterministic: true
+device: "auto"
+
+# 数据配置
+data:
+  # 路径（请修改为你的数据路径）
+  data_root: "data"
+  csv_path: "data/multimodal/metadata.csv"
+
+  # 多模态数据路径
+  radiology_dir: "data/multimodal/radiology"  # CT/MRI
+  pathology_dir: "data/multimodal/pathology"  # WSI
+
+  # 列映射
+  radiology_path_column: "ct_path"
+  pathology_path_column: "wsi_path"
+  target_column: "diagnosis"
+  patient_id_column: "patient_id"
+
+  # 临床特征
+  numerical_features:
+    - "age"
+    - "bmi"
+    - "tumor_size"
+    - "psa_level"  # 前列腺特异性抗原
+  categorical_features:
+    - "gender"
+    - "smoking_status"
+    - "family_history"
+    - "treatment_history"
+
+  # 基因组特征（可选）
+  genomic_features:
+    - "brca1_mutation"
+    - "brca2_mutation"
+    - "tp53_mutation"
+
+  # 数据划分
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+
+  # 图像处理
+  radiology_size: 128  # CT/MRI 尺寸
+  pathology_size: 224  # 病理切片尺寸
+
+  # 数据加载器
+  batch_size: 16  # 多模态数据建议中等 batch
+  num_workers: 4
+  pin_memory: true
+
+  # 数据增强
+  augmentation_strength: "medium"
+
+# 模型架构
+model:
+  num_classes: 3  # 修改为你的类别数
+  use_auxiliary_heads: true  # 每个模态独立预测
+
+  # 影像模态（CT/MRI）
+  radiology:
+    backbone: "resnet3d_18"
+    pretrained: false
+    freeze_backbone: false
+    feature_dim: 256
+    dropout: 0.3
+    attention_type: "cbam"
+
+  # 病理模态（WSI）
+  pathology:
+    backbone: "resnet50"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 256
+    dropout: 0.3
+    attention_type: "cbam"
+
+    # MIL 配置（如果使用全切片图像）
+    use_mil: true
+    mil_aggregator: "attention"  # "mean", "max", "attention"
+
+  # 临床 + 基因组模态
+  tabular:
+    hidden_dims: [128, 64, 32]
+    output_dim: 64
+    dropout: 0.2
+    use_batch_norm: true
+    activation: "relu"
+
+  # 多模态融合策略
+  fusion:
+    fusion_type: "cross_attention"  # 推荐：cross_attention 或 attention
+    hidden_dim: 256
+    dropout: 0.4
+    num_heads: 8  # 多头注意力
+
+    # 模态权重初始化
+    initial_radiology_weight: 0.35
+    initial_pathology_weight: 0.35
+    initial_tabular_weight: 0.30
+
+    # 高级融合选项
+    use_modality_dropout: true  # 模态 dropout（提升鲁棒性）
+    modality_dropout_rate: 0.1
+    use_late_fusion: false  # 是否使用后期融合
+
+# 训练配置
+training:
+  num_epochs: 80
+  mixed_precision: true
+  gradient_clip: 1.0
+  label_smoothing: 0.1
+
+  # 渐进式训练（推荐用于多模态）
+  use_progressive_training: true
+  stage1_epochs: 20  # 单独训练各模态
+  stage2_epochs: 40  # 联合训练
+  stage3_epochs: 20  # 微调融合层
+
+  # 早停
+  early_stopping: true
+  patience: 15
+  monitor: "val_auc"
+  mode: "max"
+
+  # 检查点保存
+  save_top_k: 3
+  save_last: true
+
+  # 优化器
+  optimizer:
+    optimizer: "adamw"
+    learning_rate: 1.0e-4
+    weight_decay: 0.01
+
+    # 差异化学习率（多模态推荐）
+    use_differential_lr: true
+    lr_radiology: 5.0e-5
+    lr_pathology: 1.0e-4
+    lr_tabular: 1.0e-3
+    lr_fusion: 5.0e-5
+
+  # 学习率调度器
+  scheduler:
+    scheduler: "cosine"
+    warmup_epochs: 10
+    min_lr: 1.0e-6
+
+  # 多模态特定配置
+  multimodal:
+    # 模态缺失处理
+    handle_missing_modalities: true
+    missing_strategy: "zero"  # "zero", "mean", "learned"
+
+    # 辅助损失权重
+    auxiliary_loss_weight: 0.3
+
+    # 模态平衡
+    use_modality_balancing: true
+
+# 日志配置
+logging:
+  output_dir: "outputs/multimodal"
+  use_tensorboard: true
+  use_wandb: false
+  log_every_n_steps: 10
+  save_visualizations: true
+
+  # 多模态特定可视化
+  log_modality_weights: true  # 记录模态权重变化
+  log_attention_maps: true  # 记录注意力图
+  log_fusion_features: true  # 记录融合特征
+
+# 使用说明
+# 1. 修改数据路径为你的多模态数据
+# 2. 根据实际模态调整 model 配置（可以删除不需要的模态）
+# 3. 如果某些样本缺少某个模态，设置 handle_missing_modalities: true
+# 4. 推荐使用渐进式训练（use_progressive_training: true）
+# 5. 运行：uv run med-train --config configs/templates/multimodal_fusion.yaml
+#
+# 数据格式示例：
+# patient_id,ct_path,wsi_path,age,gender,diagnosis
+# P001,radiology/p001.nii.gz,pathology/p001.svs,65,M,malignant
+# P002,radiology/p002.nii.gz,pathology/p002.svs,58,F,benign
+#
+# 模态缺失示例（某些患者可能只有部分模态）：
+# P003,radiology/p003.nii.gz,,62,M,malignant  # 缺少病理数据
+# P004,,pathology/p004.svs,55,F,benign  # 缺少影像数据

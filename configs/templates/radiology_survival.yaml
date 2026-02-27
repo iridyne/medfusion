@@ -1,0 +1,154 @@
+# 影像生存分析模板
+# 适用场景：基于医学影像预测患者生存时间（如 CT、MRI）
+# 推荐用于：肿瘤预后预测、治疗效果评估
+
+project_name: "radiology-survival"
+experiment_name: "survival_swin3d_v1"
+description: "基于 3D 影像的生存分析模型"
+tags: ["radiology", "survival", "3d"]
+
+# 全局设置
+seed: 42
+deterministic: true
+device: "auto"
+
+# 数据配置
+data:
+  # 路径（请修改为你的数据路径）
+  data_root: "data"
+  csv_path: "data/radiology/survival_data.csv"
+  image_dir: "data/radiology/scans"
+
+  # 列映射
+  image_path_column: "scan_path"
+  target_column: "survival_time"  # 生存时间（天数）
+  event_column: "event"  # 事件发生标志（1=死亡，0=删失）
+  patient_id_column: "patient_id"
+
+  # 临床特征（生存分析通常需要临床信息）
+  numerical_features:
+    - "age"
+    - "tumor_size"
+    - "ki67_index"
+  categorical_features:
+    - "gender"
+    - "stage"  # 肿瘤分期
+    - "treatment_type"
+
+  # 数据划分
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+
+  # 图像处理（3D 影像）
+  image_size: 128  # 3D 体积较大，通常使用较小尺寸
+  image_channels: 1  # CT/MRI 通常是单通道
+  use_3d: true  # 启用 3D 处理
+
+  # 数据加载器（3D 数据内存占用大）
+  batch_size: 4  # 3D 数据建议小 batch
+  num_workers: 2
+  pin_memory: true
+
+  # 数据增强（3D 影像推荐轻度增强）
+  augmentation_strength: "light"
+
+# 模型架构
+model:
+  task_type: "survival"  # 生存分析任务
+  use_auxiliary_heads: false
+
+  # 视觉骨干网络（3D 影像推荐 3D CNN）
+  vision:
+    backbone: "resnet3d_18"  # 或 "swin3d_small", "efficientnet3d_b0"
+    pretrained: false  # 3D 预训练模型较少
+    freeze_backbone: false
+    feature_dim: 256
+    dropout: 0.4
+    attention_type: "se"  # 3D 注意力
+
+  # 表格骨干网络（临床特征很重要）
+  tabular:
+    hidden_dims: [128, 64, 32]
+    output_dim: 64
+    dropout: 0.3
+    use_batch_norm: true
+    activation: "relu"
+
+  # 融合模块（生存分析推荐 attention 融合）
+  fusion:
+    fusion_type: "attention"  # 或 "cross_attention", "gated"
+    hidden_dim: 128
+    dropout: 0.4
+    initial_image_weight: 0.5
+    initial_tabular_weight: 0.5
+
+  # 生存分析头
+  survival_head:
+    num_time_bins: 10  # 时间区间数量
+    use_cox: true  # 使用 Cox 比例风险模型
+    use_deep_surv: false  # 或使用深度生存网络
+
+# 训练配置
+training:
+  num_epochs: 100  # 生存分析通常需要更多 epoch
+  mixed_precision: true
+  gradient_clip: 1.0
+
+  # 早停
+  early_stopping: true
+  patience: 20
+  monitor: "val_c_index"  # C-index 是生存分析的主要指标
+  mode: "max"
+
+  # 检查点保存
+  save_top_k: 3
+  save_last: true
+
+  # 优化器
+  optimizer:
+    optimizer: "adamw"
+    learning_rate: 5.0e-5  # 3D 模型建议较小学习率
+    weight_decay: 0.01
+
+    # 差异化学习率
+    use_differential_lr: true
+    lr_backbone: 1.0e-5
+    lr_tabular: 1.0e-4
+    lr_fusion: 5.0e-5
+
+  # 学习率调度器
+  scheduler:
+    scheduler: "cosine"
+    warmup_epochs: 10
+    min_lr: 1.0e-7
+
+  # 生存分析特定配置
+  survival:
+    loss_type: "cox"  # "cox", "nll", "ranking"
+    use_censoring_weights: true  # 处理删失数据
+
+# 日志配置
+logging:
+  output_dir: "outputs/survival"
+  use_tensorboard: true
+  use_wandb: false
+  log_every_n_steps: 10
+  save_visualizations: true
+
+  # 生存分析特定可视化
+  plot_kaplan_meier: true
+  plot_risk_scores: true
+
+# 使用说明
+# 1. 修改 data.csv_path 和 data.image_dir 为你的数据路径
+# 2. 确保 CSV 包含 survival_time 和 event 列
+# 3. 根据数据调整 num_time_bins（时间区间数）
+# 4. 3D 数据内存占用大，建议使用较小的 batch_size
+# 5. 运行：uv run med-train --config configs/templates/radiology_survival.yaml
+#
+# 数据格式示例：
+# patient_id,scan_path,survival_time,event,age,gender,stage
+# P001,scans/p001.nii.gz,365,1,65,M,III
+# P002,scans/p002.nii.gz,730,0,58,F,II

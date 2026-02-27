@@ -1,0 +1,124 @@
+# 病理图像分类模板
+# 适用场景：病理切片分类任务（如肿瘤分类、组织类型识别）
+# 推荐用于：WSI patches, H&E 染色图像
+
+project_name: "pathology-classification"
+experiment_name: "pathology_resnet50_v1"
+description: "病理图像分类基线模型"
+tags: ["pathology", "classification", "baseline"]
+
+# 全局设置
+seed: 42
+deterministic: true
+device: "auto"
+
+# 数据配置
+data:
+  # 路径（请修改为你的数据路径）
+  data_root: "data"
+  csv_path: "data/pathology/metadata.csv"
+  image_dir: "data/pathology/images"
+
+  # 列映射
+  image_path_column: "image_path"
+  target_column: "label"  # 分类标签
+  patient_id_column: "patient_id"
+
+  # 临床特征（可选，如果只用图像可以留空）
+  numerical_features:
+    - "age"
+  categorical_features:
+    - "gender"
+    - "tissue_type"
+
+  # 数据划分
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  random_seed: 42
+
+  # 图像处理（病理图像通常较大）
+  image_size: 224  # 可以增加到 384 或 512
+  image_channels: 3
+
+  # 数据加载器
+  batch_size: 32  # 根据 GPU 内存调整
+  num_workers: 4
+  pin_memory: true
+
+  # 数据增强（病理图像推荐中等强度）
+  augmentation_strength: "medium"
+
+# 模型架构
+model:
+  num_classes: 2  # 修改为你的类别数
+  use_auxiliary_heads: false
+
+  # 视觉骨干网络（病理图像推荐 ResNet50 或 EfficientNet）
+  vision:
+    backbone: "resnet50"  # 或 "efficientnet_b2", "convnext_small"
+    pretrained: true
+    freeze_backbone: false  # 病理图像建议微调
+    feature_dim: 256
+    dropout: 0.3
+    attention_type: "cbam"  # 注意力机制有助于关注关键区域
+
+  # 表格骨干网络（如果不使用临床特征，可以注释掉）
+  tabular:
+    hidden_dims: [64, 32]
+    output_dim: 32
+    dropout: 0.2
+    use_batch_norm: true
+    activation: "relu"
+
+  # 融合模块（如果只用图像，可以设置为 "concatenate"）
+  fusion:
+    fusion_type: "gated"  # 或 "attention", "concatenate"
+    hidden_dim: 128
+    dropout: 0.3
+    initial_image_weight: 0.7  # 图像权重较高
+    initial_tabular_weight: 0.3
+
+# 训练配置
+training:
+  num_epochs: 50
+  mixed_precision: true
+  gradient_clip: 1.0
+  label_smoothing: 0.1  # 有助于泛化
+
+  # 早停
+  early_stopping: true
+  patience: 10
+  monitor: "val_auc"
+  mode: "max"
+
+  # 检查点保存
+  save_top_k: 3
+  save_last: true
+
+  # 优化器
+  optimizer:
+    optimizer: "adamw"
+    learning_rate: 1.0e-4
+    weight_decay: 0.01
+
+  # 学习率调度器
+  scheduler:
+    scheduler: "cosine"
+    warmup_epochs: 5
+    min_lr: 1.0e-6
+
+# 日志配置
+logging:
+  output_dir: "outputs/pathology"
+  use_tensorboard: true
+  use_wandb: false
+  log_every_n_steps: 10
+  save_visualizations: true
+
+# 使用说明
+# 1. 修改 data.csv_path 和 data.image_dir 为你的数据路径
+# 2. 修改 model.num_classes 为你的类别数
+# 3. 如果不使用临床特征，注释掉 tabular 和 fusion 部分
+# 4. 根据 GPU 内存调整 batch_size
+# 5. 运行：uv run med-train --config configs/templates/pathology_classification.yaml
