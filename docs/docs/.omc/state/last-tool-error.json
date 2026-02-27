@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"tree docs -L 2 -I '__pycache__|*.pyc|api|reference|guides|architecture|_static' --dirsfirst\",\"description\":\"查看整理后的结构\"}",
+  "error": "Exit code 2\ndocs  [error opening dir]\n\n0 directories, 0 files\n\ndocs  [error opening dir]\n\n0 directories, 0 files",
+  "timestamp": "2026-02-27T10:56:38.995Z",
+  "retry_count": 1
+}

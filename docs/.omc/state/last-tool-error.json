@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"\\\\\\nmv QUICKSTART_GUIDE.md user-guides/ && \\\\\\nmv DOCKER_GUIDE.md user-guides/ && \\\\\\nmv WEB_UI_QUICKSTART.md user-guides/ && \\\\\\necho \\\"用户文档移动完成\\\"\",\"description\":\"移动用户文档\"}",
+  "error": "Exit code 1\nmv: cannot move 'QUICKSTART_GUIDE.md' to 'user-guides/': Not a directory\n\nmv: cannot move 'QUICKSTART_GUIDE.md' to 'user-guides/': Not a directory",
+  "timestamp": "2026-02-27T10:57:14.424Z",
+  "retry_count": 1
+}
