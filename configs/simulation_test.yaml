@@ -20,7 +20,7 @@ data:
   numerical_features:
     - "age"
   categorical_features:
-    - "sex"
+    - "gender"  # 修正：使用 gender 而不是 sex
 
   train_ratio: 0.7
   val_ratio: 0.15

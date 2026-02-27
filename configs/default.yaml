@@ -13,22 +13,19 @@ device: "auto" # "auto", "cuda", "cpu", "mps"
 data:
   # 路径
   data_root: "data"
-  csv_path: "data/dataset.csv" # 包含临床数据和图像路径的 CSV 文件路径
-  image_dir: "data/images" # 图像根目录
+  csv_path: "data/mock/metadata.csv" # 使用 mock 数据作为默认示例
+  image_dir: "data/mock" # 图像根目录
 
   # 列映射
   image_path_column: "image_path"
   target_column: "diagnosis"
   patient_id_column: "patient_id"
 
-  # 使用的特征（如果为空，则自动检测或在代码中指定）
+  # 使用的特征（匹配 mock 数据的实际列）
   numerical_features:
     - "age"
-    - "weight"
-    - "marker_a"
   categorical_features:
-    - "sex"
-    - "smoking_status"
+    - "gender"
 
   # 数据划分
   train_ratio: 0.7

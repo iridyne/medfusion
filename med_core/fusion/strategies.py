@@ -9,7 +9,7 @@ Provides various strategies for combining vision and tabular features:
 - BilinearFusion: Bilinear pooling
 """
 
-from typing import Any, Literal
+from typing import Any
 
 import torch
 from torch import nn
@@ -461,11 +461,17 @@ FUSION_REGISTRY = {
     "bilinear": BilinearFusion,
 }
 
+# Aliases for common naming variations
+FUSION_ALIASES = {
+    "concat": "concatenate",
+    "attn": "attention",
+    "cross_attn": "cross_attention",
+    "gate": "gated",
+}
+
 
 def create_fusion_module(
-    fusion_type: Literal[
-        "concatenate", "gated", "attention", "cross_attention", "bilinear",
-    ],
+    fusion_type: str,  # Accept any string, validate at runtime
     vision_dim: int,
     tabular_dim: int,
     output_dim: int = 96,
@@ -493,9 +499,29 @@ def create_fusion_module(
         ...     initial_vision_weight=0.3,
         ... )
     """
+    # Check for aliases first
+    original_fusion_type = fusion_type
+    fusion_type = FUSION_ALIASES.get(fusion_type, fusion_type)
+
     if fusion_type not in FUSION_REGISTRY:
         available = list(FUSION_REGISTRY.keys())
-        raise ValueError(f"Unknown fusion type: {fusion_type}. Available: {available}")
+
+        # Provide helpful suggestions for common mistakes
+        suggestions = []
+        if original_fusion_type == "concat":
+            suggestions.append("Did you mean 'concatenate'? (not 'concat')")
+        elif original_fusion_type == "attn":
+            suggestions.append("Did you mean 'attention'? (not 'attn')")
+        elif original_fusion_type in ["gate", "gates"]:
+            suggestions.append("Did you mean 'gated'?")
+
+        error_msg = f"Unknown fusion type: '{original_fusion_type}'."
+        if suggestions:
+            error_msg += f"\n  → {suggestions[0]}"
+        error_msg += f"\n  Available types: {available}"
+        error_msg += f"\n  Common aliases: {list(FUSION_ALIASES.keys())}"
+
+        raise ValueError(error_msg)
 
     fusion_cls = FUSION_REGISTRY[fusion_type]
 
