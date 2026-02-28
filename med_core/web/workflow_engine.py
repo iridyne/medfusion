@@ -10,7 +10,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .checkpoint_manager import CheckpointManager
 from .node_executors import ExecutorFactory, NodeExecutionError
@@ -328,7 +328,7 @@ class WorkflowEngine:
 
     async def execute(
         self,
-        progress_callback: callable | None = None,
+        progress_callback: Callable[[str, str, float], None] | None = None,
         workflow_id: str | None = None,
     ) -> dict[str, Any]:
         """
