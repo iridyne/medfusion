@@ -7,10 +7,11 @@
 import asyncio
 import logging
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .checkpoint_manager import CheckpointManager
 from .node_executors import ExecutorFactory, NodeExecutionError
@@ -83,10 +84,8 @@ class WorkflowValidationError(Exception):
     """工作流验证错误"""
 
 
-
 class WorkflowExecutionError(Exception):
     """工作流执行错误"""
-
 
 
 class WorkflowEngine:
@@ -121,7 +120,9 @@ class WorkflowEngine:
             logger.info("Resource monitor enabled")
 
     async def _execute_data_loader(
-        self, node: Node, inputs: dict[str, Any],
+        self,
+        node: Node,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """执行数据加载节点"""
         logger.info(f"Loading dataset: {node.data.get('datasetId')}")
@@ -205,15 +206,24 @@ class WorkflowEngine:
                 is_input=True,
             )
             node.outputs["model"] = Port(
-                id="model", type=PortType.MODEL, node_id=node.id, is_input=False,
+                id="model",
+                type=PortType.MODEL,
+                node_id=node.id,
+                is_input=False,
             )
 
         elif node.type == "training":
             node.inputs["model"] = Port(
-                id="model", type=PortType.MODEL, node_id=node.id, is_input=True,
+                id="model",
+                type=PortType.MODEL,
+                node_id=node.id,
+                is_input=True,
             )
             node.inputs["dataset"] = Port(
-                id="dataset", type=PortType.DATASET, node_id=node.id, is_input=True,
+                id="dataset",
+                type=PortType.DATASET,
+                node_id=node.id,
+                is_input=True,
             )
             node.outputs["trained_model"] = Port(
                 id="trained_model",
@@ -222,21 +232,36 @@ class WorkflowEngine:
                 is_input=False,
             )
             node.outputs["history"] = Port(
-                id="history", type=PortType.HISTORY, node_id=node.id, is_input=False,
+                id="history",
+                type=PortType.HISTORY,
+                node_id=node.id,
+                is_input=False,
             )
 
         elif node.type == "evaluation":
             node.inputs["model"] = Port(
-                id="model", type=PortType.TRAINED_MODEL, node_id=node.id, is_input=True,
+                id="model",
+                type=PortType.TRAINED_MODEL,
+                node_id=node.id,
+                is_input=True,
             )
             node.inputs["test_data"] = Port(
-                id="test_data", type=PortType.DATASET, node_id=node.id, is_input=True,
+                id="test_data",
+                type=PortType.DATASET,
+                node_id=node.id,
+                is_input=True,
             )
             node.outputs["metrics"] = Port(
-                id="metrics", type=PortType.METRICS, node_id=node.id, is_input=False,
+                id="metrics",
+                type=PortType.METRICS,
+                node_id=node.id,
+                is_input=False,
             )
             node.outputs["report"] = Port(
-                id="report", type=PortType.REPORT, node_id=node.id, is_input=False,
+                id="report",
+                type=PortType.REPORT,
+                node_id=node.id,
+                is_input=False,
             )
 
     def validate(self) -> tuple[bool, list[str]]:
@@ -285,7 +310,9 @@ class WorkflowEngine:
         for node in self.nodes.values():
             if node.type == "training" and not self.reverse_adjacency_list.get(node.id):
                 errors.append(f"训练节点 {node.id} 缺少输入连接")
-            elif node.type == "evaluation" and not self.reverse_adjacency_list.get(node.id):
+            elif node.type == "evaluation" and not self.reverse_adjacency_list.get(
+                node.id
+            ):
                 errors.append(f"评估节点 {node.id} 缺少输入连接")
 
         return len(errors) == 0, errors
@@ -371,7 +398,9 @@ class WorkflowEngine:
                     node.status = NodeStatus.RUNNING
                     if progress_callback:
                         await progress_callback(
-                            node_id, NodeStatus.RUNNING, (i + 1) / len(execution_order),
+                            node_id,
+                            NodeStatus.RUNNING,
+                            (i + 1) / len(execution_order),
                         )
 
                     # 收集输入数据
@@ -462,7 +491,9 @@ class WorkflowEngine:
         raise WorkflowExecutionError(f"未知的节点类型: {node.type}")
 
     async def _execute_data_loader(
-        self, node: Node, inputs: dict[str, Any],
+        self,
+        node: Node,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """执行数据加载节点"""
         try:
@@ -474,7 +505,9 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"数据加载节点执行失败: {e}") from e
 
     async def _execute_model(
-        self, node: Node, inputs: dict[str, Any],
+        self,
+        node: Node,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """执行模型构建节点"""
         try:
@@ -486,7 +519,9 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"模型构建节点执行失败: {e}") from e
 
     async def _execute_training(
-        self, node: Node, inputs: dict[str, Any],
+        self,
+        node: Node,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """执行训练节点"""
         try:
@@ -498,7 +533,9 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"训练节点执行失败: {e}") from e
 
     async def _execute_evaluation(
-        self, node: Node, inputs: dict[str, Any],
+        self,
+        node: Node,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """执行评估节点"""
         try:
@@ -510,7 +547,10 @@ class WorkflowEngine:
             raise WorkflowExecutionError(f"评估节点执行失败: {e}") from e
 
     async def _save_checkpoint(
-        self, workflow_id: str, results: dict[str, Any], failed: bool = False,
+        self,
+        workflow_id: str,
+        results: dict[str, Any],
+        failed: bool = False,
     ) -> None:
         """保存检查点"""
         try:
