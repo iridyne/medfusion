@@ -1,2 +1,6 @@
 .archive/
 _build/
+
+# Presentations
+presentations/node_modules/
+presentations/dist/
