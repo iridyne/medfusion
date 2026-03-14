@@ -5,9 +5,6 @@ hero:
   name: MedFusion
   text: 医学多模态深度学习框架
   tagline: 高度模块化 · 29+ 骨干网络 · 5+ 融合策略 · 配置驱动
-  image:
-    src: /logo.svg
-    alt: MedFusion
   actions:
     - theme: brand
       text: 📚 开始学习教程
@@ -30,7 +27,7 @@ features:
 
   - icon: 🎯
     title: 配置驱动
-    details: 通过 YAML ��置文件快速切换组件，无需修改代码。所有模型架构可通过配置定义。
+    details: 通过 YAML 配置文件快速切换组件，无需修改代码。所有模型架构可通过配置定义。
 
   - icon: 🌐
     title: Web UI
