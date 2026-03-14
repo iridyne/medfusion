@@ -14,7 +14,6 @@ export default defineConfig({
     plugins: [
       AutoSidebar({
         // 自动生成侧边栏
-        path: '/contents',
         collapsed: false,
       })
     ]
@@ -28,9 +27,9 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '教程', link: '/contents/tutorials/README' },
-      { text: '快速开始', link: '/contents/user-guides/QUICKSTART_GUIDE' },
+      { text: '新手指南', link: '/contents/user-guides/QUICKSTART_GUIDE' },
       { text: 'API 文档', link: '/contents/api/med_core' },
-      { text: '指南', link: '/contents/guides/quick_reference' },
+      { text: '功能指南', link: '/contents/guides/quick_reference' },
       { text: 'GitHub', link: 'https://github.com/iridite/medfusion' }
     ],
 

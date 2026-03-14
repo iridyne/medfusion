@@ -143,10 +143,3 @@ uv run med-evaluate --checkpoint outputs/best_model.pth
 
 - [GitHub Issues](https://github.com/iridite/medfusion/issues) - 问题反馈
 - [GitHub Discussions](https://github.com/iridite/medfusion/discussions) - 讨论交流
-
----
-
-<div style="text-align: center; margin-top: 2rem; color: var(--vp-c-text-2);">
-  <p>Released under the MIT License</p>
-  <p>Copyright © 2024-2026 MedFusion Team</p>
-</div>
