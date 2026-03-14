@@ -6,6 +6,9 @@ export default defineConfig({
   description: '高度模块化的医学多模态深度学习研究框架',
   lang: 'zh-CN',
 
+  // 源文件目录
+  srcDir: '.',
+
   // 基础路径，部署到 GitHub Pages 时使用
   base: '/medfusion/',
 
