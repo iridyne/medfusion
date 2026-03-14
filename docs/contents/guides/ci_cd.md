@@ -248,7 +248,7 @@ git commit -m "message" --no-verify
 
 ### 配置
 
-编辑 `.pre-commit-config.yaml` 自定义配置：
+编辑 `dotconfig/.pre-commit-config.yaml` 自定义配置：
 
 ```yaml
 repos:
