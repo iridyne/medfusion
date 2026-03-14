@@ -1,26 +1,12 @@
 import { defineConfig } from 'vitepress'
-import AutoSidebar from 'vite-plugin-vitepress-auto-sidebar'
 
 export default defineConfig({
   title: 'MedFusion',
   description: '高度模块化的医学多模态深度学习研究框架',
   lang: 'zh-CN',
 
-  // 源文件目录
-  srcDir: '.',
-
   // 基础路径，部署到 GitHub Pages 时使用
   base: '/medfusion/',
-
-  // Vite 配置
-  vite: {
-    plugins: [
-      AutoSidebar({
-        // 自动生成侧边栏
-        collapsed: false,
-      })
-    ]
-  },
 
   // 主题配置
   themeConfig: {
