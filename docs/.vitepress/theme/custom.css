@@ -1,0 +1,14 @@
+:root {
+  --vp-c-brand: #3eaf7c;
+  --vp-c-brand-light: #4abf8a;
+  --vp-c-brand-lighter: #6fd5a8;
+  --vp-c-brand-dark: #2c8e5f;
+  --vp-c-brand-darker: #1f6b47;
+}
+
+.VPHero .name {
+  background: linear-gradient(120deg, #3eaf7c 30%, #42d392);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

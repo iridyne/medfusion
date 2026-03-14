@@ -1,6 +1,4 @@
-.archive/
-_build/
-
-# Presentations
-presentations/node_modules/
-presentations/dist/
+node_modules/
+.vitepress/dist/
+.vitepress/cache/
+package-lock.json
