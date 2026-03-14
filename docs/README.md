@@ -4,6 +4,16 @@
 
 ## 📚 文档导航
 
+### 🎓 教程
+
+**从入门到精通的完整学习路径：**
+- [教程总览](tutorials/README.md) - 三种学习路径（快速入门/完整学习/深度学习）
+- [你的第一个模型](tutorials/modules/02_first_model.md) - 30分钟快速上手
+- [配置文件详解](tutorials/modules/03_understanding_configs.md) - 理解配置系统
+- [数据准备指南](tutorials/modules/04_data_preparation.md) - 准备医学影像数据
+- [模型构建器 API](tutorials/modules/05_builder_api.md) - 使用 Builder API
+- [查看所有教程模块](tutorials/README.md#-所有教程模块)
+
 ### 🚀 快速开始
 
 **新手必读：**

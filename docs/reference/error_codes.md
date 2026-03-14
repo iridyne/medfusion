@@ -1,40 +1,40 @@
-# Medical Multimodal System - Error Codes and Guardrails
+# 医学多模态系统 - 错误代码与防护机制
 
-**Version:** 1.0.0  
-**Last Updated:** 2026-01-28  
-**Purpose:** Define error handling, fallback strategies, and user feedback for medical data quality issues
-
----
-
-## Overview
-
-Medical data is inherently unstable and incomplete. This document defines a comprehensive error handling system that:
-
-1. **Detects** data quality issues before model inference
-2. **Degrades gracefully** when modalities are missing
-3. **Provides professional feedback** to clinicians instead of system crashes
-4. **Logs** all quality issues for audit and improvement
+**版本:** 1.0.0
+**最后更新:** 2026-01-28
+**目的:** 定义医学数据质量问题的错误处理、降级策略和用户反馈
 
 ---
 
-## Error Code Structure
+## 概述
 
-Format: `MED-[CATEGORY]-[NUMBER]`
+医学数据本质上是不稳定和不完整的。本文档定义了一个全面的错误处理系统，该系统：
 
-- **CATEGORY**: DATA, MODEL, SYSTEM, VALIDATION
-- **NUMBER**: 3-digit sequential identifier
+1. **检测** 模型推理前的数据质量问题
+2. **优雅降级** 当模态缺失时
+3. **提供专业反馈** 向临床医生而非系统崩溃
+4. **记录** 所有质量问题以供审计和改进
 
 ---
 
-## 1. Data Quality Errors (MED-DATA-xxx)
+## 错误代码结构
 
-### MED-DATA-001: Missing Image Modality
+格式: `MED-[类别]-[编号]`
 
-**Severity:** WARNING  
-**Trigger:** Image file path exists but file is missing or corrupted  
-**System Behavior:** Degrade to tabular-only mode
+- **类别**: DATA（数据）, MODEL（模型）, SYSTEM（系统）, VALIDATION（验证）
+- **编号**: 3 位顺序标识符
 
-**User Message:**
+---
+
+## 1. 数据质量错误 (MED-DATA-xxx)
+
+### MED-DATA-001: 影像模态缺失
+
+**严重程度:** 警告
+**触发条件:** 影像文件路径存在但文件缺失或损坏
+**系统行为:** 降级为仅表格数据模式
+
+**用户消息:**
 ```
 ⚠️ 影像数据缺失警告
 
@@ -48,20 +48,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 置信度：降低约 15-25%
 ```
 
-**Technical Details:**
-- Fallback: Use `TabularBranch` only
-- Log: Record missing file path and patient ID
-- Confidence penalty: -15% to -25%
+**技术细节:**
+- 降级方案: 仅使用 `TabularBranch`
+- 日志: 记录缺失文件路径和患者 ID
+- 置信度惩罚: -15% 至 -25%
 
 ---
 
-### MED-DATA-002: Missing Tabular Modality
+### MED-DATA-002: 表格模态缺失
 
-**Severity:** WARNING  
-**Trigger:** Clinical features are all null or missing  
-**System Behavior:** Degrade to vision-only mode
+**严重程度:** 警告
+**触发条件:** 临床特征全部为空或缺失
+**系统行为:** 降级为仅视觉模式
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 临床数据缺失警告
 
@@ -75,20 +75,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 置信度：降低约 10-20%
 ```
 
-**Technical Details:**
-- Fallback: Use `VisionBranch` only
-- Log: Record missing feature columns
-- Confidence penalty: -10% to -20%
+**技术细节:**
+- 降级方案: 仅使用 `VisionBranch`
+- 日志: 记录缺失特征列
+- 置信度惩罚: -10% 至 -20%
 
 ---
 
-### MED-DATA-003: Both Modalities Missing
+### MED-DATA-003: 两种模态均缺失
 
-**Severity:** ERROR  
-**Trigger:** Both image and tabular data are unavailable  
-**System Behavior:** Abort inference, return error
+**严重程度:** 错误
+**触发条件:** 影像和表格数据均不可用
+**系统行为:** 中止推理，返回错误
 
-**User Message:**
+**用户消息:**
 ```
 ❌ 数据不足错误
 
@@ -101,20 +101,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 请补充数据后重新提交。
 ```
 
-**Technical Details:**
-- Action: Raise `InsufficientDataError`
-- Log: Record patient ID and data source
-- No inference performed
+**技术细节:**
+- 操作: 抛出 `InsufficientDataError`
+- 日志: 记录患者 ID 和数据源
+- 不执行推理
 
 ---
 
-### MED-DATA-004: Image Quality Too Low
+### MED-DATA-004: 影像质量过低
 
-**Severity:** WARNING  
-**Trigger:** Image resolution < 128x128 or severe artifacts detected  
-**System Behavior:** Continue with warning, flag low confidence
+**严重程度:** 警告
+**触发条件:** 影像分辨率 < 128x128 或检测到严重伪影
+**系统行为:** 继续执行但带警告，标记低置信度
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 影像质量警告
 
@@ -131,20 +131,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 当前分析：继续进行，但置信度降低
 ```
 
-**Technical Details:**
-- Continue inference with quality flag
-- Log: Image dimensions and quality score
-- Confidence penalty: -20% to -40%
+**技术细节:**
+- 继续推理但带质量标记
+- 日志: 影像尺寸和质量评分
+- 置信度惩罚: -20% 至 -40%
 
 ---
 
-### MED-DATA-005: Feature Out of Valid Range
+### MED-DATA-005: 特征值超出有效范围
 
-**Severity:** WARNING  
-**Trigger:** Clinical feature value outside expected physiological range  
-**System Behavior:** Clip to valid range and continue
+**严重程度:** 警告
+**触发条件:** 临床特征值超出预期生理范围
+**系统行为:** 裁剪至有效范围并继续
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 数据异常警告
 
@@ -159,20 +159,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 分析将继续进行，但请注意数据质量。
 ```
 
-**Technical Details:**
-- Action: Clip value to `[min, max]` from data dictionary
-- Log: Original value, clipped value, feature name
-- Flag: Mark as data quality issue
+**技术细节:**
+- 操作: 将值裁剪至数据字典中的 `[min, max]`
+- 日志: 原始值、裁剪值、特征名称
+- 标记: 标记为数据质量问题
 
 ---
 
-### MED-DATA-006: Incomplete Image Series
+### MED-DATA-006: 影像序列不完整
 
-**Severity:** WARNING  
-**Trigger:** CT/MRI series has < 50% expected slices  
-**System Behavior:** Use available slices with warning
+**严重程度:** 警告
+**触发条件:** CT/MRI 序列切片数 < 预期的 50%
+**系统行为:** 使用可用切片并带警告
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 影像序列不完整
 
@@ -190,20 +190,20 @@ Format: `MED-[CATEGORY]-[NUMBER]`
 分析将继续，但置信度降低。
 ```
 
-**Technical Details:**
-- Use available slices
-- Log: Expected vs actual slice count
-- Confidence penalty: Proportional to missing percentage
+**技术细节:**
+- 使用可用切片
+- 日志: 预期与实际切片数对比
+- 置信度惩罚: 与缺失百分比成正比
 
 ---
 
-### MED-DATA-007: DICOM Metadata Missing
+### MED-DATA-007: DICOM 元数据缺失
 
-**Severity:** INFO  
-**Trigger:** DICOM file lacks critical metadata (StudyDate, Modality, etc.)  
-**System Behavior:** Continue with default assumptions
+**严重程度:** 信息
+**触发条件:** DICOM 文件缺少关键元数据（StudyDate、Modality 等）
+**系统行为:** 使用默认假设继续
 
-**User Message:**
+**用户消息:**
 ```
 ℹ️ 影像元数据缺失
 
@@ -219,22 +219,22 @@ DICOM 文件缺少部分元数据信息。
 系统将使用默认设置继续分析。
 ```
 
-**Technical Details:**
-- Use default values for missing metadata
-- Log: Missing metadata fields
-- No confidence penalty
+**技术细节:**
+- 对缺失元数据使用默认值
+- 日志: 缺失元数据字段
+- 无置信度惩罚
 
 ---
 
-## 2. Model Errors (MED-MODEL-xxx)
+## 2. 模型错误 (MED-MODEL-xxx)
 
-### MED-MODEL-001: Model Checkpoint Not Found
+### MED-MODEL-001: 模型检查点未找到
 
-**Severity:** ERROR  
-**Trigger:** Model weights file missing or corrupted  
-**System Behavior:** Abort, cannot proceed
+**严重程度:** 错误
+**触发条件:** 模型权重文件缺失或损坏
+**系统行为:** 中止，无法继续
 
-**User Message:**
+**用户消息:**
 ```
 ❌ 模型加载失败
 
@@ -247,20 +247,20 @@ DICOM 文件缺少部分元数据信息。
 请联系技术支持团队。
 ```
 
-**Technical Details:**
-- Action: Raise `ModelLoadError`
-- Log: Checkpoint path, error traceback
-- Notify: System administrator
+**技术细节:**
+- 操作: 抛出 `ModelLoadError`
+- 日志: 检查点路径、错误堆栈
+- 通知: 系统管理员
 
 ---
 
-### MED-MODEL-002: Model Inference Timeout
+### MED-MODEL-002: 模型推理超时
 
-**Severity:** ERROR  
-**Trigger:** Inference takes > 60 seconds  
-**System Behavior:** Abort inference, return timeout error
+**严重程度:** 错误
+**触发条件:** 推理时间 > 60 秒
+**系统行为:** 中止推理，返回超时错误
 
-**User Message:**
+**用户消息:**
 ```
 ❌ 分析超时
 
@@ -275,20 +275,20 @@ DICOM 文件缺少部分元数据信息。
 - 如问题持续，请联系技术支持
 ```
 
-**Technical Details:**
-- Action: Kill inference process
-- Log: Inference time, data size, system load
-- Retry: Allow user to retry with timeout extension
+**技术细节:**
+- 操作: 终止推理进程
+- 日志: 推理时间、数据大小、系统负载
+- 重试: 允许用户延长超时重试
 
 ---
 
-### MED-MODEL-003: Low Confidence Prediction
+### MED-MODEL-003: 低置信度预测
 
-**Severity:** WARNING  
-**Trigger:** Model confidence < 60%  
-**System Behavior:** Return result with strong warning
+**严重程度:** 警告
+**触发条件:** 模型置信度 < 60%
+**系统行为:** 返回结果但带强烈警告
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 低置信度预测
 
@@ -305,20 +305,20 @@ DICOM 文件缺少部分元数据信息。
 请谨慎使用此分析结果。
 ```
 
-**Technical Details:**
-- Return prediction with warning flag
-- Log: Confidence score, prediction, patient ID
-- Recommend: Manual review
+**技术细节:**
+- 返回预测但带警告标记
+- 日志: 置信度评分、预测、患者 ID
+- 建议: 人工审核
 
 ---
 
-### MED-MODEL-004: Conflicting Modality Predictions
+### MED-MODEL-004: 多模态预测冲突
 
-**Severity:** WARNING  
-**Trigger:** Vision and tabular branches predict different classes  
-**System Behavior:** Return fusion result with conflict warning
+**严重程度:** 警告
+**触发条件:** 视觉和表格分支预测不同类别
+**系统行为:** 返回融合结果但带冲突警告
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 多模态预测不一致
 
@@ -336,22 +336,22 @@ DICOM 文件缺少部分元数据信息。
 请谨慎解读分析结果。
 ```
 
-**Technical Details:**
-- Return all three predictions
-- Log: Vision, tabular, fusion predictions
-- Flag: Mark for expert review
+**技术细节:**
+- 返回所有三个预测
+- 日志: 视觉、表格、融合预测
+- 标记: 标记为需专家审核
 
 ---
 
-## 3. Validation Errors (MED-VALIDATION-xxx)
+## 3. 验证错误 (MED-VALIDATION-xxx)
 
-### MED-VALIDATION-001: Patient ID Missing
+### MED-VALIDATION-001: 患者 ID 缺失
 
-**Severity:** ERROR  
-**Trigger:** Patient identifier not provided  
-**System Behavior:** Abort, cannot proceed
+**严重程度:** 错误
+**触发条件:** 未提供患者标识符
+**系统行为:** 中止，无法继续
 
-**User Message:**
+**用户消息:**
 ```
 ❌ 患者信息缺失
 
@@ -364,20 +364,20 @@ DICOM 文件缺少部分元数据信息。
 请补充患者信息后重新提交。
 ```
 
-**Technical Details:**
-- Action: Raise `ValidationError`
-- Log: Request timestamp, data source
-- No inference performed
+**技术细节:**
+- 操作: 抛出 `ValidationError`
+- 日志: 请求时间戳、数据源
+- 不执行推理
 
 ---
 
-### MED-VALIDATION-002: Duplicate Submission
+### MED-VALIDATION-002: 重复提交
 
-**Severity:** WARNING  
-**Trigger:** Same patient data submitted within 5 minutes  
-**System Behavior:** Return cached result or warn user
+**严重程度:** 警告
+**触发条件:** 相同患者数据在 5 分钟内重复提交
+**系统行为:** 返回缓存结果或警告用户
 
-**User Message:**
+**用户消息:**
 ```
 ℹ️ 重复提交检测
 
@@ -393,20 +393,20 @@ DICOM 文件缺少部分元数据信息。
 是否使用缓存结果？
 ```
 
-**Technical Details:**
-- Check: Patient ID + data hash
-- Action: Return cached result or re-run
-- Log: Duplicate submission count
+**技术细节:**
+- 检查: 患者 ID + 数据哈希
+- 操作: 返回缓存结果或重新运行
+- 日志: 重复提交次数
 
 ---
 
-### MED-VALIDATION-003: Age-Gender Mismatch
+### MED-VALIDATION-003: 年龄-性别不匹配
 
-**Severity:** WARNING  
-**Trigger:** Clinical features inconsistent with demographics  
-**System Behavior:** Continue with warning
+**严重程度:** 警告
+**触发条件:** 临床特征与人口统计学信息不一致
+**系统行为:** 继续但带警告
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 数据一致性警告
 
@@ -423,22 +423,22 @@ DICOM 文件缺少部分元数据信息。
 分析将继续，但请注意数据质量。
 ```
 
-**Technical Details:**
-- Check: Age-specific and gender-specific feature ranges
-- Log: Inconsistent features
-- Continue with warning flag
+**技术细节:**
+- 检查: 年龄特定和性别特定特征范围
+- 日志: 不一致特征
+- 继续但带警告标记
 
 ---
 
-## 4. System Errors (MED-SYSTEM-xxx)
+## 4. 系统错误 (MED-SYSTEM-xxx)
 
-### MED-SYSTEM-001: GPU Memory Insufficient
+### MED-SYSTEM-001: GPU 内存不足
 
-**Severity:** ERROR  
-**Trigger:** CUDA out of memory during inference  
-**System Behavior:** Fallback to CPU or smaller batch
+**严重程度:** 错误
+**触发条件:** 推理期间 CUDA 内存不足
+**系统行为:** 降级到 CPU 或更小批次
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 系统资源不足
 
@@ -453,20 +453,20 @@ GPU 内存不足，系统将使用 CPU 进行分析。
 分析正在进行中，请稍候...
 ```
 
-**Technical Details:**
-- Action: Move model to CPU
-- Log: GPU memory usage, batch size
-- Fallback: Reduce batch size or use CPU
+**技术细节:**
+- 操作: 将模型移至 CPU
+- 日志: GPU 内存使用、批次大小
+- 降级: 减小批次大小或使用 CPU
 
 ---
 
-### MED-SYSTEM-002: Disk Space Low
+### MED-SYSTEM-002: 磁盘空间不足
 
-**Severity:** WARNING  
-**Trigger:** Available disk space < 1GB  
-**System Behavior:** Continue but disable logging
+**严重程度:** 警告
+**触发条件:** 可用磁盘空间 < 1GB
+**系统行为:** 继续但禁用日志记录
 
-**User Message:**
+**用户消息:**
 ```
 ⚠️ 存储空间不足
 
@@ -483,25 +483,25 @@ GPU 内存不足，系统将使用 CPU 进行分析。
 建议尽快清理磁盘空间。
 ```
 
-**Technical Details:**
-- Disable: Detailed logging, visualization saving
-- Log: Only critical events
-- Alert: System administrator
+**技术细节:**
+- 禁用: 详细日志记录、可视化保存
+- 日志: 仅关键事件
+- 警报: 系统管理员
 
 ---
 
-## 5. Fallback Strategies
+## 5. 降级策略
 
-### Strategy 1: Single Modality Fallback
+### 策略 1: 单模态降级
 
-**Trigger:** One modality missing or invalid  
-**Action:**
-1. Detect missing modality
-2. Load single-modality model weights
-3. Adjust confidence threshold
-4. Provide clear user feedback
+**触发条件:** 一种模态缺失或无效
+**操作:**
+1. 检测缺失模态
+2. 加载单模态模型权重
+3. 调整置信度阈值
+4. 提供清晰的用户反馈
 
-**Implementation:**
+**实现:**
 ```python
 if image_missing:
     model = load_tabular_only_model()
@@ -513,15 +513,15 @@ elif tabular_missing:
 
 ---
 
-### Strategy 2: Quality-Based Degradation
+### 策略 2: 基于质量的降级
 
-**Trigger:** Data quality below threshold  
-**Action:**
-1. Calculate quality score (0-100)
-2. Apply confidence penalty proportional to quality
-3. Flag result for manual review if quality < 50
+**触发条件:** 数据质量低于阈值
+**操作:**
+1. 计算质量评分 (0-100)
+2. 应用与质量成正比的置信度惩罚
+3. 如果质量 < 50 则标记结果需人工审核
 
-**Quality Score Formula:**
+**质量评分公式:**
 ```
 quality_score = (
     image_quality * 0.4 +
@@ -533,22 +533,22 @@ quality_score = (
 
 ---
 
-### Strategy 3: Ensemble Fallback
+### 策略 3: 集成降级
 
-**Trigger:** Primary model fails or times out  
-**Action:**
-1. Switch to lightweight backup model
-2. Reduce input resolution
-3. Use faster inference mode
-4. Clearly indicate reduced accuracy
+**触发条件:** 主模型失败或超时
+**操作:**
+1. 切换到轻量级备用模型
+2. 降低输入分辨率
+3. 使用更快的推理模式
+4. 明确指示准确性降低
 
 ---
 
-## 6. Logging and Audit
+## 6. 日志和审计
 
-### Required Log Fields
+### 必需的日志字段
 
-For every inference request, log:
+对于每个推理请求，记录：
 
 ```json
 {
@@ -579,41 +579,41 @@ For every inference request, log:
 
 ---
 
-## 7. User Feedback Guidelines
+## 7. 用户反馈指南
 
-### Tone and Language
+### 语气和语言
 
-1. **Professional but accessible**: Avoid technical jargon
-2. **Action-oriented**: Always provide next steps
-3. **Transparent**: Clearly state limitations
-4. **Reassuring**: Emphasize safety and quality control
+1. **专业但易懂**: 避免技术术语
+2. **面向行动**: 始终提供下一步操作
+3. **透明**: 清楚���明限制
+4. **令人安心**: 强调安全和质量控制
 
-### Message Structure
+### 消息结构
 
 ```
-[Icon] [Title]
+[图标] [标题]
 
-[Problem Description]
+[问题描述]
 
-[Impact/Details]
+[影响/详情]
 
-[Recommendations]
+[建议]
 
-[Action Items]
+[行动项]
 ```
 
-### Icons
+### 图标
 
-- ❌ Error (critical, cannot proceed)
-- ⚠️ Warning (can proceed with caution)
-- ℹ️ Info (informational, no action needed)
-- ✅ Success (operation completed)
+- ❌ 错误（严重，无法继续）
+- ⚠️ 警告（可谨慎继续）
+- ℹ️ 信息（仅供参考，无需操作）
+- ✅ 成功（操作完成）
 
 ---
 
-## 8. Configuration
+## 8. 配置
 
-### Quality Thresholds
+### 质量阈值
 
 ```yaml
 quality_thresholds:
@@ -642,54 +642,54 @@ fallback_config:
 
 ---
 
-## 9. Testing Checklist
+## 9. 测试清单
 
-- [ ] Test with missing image file
-- [ ] Test with all-null tabular data
-- [ ] Test with both modalities missing
-- [ ] Test with low-resolution images
-- [ ] Test with out-of-range clinical values
-- [ ] Test with incomplete DICOM series
-- [ ] Test with conflicting predictions
-- [ ] Test with duplicate submissions
-- [ ] Test GPU memory overflow
-- [ ] Test disk space warning
-
----
-
-## 10. Future Enhancements
-
-1. **Adaptive Thresholds**: Learn optimal thresholds from historical data
-2. **Multi-language Support**: Provide error messages in multiple languages
-3. **Automated Quality Improvement**: Suggest data collection improvements
-4. **Predictive Alerts**: Warn about potential issues before inference
-5. **Integration with PACS**: Direct quality checks on DICOM sources
+- [ ] 测试影像文件缺失
+- [ ] 测试全空表格数据
+- [ ] 测试两种模态均缺失
+- [ ] 测试低分辨率影像
+- [ ] 测试超出范围的临床值
+- [ ] 测试不完整的 DICOM 序列
+- [ ] 测试冲突预测
+- [ ] 测试重复提交
+- [ ] 测试 GPU 内存溢出
+- [ ] 测试磁盘空间警告
 
 ---
 
-## Appendix A: Error Code Quick Reference
+## 10. 未来增强
 
-| Code | Description | Severity | Fallback |
+1. **自适应阈值**: 从历史数据学习最优阈值
+2. **多语言支持**: 提供多语言错误消息
+3. **自动质量改进**: 建议数据收集改进
+4. **预测性警报**: 在推理前警告潜在问题
+5. **PACS 集成**: 直接对 DICOM 源进行质量检查
+
+---
+
+## 附录 A: 错误代码快速参考
+
+| 代码 | 描述 | 严重程度 | 降级方案 |
 |------|-------------|----------|----------|
-| MED-DATA-001 | Missing Image | WARNING | Tabular-only |
-| MED-DATA-002 | Missing Tabular | WARNING | Vision-only |
-| MED-DATA-003 | Both Missing | ERROR | Abort |
-| MED-DATA-004 | Low Image Quality | WARNING | Continue |
-| MED-DATA-005 | Feature Out of Range | WARNING | Clip & Continue |
-| MED-DATA-006 | Incomplete Series | WARNING | Use Available |
-| MED-DATA-007 | Missing Metadata | INFO | Use Defaults |
-| MED-MODEL-001 | Model Load Failed | ERROR | Abort |
-| MED-MODEL-002 | Inference Timeout | ERROR | Abort |
-| MED-MODEL-003 | Low Confidence | WARNING | Flag Review |
-| MED-MODEL-004 | Conflicting Predictions | WARNING | Return All |
-| MED-VALIDATION-001 | Missing Patient ID | ERROR | Abort |
-| MED-VALIDATION-002 | Duplicate Submission | WARNING | Use Cache |
-| MED-VALIDATION-003 | Data Inconsistency | WARNING | Continue |
-| MED-SYSTEM-001 | GPU Memory Low | ERROR | Use CPU |
-| MED-SYSTEM-002 | Disk Space Low | WARNING | Disable Logs |
+| MED-DATA-001 | 影像缺失 | 警告 | 仅表格 |
+| MED-DATA-002 | 表格缺失 | 警告 | 仅视觉 |
+| MED-DATA-003 | 两者均缺失 | 错误 | 中止 |
+| MED-DATA-004 | 影像质量低 | 警告 | 继续 |
+| MED-DATA-005 | 特征超出范围 | 警告 | 裁剪并继续 |
+| MED-DATA-006 | 序列不完整 | 警告 | 使用可用 |
+| MED-DATA-007 | 元数据缺失 | 信息 | 使用默认值 |
+| MED-MODEL-001 | 模型加载失败 | 错误 | 中止 |
+| MED-MODEL-002 | 推理超时 | 错误 | 中止 |
+| MED-MODEL-003 | 低置信度 | 警告 | 标记审核 |
+| MED-MODEL-004 | 预测冲突 | 警告 | 返回全部 |
+| MED-VALIDATION-001 | 患者 ID 缺失 | 错误 | 中止 |
+| MED-VALIDATION-002 | 重复提交 | 警告 | 使用缓存 |
+| MED-VALIDATION-003 | 数据不一致 | 警告 | 继续 |
+| MED-SYSTEM-001 | GPU 内存不足 | 错误 | 使用 CPU |
+| MED-SYSTEM-002 | 磁盘空间不足 | 警告 | 禁用日志 |
 
 ---
 
-**Document Maintainer:** Medical AI Engineering Team  
-**Review Cycle:** Quarterly  
-**Last Review:** 2026-01-28
+**文档维护者:** Medical AI Engineering Team
+**审核周期:** 季度
+**最后审核:** 2026-01-28

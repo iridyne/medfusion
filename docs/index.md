@@ -11,7 +11,7 @@ hero:
   actions:
     - theme: brand
       text: 快速开始
-      link: /user-guides/QUICKSTART_GUIDE
+      link: /tutorials/README
     - theme: alt
       text: 查看文档
       link: /guides/quick_reference
@@ -133,6 +133,7 @@ uv run med-evaluate --checkpoint outputs/best_model.pth
 
 ## 文档导航
 
+- **[教程](/tutorials/README)** - 从入门到精通的完整学习路径
 - **[快速入门](/user-guides/QUICKSTART_GUIDE)** - 新手必读
 - **[API 文档](/api/med_core)** - 完整的 API 参考
 - **[用户指南](/guides/quick_reference)** - 详细的功能指南
