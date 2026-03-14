@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quick Reference
+
+```bash
+# Most common commands
+uv sync                                    # Install dependencies
+uv run pytest -q                           # Run tests
+uv run med-train --config configs/X.yaml   # Train model
+./start-webui.sh                           # Start Web UI
+ruff check . --fix && ruff format .        # Format code
+```
+
 ## Project Overview
 
 MedFusion is a highly modular medical multimodal deep learning research framework. It supports 29+ vision backbones and 5+ fusion strategies for combining medical imaging (CT, pathology, etc.) with tabular clinical data.
@@ -74,13 +85,22 @@ uv run med-preprocess --data-dir data/raw
 
 ### Web UI
 ```bash
-# Start web server
+# Backend: Start web server
 ./start-webui.sh
 
 # Or manually
 uv run python -m med_core.web.cli web
 
 # Access at http://localhost:8000
+
+# Frontend: Development (in web/frontend/)
+cd web/frontend
+npm install          # Install dependencies
+npm run dev          # Start dev server (http://localhost:5173)
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript type checking
 ```
 
 ## Architecture
