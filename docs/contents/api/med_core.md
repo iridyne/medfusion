@@ -2,50 +2,24 @@
 
 The core package containing all MedFusion functionality.
 
-```{eval-rst}
-.. automodule:: med_core
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
 ## Submodules
 
-- {doc}`aggregators` - Multiple Instance Learning aggregators
-- {doc}`attention_supervision` - Attention supervision mechanisms
-- {doc}`backbones` - Feature extraction backbones
-- {doc}`datasets` - Dataset implementations
-- {doc}`evaluation` - Evaluation metrics and tools
-- {doc}`fusion` - Multimodal fusion strategies
-- {doc}`heads` - Classification and prediction heads
-- {doc}`models` - Complete model implementations
-- {doc}`preprocessing` - Data preprocessing utilities
-- {doc}`trainers` - Training loops and strategies
-- {doc}`utils` - Utility functions
+- [aggregators](/contents/api/aggregators) - Multiple Instance Learning aggregators
+- [attention_supervision](/contents/api/attention_supervision) - Attention supervision mechanisms
+- [backbones](/contents/api/backbones) - Feature extraction backbones
+- [datasets](/contents/api/datasets) - Dataset implementations
+- [evaluation](/contents/api/evaluation) - Evaluation metrics and tools
+- [fusion](/contents/api/fusion) - Multimodal fusion strategies
+- [heads](/contents/api/heads) - Classification and prediction heads
+- [models](/contents/api/models) - Complete model implementations
+- [preprocessing](/contents/api/preprocessing) - Data preprocessing utilities
+- [trainers](/contents/api/trainers) - Training loops and strategies
+- [utils](/contents/api/utils) - Utility functions
 
 ## Configuration
 
-```{eval-rst}
-.. automodule:: med_core.configs
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+The `med_core.configs` module provides configuration management and validation for MedFusion experiments.
 
 ### Configuration Validation
 
-```{eval-rst}
-.. automodule:: med_core.configs.validation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
-## Exceptions
-
-```{eval-rst}
-.. automodule:: med_core.exceptions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+Configuration validation ensures all settings are correct before training begins.

@@ -11,57 +11,27 @@ multi-class, multi-label, ordinal, and attention-based classification tasks.
 
 ### Standard Classification
 
-```{eval-rst}
-.. autoclass:: med_core.heads.classification.ClassificationHead
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+**ClassificationHead** - Standard multi-class classification head with configurable hidden layers and dropout.
 
 ### Multi-Label Classification
 
-```{eval-rst}
-.. autoclass:: med_core.heads.classification.MultiLabelClassificationHead
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+**MultiLabelClassificationHead** - Multi-label classification with independent classifiers for each label.
 
 ### Ordinal Classification
 
-```{eval-rst}
-.. autoclass:: med_core.heads.classification.OrdinalClassificationHead
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+**OrdinalClassificationHead** - Ordinal classification for ordered categories (e.g., tumor grading).
 
 ### Attention-Based Classification
 
-```{eval-rst}
-.. autoclass:: med_core.heads.classification.AttentionClassificationHead
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+**AttentionClassificationHead** - Classification with attention weights for interpretability.
 
 ### Ensemble Classification
 
-```{eval-rst}
-.. autoclass:: med_core.heads.classification.EnsembleClassificationHead
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+**EnsembleClassificationHead** - Ensemble of multiple classification heads with aggregation.
 
 ## Survival Analysis
 
-```{eval-rst}
-.. automodule:: med_core.heads.survival
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+The survival module provides heads for survival analysis tasks including Cox regression, DeepSurvival, and discrete-time survival models.
 
 ## Usage Examples
 

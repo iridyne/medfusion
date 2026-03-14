@@ -12,54 +12,22 @@ patches or regions need to be combined.
 
 ### Simple Aggregators
 
-```{eval-rst}
-.. autoclass:: med_core.aggregators.mil.MeanPoolingAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: med_core.aggregators.mil.MaxPoolingAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+- **MeanPoolingAggregator** - Averages features across instances
+- **MaxPoolingAggregator** - Takes maximum values across instances
 
 ### Attention-Based Aggregators
 
-```{eval-rst}
-.. autoclass:: med_core.aggregators.mil.AttentionAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: med_core.aggregators.mil.GatedAttentionAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+- **AttentionAggregator** - Uses attention weights to aggregate instances
+- **GatedAttentionAggregator** - Gated attention mechanism for instance aggregation
 
 ### Advanced Aggregators
 
-```{eval-rst}
-.. autoclass:: med_core.aggregators.mil.DeepSetsAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: med_core.aggregators.mil.TransformerAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+- **DeepSetsAggregator** - Deep Sets architecture for permutation-invariant aggregation
+- **TransformerAggregator** - Transformer-based aggregation with multi-head attention
 
 ### Unified Interface
 
-```{eval-rst}
-.. autoclass:: med_core.aggregators.mil.MILAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+The **MILAggregator** class provides a unified interface to all aggregation strategies.
 
 ## Usage Examples
 

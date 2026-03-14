@@ -2,30 +2,13 @@
 
 Attention supervision mechanisms for interpretable medical imaging models.
 
-```{eval-rst}
-.. automodule:: med_core.attention_supervision
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
 ## Core Components
 
-```{eval-rst}
-.. automodule:: med_core.attention_supervision.core
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+The attention supervision module provides mechanisms to guide model attention using supervision signals, improving both interpretability and performance.
 
 ## Supervision Strategies
 
-```{eval-rst}
-.. automodule:: med_core.attention_supervision.supervision
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+Various supervision strategies are available including region-based, point-based, and scribble-based supervision for different annotation types.
 
 ## Usage Example
 

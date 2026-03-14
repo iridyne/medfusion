@@ -2,39 +2,19 @@
 
 Feature extraction backbones for medical imaging.
 
-```{eval-rst}
-.. automodule:: med_core.backbones
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
 ## Vision Backbones
 
-```{eval-rst}
-.. automodule:: med_core.backbones.vision
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+Supports 29+ vision backbones including:
+- ResNet, EfficientNet, ViT, Swin Transformer (2D/3D)
+- DenseNet, ConvNeXt, MaxViT, RegNet, MobileNet
 
 ## Tabular Backbones
 
-```{eval-rst}
-.. automodule:: med_core.backbones.tabular
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+MLP-based backbones for processing tabular/clinical features.
 
 ## Attention Mechanisms
 
-```{eval-rst}
-.. automodule:: med_core.backbones.attention
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+Built-in attention mechanisms for feature refinement and interpretability.
 
 ## Usage Example
 
