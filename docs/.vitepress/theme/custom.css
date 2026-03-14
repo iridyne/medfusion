@@ -11,4 +11,13 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  white-space: nowrap;
+}
+
+.VPHero .text {
+  white-space: nowrap;
+}
+
+.VPHero .tagline {
+  white-space: nowrap;
 }
