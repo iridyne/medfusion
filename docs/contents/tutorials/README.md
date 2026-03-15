@@ -175,8 +175,8 @@
 ## 🤝 反馈和贡献
 
 如果你在学习过程中遇到问题或有改进建议，欢迎：
-- 提交 [GitHub Issue](https://github.com/iridite/medfusion/issues)
-- 参与 [GitHub Discussions](https://github.com/iridite/medfusion/discussions)
+- 提交 [GitHub Issue](https://github.com/iridyne/medfusion/issues)
+- 参与 [GitHub Discussions](https://github.com/iridyne/medfusion/discussions)
 
 ---
 

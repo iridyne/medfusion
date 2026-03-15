@@ -103,7 +103,7 @@ outputs = model({"ct": ct_tensor, "pathology": path_tensor})
 
 ```bash
 # 克隆仓库
-git clone https://github.com/iridite/medfusion.git
+git clone https://github.com/iridyne/medfusion.git
 cd medfusion
 
 # 安装依赖（推荐使用 uv）
@@ -138,5 +138,5 @@ uv run med-evaluate --checkpoint outputs/best_model.pth
 
 ## 社区
 
-- [GitHub Issues](https://github.com/iridite/medfusion/issues) - 问题反馈
-- [GitHub Discussions](https://github.com/iridite/medfusion/discussions) - 讨论交流
+- [GitHub Issues](https://github.com/iridyne/medfusion/issues) - 问题反馈
+- [GitHub Discussions](https://github.com/iridyne/medfusion/discussions) - 讨论交流

@@ -102,7 +102,7 @@
 
 ## 🔗 相关资源
 
-- **GitHub 仓库**: [iridite/medfusion](https://github.com/iridite/medfusion)
+- **GitHub 仓库**: [iridite/medfusion](https://github.com/iridyne/medfusion)
 - **配置模板**: `configs/` - YAML 配置文件示例
 - **示例代码**: `examples/` - 使用示例
 - **测试代码**: `tests/` - 单元测试和集成测试

@@ -136,13 +136,12 @@ export default defineConfig({
       { text: '教程', link: '/contents/tutorials/README' },
       { text: '新手指南', link: '/contents/user-guides/QUICKSTART_GUIDE' },
       { text: 'API 文档', link: '/contents/api/med_core' },
-      { text: '功能指南', link: '/contents/guides/quick_reference' },
-      { text: 'GitHub', link: 'https://github.com/iridite/medfusion' }
+      { text: '功能指南', link: '/contents/guides/quick_reference' }
     ],
 
     // 社交链接
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/iridite/medfusion' }
+      { icon: 'github', link: 'https://github.com/iridyne/medfusion' }
     ],
 
     // 页脚
@@ -178,7 +177,7 @@ export default defineConfig({
 
     // 编辑链接
     editLink: {
-      pattern: 'https://github.com/iridite/medfusion/edit/main/docs/:path',
+      pattern: 'https://github.com/iridyne/medfusion/edit/main/docs/:path',
       text: '在 GitHub 上编辑此页'
     },
 
