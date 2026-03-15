@@ -183,28 +183,7 @@ jobs:
         run: |
           python -m py_compile examples/*.py
 
-  # Job 7: Performance Tests
-  performance:
-    name: Performance Tests
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: "3.11"
-          extras: "dev"
-
-      - name: Run performance benchmarks
-        run: |
-          # Add performance tests when available
-          echo "Performance tests placeholder"
-
-  # Job 8: Build Summary
+  # Job 7: Build Summary
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
