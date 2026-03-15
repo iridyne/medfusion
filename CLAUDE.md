@@ -85,11 +85,14 @@ uv run med-preprocess --data-dir data/raw
 
 ### Web UI
 ```bash
-# Backend: Start web server
+# Backend: Start web server (recommended)
 ./start-webui.sh
 
+# Or use CLI command
+uv run medfusion web
+
 # Or manually
-uv run python -m med_core.web.cli web
+uv run uvicorn med_core.web.app:app --host 127.0.0.1 --port 8000
 
 # Access at http://localhost:8000
 
@@ -282,10 +285,9 @@ logits, aux = model(inputs)
 - Mock external dependencies (file I/O, network calls)
 
 **Test Coverage:**
-- Total: 699 tests collected
-- Core modules: 251+ tests passing
-- Known issues: `test_export.py` requires `onnxscript` dependency
+- Use fixtures from `tests/conftest.py` for common test data
 - Run with: `uv run pytest -q` for minimal output
+- Known issues: `test_export.py` requires `onnxscript` dependency
 
 ### Performance Optimization
 
@@ -366,8 +368,11 @@ logits, aux = model(inputs)
 - Validate configs early (in `__post_init__` or constructors)
 
 ### Documentation
-- All public APIs have docstrings with Args/Returns/Example sections
-- Complex algorithms have inline comments explaining the logic
+- **Language**: All code documentation must be in English (see [Documentation Standards](/contents/guides/documentation_standards))
+- **Format**: Use Google-style docstrings with Args/Returns/Example sections
+- **Comments**: Explain "why", not "what"; keep minimal and up-to-date
+- **Web API**: See [Web API Reference](/contents/api/web_api) for REST/WebSocket documentation
+- **Contributing**: See [Contributing Guide](/contents/guides/contributing) for development workflow
 - Config options are documented in example YAML files
 
 ## Common Tasks
