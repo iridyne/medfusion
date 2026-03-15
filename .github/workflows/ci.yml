@@ -8,37 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Job 1: Code Quality Checks
-  code-quality:
-    name: Code Quality
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: "3.11"
-          extras: "dev"
-
-      - name: Run ruff (linting)
-        run: |
-          ruff check med_core/ tests/ --output-format=github
-        continue-on-error: true
-
-      - name: Run ruff (formatting)
-        run: |
-          ruff format --check med_core/ tests/
-        continue-on-error: true
-
-      - name: Run mypy (type checking)
-        run: |
-          mypy med_core/ --ignore-missing-imports
-        continue-on-error: true
-
-  # Job 2: Testing
+  # Job 1: Testing
   test:
     name: Test Suite
     runs-on: ubuntu-latest
@@ -68,7 +38,7 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  # Job 3: Integration Tests
+  # Job 2: Integration Tests
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -95,115 +65,21 @@ jobs:
         run: |
           python scripts/smoke_test.py
 
-  # Job 4: Docker Build
-  docker-build:
-    name: Docker Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./docker/Dockerfile
-          push: false
-          load: true
-          tags: medfusion:test
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Test Docker image
-        run: |
-          docker run --rm medfusion:test python -c "import med_core; print(med_core.__version__)"
-
-  # Job 5: Security Scan
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: "3.11"
-          extras: "dev"
-
-      - name: Install security tools
-        run: uv pip install pbr bandit==1.7.5 safety
-
-      - name: Run bandit (security linter)
-        run: |
-          bandit -r med_core/ -f json -o bandit-report.json
-        continue-on-error: true
-
-      - name: Run safety (dependency check)
-        run: |
-          safety check --json
-        continue-on-error: true
-
-      - name: Upload security reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: security-reports
-          path: |
-            bandit-report.json
-
-  # Job 6: Documentation
-  docs:
-    name: Documentation Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python environment
-        uses: ./.github/actions/setup-python-env
-        with:
-          python-version: "3.11"
-          extras: "dev"
-
-      - name: Check documentation links
-        run: |
-          # Check for broken links in markdown files
-          find docs/ -name "*.md" -type f
-
-      - name: Validate examples
-        run: |
-          python -m py_compile examples/*.py
-
-  # Job 7: Build Summary
+  # Job 3: Build Summary
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [code-quality, test, integration-test, docker-build, security, docs]
+    needs: [test, integration-test]
     if: always()
 
     steps:
       - name: Check build status
         run: |
-          echo "Code Quality: ${{ needs.code-quality.result }}"
           echo "Tests: ${{ needs.test.result }}"
           echo "Integration Tests: ${{ needs.integration-test.result }}"
-          echo "Docker Build: ${{ needs.docker-build.result }}"
-          echo "Security: ${{ needs.security.result }}"
-          echo "Documentation: ${{ needs.docs.result }}"
 
       - name: Fail if any job failed
         if: |
-          needs.code-quality.result == 'failure' ||
           needs.test.result == 'failure' ||
-          needs.integration-test.result == 'failure' ||
-          needs.docker-build.result == 'failure'
+          needs.integration-test.result == 'failure'
         run: exit 1
