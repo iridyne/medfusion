@@ -76,7 +76,7 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
     """
     基于分割掩码的注意力监督
 
-    使用数据集中的分割掩码来监督模型��注意力权重，
+    使用数据集中的分割掩码来监督模型的注意力权重，
     让模型学会关注病灶区域。
 
     Args:
@@ -164,18 +164,21 @@ class MaskSupervisedAttention(BaseAttentionSupervision):
             normalize=(self.loss_type in ["kl", "mse"]),
         )
 
-        # 归一化��意力权重
+        # 归一化注意力权重
         if self.loss_type == "kl":
             attention_norm = self.normalize_attention(
-                attention_weights, method="softmax",
+                attention_weights,
+                method="softmax",
             )
         elif self.loss_type == "bce":
             attention_norm = self.normalize_attention(
-                attention_weights, method="sigmoid",
+                attention_weights,
+                method="sigmoid",
             )
         else:  # mse
             attention_norm = self.normalize_attention(
-                attention_weights, method="minmax",
+                attention_weights,
+                method="minmax",
             )
 
         # 计算主损失

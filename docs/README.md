@@ -49,7 +49,7 @@
 - [快速参考](contents/guides/quick_reference.md) - 常用命令速查
 - [FAQ 和故障排除](contents/guides/faq_troubleshooting.md) - 常见问题解答
 
-**高级功能��**
+**高级功能指南**
 - [分布式训练](contents/guides/distributed_training.md) - 多 GPU 和多节点训练
 - [梯度检查点](contents/guides/gradient_checkpointing_guide.md) - 内存优化技术
 - [模型压缩](contents/guides/model_compression.md) - 模型剪枝和量化

@@ -210,7 +210,7 @@ mypy med_core/
 2. **工程层面**：数据缓存、预计算特征、优化 DataLoader
 3. **基础设施**：更好的 GPU、分布式训练、NVMe SSD
 4. **部署优化**：TorchScript、ONNX、TensorRT
-5. **自定义���核**：Triton CUDA kernel、C++ 扩展
+5. **自定义算核**：Triton CUDA kernel、C++ 扩展
 
 ### 常见瓶颈解决方案
 
