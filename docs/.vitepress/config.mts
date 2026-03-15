@@ -158,7 +158,7 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '快速入门', link: '/contents/getting-started/installation' },
-      { text: '教程', link: '/contents/tutorials/fundamentals/configs' },
+      { text: '教程', link: '/contents/tutorials/README' },
       { text: '指南', link: '/contents/guides/core/quick-reference' },
       { text: 'API 文档', link: '/contents/api/med_core' }
     ],
