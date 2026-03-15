@@ -11,8 +11,8 @@
 **适合人群**：想要快速体验框架的用户
 
 **学习模块**：
-1. [环境安装](modules/01_installation.md)（5 分钟）
-2. [你的第一个模型](modules/02_first_model.md)（30 分钟）⭐
+1. [环境安装](../getting-started/installation.md)（5 分钟）
+2. [你的第一个模型](../getting-started/first-model.md)（30 分钟）⭐
 
 **特点**：
 - 使用合成数据，零门槛
@@ -28,14 +28,14 @@
 **适合人群**：希望全面了解框架的研究人员和工程师
 
 **学习模块**：
-1. [环境安装](modules/01_installation.md)（5 分钟）
-2. [你的第一个模型](modules/02_first_model.md)（30 分钟）
-3. [配置文件详解](modules/03_understanding_configs.md)（20 分钟）
-4. [数据准备指南](modules/04_data_preparation.md)（30 分钟）
-5. [模型构建器 API](modules/05_builder_api.md)（25 分钟）
-6. [融合策略对比](modules/07_fusion_strategies.md)（20 分钟）
-7. [训练工作流](modules/08_training_workflow.md)（30 分钟）
-8. [模型导出](modules/13_model_export.md)（15 分钟）
+1. [环境安装](../getting-started/installation.md)（5 分钟）
+2. [你的第一个模型](../getting-started/first-model.md)（30 分钟）
+3. [配置文件详解](fundamentals/configs.md)（20 分钟）
+4. [数据准备指南](fundamentals/data-prep.md)（30 分钟）
+5. [模型构建器 API](fundamentals/builder-api.md)（25 分钟）
+6. [融合策略对比](fundamentals/fusion.md)（20 分钟）
+7. [训练工作流](training/workflow.md)（30 分钟）
+8. [模型导出](deployment/model-export.md)（15 分钟）
 
 **总时长**：约 2.5 小时
 
@@ -52,13 +52,13 @@
 **基础部分**（路径 2 的所有模块）
 
 **高级功能**：
-- [选择骨干网络](modules/06_choosing_backbones.md)（15 分钟）
-- [监控训练进度](modules/09_monitoring_progress.md)（15 分钟）
-- [超参数调优](modules/10_hyperparameter_tuning.md)（25 分钟）
-- [注意力监督](modules/11_attention_supervision.md)（20 分钟）
-- [多视图支持](modules/12_multiview_support.md)（25 分钟）
-- [Docker 部署](modules/14_docker_deployment.md)（20 分钟）
-- [生产环境清单](modules/15_production_checklist.md)（15 分钟）
+- [选择骨干网络](fundamentals/backbones.md)（15 分钟）
+- [监控训练进度](training/monitoring.md)（15 分钟）
+- [超参数调优](training/tuning.md)（25 分钟）
+- [注意力监督](advanced/attention.md)（20 分钟）
+- [多视图支持](advanced/multiview.md)（25 分钟）
+- [Docker 部署](deployment/docker.md)（20 分钟）
+- [生产环境清单](deployment/production.md)（15 分钟）
 
 **案例研究**（选择 1-2 个）：
 - [肺结节检测](case_studies/01_lung_nodule_detection.md)（60 分钟）
@@ -75,41 +75,41 @@
 
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [01. 环境安装](modules/01_installation.md) | 5 分钟 | ⭐ | 安装 MedFusion 和依赖 |
-| [02. 你的第一个模型](modules/02_first_model.md) | 30 分钟 | ⭐ | 端到端训练第一个模型 |
-| [03. 配置文件详解](modules/03_understanding_configs.md) | 20 分钟 | ⭐⭐ | 理解配置文件结构 |
-| [04. 数据准备指南](modules/04_data_preparation.md) | 30 分钟 | ⭐⭐ | 准备医学影像数据 |
+| [01. 环境安装](../getting-started/installation.md) | 5 分钟 | ⭐ | 安装 MedFusion 和依赖 |
+| [02. 你的第一个模型](../getting-started/first-model.md) | 30 分钟 | ⭐ | 端到端训练第一个模型 |
+| [03. 配置文件详解](fundamentals/configs.md) | 20 分钟 | ⭐⭐ | 理解配置文件结构 |
+| [04. 数据准备指南](fundamentals/data-prep.md) | 30 分钟 | ⭐⭐ | 准备医学影像数据 |
 
 ### 模型构建模块
 
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [05. 模型构建器 API](modules/05_builder_api.md) | 25 分钟 | ⭐⭐ | 使用 Builder API 构建模型 |
-| [06. 选择骨干网络](modules/06_choosing_backbones.md) | 15 分钟 | ⭐⭐ | 如何选择合适的骨干网络 |
-| [07. 融合策略对比](modules/07_fusion_strategies.md) | 20 分钟 | ⭐⭐⭐ | 8 种融合策略详解 |
+| [05. 模型构建器 API](fundamentals/builder-api.md) | 25 分钟 | ⭐⭐ | 使用 Builder API 构建模型 |
+| [06. 选择骨干网络](fundamentals/backbones.md) | 15 分钟 | ⭐⭐ | 如何选择合适的骨干网络 |
+| [07. 融合策略对比](fundamentals/fusion.md) | 20 分钟 | ⭐⭐⭐ | 8 种融合策略详解 |
 
 ### 训练模块
 
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [08. 训练工作流](modules/08_training_workflow.md) | 30 分钟 | ⭐⭐ | 完整训练流程 |
-| [09. 监控训练进度](modules/09_monitoring_progress.md) | 15 分钟 | ⭐⭐ | TensorBoard 和 WandB |
-| [10. 超参数调优](modules/10_hyperparameter_tuning.md) | 25 分钟 | ⭐⭐⭐ | 系统化调优策略 |
+| [08. 训练工作流](training/workflow.md) | 30 分钟 | ⭐⭐ | 完整训练流程 |
+| [09. 监控训练进度](training/monitoring.md) | 15 分钟 | ⭐⭐ | TensorBoard 和 WandB |
+| [10. 超参数调优](training/tuning.md) | 25 分钟 | ⭐⭐⭐ | 系统化调优策略 |
 
 ### 高级功能模块
 
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [11. 注意力监督](modules/11_attention_supervision.md) | 20 分钟 | ⭐⭐⭐ | 引导模型关注正确区域 |
-| [12. 多视图支持](modules/12_multiview_support.md) | 25 分钟 | ⭐⭐⭐ | 多角度 CT、时间序列等 |
+| [11. 注意力监督](advanced/attention.md) | 20 分钟 | ⭐⭐⭐ | 引导模型关注正确区域 |
+| [12. 多视图支持](advanced/multiview.md) | 25 分钟 | ⭐⭐⭐ | 多角度 CT、时间序列等 |
 
 ### 部署模块
 
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
-| [13. 模型导出](modules/13_model_export.md) | 15 分钟 | ⭐⭐ | ONNX 和 TorchScript |
-| [14. Docker 部署](modules/14_docker_deployment.md) | 20 分钟 | ⭐⭐ | 容器化部署 |
-| [15. 生产环境清单](modules/15_production_checklist.md) | 15 分钟 | ⭐⭐⭐ | 上线前检查 |
+| [13. 模型导出](deployment/model-export.md) | 15 分钟 | ⭐⭐ | ONNX 和 TorchScript |
+| [14. Docker 部署](deployment/docker.md) | 20 分钟 | ⭐⭐ | 容器化部署 |
+| [15. 生产环境清单](deployment/production.md) | 15 分钟 | ⭐⭐⭐ | 上线前检查 |
 
 ### 案例研究
 
