@@ -19,7 +19,7 @@ import pandas as pd
 from PIL import Image
 
 
-def generate_mock_images(output_dir: Path, num_images: int = 10, image_size: int = 224):
+def generate_mock_images(output_dir: Path, num_images: int = 20, image_size: int = 224):
     """
     Generate random noise images as mock medical images.
 
@@ -52,7 +52,7 @@ def generate_mock_images(output_dir: Path, num_images: int = 10, image_size: int
 
 
 def generate_mock_metadata(
-    output_dir: Path, image_paths: list[str], num_samples: int = 10
+    output_dir: Path, image_paths: list[str], num_samples: int = 20
 ):
     """
     Generate mock patient metadata CSV.
@@ -64,12 +64,25 @@ def generate_mock_metadata(
     """
     np.random.seed(42)
 
+    # Ensure balanced classes for stratified splitting (at least 2 samples per class)
+    # Generate at least 20 samples to ensure enough for train/val/test split
+    actual_samples = max(num_samples, 20)
+
+    # Create balanced diagnosis labels (50/50 split)
+    half = actual_samples // 2
+    diagnosis_labels = [0] * half + [1] * (actual_samples - half)
+    np.random.shuffle(diagnosis_labels)
+
+    # Extend image_paths if needed
+    while len(image_paths) < actual_samples:
+        image_paths.extend(image_paths[:actual_samples - len(image_paths)])
+
     data = {
-        "patient_id": [f"P{i:03d}" for i in range(num_samples)],
-        "image_path": image_paths,
-        "age": np.random.randint(20, 80, num_samples),
-        "gender": np.random.choice([0, 1], num_samples),
-        "diagnosis": np.random.choice([0, 1], num_samples),
+        "patient_id": [f"P{i:03d}" for i in range(actual_samples)],
+        "image_path": image_paths[:actual_samples],
+        "age": np.random.randint(20, 80, actual_samples),
+        "gender": np.random.choice([0, 1], actual_samples),
+        "diagnosis": diagnosis_labels,
     }
 
     df = pd.DataFrame(data)
@@ -92,8 +105,8 @@ def main():
     parser.add_argument(
         "--num-samples",
         type=int,
-        default=10,
-        help="Number of samples to generate",
+        default=20,
+        help="Number of samples to generate (minimum 20 for proper train/val/test split)",
     )
     parser.add_argument(
         "--image-size",

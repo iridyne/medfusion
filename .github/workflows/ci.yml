@@ -111,6 +111,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: ./docker/Dockerfile
           push: false
           load: true
           tags: medfusion:test
