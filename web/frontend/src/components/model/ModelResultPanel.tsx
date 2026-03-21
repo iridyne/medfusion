@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Col,
+  Descriptions,
   Empty,
   Image,
   Row,
@@ -56,12 +57,16 @@ function formatPath(path?: string) {
   return path || "-";
 }
 
-function formatAccuracy(value?: number) {
-  return value !== undefined ? `${(value * 100).toFixed(2)}%` : "-";
+function formatPercent(value?: number | null, digits = 2) {
+  return value !== undefined && value !== null ? `${(value * 100).toFixed(digits)}%` : "-";
 }
 
-function formatLoss(value?: number) {
-  return value !== undefined ? value.toFixed(4) : "-";
+function formatMetric(value?: number | null, digits = 4) {
+  return value !== undefined && value !== null ? value.toFixed(digits) : "-";
+}
+
+function formatCount(value?: number | null) {
+  return value !== undefined && value !== null ? `${value}` : "-";
 }
 
 function formatChartTooltipValue(value?: number | string) {
@@ -114,7 +119,14 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const rocCurve = model.visualizations?.roc_curve;
   const confusionMatrix = model.visualizations?.confusion_matrix;
   const attentionMaps = model.visualizations?.attention_maps || [];
-  const summary = model.config?.result_summary as Record<string, any> | undefined;
+  const validation = model.validation;
+  const validationOverview = validation?.overview;
+  const validationDataset = validation?.dataset;
+  const predictionSummary = validation?.prediction_summary;
+  const thresholdAnalysis = validation?.threshold_analysis;
+  const calibration = validation?.calibration;
+  const perClassRows = validation?.per_class || [];
+  const summary = (model.config?.result_summary || {}) as Record<string, any>;
   const trainingHistory = model.training_history?.entries || [];
   const auxiliaryVisuals = [
     {
@@ -161,53 +173,98 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
     learningRate: entry.learning_rate,
   }));
 
+  const primaryStats = [
+    {
+      title: "Best Accuracy",
+      value: formatPercent(
+        summary?.best_accuracy ?? model.metrics?.best_accuracy ?? model.accuracy,
+      ),
+    },
+    {
+      title: "ROC AUC",
+      value: formatMetric(
+        rocCurve?.auc ?? validationOverview?.auc ?? model.metrics?.auc,
+      ),
+    },
+    {
+      title: "宏平均 F1",
+      value: formatMetric(
+        validationOverview?.macro_f1 ??
+          model.metrics?.macro_f1 ??
+          model.metrics?.f1_score,
+      ),
+    },
+    {
+      title: "Balanced Acc",
+      value: formatMetric(
+        validationOverview?.balanced_accuracy ??
+          model.metrics?.balanced_accuracy,
+      ),
+    },
+    {
+      title: "Specificity",
+      value: formatMetric(
+        thresholdAnalysis?.specificity ?? model.metrics?.specificity,
+      ),
+    },
+    {
+      title: "训练时长",
+      value: formatDuration(model.training_time),
+    },
+  ];
+
+  const validationMetricCards = [
+    {
+      title: "验证样本数",
+      value: formatCount(validationOverview?.sample_count),
+    },
+    {
+      title: "平均置信度",
+      value: formatPercent(
+        predictionSummary?.mean_confidence ?? validationOverview?.mean_confidence,
+      ),
+    },
+    {
+      title: "错误率",
+      value: formatPercent(
+        predictionSummary?.error_rate ?? validationOverview?.error_rate,
+      ),
+    },
+    {
+      title: "Brier Score",
+      value: formatMetric(calibration?.brier_score ?? model.metrics?.brier_score),
+    },
+    {
+      title: "ECE",
+      value: formatMetric(calibration?.ece ?? model.metrics?.ece),
+    },
+    {
+      title: "最佳轮次",
+      value: formatCount(validationOverview?.best_epoch ?? model.metrics?.best_epoch),
+    },
+  ];
+
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Alert
         type="info"
         showIcon
         message="多模态结果面板"
-        description="当前面板直接消费训练后沉淀下来的 artifact，包括 history、ROC、混淆矩阵、注意力图和报告文件，不再依赖运行时 mock 数据。"
+        description="当前面板直接消费训练后沉淀下来的 artifact 和 validation 摘要，包括训练历史、ROC、混淆矩阵、per-class 指标、阈值分析、注意力图和报告文件。"
       />
 
-      <Row gutter={16}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Best Accuracy"
-              value={(summary?.best_accuracy ?? model.metrics?.best_accuracy ?? model.accuracy ?? 0) * 100}
-              precision={2}
-              suffix="%"
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="AUC"
-              value={rocCurve?.auc ?? model.metrics?.auc ?? 0}
-              precision={4}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Best Loss"
-              value={summary?.best_loss ?? model.metrics?.best_loss ?? model.loss ?? 0}
-              precision={4}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic title="训练时长" value={formatDuration(model.training_time)} />
-          </Card>
-        </Col>
+      <Row gutter={[16, 16]}>
+        {primaryStats.map((item) => (
+          <Col xs={24} sm={12} lg={8} xl={4} key={item.title}>
+            <Card>
+              <Statistic title={item.title} value={item.value} />
+            </Card>
+          </Col>
+        ))}
       </Row>
 
-      <Row gutter={16}>
-        <Col span={14}>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={15}>
           <Card
             title={
               <Space>
@@ -233,7 +290,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
             }
           >
             {rocCurve?.points?.length ? (
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={rocCurve.points}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="fpr" type="number" domain={[0, 1]} />
@@ -262,7 +319,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
             )}
             <Paragraph style={{ marginTop: 12, marginBottom: 0 }}>
               <Text strong>AUC：</Text>
-              {rocCurve?.auc?.toFixed(4) || "-"}
+              {formatMetric(rocCurve?.auc ?? validationOverview?.auc)}
               {rocCurve?.positive_class_label ? (
                 <Text type="secondary" style={{ marginLeft: 12 }}>
                   正类: {rocCurve.positive_class_label}
@@ -271,7 +328,8 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
             </Paragraph>
           </Card>
         </Col>
-        <Col span={10}>
+
+        <Col xs={24} xl={9}>
           <Card
             title="结果摘要"
             extra={
@@ -284,38 +342,66 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
               ) : null
             }
           >
-            <Space direction="vertical" size={8} style={{ width: "100%" }}>
-              <div>
-                <Text type="secondary">数据集</Text>
-                <div>{model.dataset_name || "-"}</div>
-              </div>
-              <div>
-                <Text type="secondary">骨干网络</Text>
-                <div>{model.backbone}</div>
-              </div>
-              <div>
-                <Text type="secondary">训练轮数</Text>
-                <div>{model.trained_epochs || "-"}</div>
-              </div>
-              <div>
-                <Text type="secondary">结果权重</Text>
+            <Descriptions column={1} size="small" labelStyle={{ width: 120 }}>
+              <Descriptions.Item label="数据集">
+                {model.dataset_name || validationDataset?.name || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="骨干网络">
+                {model.backbone || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="训练轮数">
+                {formatCount(model.trained_epochs)}
+              </Descriptions.Item>
+              <Descriptions.Item label="验证样本数">
+                {formatCount(validationOverview?.sample_count)}
+              </Descriptions.Item>
+              <Descriptions.Item label="正类标签">
+                {validationOverview?.positive_class_label || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="权重路径">
                 <div style={{ wordBreak: "break-all" }}>
                   {formatPath(model.checkpoint_path)}
                 </div>
-              </div>
-              <div>
-                <Text type="secondary">配置文件</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="配置路径">
                 <div style={{ wordBreak: "break-all" }}>
                   {formatPath(model.config_path)}
                 </div>
+              </Descriptions.Item>
+            </Descriptions>
+
+            {validationDataset?.class_distribution?.length ? (
+              <div style={{ marginTop: 12 }}>
+                <Text type="secondary">类别分布</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Space wrap>
+                    {validationDataset.class_distribution.map((item) => (
+                      <Tag key={item.label} color="blue">
+                        {item.label}: {item.count} / {formatPercent(item.rate)}
+                      </Tag>
+                    ))}
+                  </Space>
+                </div>
               </div>
-            </Space>
+            ) : null}
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={16}>
-        <Col span={12}>
+      <Card title="Validation 快照">
+        <Row gutter={[16, 16]}>
+          {validationMetricCards.map((item) => (
+            <Col xs={24} sm={12} lg={8} xl={4} key={item.title}>
+              <Card size="small">
+                <Statistic title={item.title} value={item.value} />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={12}>
           <Card
             title={
               <Space>
@@ -355,7 +441,8 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
             )}
           </Card>
         </Col>
-        <Col span={12}>
+
+        <Col xs={24} xl={12}>
           <Card
             title={
               <Space>
@@ -434,19 +521,27 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
       >
         {confusionMatrix ? (
           <Space direction="vertical" size={16} style={{ width: "100%" }}>
-            {confusionMatrix.plot_url ? (
-              <Image
-                src={confusionMatrix.plot_url}
-                alt="Confusion Matrix"
-                style={{ width: "100%", borderRadius: 8 }}
-              />
-            ) : null}
+            <Row gutter={[16, 16]}>
+              {confusionMatrix.plot_url ? (
+                <Col xs={24} xl={12}>
+                  <PreviewImageCard title="原始混淆矩阵" imageUrl={confusionMatrix.plot_url} />
+                </Col>
+              ) : null}
+              {confusionMatrix.normalized_plot_url ? (
+                <Col xs={24} xl={12}>
+                  <PreviewImageCard
+                    title="归一化混淆矩阵"
+                    imageUrl={confusionMatrix.normalized_plot_url}
+                  />
+                </Col>
+              ) : null}
+            </Row>
             <Table
               pagination={false}
               size="small"
               scroll={{ x: true }}
               dataSource={confusionMatrix.matrix.map((row, rowIndex) => {
-                const item: Record<string, any> = {
+                const item: Record<string, string | number> = {
                   key: confusionMatrix.labels[rowIndex],
                   actual: confusionMatrix.labels[rowIndex],
                 };
@@ -476,6 +571,152 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
         )}
       </Card>
 
+      <Card title="Per-class Metrics">
+        {perClassRows.length ? (
+          <Table
+            rowKey="label"
+            pagination={false}
+            size="small"
+            scroll={{ x: true }}
+            dataSource={perClassRows}
+            columns={[
+              {
+                title: "类别",
+                dataIndex: "label",
+                key: "label",
+                fixed: "left",
+              },
+              {
+                title: "Support",
+                dataIndex: "support",
+                key: "support",
+                align: "right",
+              },
+              {
+                title: "Prevalence",
+                dataIndex: "prevalence",
+                key: "prevalence",
+                align: "right",
+                render: (value: number) => formatPercent(value),
+              },
+              {
+                title: "Precision",
+                dataIndex: "precision",
+                key: "precision",
+                align: "right",
+                render: (value: number) => formatMetric(value),
+              },
+              {
+                title: "Recall",
+                dataIndex: "recall",
+                key: "recall",
+                align: "right",
+                render: (value: number) => formatMetric(value),
+              },
+              {
+                title: "F1",
+                dataIndex: "f1_score",
+                key: "f1_score",
+                align: "right",
+                render: (value: number) => formatMetric(value),
+              },
+              {
+                title: "Predicted",
+                dataIndex: "predicted_count",
+                key: "predicted_count",
+                align: "right",
+              },
+              {
+                title: "Predicted Rate",
+                dataIndex: "predicted_rate",
+                key: "predicted_rate",
+                align: "right",
+                render: (value: number) => formatPercent(value),
+              },
+            ]}
+          />
+        ) : (
+          <Empty description="暂无 per-class 指标" />
+        )}
+      </Card>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={12}>
+          <Card title="阈值分析">
+            {thresholdAnalysis ? (
+              <Descriptions column={1} size="small" labelStyle={{ width: 140 }}>
+                <Descriptions.Item label="Optimal Threshold">
+                  {formatMetric(thresholdAnalysis.threshold)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Youden J">
+                  {formatMetric(thresholdAnalysis.youden_j)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Sensitivity">
+                  {formatMetric(thresholdAnalysis.sensitivity)}
+                </Descriptions.Item>
+                <Descriptions.Item label="Specificity">
+                  {formatMetric(thresholdAnalysis.specificity)}
+                </Descriptions.Item>
+                <Descriptions.Item label="PPV">
+                  {formatMetric(thresholdAnalysis.ppv)}
+                </Descriptions.Item>
+                <Descriptions.Item label="NPV">
+                  {formatMetric(thresholdAnalysis.npv)}
+                </Descriptions.Item>
+              </Descriptions>
+            ) : (
+              <Empty description="当前任务暂无阈值分析" />
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={24} xl={12}>
+          <Card title="校准与误差">
+            <Descriptions column={1} size="small" labelStyle={{ width: 140 }}>
+              <Descriptions.Item label="Brier Score">
+                {formatMetric(calibration?.brier_score ?? model.metrics?.brier_score)}
+              </Descriptions.Item>
+              <Descriptions.Item label="ECE">
+                {formatMetric(calibration?.ece ?? model.metrics?.ece)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mean Confidence">
+                {formatPercent(
+                  predictionSummary?.mean_confidence ?? validationOverview?.mean_confidence,
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Error Rate">
+                {formatPercent(
+                  predictionSummary?.error_rate ?? validationOverview?.error_rate,
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Correct Confidence">
+                {formatPercent(predictionSummary?.mean_confidence_correct)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Error Confidence">
+                {formatPercent(predictionSummary?.mean_confidence_error)}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginTop: 12 }}>
+              <Text type="secondary">常见误分类</Text>
+              <div style={{ marginTop: 8 }}>
+                {predictionSummary?.top_misclassifications?.length ? (
+                  <Space wrap>
+                    {predictionSummary.top_misclassifications.map((item) => (
+                      <Tag key={`${item.actual}-${item.predicted}`}>
+                        {item.actual} {"->"} {item.predicted}: {item.count}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无误分类摘要" />
+                )}
+              </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       <Card
         title={
           <Space>
@@ -487,7 +728,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
         <Row gutter={[16, 16]}>
           {attentionMaps.length > 0 ? (
             attentionMaps.map((map) => (
-              <Col span={12} key={`${map.modality}-${map.title}`}>
+              <Col xs={24} xl={12} key={`${map.modality}-${map.title}`}>
                 <PreviewImageCard
                   title={map.title}
                   subtitle={`modality=${map.modality} · mean=${map.mean_attention ?? "-"} · peak=${map.peak_attention ?? "-"}`}
@@ -516,7 +757,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
         <Card title="辅助图表">
           <Row gutter={[16, 16]}>
             {auxiliaryVisuals.map((item) => (
-              <Col span={12} key={item.title}>
+              <Col xs={24} xl={12} key={item.title}>
                 <PreviewImageCard
                   title={item.title}
                   imageUrl={item.imageUrl}
@@ -596,24 +837,24 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
       </Card>
 
       <Card title="关键指标">
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic title="Accuracy" value={formatAccuracy(model.accuracy)} />
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Accuracy" value={formatPercent(model.accuracy)} />
           </Col>
-          <Col span={6}>
-            <Statistic title="Loss" value={formatLoss(model.loss)} />
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Loss" value={formatMetric(model.loss)} />
           </Col>
-          <Col span={6}>
-            <Statistic
-              title="Precision"
-              value={model.metrics?.precision !== undefined ? model.metrics.precision.toFixed(4) : "-"}
-            />
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Precision" value={formatMetric(model.metrics?.precision)} />
           </Col>
-          <Col span={6}>
-            <Statistic
-              title="Recall"
-              value={model.metrics?.recall !== undefined ? model.metrics.recall.toFixed(4) : "-"}
-            />
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Recall" value={formatMetric(model.metrics?.recall)} />
+          </Col>
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Sensitivity" value={formatMetric(model.metrics?.sensitivity)} />
+          </Col>
+          <Col xs={24} sm={12} lg={8} xl={4}>
+            <Statistic title="Specificity" value={formatMetric(model.metrics?.specificity)} />
           </Col>
         </Row>
       </Card>

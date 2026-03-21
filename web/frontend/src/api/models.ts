@@ -71,6 +71,82 @@ export interface Model {
     plot_artifact_key?: string | null;
     plot_url?: string | null;
   } | null;
+  validation?: {
+    dataset?: {
+      name?: string | null;
+      labels?: string[];
+      num_classes?: number;
+      sample_count?: number;
+      class_distribution?: Array<{
+        label: string;
+        count: number;
+        rate: number;
+      }>;
+    };
+    overview?: {
+      sample_count?: number;
+      num_classes?: number;
+      positive_class_label?: string;
+      positive_prevalence?: number;
+      accuracy?: number;
+      balanced_accuracy?: number;
+      precision_macro?: number;
+      recall_macro?: number;
+      macro_f1?: number;
+      weighted_f1?: number;
+      auc?: number | null;
+      mean_confidence?: number;
+      error_count?: number;
+      error_rate?: number;
+      best_epoch?: number | null;
+    };
+    per_class?: Array<{
+      label: string;
+      support: number;
+      prevalence: number;
+      precision: number;
+      recall: number;
+      f1_score: number;
+      predicted_count: number;
+      predicted_rate: number;
+    }>;
+    prediction_summary?: {
+      mean_confidence?: number;
+      mean_confidence_correct?: number | null;
+      mean_confidence_error?: number | null;
+      error_count?: number;
+      error_rate?: number;
+      top_misclassifications?: Array<{
+        actual: string;
+        predicted: string;
+        count: number;
+      }>;
+    };
+    threshold_analysis?: {
+      threshold?: number;
+      youden_j?: number;
+      sensitivity?: number;
+      specificity?: number;
+      ppv?: number;
+      npv?: number;
+      confusion_matrix?: number[][];
+    } | null;
+    calibration?: {
+      positive_class_label?: string;
+      brier_score?: number;
+      ece?: number;
+      n_bins?: number;
+      bins?: Array<{
+        bin_index: number;
+        range_start: number;
+        range_end: number;
+        count: number;
+        mean_confidence: number;
+        empirical_accuracy: number;
+        gap: number;
+      }>;
+    } | null;
+  } | null;
   visualizations?: {
     roc_curve?: {
       auc?: number | null;
