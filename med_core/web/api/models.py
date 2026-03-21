@@ -88,6 +88,7 @@ def _build_artifact_index(model: ModelInfo) -> dict[str, dict[str, Any]]:
         ("config", "训练配置", model.config_path or artifact_paths.get("config_path")),
         ("summary", "结果摘要", artifact_paths.get("summary_path")),
         ("metrics", "指标文件", artifact_paths.get("metrics_path")),
+        ("validation", "验证摘要", artifact_paths.get("validation_path")),
         ("report", "结果报告", artifact_paths.get("report_path")),
         ("log", "训练日志", artifact_paths.get("log_path")),
         ("history", "训练历史", artifact_paths.get("history_path")),
@@ -185,6 +186,7 @@ def _collect_result_files(model: ModelInfo) -> list[dict[str, Any]]:
                 "config",
                 "summary",
                 "metrics",
+                "validation",
                 "history",
                 "roc_curve_plot",
                 "confusion_matrix_plot",
@@ -298,6 +300,12 @@ def _load_visualizations(model: ModelInfo) -> dict[str, Any]:
     return visualizations
 
 
+def _load_validation(model: ModelInfo) -> dict[str, Any] | None:
+    artifact_paths = (model.config or {}).get("artifact_paths", {})
+    validation_payload = _safe_load_json(artifact_paths.get("validation_path"))
+    return validation_payload or None
+
+
 def _to_payload(model: ModelInfo) -> dict[str, Any]:
     checkpoint_path = model.checkpoint_path
     file_size = Path(checkpoint_path).stat().st_size if checkpoint_path and Path(checkpoint_path).exists() else None
@@ -305,6 +313,7 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
     metrics = model.metrics or {}
     visualizations = _load_visualizations(model)
     training_history = _load_training_history(model)
+    validation = _load_validation(model)
 
     return {
         "id": model.id,
@@ -332,6 +341,7 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
         "result_files": _collect_result_files(model),
         "training_history": training_history,
         "visualizations": visualizations,
+        "validation": validation,
         "format": model_format,
         "created_at": model.created_at.isoformat(),
         "updated_at": model.updated_at.isoformat() if model.updated_at else None,

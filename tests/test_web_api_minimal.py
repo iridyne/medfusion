@@ -95,6 +95,18 @@ def test_web_basic_routes() -> None:
         generated_model = next(
             item for item in refreshed_models.json() if item["name"] == "ci-exp-model"
         )
+        assert generated_model["validation"]["overview"]["sample_count"] > 0
+        assert len(generated_model["validation"]["per_class"]) == 2
+        assert generated_model["metrics"]["balanced_accuracy"] >= 0
+        assert any(
+            artifact["key"] == "validation" for artifact in generated_model["result_files"]
+        )
+
+        generated_model_detail = client.get(f"/api/models/{generated_model['id']}")
+        assert generated_model_detail.status_code == 200
+        detail_payload = generated_model_detail.json()
+        assert detail_payload["validation"]["prediction_summary"]["error_count"] >= 0
+        assert detail_payload["validation"]["dataset"]["num_classes"] == 2
 
         # Cleanup
         deleted_model = client.delete(f"/api/models/{model_id}")

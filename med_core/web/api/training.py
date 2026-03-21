@@ -165,6 +165,56 @@ def _clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
 
 
+def _round_metric(value: float | None, digits: int = 4) -> float | None:
+    if value is None:
+        return None
+    if bool(np.isnan(value)):
+        return None
+    return round(float(value), digits)
+
+
+def _safe_rate(numerator: float | int, denominator: float | int) -> float:
+    if not denominator:
+        return 0.0
+    return float(numerator) / float(denominator)
+
+
+def _compute_expected_calibration_error(
+    y_true_binary: np.ndarray,
+    positive_scores: np.ndarray,
+    n_bins: int = 10,
+) -> tuple[float, list[dict[str, Any]]]:
+    """Compute expected calibration error for binary predictions."""
+    bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
+    bin_indices = np.digitize(positive_scores, bin_edges[1:-1], right=True)
+    summaries: list[dict[str, Any]] = []
+    ece = 0.0
+
+    for bin_index in range(n_bins):
+        mask = bin_indices == bin_index
+        count = int(mask.sum())
+        if count == 0:
+            continue
+
+        confidence = float(np.mean(positive_scores[mask]))
+        accuracy = float(np.mean(y_true_binary[mask]))
+        gap = abs(confidence - accuracy)
+        ece += gap * (count / len(positive_scores))
+        summaries.append(
+            {
+                "bin_index": bin_index,
+                "range_start": round(float(bin_edges[bin_index]), 4),
+                "range_end": round(float(bin_edges[bin_index + 1]), 4),
+                "count": count,
+                "mean_confidence": round(confidence, 4),
+                "empirical_accuracy": round(accuracy, 4),
+                "gap": round(gap, 4),
+            }
+        )
+
+    return round(float(ece), 4), summaries
+
+
 def _generate_prediction_payload(
     job: TrainingJob,
     metadata: dict[str, Any],
@@ -352,6 +402,8 @@ def _generate_visualization_artifacts(
     y_true = np.asarray(predictions_payload["y_true"], dtype=int)
     y_pred = np.asarray(predictions_payload["y_pred"], dtype=int)
     probabilities = np.asarray(predictions_payload["probabilities"], dtype=float)
+    confidence = probabilities.max(axis=1)
+    correct_mask = y_true == y_pred
 
     average = "binary" if num_classes == 2 else "macro"
     positive_class_label = labels[positive_class_index]
@@ -366,9 +418,73 @@ def _generate_visualization_artifacts(
     )
     accuracy = accuracy_score(y_true, y_pred)
     matrix = confusion_matrix(y_true, y_pred, labels=list(range(num_classes)))
+    (
+        per_class_precision,
+        per_class_recall,
+        per_class_f1,
+        per_class_support,
+    ) = precision_recall_fscore_support(
+        y_true,
+        y_pred,
+        labels=list(range(num_classes)),
+        average=None,
+        zero_division=0,
+    )
+    precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(
+        y_true,
+        y_pred,
+        average="macro",
+        zero_division=0,
+    )
+    precision_weighted, recall_weighted, f1_weighted, _ = precision_recall_fscore_support(
+        y_true,
+        y_pred,
+        average="weighted",
+        zero_division=0,
+    )
+    balanced_accuracy = float(np.mean(per_class_recall)) if len(per_class_recall) else 0.0
+    class_supports = np.bincount(y_true, minlength=num_classes)
+    predicted_distribution = np.bincount(y_pred, minlength=num_classes)
+    error_count = int((~correct_mask).sum())
+    misclassification_pairs = [
+        {
+            "actual": labels[row_index],
+            "predicted": labels[col_index],
+            "count": int(matrix[row_index, col_index]),
+        }
+        for row_index in range(num_classes)
+        for col_index in range(num_classes)
+        if row_index != col_index and int(matrix[row_index, col_index]) > 0
+    ]
+    misclassification_pairs.sort(key=lambda item: item["count"], reverse=True)
+    mean_confidence = float(np.mean(confidence))
+    mean_confidence_correct = (
+        float(np.mean(confidence[correct_mask])) if bool(correct_mask.any()) else None
+    )
+    mean_confidence_error = (
+        float(np.mean(confidence[~correct_mask])) if error_count > 0 else None
+    )
+    per_class_payload = [
+        {
+            "label": labels[class_index],
+            "support": int(per_class_support[class_index]),
+            "prevalence": round(_safe_rate(class_supports[class_index], len(y_true)), 4),
+            "precision": round(float(per_class_precision[class_index]), 4),
+            "recall": round(float(per_class_recall[class_index]), 4),
+            "f1_score": round(float(per_class_f1[class_index]), 4),
+            "predicted_count": int(predicted_distribution[class_index]),
+            "predicted_rate": round(
+                _safe_rate(predicted_distribution[class_index], len(y_pred)),
+                4,
+            ),
+        }
+        for class_index in range(num_classes)
+    ]
 
     roc_points: list[dict[str, float]] = []
     roc_auc: float | None = None
+    threshold_analysis: dict[str, Any] | None = None
+    calibration_summary: dict[str, Any] | None = None
     roc_curve_path = visualization_dir / "roc_curve.png"
     if np.unique(y_true_binary).size > 1:
         fpr, tpr, thresholds = roc_curve(y_true_binary, positive_scores)
@@ -388,6 +504,48 @@ def _generate_visualization_artifacts(
             save_path=roc_curve_path,
         )
         roc_figure.clf()
+
+        finite_threshold_indices = np.flatnonzero(np.isfinite(thresholds))
+        if finite_threshold_indices.size > 0:
+            optimal_index = int(
+                finite_threshold_indices[
+                    np.argmax((tpr - fpr)[finite_threshold_indices])
+                ]
+            )
+            optimal_threshold = float(thresholds[optimal_index])
+            optimal_prediction = (positive_scores >= optimal_threshold).astype(int)
+            threshold_matrix = confusion_matrix(
+                y_true_binary,
+                optimal_prediction,
+                labels=[0, 1],
+            )
+            tn, fp, fn, tp = threshold_matrix.ravel()
+            sensitivity = _safe_rate(tp, tp + fn)
+            specificity = _safe_rate(tn, tn + fp)
+            ppv = _safe_rate(tp, tp + fp)
+            npv = _safe_rate(tn, tn + fn)
+            threshold_analysis = {
+                "threshold": round(optimal_threshold, 4),
+                "youden_j": round(float(tpr[optimal_index] - fpr[optimal_index]), 4),
+                "sensitivity": round(sensitivity, 4),
+                "specificity": round(specificity, 4),
+                "ppv": round(ppv, 4),
+                "npv": round(npv, 4),
+                "confusion_matrix": threshold_matrix.astype(int).tolist(),
+            }
+
+        brier_score = float(np.mean((positive_scores - y_true_binary) ** 2))
+        ece, calibration_bins = _compute_expected_calibration_error(
+            y_true_binary,
+            positive_scores,
+        )
+        calibration_summary = {
+            "positive_class_label": positive_class_label,
+            "brier_score": round(brier_score, 4),
+            "ece": ece,
+            "n_bins": 10,
+            "bins": calibration_bins,
+        }
     else:
         roc_curve_path = None
 
@@ -459,12 +617,38 @@ def _generate_visualization_artifacts(
         "plot_path": str(confusion_matrix_path),
         "normalized_plot_path": str(normalized_confusion_matrix_path),
     }
+    validation_overview = {
+        "sample_count": int(len(y_true)),
+        "num_classes": num_classes,
+        "positive_class_label": positive_class_label,
+        "positive_prevalence": round(_safe_rate(y_true_binary.sum(), len(y_true_binary)), 4),
+        "accuracy": round(float(accuracy), 4),
+        "balanced_accuracy": round(balanced_accuracy, 4),
+        "precision_macro": round(float(precision_macro), 4),
+        "recall_macro": round(float(recall_macro), 4),
+        "macro_f1": round(float(f1_macro), 4),
+        "weighted_f1": round(float(f1_weighted), 4),
+        "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
+        "mean_confidence": round(mean_confidence, 4),
+        "error_count": error_count,
+        "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
+        "best_epoch": job.best_epoch,
+    }
     metrics_payload = {
         "accuracy": round(float(accuracy), 4),
         "precision": round(float(precision), 4),
         "recall": round(float(recall), 4),
         "f1_score": round(float(f1_score), 4),
         "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
+        "balanced_accuracy": round(balanced_accuracy, 4),
+        "precision_macro": round(float(precision_macro), 4),
+        "recall_macro": round(float(recall_macro), 4),
+        "macro_f1": round(float(f1_macro), 4),
+        "weighted_f1": round(float(f1_weighted), 4),
+        "mean_confidence": round(mean_confidence, 4),
+        "mean_confidence_correct": _round_metric(mean_confidence_correct),
+        "mean_confidence_error": _round_metric(mean_confidence_error),
+        "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
         "best_accuracy": round(float(job.best_accuracy or accuracy), 4),
         "best_loss": round(float(job.best_loss or job.current_loss or 0.0), 4),
         "best_epoch": job.best_epoch,
@@ -472,19 +656,68 @@ def _generate_visualization_artifacts(
         "final_loss": round(float(job.current_loss or 0.0), 4),
         "progress": round(float(job.progress), 2),
     }
+    if threshold_analysis:
+        metrics_payload.update(
+            {
+                "sensitivity": threshold_analysis["sensitivity"],
+                "specificity": threshold_analysis["specificity"],
+                "ppv": threshold_analysis["ppv"],
+                "npv": threshold_analysis["npv"],
+                "optimal_threshold": threshold_analysis["threshold"],
+            }
+        )
+    if calibration_summary:
+        metrics_payload.update(
+            {
+                "brier_score": calibration_summary["brier_score"],
+                "ece": calibration_summary["ece"],
+            }
+        )
+
+    validation_payload = {
+        "dataset": {
+            "name": metadata["dataset_name"],
+            "labels": labels,
+            "num_classes": num_classes,
+            "sample_count": int(len(y_true)),
+            "class_distribution": [
+                {
+                    "label": label,
+                    "count": int(class_supports[index]),
+                    "rate": round(_safe_rate(class_supports[index], len(y_true)), 4),
+                }
+                for index, label in enumerate(labels)
+            ],
+        },
+        "overview": validation_overview,
+        "per_class": per_class_payload,
+        "prediction_summary": {
+            "mean_confidence": round(mean_confidence, 4),
+            "mean_confidence_correct": _round_metric(mean_confidence_correct),
+            "mean_confidence_error": _round_metric(mean_confidence_error),
+            "error_count": error_count,
+            "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
+            "top_misclassifications": misclassification_pairs[:5],
+        },
+        "threshold_analysis": threshold_analysis,
+        "calibration": calibration_summary,
+    }
 
     roc_curve_json_path = output_dir / "roc_curve.json"
     confusion_matrix_json_path = output_dir / "confusion_matrix.json"
     metrics_path = output_dir / "metrics.json"
+    validation_path = output_dir / "validation.json"
 
     _write_json(roc_curve_json_path, roc_payload)
     _write_json(confusion_matrix_json_path, confusion_payload)
     _write_json(metrics_path, metrics_payload)
+    _write_json(validation_path, validation_payload)
 
     attention_artifacts = _generate_attention_artifacts(output_dir, job.job_id)
 
     return {
         "metrics": metrics_payload,
+        "validation": validation_payload,
         "prediction_path": str(predictions_path),
         "roc_curve_json_path": str(roc_curve_json_path),
         "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
@@ -492,6 +725,7 @@ def _generate_visualization_artifacts(
         "confusion_matrix_plot_path": str(confusion_matrix_path),
         "confusion_matrix_normalized_plot_path": str(normalized_confusion_matrix_path),
         "training_curves_plot_path": str(training_curves_path),
+        "validation_path": str(validation_path),
         "calibration_curve_plot_path": str(calibration_curve_path) if calibration_curve_path else None,
         "probability_distribution_plot_path": str(probability_distribution_path)
         if probability_distribution_path
@@ -544,6 +778,12 @@ def _write_result_artifacts(
         history_payload=history_payload,
     )
     metrics_payload = visualization_artifacts["metrics"]
+    validation_payload = visualization_artifacts["validation"]
+    validation_overview = validation_payload.get("overview", {})
+    per_class_rows = validation_payload.get("per_class", [])
+    top_misclassifications = (
+        validation_payload.get("prediction_summary", {}).get("top_misclassifications", [])
+    )
 
     summary_payload = {
         "job_id": job.job_id,
@@ -567,10 +807,11 @@ def _write_result_artifacts(
             **{
                 key: value
                 for key, value in visualization_artifacts.items()
-                if key != "metrics" and value
+                if key not in {"metrics", "validation"} and value
             },
         },
         "metrics": metrics_payload,
+        "validation_overview": validation_overview,
     }
 
     config_path.write_text(
@@ -584,18 +825,41 @@ def _write_result_artifacts(
     report_path.write_text(
         "\n".join(
             [
-                f"# {metadata['experiment_name']} Result",
+                f"# {metadata['experiment_name']} 结果报告",
                 "",
-                f"- dataset: {metadata['dataset_name'] or 'unknown'}",
-                f"- backbone: {metadata['backbone'] or 'unknown'}",
-                f"- accuracy: {metrics_payload['accuracy']}",
-                f"- precision: {metrics_payload['precision']}",
-                f"- recall: {metrics_payload['recall']}",
-                f"- f1_score: {metrics_payload['f1_score']}",
-                f"- auc: {metrics_payload['auc']}",
-                f"- best_accuracy: {metrics_payload['best_accuracy']}",
-                f"- best_loss: {metrics_payload['best_loss']}",
-                f"- checkpoint: {checkpoint_path}",
+                "## 实验摘要",
+                "",
+                f"- 数据集: {metadata['dataset_name'] or 'unknown'}",
+                f"- Backbone: {metadata['backbone'] or 'unknown'}",
+                f"- Accuracy: {metrics_payload['accuracy']}",
+                f"- AUC: {metrics_payload['auc']}",
+                f"- F1: {metrics_payload['f1_score']}",
+                f"- Balanced Accuracy: {metrics_payload.get('balanced_accuracy', '-')}",
+                f"- Best Accuracy: {metrics_payload['best_accuracy']}",
+                f"- Best Loss: {metrics_payload['best_loss']}",
+                f"- Checkpoint: {checkpoint_path}",
+                "",
+                "## Validation 概览",
+                "",
+                f"- 样本数: {validation_overview.get('sample_count', '-')}",
+                f"- 类别数: {validation_overview.get('num_classes', '-')}",
+                f"- 正类标签: {validation_overview.get('positive_class_label', '-')}",
+                f"- 正类占比: {validation_overview.get('positive_prevalence', '-')}",
+                f"- 宏平均 F1: {validation_overview.get('macro_f1', '-')}",
+                f"- 加权 F1: {validation_overview.get('weighted_f1', '-')}",
+                f"- 平均置信度: {validation_overview.get('mean_confidence', '-')}",
+                f"- 错误率: {validation_overview.get('error_rate', '-')}",
+                "",
+                "## Per-class Metrics",
+                "",
+                "| Class | Support | Prevalence | Precision | Recall | F1 | Predicted |",
+                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+                *[
+                    "| {label} | {support} | {prevalence} | {precision} | {recall} | {f1_score} | {predicted_count} |".format(
+                        **row
+                    )
+                    for row in per_class_rows
+                ],
                 "",
                 "## Visualizations",
                 "",
@@ -608,6 +872,25 @@ def _write_result_artifacts(
                 "![Confusion Matrix](visualizations/confusion_matrix.png)",
                 "",
                 "![Attention Statistics](visualizations/attention/attention_statistics.png)",
+                "",
+                "## Threshold Analysis",
+                "",
+                f"- Optimal Threshold: {metrics_payload.get('optimal_threshold', '-')}",
+                f"- Sensitivity: {metrics_payload.get('sensitivity', '-')}",
+                f"- Specificity: {metrics_payload.get('specificity', '-')}",
+                f"- PPV: {metrics_payload.get('ppv', '-')}",
+                f"- NPV: {metrics_payload.get('npv', '-')}",
+                "",
+                "## 常见误分类",
+                "",
+                *(
+                    [
+                        f"- {item['actual']} -> {item['predicted']}: {item['count']}"
+                        for item in top_misclassifications
+                    ]
+                    if top_misclassifications
+                    else ["- 无明显误分类聚集"]
+                ),
                 "",
                 "## History",
                 "",
@@ -632,7 +915,7 @@ def _write_result_artifacts(
         **{
             key: value
             for key, value in visualization_artifacts.items()
-            if key != "metrics" and value
+            if key not in {"metrics", "validation"} and value
         },
     }
 
@@ -641,6 +924,7 @@ def _sync_completed_model(db: Session, job: TrainingJob) -> None:
     metadata = _extract_job_metadata(job)
     checkpoint_path = _write_demo_checkpoint(job, metadata)
     artifact_paths = _write_result_artifacts(job, metadata, checkpoint_path)
+    validation_overview = _read_json(Path(artifact_paths["validation_path"])).get("overview", {})
     file_size = checkpoint_path.stat().st_size
     training_time = (
         (job.completed_at - job.started_at).total_seconds()
@@ -674,6 +958,9 @@ def _sync_completed_model(db: Session, job: TrainingJob) -> None:
             "backbone": metadata["backbone"],
             "best_accuracy": job.best_accuracy,
             "best_loss": job.best_loss,
+            "balanced_accuracy": validation_overview.get("balanced_accuracy"),
+            "macro_f1": validation_overview.get("macro_f1"),
+            "sample_count": validation_overview.get("sample_count"),
         },
     }
     model.config_path = artifact_paths["config_path"]
