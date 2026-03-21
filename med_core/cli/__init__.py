@@ -15,6 +15,7 @@ from med_core.version import __version__
 from .build_results import build_results
 from .doctor import doctor, validate_config
 from .evaluate import evaluate
+from .import_run import import_run
 from .preprocess import preprocess
 from .train import train
 
@@ -22,6 +23,7 @@ __all__ = [
     "build_results",
     "doctor",
     "evaluate",
+    "import_run",
     "main",
     "preprocess",
     "train",
@@ -42,6 +44,7 @@ def _print_help() -> None:
     print("  validate-config  训练前配置与数据体检")
     print("  doctor      validate-config 的短别名")
     print("  build-results   训练后生成 validation / 图表 / 报告 artifact")
+    print("  import-run      生成 artifact 并导入模型库，供 dashboard 直接展示")
     print("  web         Web UI 管理命令")
     print("  data        Web UI 数据管理命令")
     print("")
@@ -53,6 +56,7 @@ def _print_help() -> None:
     print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
     print("  medfusion build-results --config configs/starter/quickstart.yaml --checkpoint <path>")
+    print("  medfusion import-run --config configs/starter/quickstart.yaml --checkpoint <path>")
     print("  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>")
     print("  medfusion web")
     print("")
@@ -124,6 +128,10 @@ def main() -> None:
 
     if command == "build-results":
         _run_legacy_command(build_results, args, "medfusion build-results")
+        return
+
+    if command == "import-run":
+        _run_legacy_command(import_run, args, "medfusion import-run")
         return
 
     if command in {"web", "data"}:

@@ -8,32 +8,36 @@ import tomllib
 
 def test_cli_imports():
     """Test that CLI functions can be imported."""
-    from med_core.cli import evaluate, preprocess, train
+    from med_core.cli import evaluate, import_run, preprocess, train
 
     assert callable(train)
     assert callable(evaluate)
     assert callable(preprocess)
+    assert callable(import_run)
 
 
 def test_cli_submodule_imports():
     """Test that CLI submodules can be imported directly."""
     from med_core.cli.evaluate import evaluate
+    from med_core.cli.import_run import import_run
     from med_core.cli.preprocess import preprocess
     from med_core.cli.train import train
 
     assert callable(train)
     assert callable(evaluate)
     assert callable(preprocess)
+    assert callable(import_run)
 
 
 def test_cli_backward_compatibility():
     """Test that old import path still works."""
-    from med_core.cli import evaluate, preprocess, train
+    from med_core.cli import evaluate, import_run, preprocess, train
 
     # Verify functions are accessible
     assert train.__module__ == "med_core.cli.train"
     assert evaluate.__module__ == "med_core.cli.evaluate"
     assert preprocess.__module__ == "med_core.cli.preprocess"
+    assert import_run.__module__ == "med_core.cli.import_run"
 
 
 def test_cli_module_structure():

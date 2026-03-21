@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -15,9 +16,11 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..database import get_db_session
+from ..model_registry import import_model_run
 from ..models import ModelInfo
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class ModelCreate(BaseModel):
@@ -44,6 +47,17 @@ class ModelUpdate(BaseModel):
     tags: list[str] | None = None
     trained_epochs: int | None = None
     num_classes: int | None = None
+
+
+class ModelImportRequest(BaseModel):
+    config_path: str
+    checkpoint_path: str
+    output_dir: str | None = None
+    split: Literal["train", "val", "test"] = "test"
+    attention_samples: int = 4
+    name: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
 
 
 def _infer_format(path: str | None) -> str:
@@ -473,6 +487,36 @@ async def create_model(
     db.add(model)
     db.commit()
     db.refresh(model)
+    return _to_payload(model)
+
+
+@router.post("/import-run")
+async def import_model(
+    payload: ModelImportRequest,
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    """导入真实 CLI 训练结果到模型库。"""
+    try:
+        model = import_model_run(
+            db=db,
+            config_path=payload.config_path,
+            checkpoint_path=payload.checkpoint_path,
+            output_dir=payload.output_dir,
+            split=payload.split,
+            attention_samples=payload.attention_samples,
+            name=payload.name,
+            description=payload.description,
+            tags=payload.tags,
+            import_source="api",
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - routed to client with context
+        logger.exception("Failed to import CLI run into model registry")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     return _to_payload(model)
 
 

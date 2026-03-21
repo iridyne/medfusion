@@ -37,7 +37,8 @@ from med_core.visualization.attention_viz import (
 
 from ..config import settings
 from ..database import SessionLocal, get_db_session
-from ..models import ModelInfo, TrainingJob
+from ..model_registry import register_model_artifacts
+from ..models import TrainingJob
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -924,62 +925,34 @@ def _sync_completed_model(db: Session, job: TrainingJob) -> None:
     metadata = _extract_job_metadata(job)
     checkpoint_path = _write_demo_checkpoint(job, metadata)
     artifact_paths = _write_result_artifacts(job, metadata, checkpoint_path)
-    validation_overview = _read_json(Path(artifact_paths["validation_path"])).get("overview", {})
-    file_size = checkpoint_path.stat().st_size
+    metrics_payload = _read_json(Path(artifact_paths["metrics_path"]))
+    validation_payload = _read_json(Path(artifact_paths["validation_path"]))
     training_time = (
         (job.completed_at - job.started_at).total_seconds()
         if job.completed_at and job.started_at
         else None
     )
-
-    model = (
-        db.query(ModelInfo)
-        .filter(ModelInfo.checkpoint_path == str(checkpoint_path))
-        .first()
-    )
-    if model is None:
-        model = ModelInfo(
-            name=f"{metadata['experiment_name']}-model",
-            description="演示型 MVP 自动生成的训练产物",
-            model_type="classification",
-            architecture=metadata["backbone"] or "resnet18",
-            checkpoint_path=str(checkpoint_path),
-        )
-        db.add(model)
-
-    model.config = {
-        "job_id": job.job_id,
-        "training_config": (job.config or {}).get("training_config", {}),
-        "dataset_config": (job.config or {}).get("dataset_config", {}),
-        "artifact_paths": artifact_paths,
-        "result_summary": {
-            "experiment_name": metadata["experiment_name"],
-            "dataset_name": metadata["dataset_name"],
-            "backbone": metadata["backbone"],
-            "best_accuracy": job.best_accuracy,
-            "best_loss": job.best_loss,
-            "balanced_accuracy": validation_overview.get("balanced_accuracy"),
-            "macro_f1": validation_overview.get("macro_f1"),
-            "sample_count": validation_overview.get("sample_count"),
+    register_model_artifacts(
+        db=db,
+        checkpoint_path=checkpoint_path,
+        artifact_paths=artifact_paths,
+        metrics=metrics_payload,
+        validation=validation_payload,
+        name=f"{metadata['experiment_name']}-model",
+        description="演示型 MVP 自动生成的训练产物",
+        architecture=metadata["backbone"] or "resnet18",
+        config_path=artifact_paths["config_path"],
+        tags=["demo-mvp", f"job:{job.job_id}", "auto-generated"],
+        trained_epochs=job.total_epochs,
+        training_time=training_time,
+        num_parameters=_estimate_num_parameters(metadata["backbone"]),
+        extra_config={
+            "job_id": job.job_id,
+            "import_source": "web-demo",
+            "training_config": (job.config or {}).get("training_config", {}),
+            "dataset_config": (job.config or {}).get("dataset_config", {}),
         },
-    }
-    model.config_path = artifact_paths["config_path"]
-    model.metrics = {
-        **_read_json(Path(artifact_paths["metrics_path"])),
-    }
-    model.accuracy = job.best_accuracy or job.current_accuracy
-    model.loss = job.best_loss or job.current_loss
-    model.num_parameters = _estimate_num_parameters(metadata["backbone"])
-    model.model_size_mb = file_size / (1024 * 1024)
-    model.trained_epochs = job.total_epochs
-    model.training_time = training_time
-    model.dataset_name = metadata["dataset_name"]
-    model.num_classes = metadata["num_classes"]
-    model.tags = [
-        "demo-mvp",
-        f"job:{job.job_id}",
-        *(["auto-generated"] if True else []),
-    ]
+    )
 
 
 async def _simulate_training(job_id: str, total_epochs: int) -> None:

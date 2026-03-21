@@ -9,6 +9,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from med_core.web.app import app
+from test_build_results import _create_checkpoint_and_logs
 
 
 def test_web_basic_routes() -> None:
@@ -117,3 +118,34 @@ def test_web_basic_routes() -> None:
 
         deleted_dataset = client.delete(f"/api/datasets/{dataset_id}")
         assert deleted_dataset.status_code == 200
+
+
+def test_web_can_import_real_cli_run(tmp_path) -> None:
+    config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
+
+    with TestClient(app) as client:
+        imported = client.post(
+            "/api/models/import-run",
+            json={
+                "config_path": str(config_path),
+                "checkpoint_path": str(checkpoint_path),
+                "split": "train",
+                "attention_samples": 2,
+                "name": "ci-imported-real-run",
+                "tags": ["ci-import"],
+            },
+        )
+        assert imported.status_code == 200
+        payload = imported.json()
+        assert payload["name"] == "ci-imported-real-run"
+        assert payload["validation"]["overview"]["split"] == "train"
+        assert payload["visualizations"]["confusion_matrix"]["plot_url"]
+        assert payload["visualizations"]["attention_maps"]
+        assert any(artifact["key"] == "report" for artifact in payload["result_files"])
+
+        listed = client.get("/api/models/")
+        assert listed.status_code == 200
+        assert any(item["id"] == payload["id"] for item in listed.json())
+
+        deleted = client.delete(f"/api/models/{payload['id']}")
+        assert deleted.status_code == 200
