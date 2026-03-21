@@ -116,14 +116,16 @@ pip install -e ".[dev,web]"
 ### 训练模型
 
 ```bash
-# 使用默认配置训练
-uv run med-train --config configs/default.yaml
+# 最快跑通训练链路
+uv run medfusion train --config configs/starter/quickstart.yaml
 
 # 评估模型
-uv run med-evaluate --checkpoint outputs/best_model.pth
+uv run medfusion evaluate \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 
 # 启动 Web UI
-./start-webui.sh
+uv run medfusion web
 ```
 
 </div>
@@ -131,6 +133,7 @@ uv run med-evaluate --checkpoint outputs/best_model.pth
 ## 文档导航
 
 - **[教程](/contents/tutorials/README)** - 从入门到精通的完整学习路径
+- **[CLI 与 Config 使用路径](/contents/getting-started/cli-config-workflow)** - 先分清 CLI 配置和 builder 配置
 - **[快速入门](/contents/user-guides/QUICKSTART_GUIDE)** - 新手必读
 - **[API 文档](/contents/api/med_core)** - 完整的 API 参考
 - **[用户指南](/contents/guides/quick_reference)** - 详细的功能指南

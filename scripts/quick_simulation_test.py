@@ -223,7 +223,7 @@ logging:
   save_visualizations: true
 """
 
-    config_path = Path("configs/simulation_test.yaml")
+    config_path = Path("configs/testing/simulation_test.yaml")
     config_path.write_text(config_content)
 
     logger.info(f"✓ 配置文件保存在: {config_path}")

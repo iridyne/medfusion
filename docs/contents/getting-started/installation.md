@@ -50,7 +50,7 @@ pip install -e ".[dev,web]"
 
 ```bash
 # 检查命令行工具
-uv run med-train --help
+uv run medfusion train --help
 
 # 运行测试（可选）
 uv run pytest -q
@@ -59,14 +59,15 @@ uv run pytest -q
 **预期输出：**
 
 ```
-usage: med-train [-h] --config CONFIG [--resume RESUME]
+usage: medfusion train [-h] --config CONFIG [--output-dir OUTPUT_DIR]
 
 Train a medical multimodal model
 
 optional arguments:
   -h, --help         show this help message and exit
-  --config CONFIG    Path to config file
-  --resume RESUME    Path to checkpoint to resume from
+  --config CONFIG    Path to YAML configuration file
+  --output-dir OUTPUT_DIR
+                     Override output directory
 ```
 
 ## 常见问题

@@ -214,7 +214,7 @@ def objective(trial):
     weight_decay = trial.suggest_float("weight_decay", 1e-5, 1e-3, log=True)
 
     # 创建配置
-    config = load_config("configs/base.yaml")
+    config = load_config("configs/starter/quickstart.yaml")
     config.training.optimizer.lr = lr
     config.data.batch_size = batch_size
     config.model.fusion.dropout = dropout
@@ -545,9 +545,9 @@ with open(f'experiments/exp_{timestamp}.json', 'w') as f:
 
 ```bash
 # 使用不同 GPU 并行运行
-CUDA_VISIBLE_DEVICES=0 uv run medfusion-train --config config1.yaml &
-CUDA_VISIBLE_DEVICES=1 uv run medfusion-train --config config2.yaml &
-CUDA_VISIBLE_DEVICES=2 uv run medfusion-train --config config3.yaml &
+CUDA_VISIBLE_DEVICES=0 uv run medfusion train --config config1.yaml &
+CUDA_VISIBLE_DEVICES=1 uv run medfusion train --config config2.yaml &
+CUDA_VISIBLE_DEVICES=2 uv run medfusion train --config config3.yaml &
 wait
 ```
 

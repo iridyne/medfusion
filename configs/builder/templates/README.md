@@ -1,6 +1,12 @@
 # 配置模板使用指南
 
-本目录包含常用场景的配置模板，帮助你快速启动新项目。
+本目录包含偏研究表达的 builder / 结构模板。
+
+先把边界说清楚：
+
+- 这里的 YAML 主要用于描述模型结构思路
+- 它们不等价于当前 `medfusion train --config ...` 直接可执行的 starter/public/testing 配置
+- 如果你只是想先把训练主链跑通，不要从这里开始
 
 ## 📋 可用模板
 
@@ -20,7 +26,7 @@
 **快速开始：**
 ```bash
 # 1. 复制模板
-cp configs/templates/pathology_classification.yaml configs/my_project.yaml
+cp configs/builder/templates/pathology_classification.yaml configs/my_project.yaml
 
 # 2. 修改数据路径
 # 编辑 my_project.yaml，修改：
@@ -28,8 +34,7 @@ cp configs/templates/pathology_classification.yaml configs/my_project.yaml
 #   - data.image_dir
 #   - model.num_classes
 
-# 3. 开始训练
-uv run med-train --config configs/my_project.yaml
+# 3. 将其改造成你自己的 builder 配置，供 build_model_from_config() 使用
 ```
 
 ---
@@ -147,10 +152,10 @@ ls data/your_data.csv
 ls data/your_images/
 ```
 
-### 步骤 5：开始训练
+### 步骤 5：接入你自己的执行链
 
 ```bash
-uv run med-train --config configs/my_project.yaml
+python -c "import yaml; from med_core.models import build_model_from_config; config = yaml.safe_load(open('configs/my_project.yaml')); build_model_from_config(config)"
 ```
 
 ---
@@ -287,13 +292,13 @@ model:
 
 ```bash
 # 1. 复制最接近的模板
-cp configs/templates/pathology_classification.yaml configs/custom.yaml
+cp configs/builder/templates/pathology_classification.yaml configs/custom.yaml
 
 # 2. 修改关键部分
 # 例如：添加新的数据增强、修改网络结构等
 
-# 3. 测试配置
-uv run med-train --config configs/custom.yaml --dry-run
+# 3. 测试 builder 配置是否能被解析
+python -c "import yaml; from med_core.models import build_model_from_config; config = yaml.safe_load(open('configs/custom.yaml')); build_model_from_config(config)"
 ```
 
 ### 配置继承
@@ -324,7 +329,7 @@ data:
 
 ```bash
 export DATA_ROOT=/path/to/data
-uv run med-train --config configs/my_project.yaml
+python -c "import yaml; from med_core.models import build_model_from_config; config = yaml.safe_load(open('configs/my_project.yaml')); build_model_from_config(config)"
 ```
 
 ---

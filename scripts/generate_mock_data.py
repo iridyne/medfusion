@@ -154,7 +154,7 @@ def main():
     print(f'       csv_path: "{csv_path}"')
     print(f'       image_dir: "{output_dir}"')
     print("  2. Run training:")
-    print("     uv run med-train --config configs/your_config.yaml")
+    print("     uv run medfusion train --config configs/your_config.yaml")
 
 
 if __name__ == "__main__":

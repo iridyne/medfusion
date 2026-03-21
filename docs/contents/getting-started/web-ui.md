@@ -64,10 +64,10 @@ uv run uvicorn med_core.web.app:app --host 127.0.0.1 --port 8000
 
 ```bash
 # 使用 MedFusion CLI
-uv run python med_core/cli.py web start
+uv run medfusion web
 
 # 指定选项
-uv run python med_core/cli.py web start --host 0.0.0.0 --port 8080 --reload
+uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 ```
 
 ## 🌐 访问界面

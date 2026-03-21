@@ -2,6 +2,22 @@
 
 这份指南基于实际从零开始使用框架的经验，列出了所有可能遇到的问题和解决方案。
 
+先看这一页，再继续：
+
+- [CLI 与 Config 使用路径](cli-config-workflow.md)
+
+当前最稳定的训练入口是：
+
+```bash
+uv run medfusion train --config configs/starter/quickstart.yaml
+```
+
+要注意：
+
+- `configs/starter/`、`configs/public_datasets/`、`configs/testing/` 是当前 `medfusion train` 主链配置
+- `configs/builder/` 是 `MultiModalModelBuilder` / `build_model_from_config()` 的结构示例，不等价于 CLI 训练配置
+- `configs/legacy/` 是历史模板，不建议新用户从这里开始
+
 ## 🚨 关键问题清单
 
 ### 问题 1：融合策略命名不一致 ⭐⭐⭐⭐⭐
@@ -50,12 +66,12 @@ FileNotFoundError: data/dataset.csv not found
 ```
 
 **原因**：
-- `configs/default.yaml` 指向 `data/dataset.csv`
-- 但项目中没有这个文件
-- 实际测试数据在 `data/mock/metadata.csv`
+- 新手直接从非 quickstart 配置开始
+- 没有先对照仓库里实际存在的数据路径
+- 入口配置和自己准备的数据路径没有同步
 
 **解决方案**：
-创建 `configs/quickstart.yaml`（已完成）：
+创建 `configs/starter/quickstart.yaml`（已完成）：
 ```yaml
 data:
   csv_path: "data/mock/metadata.csv"  # 使用实际存在的数据
@@ -65,7 +81,7 @@ data:
 **影响范围**：所有新手用户（100%）
 
 **修复建议**：
-1. 将 `default.yaml` 改为指向 `data/mock/`
+1. 优先从 `configs/starter/quickstart.yaml` 开始
 2. 或者在 README 中明确说明需要准备数据
 3. 提供 `med-download-sample-data` 命令
 
@@ -238,7 +254,7 @@ model:
 
 ```bash
 # 使用提供的快速入门配置
-uv run med-train --config configs/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
 ```
 
 **预期结果**：
@@ -254,7 +270,7 @@ uv run med-train --config configs/quickstart.yaml
 # - 图像目录：包含所有图像
 
 # 2. 复制快速入门配置
-cp configs/quickstart.yaml configs/my_experiment.yaml
+cp configs/starter/quickstart.yaml configs/my_experiment.yaml
 
 # 3. 修改配置
 # - 更新 csv_path 和 image_dir
@@ -265,7 +281,7 @@ cp configs/quickstart.yaml configs/my_experiment.yaml
 # uv run med-validate-config configs/my_experiment.yaml
 
 # 5. 训练
-uv run med-train --config configs/my_experiment.yaml
+uv run medfusion train --config configs/my_experiment.yaml
 ```
 
 ### 3. 使用 Builder API（1 小时）
@@ -351,7 +367,7 @@ for fusion in ["concatenate", "gated", "attention"]:
 
 ### 第 1 天：环境和基础
 1. 安装环境
-2. 运行 `configs/quickstart.yaml`
+2. 运行 `configs/starter/quickstart.yaml`
 3. 理解输出日志
 
 ### 第 2-3 天：使用自己的数据

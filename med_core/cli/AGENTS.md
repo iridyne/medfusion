@@ -38,27 +38,27 @@ CLI Command → Argument Parser → Config Loader → Main Function → Output
 ### Training
 ```bash
 # Basic training
-uv run med-train --config configs/default.yaml
+uv run medfusion train --config configs/starter/default.yaml
 
 # With custom output directory
-uv run med-train --config configs/smurf_config.yaml --output-dir outputs/experiment1
+uv run medfusion train --config configs/builder/smurf.yaml --output-dir outputs/experiment1
 
 # Resume from checkpoint
-uv run med-train --config configs/default.yaml --resume outputs/checkpoints/last.pth
+uv run medfusion train --config configs/starter/default.yaml --resume outputs/checkpoints/last.pth
 
 # Multi-GPU training
-uv run med-train --config configs/default.yaml --gpus 0,1,2,3
+uv run medfusion train --config configs/starter/default.yaml --gpus 0,1,2,3
 ```
 
 ### Evaluation
 ```bash
 # Evaluate on test set
-uv run med-evaluate --config configs/default.yaml \
+uv run medfusion evaluate --config configs/starter/default.yaml \
     --checkpoint outputs/checkpoints/best.pth \
     --split test
 
 # Generate detailed report
-uv run med-evaluate --config configs/default.yaml \
+uv run medfusion evaluate --config configs/starter/default.yaml \
     --checkpoint outputs/checkpoints/best.pth \
     --split test \
     --output-dir outputs/evaluation
@@ -67,14 +67,14 @@ uv run med-evaluate --config configs/default.yaml \
 ### Preprocessing
 ```bash
 # Preprocess images
-uv run med-preprocess \
+uv run medfusion preprocess \
     --input-dir data/raw_images \
     --output-dir data/processed_images \
     --size 224 \
     --normalize
 
 # With parallel workers
-uv run med-preprocess \
+uv run medfusion preprocess \
     --input-dir data/raw_images \
     --output-dir data/processed_images \
     --workers 8

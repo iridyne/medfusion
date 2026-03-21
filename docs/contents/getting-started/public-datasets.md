@@ -105,7 +105,7 @@
 ```bash
 uv pip install medmnist
 uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_quickstart.yaml
+uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
 ```
 
 输出目录固定为：
@@ -119,7 +119,7 @@ uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_q
 
 ```bash
 uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 
 输出目录固定为：

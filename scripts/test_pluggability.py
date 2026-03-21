@@ -181,7 +181,7 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/test_mock.yaml",
+        default="configs/testing/test_mock.yaml",
         help="Base configuration file",
     )
     parser.add_argument(

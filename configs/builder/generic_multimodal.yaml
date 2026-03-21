@@ -396,7 +396,7 @@ reproducibility:
 # 1. Build model from this config:
 #    ```python
 #    from med_core.models import build_model_from_config
-#    model = build_model_from_config('configs/generic_multimodal_config.yaml')
+#    model = build_model_from_config('configs/builder/generic_multimodal.yaml')
 #    ```
 #
 # 2. Build model programmatically:
@@ -413,14 +413,12 @@ reproducibility:
 #
 # 3. Train model:
 #    ```bash
-#    uv run medfusion-train --config configs/generic_multimodal_config.yaml
+#    python -c "import yaml; from med_core.models import build_model_from_config; config = yaml.safe_load(open('configs/builder/generic_multimodal.yaml')); build_model_from_config(config)"
 #    ```
 #
 # 4. Evaluate model:
 #    ```bash
-#    uv run medfusion-evaluate \
-#        --config configs/generic_multimodal_config.yaml \
-#        --checkpoint outputs/generic_multimodal/best_model.pth
+#    # Builder config 示例主要用于结构表达，不直接等价于 medfusion train 主链
 #    ```
 #
 # ============================================================================

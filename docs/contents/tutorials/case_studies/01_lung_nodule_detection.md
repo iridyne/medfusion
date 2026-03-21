@@ -328,7 +328,7 @@ uv run python examples/train_lung_nodule.py
 
 ```bash
 # 使用 MedFusion CLI
-uv run medfusion-train --config configs/lung_nodule_config.yaml
+uv run medfusion train --config configs/lung_nodule_config.yaml
 ```
 
 ## 7. 模型评估

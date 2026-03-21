@@ -8,8 +8,8 @@ This script performs a comprehensive smoke test to verify:
 3. Training loop functionality and gradient flow
 
 Usage:
-    uv run python scripts/smoke_test.py --config configs/test_mock.yaml
-    uv run python scripts/smoke_test.py --config configs/test_mock.yaml --epochs 5
+    uv run python scripts/smoke_test.py --config configs/testing/test_mock.yaml
+    uv run python scripts/smoke_test.py --config configs/testing/test_mock.yaml --epochs 5
 """
 
 import argparse
@@ -322,7 +322,7 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/test_mock.yaml",
+        default="configs/testing/test_mock.yaml",
         help="Path to configuration file",
     )
     parser.add_argument(

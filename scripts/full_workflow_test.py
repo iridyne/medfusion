@@ -107,7 +107,7 @@ def main():
     logger.info("阶段 1: 加载配置")
     logger.info("=" * 60)
 
-    config = config_loader.load_config("configs/simulation_test.yaml")
+    config = config_loader.load_config("configs/testing/simulation_test.yaml")
 
     # 更新配置中的路径
     config.data.csv_path = str(csv_path)

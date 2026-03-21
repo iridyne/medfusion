@@ -19,47 +19,60 @@ python -c "import med_core; print(med_core.__version__)"
 ### 训练模型
 
 ```bash
-# 使用默认配置
-python -m med_core.cli train --config configs/default.yaml
+# 最快开始
+medfusion train --config configs/starter/quickstart.yaml
 
 # 使用自定义配置
-python -m med_core.cli train --config configs/my_config.yaml
+medfusion train --config configs/my_config.yaml
 
 # 指定输出目录
-python -m med_core.cli train --config configs/default.yaml --output-dir outputs/exp1
+medfusion train --config configs/starter/quickstart.yaml --output-dir outputs/exp1
 ```
 
 ### 评估模型
 
 ```bash
 # 评估检查点
-python -m med_core.cli evaluate --checkpoint outputs/best_model.pth
-
-# 指定数据集
-python -m med_core.cli evaluate --checkpoint outputs/best_model.pth --data-dir data/test
+medfusion evaluate \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
 ## 配置文件模板
 
 ```yaml
 # configs/my_config.yaml
+project_name: "my-project"
+experiment_name: "my-exp"
+
 model:
-  backbone: resnet50
   num_classes: 2
-  pretrained: true
+
+  vision:
+    backbone: "resnet18"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 128
+
+  tabular:
+    hidden_dims: [32]
+    output_dim: 16
 
 data:
-  data_dir: data/
+  csv_path: "data/mock/metadata.csv"
+  image_dir: "data/mock"
+  image_path_column: "image_path"
+  target_column: "diagnosis"
   batch_size: 32
   num_workers: 4
   image_size: 224
 
 training:
-  epochs: 100
+  num_epochs: 50
   optimizer:
-    type: adamw
-    lr: 0.001
-  use_amp: true
+    optimizer: "adamw"
+    learning_rate: 0.001
+  mixed_precision: true
 ```
 
 ## 常用命令
@@ -109,14 +122,14 @@ pre-commit run --all-files
 # 构建镜像
 docker-compose build
 
-# 运行训练
-docker-compose up medfusion-train
+# 启动 Web UI（GPU 版本）
+docker compose -f docker/docker-compose.yml up medfusion-web
 
-# 启动 TensorBoard
-docker-compose --profile monitoring up tensorboard
+# 启动 CPU 版本
+docker compose -f docker/docker-compose.yml --profile cpu up medfusion-web-cpu
 
-# 启动 Jupyter
-docker-compose --profile dev up jupyter
+# 启动开发容器
+docker compose -f docker/docker-compose.yml --profile dev up medfusion-dev
 ```
 
 ## 调试
@@ -124,7 +137,7 @@ docker-compose --profile dev up jupyter
 ```bash
 # 启用详细日志（Web UI）
 export MEDFUSION_LOG_LEVEL=DEBUG
-python -m med_core.cli train --config configs/default.yaml
+medfusion train --config configs/starter/quickstart.yaml
 
 # 检查 GPU
 python -c "import torch; print(torch.cuda.is_available())"
@@ -215,7 +228,4 @@ python -c "import med_core; print(med_core.__version__)"
 
 # 查看依赖
 uv pip list
-
-# 检查环境
-python -m med_core.cli info
 ```

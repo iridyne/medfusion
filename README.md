@@ -39,15 +39,35 @@ pip install -e ".[dev,web]"
 ### 基础使用
 
 ```bash
-# 训练模型
-uv run med-train --config configs/default.yaml
+# 最快跑通训练主链
+uv run medfusion train --config configs/starter/quickstart.yaml
 
 # 评估模型
-uv run med-evaluate --checkpoint outputs/best_model.pth
+uv run medfusion evaluate \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 
 # 数据预处理
-uv run med-preprocess --data-dir data/raw
+uv run medfusion preprocess --input-dir data/raw --output-dir data/processed
 ```
+
+### CLI 与 Config 路径
+
+当前先分清三条使用路径：
+
+1. `medfusion train` 直接可用的配置：
+   - `configs/starter/`
+   - `configs/public_datasets/`
+   - `configs/testing/`
+2. `MultiModalModelBuilder` / `build_model_from_config()` 用的结构示例：
+   - `configs/builder/`
+3. 历史模板：
+   - `configs/legacy/`
+
+入口说明：
+
+- [configs/README.md](configs/README.md)
+- [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
 
 ### 启动 Web UI
 
@@ -91,11 +111,11 @@ uv run python -m med_core.web.cli web
 # 1) 最快验证图像训练主链：PathMNIST
 uv pip install medmnist
 uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_quickstart.yaml
+uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
 
 # 2) 最快验证表格指标主链：UCI Heart Disease
 uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 
 说明：
@@ -129,7 +149,7 @@ outputs = model({"ct": ct_tensor, "pathology": path_tensor})
 from med_core.models import build_model_from_config
 import yaml
 
-with open("configs/smurf_config.yaml") as f:
+with open("configs/builder/smurf.yaml") as f:
     config = yaml.safe_load(f)
 
 model = build_model_from_config(config)

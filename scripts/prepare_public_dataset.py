@@ -124,7 +124,7 @@ def _prepare_pathmnist(
     print(f"Metadata: {metadata_path}")
     print("Recommended training command:")
     print(
-        "  uv run python -m med_core.cli train "
+        "  uv run medfusion train "
         "--config configs/public_datasets/pathmnist_quickstart.yaml"
     )
 
@@ -213,7 +213,7 @@ def _prepare_uci_heart_disease(output_dir: Path, overwrite: bool) -> None:
     print(f"Metadata: {metadata_path}")
     print("Recommended training command:")
     print(
-        "  uv run python -m med_core.cli train --config "
+        "  uv run medfusion train --config "
         "configs/public_datasets/uci_heart_disease_quickstart.yaml"
     )
 

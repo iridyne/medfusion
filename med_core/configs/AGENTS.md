@@ -57,7 +57,7 @@ YAML File → load_config() → Config Object → validate_config() → Validate
 ```python
 from med_core.configs import load_config, validate_config_or_exit
 
-config = load_config('configs/default.yaml')
+config = load_config('configs/starter/default.yaml')
 validate_config_or_exit(config)  # Exits if invalid
 ```
 

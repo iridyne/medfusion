@@ -55,7 +55,7 @@ from med_core.trainers import MultimodalTrainer
 from med_core.models import build_model_from_config
 
 # Build model
-model = build_model_from_config('configs/smurf_config.yaml')
+model = build_model_from_config('configs/builder/smurf.yaml')
 
 # Create trainer
 trainer = MultimodalTrainer(
@@ -78,7 +78,7 @@ from med_core.trainers import create_trainer
 import yaml
 
 # Load config
-with open('configs/smurf_config.yaml') as f:
+with open('configs/builder/smurf.yaml') as f:
     config = yaml.safe_load(f)
 
 # Create trainer from config

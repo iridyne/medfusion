@@ -17,6 +17,7 @@
 ### 🚀 快速开始
 
 **新手必读：**
+- [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md) - 先分清哪些 YAML 是给 CLI 训练用、哪些是 builder 示例
 - [快速入门指南](contents/getting-started/quickstart.md) - 新手避坑指南，常见问题和解决方案
 - [公开数据集快速验证清单](contents/getting-started/public-datasets.md) - 没有私有数据时的第一批公开验证入口
 - [Docker 部署指南](contents/tutorials/deployment/docker.md) - 使用 Docker 部署 MedFusion

@@ -20,7 +20,7 @@ logging:
 
 ```bash
 # 训练时自动记录日志
-uv run medfusion-train --config configs/my_config.yaml
+uv run medfusion train --config configs/my_config.yaml
 
 # 在另一个终端启动 TensorBoard
 tensorboard --logdir outputs/tensorboard --port 6006
@@ -95,7 +95,7 @@ logging:
 ### 训练时自动记录
 
 ```bash
-uv run medfusion-train --config configs/my_config.yaml
+uv run medfusion train --config configs/my_config.yaml
 ```
 
 训练开始后，会自动：
@@ -145,7 +145,7 @@ wandb.finish()
 
 ```yaml
 # sweep.yaml
-program: medfusion-train
+program: scripts/run_sweep.py  # 需要你自己封装对 medfusion CLI 的调用
 method: bayes
 metric:
   name: val/auc
@@ -401,13 +401,10 @@ training:
 ### 1. 多实验对比
 
 ```bash
-# 使用不同配置运行多个实验
-for lr in 0.001 0.0001 0.00001; do
-    uv run medfusion-train \
-        --config configs/base.yaml \
-        --override training.optimizer.lr=$lr \
-        --experiment-name "lr_${lr}"
-done
+# 复制出多份配置，再分别运行
+uv run medfusion train --config configs/exp_lr_1e3.yaml
+uv run medfusion train --config configs/exp_lr_1e4.yaml
+uv run medfusion train --config configs/exp_lr_1e5.yaml
 ```
 
 ### 2. 自动通知
@@ -461,12 +458,12 @@ wandb.init(project="...", save_code=False)
 
 ### Q3: 如何恢复中断的训练？
 
-**A:** 使用检查点恢复：
-```bash
-uv run medfusion-train \
-    --config configs/my_config.yaml \
-    --resume outputs/checkpoints/last.pth
-```
+**A:** 当前稳定 CLI 主链还没有把 `--resume` 收敛成正式入口。
+更稳的做法是：
+
+1. 保留已有 checkpoint
+2. 重新发起一轮训练并明确新的输出目录
+3. 如果你要做真正的断点恢复，建议先在脚本层自己接入
 
 ## 下一步
 

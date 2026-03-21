@@ -627,7 +627,7 @@ config = validate_config_or_exit(config_dict)
 
 ## 最佳实践
 
-1. **从默认配置开始**：复制 `configs/default.yaml` 并修改
+1. **从默认配置开始**：复制 `configs/starter/default.yaml` 并修改
 2. **使用有意义的命名**：`experiment_name` 应包含关键信息
 3. **记录实验**：使用 `description` 和 `tags` 记录实验目的
 4. **渐进式调整**：先用小模型快速验证，再用大模型训练

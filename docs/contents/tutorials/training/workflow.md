@@ -63,23 +63,21 @@ python -c "from med_core.models import MultiModalModelBuilder; builder = MultiMo
 ### 方法 1：使用命令行（推荐）
 
 ```bash
-# 基础训练
-uv run medfusion-train --config configs/default.yaml
+# 基础训练（当前稳定入口）
+uv run medfusion train --config configs/starter/quickstart.yaml
 
 # 指定输出目录
-uv run medfusion-train --config configs/default.yaml --output-dir outputs/exp_001
-
-# 覆盖配置参数
-uv run medfusion-train \
-  --config configs/default.yaml \
-  --override training.num_epochs=100 \
-  --override training.optimizer.learning_rate=0.0001
-
-# 从检查点恢复训练
-uv run medfusion-train \
-  --config configs/default.yaml \
-  --resume outputs/exp_001/checkpoints/last.pth
+uv run medfusion train \
+  --config configs/starter/quickstart.yaml \
+  --output-dir outputs/exp_001
 ```
+
+当前 CLI 主链实际支持的训练参数只有：
+
+- `--config`
+- `--output-dir`
+
+像 `--override`、`--resume` 这类参数目前不是这条主链的稳定接口，不建议按旧文档使用。
 
 ### 方法 2：使用 Python 脚本
 
@@ -88,12 +86,13 @@ uv run medfusion-train \
 from pathlib import Path
 from med_core.configs import load_config
 from med_core.datasets import MedicalMultimodalDataset, create_dataloaders, split_dataset
-from med_core.models import build_model_from_config
+from med_core.backbones import create_tabular_backbone, create_vision_backbone
+from med_core.fusion import MultiModalFusionModel, create_fusion_module
 from med_core.trainers import MultimodalTrainer
 import torch.optim as optim
 
 # 加载配置
-config = load_config("configs/default.yaml")
+config = load_config("configs/starter/quickstart.yaml")
 
 # 准备数据
 dataset, preprocessor = MedicalMultimodalDataset.from_csv(
@@ -109,7 +108,34 @@ train_ds, val_ds, test_ds = split_dataset(dataset, train_ratio=0.7, val_ratio=0.
 dataloaders = create_dataloaders(train_ds, val_ds, test_ds, batch_size=config.data.batch_size)
 
 # 构建模型
-model = build_model_from_config(config.model)
+vision_backbone = create_vision_backbone(
+    backbone_name=config.model.vision.backbone,
+    pretrained=config.model.vision.pretrained,
+    freeze=config.model.vision.freeze_backbone,
+    feature_dim=config.model.vision.feature_dim,
+    dropout=config.model.vision.dropout,
+    attention_type=config.model.vision.attention_type,
+)
+tabular_backbone = create_tabular_backbone(
+    input_dim=train_ds.get_tabular_dim(),
+    output_dim=config.model.tabular.output_dim,
+    hidden_dims=config.model.tabular.hidden_dims,
+    dropout=config.model.tabular.dropout,
+)
+fusion_module = create_fusion_module(
+    fusion_type=config.model.fusion.fusion_type,
+    vision_dim=config.model.vision.feature_dim,
+    tabular_dim=config.model.tabular.output_dim,
+    output_dim=config.model.fusion.hidden_dim,
+    dropout=config.model.fusion.dropout,
+)
+model = MultiModalFusionModel(
+    vision_backbone=vision_backbone,
+    tabular_backbone=tabular_backbone,
+    fusion_module=fusion_module,
+    num_classes=config.model.num_classes,
+    use_auxiliary_heads=config.model.use_auxiliary_heads,
+)
 
 # 创建优化器
 optimizer = optim.AdamW(
@@ -176,7 +202,7 @@ logging:
 wandb login
 
 # 训练时自动上传
-uv run medfusion-train --config configs/default.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
 ```
 
 ### 实时日志监控
@@ -629,17 +655,46 @@ cp outputs/exp_001/checkpoints/best.pth models/final_model.pth
 
 # 导出为 ONNX（可选）
 uv run python -c "
-from med_core.models import build_model_from_config
 from med_core.configs import load_config
 import torch
 
-config = load_config('configs/default.yaml')
-model = build_model_from_config(config.model)
+config = load_config('configs/starter/quickstart.yaml')
+from med_core.backbones import create_tabular_backbone, create_vision_backbone
+from med_core.fusion import MultiModalFusionModel, create_fusion_module
+
+vision_backbone = create_vision_backbone(
+    backbone_name=config.model.vision.backbone,
+    pretrained=config.model.vision.pretrained,
+    freeze=config.model.vision.freeze_backbone,
+    feature_dim=config.model.vision.feature_dim,
+    dropout=config.model.vision.dropout,
+    attention_type=config.model.vision.attention_type,
+)
+tabular_backbone = create_tabular_backbone(
+    input_dim=max(len(config.data.numerical_features) + len(config.data.categorical_features), 1),
+    output_dim=config.model.tabular.output_dim,
+    hidden_dims=config.model.tabular.hidden_dims,
+    dropout=config.model.tabular.dropout,
+)
+fusion_module = create_fusion_module(
+    fusion_type=config.model.fusion.fusion_type,
+    vision_dim=config.model.vision.feature_dim,
+    tabular_dim=config.model.tabular.output_dim,
+    output_dim=config.model.fusion.hidden_dim,
+    dropout=config.model.fusion.dropout,
+)
+model = MultiModalFusionModel(
+    vision_backbone=vision_backbone,
+    tabular_backbone=tabular_backbone,
+    fusion_module=fusion_module,
+    num_classes=config.model.num_classes,
+    use_auxiliary_heads=config.model.use_auxiliary_heads,
+)
 model.load_state_dict(torch.load('models/final_model.pth')['model_state_dict'])
 model.eval()
 
 dummy_image = torch.randn(1, 3, 224, 224)
-dummy_tabular = torch.randn(1, 32)
+dummy_tabular = torch.randn(1, max(len(config.data.numerical_features) + len(config.data.categorical_features), 1))
 torch.onnx.export(model, (dummy_image, dummy_tabular), 'models/final_model.onnx')
 "
 ```
@@ -660,8 +715,8 @@ print(f"Report saved to: {report}")
 ### 3. 评估测试集
 
 ```bash
-uv run medfusion-evaluate \
-  --config configs/default.yaml \
+uv run medfusion evaluate \
+  --config configs/starter/quickstart.yaml \
   --checkpoint outputs/exp_001/checkpoints/best.pth \
   --split test \
   --output-dir outputs/exp_001/evaluation

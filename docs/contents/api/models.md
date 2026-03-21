@@ -70,8 +70,13 @@ config = {
 model = build_model_from_config(config)
 
 # 从 YAML 文件构建
-model = build_model_from_config('configs/smurf_config.yaml')
+model = build_model_from_config('configs/builder/smurf.yaml')
 ```
+
+注意：
+
+- `build_model_from_config()` 读取的是 builder 风格配置
+- 它和 `medfusion train --config ...` 使用的 starter/public/testing 配置不是同一套 schema
 
 ## 配置格式
 

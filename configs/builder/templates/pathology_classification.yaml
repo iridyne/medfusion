@@ -121,4 +121,4 @@ logging:
 # 2. 修改 model.num_classes 为你的类别数
 # 3. 如果不使用临床特征，注释掉 tabular 和 fusion 部分
 # 4. 根据 GPU 内存调整 batch_size
-# 5. 运行：uv run med-train --config configs/templates/pathology_classification.yaml
+# 5. 用于 builder / 结构表达，不建议直接拿给 medfusion train 主链

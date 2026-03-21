@@ -31,13 +31,14 @@ model = (
 from med_core.models import build_model_from_config
 import yaml
 
-with open("configs/default.yaml") as f:
+with open("configs/builder/smurf.yaml") as f:
     config = yaml.safe_load(f)
 
 model = build_model_from_config(config)
 ```
 
 **优点**：配置与代码分离，便于实验管理
+**注意**：这里使用的是 `configs/builder/` 下的 builder 配置，不是 `medfusion train` 主链配置。
 
 ### 3. 直接构建
 

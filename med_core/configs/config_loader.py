@@ -134,8 +134,8 @@ def load_config(
         Instantiated configuration object
 
     Example:
-        >>> config = load_config("configs/dermoscopy.yaml")
-        >>> config = load_config("configs/base.yaml", overrides={"training.num_epochs": 50})
+        >>> config = load_config("configs/starter/quickstart.yaml")
+        >>> config = load_config("configs/starter/default.yaml", overrides={"training": {"num_epochs": 50}})
     """
     config_path = Path(config_path)
 

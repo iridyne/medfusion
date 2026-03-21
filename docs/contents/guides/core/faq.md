@@ -213,11 +213,11 @@ FileNotFoundError: [Errno 2] No such file or directory: 'configs/my_config.yaml'
 
 ```bash
 # 使用绝对路径
-python -m med_core.cli train --config /absolute/path/to/config.yaml
+medfusion train --config /absolute/path/to/config.yaml
 
 # 或从正确的目录运行
 cd /path/to/medfusion
-python -m med_core.cli train --config configs/my_config.yaml
+medfusion train --config configs/my_config.yaml
 ```
 
 ### 问题 3: 注意力监督配置错误
