@@ -14,7 +14,11 @@ from pathlib import Path
 from typing import Any
 
 from .checkpoint_manager import CheckpointManager
-from .node_executors import ExecutorFactory, NodeExecutionError
+from .node_executors import (
+    ExecutorFactory,
+    NodeExecutionError,
+    get_executor_runtime_errors,
+)
 from .resource_monitor import ResourceMonitor
 
 logger = logging.getLogger(__name__)
@@ -86,6 +90,26 @@ class WorkflowValidationError(Exception):
 
 class WorkflowExecutionError(Exception):
     """工作流执行错误"""
+
+
+_NODE_LABELS: dict[str, str] = {
+    "dataLoader": "数据加载节点",
+    "model": "模型节点",
+    "training": "训练节点",
+    "evaluation": "评估节点",
+}
+
+_NODE_RUNTIME_LABELS: dict[str, str] = {
+    "dataLoader": "数据加载器",
+    "model": "模型构建",
+    "training": "训练",
+    "evaluation": "评估",
+}
+
+_REQUIRED_INPUT_PORTS: dict[str, tuple[str, ...]] = {
+    "training": ("model", "train_data"),
+    "evaluation": ("model", "test_data"),
+}
 
 
 class WorkflowEngine:
@@ -167,12 +191,31 @@ class WorkflowEngine:
         self.reverse_adjacency_list = defaultdict(list)
 
         for edge_data in workflow_data.get("edges", []):
+            source_handle = edge_data.get("sourceHandle")
+            target_handle = edge_data.get("targetHandle")
+
+            source_node = self.nodes.get(edge_data["source"])
+            if source_node is not None:
+                source_handle = self._normalize_handle(
+                    source_node,
+                    source_handle,
+                    is_input=False,
+                )
+
+            target_node = self.nodes.get(edge_data["target"])
+            if target_node is not None:
+                target_handle = self._normalize_handle(
+                    target_node,
+                    target_handle,
+                    is_input=True,
+                )
+
             edge = Edge(
                 id=edge_data["id"],
                 source=edge_data["source"],
                 target=edge_data["target"],
-                source_handle=edge_data.get("sourceHandle", "default"),
-                target_handle=edge_data.get("targetHandle", "default"),
+                source_handle=source_handle or "default",
+                target_handle=target_handle or "default",
             )
             self.edges.append(edge)
 
@@ -219,8 +262,14 @@ class WorkflowEngine:
                 node_id=node.id,
                 is_input=True,
             )
-            node.inputs["dataset"] = Port(
-                id="dataset",
+            node.inputs["train_data"] = Port(
+                id="train_data",
+                type=PortType.DATASET,
+                node_id=node.id,
+                is_input=True,
+            )
+            node.inputs["val_data"] = Port(
+                id="val_data",
                 type=PortType.DATASET,
                 node_id=node.id,
                 is_input=True,
@@ -264,19 +313,106 @@ class WorkflowEngine:
                 is_input=False,
             )
 
-    def validate(self) -> tuple[bool, list[str]]:
+    def _normalize_handle(
+        self,
+        node: Node,
+        handle: str | None,
+        *,
+        is_input: bool,
+    ) -> str:
+        if handle == "dataset" and is_input and node.type == "training":
+            return "train_data"
+
+        if handle and handle != "default":
+            return handle
+
+        ports = node.inputs if is_input else node.outputs
+        if len(ports) == 1:
+            return next(iter(ports))
+
+        return "default"
+
+    def _is_port_type_compatible(
+        self,
+        source_type: PortType,
+        target_type: PortType,
+    ) -> bool:
+        if source_type == target_type:
+            return True
+
+        if (
+            source_type == PortType.DATASET
+            and target_type in {PortType.DATASET, PortType.IMAGE_DATA, PortType.TABULAR_DATA}
+        ):
+            return True
+
+        return False
+
+    def _validate_node_configuration(self, node: Node) -> list[str]:
+        errors: list[str] = []
+
+        if node.type not in _NODE_LABELS:
+            errors.append(f"未知节点类型: {node.type}")
+            return errors
+
+        if node.type == "dataLoader" and not node.data.get("datasetId"):
+            errors.append(f"数据加载节点 {node.id} 缺少 datasetId 配置")
+
+        if node.type == "model":
+            num_classes = node.data.get("numClasses")
+            if num_classes is not None and int(num_classes) < 2:
+                errors.append(f"模型节点 {node.id} 的 numClasses 必须大于等于 2")
+
+        if node.type == "training":
+            epochs = node.data.get("epochs")
+            learning_rate = node.data.get("learningRate")
+            if epochs is not None and int(epochs) <= 0:
+                errors.append(f"训练节点 {node.id} 的 epochs 必须大于 0")
+            if learning_rate is not None and float(learning_rate) <= 0:
+                errors.append(f"训练节点 {node.id} 的 learningRate 必须大于 0")
+
+        return errors
+
+    def _validate_runtime_readiness(self) -> list[str]:
+        errors: list[str] = []
+        seen_types: set[str] = set()
+
+        for node in self.nodes.values():
+            if node.type in seen_types:
+                continue
+            seen_types.add(node.type)
+
+            node_errors = get_executor_runtime_errors(node.type)
+            for error in node_errors:
+                label = _NODE_RUNTIME_LABELS.get(node.type, node.type)
+                errors.append(f"{label}后端未就绪: {error}")
+
+        return errors
+
+    def validate(
+        self,
+        include_runtime_readiness: bool = False,
+    ) -> tuple[bool, list[str]]:
         """
         验证工作流合法性
 
         Returns:
             (is_valid, errors): 验证结果和错误列表
         """
-        errors = []
+        errors: list[str] = []
 
         # 检查是否有节点
         if not self.nodes:
             errors.append("工作流为空，至少需要一个节点")
             return False, errors
+
+        valid_edges: list[Edge] = []
+        incoming_edges: dict[str, dict[str, list[str]]] = defaultdict(
+            lambda: defaultdict(list),
+        )
+
+        for node in self.nodes.values():
+            errors.extend(self._validate_node_configuration(node))
 
         # 检查边的有效性（必须在拓扑排序之前）
         for edge in self.edges:
@@ -298,26 +434,49 @@ class WorkflowEngine:
                     errors.append(
                         f"节点 {edge.target} 没有输入端口 {edge.target_handle}",
                     )
+                    continue
+
+                source_port = source_node.outputs[edge.source_handle]
+                target_port = target_node.inputs[edge.target_handle]
+                if not self._is_port_type_compatible(source_port.type, target_port.type):
+                    errors.append(
+                        f"边 {edge.id} 的端口类型不兼容: "
+                        f"{edge.source}.{edge.source_handle}({source_port.type.value}) -> "
+                        f"{edge.target}.{edge.target_handle}({target_port.type.value})",
+                    )
+                    continue
+
+                valid_edges.append(edge)
+                incoming_edges[edge.target][edge.target_handle].append(edge.id)
+
+        for node_id, port_edges in incoming_edges.items():
+            for port_id, edge_ids in port_edges.items():
+                if len(edge_ids) > 1:
+                    errors.append(
+                        f"节点 {node_id} 的输入端口 {port_id} 只能连接一条边，当前为 {edge_ids}",
+                    )
 
         # 检查循环依赖（只在边都有效时进行）
         if not any("不存在" in error for error in errors):
             try:
-                self._topological_sort()
+                self._topological_sort(valid_edges)
             except WorkflowValidationError as e:
                 errors.append(f"检测到循环依赖: {e!s}")
 
         # 检查必需的输入
         for node in self.nodes.values():
-            if node.type == "training" and not self.reverse_adjacency_list.get(node.id):
-                errors.append(f"训练节点 {node.id} 缺少输入连接")
-            elif node.type == "evaluation" and not self.reverse_adjacency_list.get(
-                node.id
-            ):
-                errors.append(f"评估节点 {node.id} 缺少输入连接")
+            for port_id in _REQUIRED_INPUT_PORTS.get(node.type, ()):
+                if not incoming_edges[node.id].get(port_id):
+                    node_label = _NODE_LABELS.get(node.type, f"{node.type} 节点")
+                    errors.append(f"{node_label} {node.id} 缺少必需输入端口 {port_id}")
 
-        return len(errors) == 0, errors
+        if include_runtime_readiness:
+            errors.extend(self._validate_runtime_readiness())
 
-    def _topological_sort(self) -> list[str]:
+        deduplicated_errors = list(dict.fromkeys(errors))
+        return len(deduplicated_errors) == 0, deduplicated_errors
+
+    def _topological_sort(self, edges: list[Edge] | None = None) -> list[str]:
         """
         拓扑排序，返回节点执行顺序
 
@@ -327,10 +486,18 @@ class WorkflowEngine:
         Raises:
             WorkflowValidationError: 如果存在循环依赖
         """
+        edges = edges if edges is not None else self.edges
+        adjacency_list: dict[str, list[str]] = defaultdict(list)
+        reverse_adjacency_list: dict[str, list[str]] = defaultdict(list)
+
+        for edge in edges:
+            adjacency_list[edge.source].append(edge.target)
+            reverse_adjacency_list[edge.target].append(edge.source)
+
         # 计算入度
         in_degree = dict.fromkeys(self.nodes, 0)
         for node_id in self.nodes:
-            in_degree[node_id] = len(self.reverse_adjacency_list.get(node_id, []))
+            in_degree[node_id] = len(reverse_adjacency_list.get(node_id, []))
 
         # 找到所有入度为 0 的节点
         queue = deque([node_id for node_id, degree in in_degree.items() if degree == 0])
@@ -341,7 +508,7 @@ class WorkflowEngine:
             result.append(node_id)
 
             # 减少相邻节点的入度
-            for neighbor in self.adjacency_list.get(node_id, []):
+            for neighbor in adjacency_list.get(node_id, []):
                 in_degree[neighbor] -= 1
                 if in_degree[neighbor] == 0:
                     queue.append(neighbor)

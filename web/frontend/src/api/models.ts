@@ -54,24 +54,68 @@ export interface Model {
     label: string;
     path: string;
     exists: boolean;
+    download_url?: string;
+    preview_url?: string | null;
+    is_image?: boolean;
   }>;
+  training_history?: {
+    entries: Array<{
+      epoch: number;
+      train_loss: number;
+      val_loss: number;
+      train_accuracy: number;
+      val_accuracy: number;
+      learning_rate: number;
+      best_so_far?: boolean;
+    }>;
+    plot_artifact_key?: string | null;
+    plot_url?: string | null;
+  } | null;
   visualizations?: {
     roc_curve?: {
-      auc: number;
+      auc?: number | null;
+      positive_class_label?: string;
       points: Array<{
         fpr: number;
         tpr: number;
+        threshold?: number;
       }>;
+      plot_artifact_key?: string | null;
+      plot_url?: string | null;
     };
     confusion_matrix?: {
       labels: string[];
       matrix: number[][];
+      plot_artifact_key?: string | null;
+      plot_url?: string | null;
+      normalized_plot_artifact_key?: string | null;
+      normalized_plot_url?: string | null;
     };
     attention_maps?: Array<{
       title: string;
       modality: string;
       grid: number[][];
+      artifact_key?: string;
+      image_url?: string | null;
+      mean_attention?: number;
+      peak_attention?: number;
     }>;
+    attention_statistics?: {
+      artifact_key: string;
+      image_url: string;
+    };
+    calibration_curve?: {
+      artifact_key: string;
+      image_url: string;
+    };
+    probability_distribution?: {
+      artifact_key: string;
+      image_url: string;
+    };
+    training_curves?: {
+      artifact_key: string;
+      image_url: string;
+    };
   };
   created_at: string;
   updated_at?: string;

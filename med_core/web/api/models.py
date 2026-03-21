@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import random
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -57,165 +57,254 @@ def _infer_format(path: str | None) -> str:
     return "pytorch"
 
 
-def _collect_result_files(model: ModelInfo) -> list[dict[str, Any]]:
+def _artifact_download_url(model_id: int, artifact_key: str) -> str:
+    return f"/api/models/{model_id}/artifacts/{artifact_key}"
+
+
+def _safe_load_json(path: str | None) -> dict[str, Any]:
+    if not path:
+        return {}
+    artifact_path = Path(path)
+    if not artifact_path.exists():
+        return {}
+    try:
+        return json.loads(artifact_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _is_image_artifact(path: str | None) -> bool:
+    if not path:
+        return False
+    return Path(path).suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+
+
+def _build_artifact_index(model: ModelInfo) -> dict[str, dict[str, Any]]:
     config = model.config or {}
     artifact_paths = config.get("artifact_paths", {})
-    candidates = [
+
+    candidates: list[tuple[str, str, str | None]] = [
         ("checkpoint", "模型权重", model.checkpoint_path),
         ("config", "训练配置", model.config_path or artifact_paths.get("config_path")),
         ("summary", "结果摘要", artifact_paths.get("summary_path")),
         ("metrics", "指标文件", artifact_paths.get("metrics_path")),
         ("report", "结果报告", artifact_paths.get("report_path")),
         ("log", "训练日志", artifact_paths.get("log_path")),
+        ("history", "训练历史", artifact_paths.get("history_path")),
+        ("predictions", "预测样本", artifact_paths.get("prediction_path")),
+        ("roc_curve_json", "ROC 数据", artifact_paths.get("roc_curve_json_path")),
+        ("roc_curve_plot", "ROC 曲线图", artifact_paths.get("roc_curve_plot_path")),
+        (
+            "confusion_matrix_json",
+            "混淆矩阵数据",
+            artifact_paths.get("confusion_matrix_json_path"),
+        ),
+        (
+            "confusion_matrix_plot",
+            "混淆矩阵图",
+            artifact_paths.get("confusion_matrix_plot_path"),
+        ),
+        (
+            "confusion_matrix_normalized_plot",
+            "归一化混淆矩阵图",
+            artifact_paths.get("confusion_matrix_normalized_plot_path"),
+        ),
+        (
+            "training_curves_plot",
+            "训练曲线图",
+            artifact_paths.get("training_curves_plot_path"),
+        ),
+        (
+            "calibration_curve_plot",
+            "校准曲线图",
+            artifact_paths.get("calibration_curve_plot_path"),
+        ),
+        (
+            "probability_distribution_plot",
+            "概率分布图",
+            artifact_paths.get("probability_distribution_plot_path"),
+        ),
     ]
 
-    result_files = []
+    artifact_index: dict[str, dict[str, Any]] = {}
     for key, label, path in candidates:
-        if not path:
+        if not path or key in artifact_index:
             continue
-        result_files.append(
-            {
-                "key": key,
-                "label": label,
-                "path": path,
-                "exists": Path(path).exists(),
-            },
-        )
+        artifact_index[key] = {
+            "key": key,
+            "label": label,
+            "path": path,
+            "exists": Path(path).exists(),
+            "download_url": _artifact_download_url(model.id, key),
+            "is_image": _is_image_artifact(path),
+            "preview_url": _artifact_download_url(model.id, key)
+            if _is_image_artifact(path)
+            else None,
+        }
+
+    attention_manifest = _safe_load_json(artifact_paths.get("attention_manifest_path"))
+    for item in attention_manifest.get("items", []):
+        artifact_key = item.get("artifact_key")
+        image_path = item.get("image_path")
+        if not artifact_key or not image_path or artifact_key in artifact_index:
+            continue
+        artifact_index[artifact_key] = {
+            "key": artifact_key,
+            "label": item.get("title", artifact_key),
+            "path": image_path,
+            "exists": Path(image_path).exists(),
+            "download_url": _artifact_download_url(model.id, artifact_key),
+            "is_image": True,
+            "preview_url": _artifact_download_url(model.id, artifact_key),
+        }
+
+    statistics_key = attention_manifest.get("statistics_artifact_key")
+    statistics_path = attention_manifest.get("statistics_plot_path")
+    if statistics_key and statistics_path and statistics_key not in artifact_index:
+        artifact_index[statistics_key] = {
+            "key": statistics_key,
+            "label": "注意力统计图",
+            "path": statistics_path,
+            "exists": Path(statistics_path).exists(),
+            "download_url": _artifact_download_url(model.id, statistics_key),
+            "is_image": True,
+            "preview_url": _artifact_download_url(model.id, statistics_key),
+        }
+
+    return artifact_index
+
+
+def _collect_result_files(model: ModelInfo) -> list[dict[str, Any]]:
+    result_files = list(_build_artifact_index(model).values())
+    result_files.sort(
+        key=lambda item: (
+            0
+            if item["key"]
+            in {
+                "checkpoint",
+                "config",
+                "summary",
+                "metrics",
+                "history",
+                "roc_curve_plot",
+                "confusion_matrix_plot",
+                "training_curves_plot",
+            }
+            else 1,
+            item["label"],
+        ),
+    )
     return result_files
 
 
-def _build_demo_roc_curve(model: ModelInfo) -> dict[str, Any]:
-    metrics = model.metrics or {}
-    base_accuracy = model.accuracy or metrics.get("best_accuracy") or 0.85
-    auc = metrics.get("auc") or min(0.995, max(0.7, base_accuracy + 0.035))
-    points = []
+def _load_training_history(model: ModelInfo) -> dict[str, Any] | None:
+    artifact_paths = (model.config or {}).get("artifact_paths", {})
+    history_payload = _safe_load_json(artifact_paths.get("history_path"))
+    entries = history_payload.get("entries")
+    if not entries:
+        return None
 
-    for index in range(21):
-        fpr = index / 20
-        tpr = min(1.0, max(0.0, fpr + (auc - 0.5) * 2 * (1 - fpr)))
-        points.append(
-            {
-                "fpr": round(fpr, 3),
-                "tpr": round(tpr, 3),
-            },
-        )
-
-    return {"auc": round(auc, 4), "points": points}
-
-
-def _build_demo_confusion_matrix(model: ModelInfo) -> dict[str, Any]:
-    num_classes = min(max(model.num_classes or 2, 2), 4)
-    accuracy = min(0.98, max(0.6, model.accuracy or 0.85))
-    rng = random.Random(f"cm-{model.id}")
-    labels = [f"Class {idx}" for idx in range(num_classes)]
-    matrix = []
-
-    for _ in range(num_classes):
-        row_total = 100
-        correct = int(row_total * accuracy)
-        remaining = row_total - correct
-        row = [0] * num_classes
-
-        for col in range(num_classes):
-            if remaining <= 0:
-                break
-            noise = rng.randint(0, remaining if col < num_classes - 1 else remaining)
-            row[col] = noise
-            remaining -= noise
-
-        row[rng.randrange(num_classes)] += remaining
-        matrix.append(row)
-
-    for row_index, row in enumerate(matrix):
-        diagonal_value = max(row[row_index], int(100 * accuracy))
-        off_diagonal_sum = sum(value for idx, value in enumerate(row) if idx != row_index)
-        diagonal_value = min(100, diagonal_value)
-        scale = max(0, 100 - diagonal_value)
-
-        if off_diagonal_sum > 0:
-            adjusted = []
-            running = 0
-            for idx, value in enumerate(row):
-                if idx == row_index:
-                    adjusted.append(diagonal_value)
-                    continue
-                new_value = round(value / off_diagonal_sum * scale)
-                adjusted.append(new_value)
-                running += new_value
-            diff = 100 - sum(adjusted)
-            for idx in range(num_classes):
-                if idx != row_index and diff != 0:
-                    adjusted[idx] += 1 if diff > 0 else -1
-                    diff += -1 if diff > 0 else 1
-                    if diff == 0:
-                        break
-            matrix[row_index] = adjusted
-        else:
-            row[row_index] = 100
-            matrix[row_index] = row
-
-    return {"labels": labels, "matrix": matrix}
-
-
-def _build_attention_grid(seed: str, size: int = 8) -> list[list[float]]:
-    rng = random.Random(seed)
-    center_x = rng.uniform(1.5, size - 2.0)
-    center_y = rng.uniform(1.5, size - 2.0)
-    secondary_x = rng.uniform(1.0, size - 1.0)
-    secondary_y = rng.uniform(1.0, size - 1.0)
-
-    grid: list[list[float]] = []
-    for row in range(size):
-        row_values = []
-        for col in range(size):
-            primary = max(0.0, 1.0 - (((row - center_y) ** 2 + (col - center_x) ** 2) / 18))
-            secondary = max(
-                0.0,
-                0.65 - (((row - secondary_y) ** 2 + (col - secondary_x) ** 2) / 22),
-            )
-            value = min(1.0, primary + secondary + rng.uniform(0.0, 0.08))
-            row_values.append(round(value, 3))
-        grid.append(row_values)
-    return grid
-
-
-def _build_demo_attention_maps(model: ModelInfo) -> list[dict[str, Any]]:
-    return [
-        {
-            "title": "影像模态注意力",
-            "modality": "image",
-            "grid": _build_attention_grid(f"image-{model.id}"),
-        },
-        {
-            "title": "临床表格注意力",
-            "modality": "tabular",
-            "grid": _build_attention_grid(f"tabular-{model.id}"),
-        },
-        {
-            "title": "病历文本注意力",
-            "modality": "text",
-            "grid": _build_attention_grid(f"text-{model.id}"),
-        },
-        {
-            "title": "融合层注意力",
-            "modality": "fusion",
-            "grid": _build_attention_grid(f"fusion-{model.id}"),
-        },
-    ]
-
-
-def _build_demo_visualizations(model: ModelInfo) -> dict[str, Any]:
+    plot_path = artifact_paths.get("training_curves_plot_path")
     return {
-        "roc_curve": _build_demo_roc_curve(model),
-        "confusion_matrix": _build_demo_confusion_matrix(model),
-        "attention_maps": _build_demo_attention_maps(model),
+        "entries": entries,
+        "plot_artifact_key": "training_curves_plot" if plot_path else None,
+        "plot_url": _artifact_download_url(model.id, "training_curves_plot")
+        if plot_path and Path(plot_path).exists()
+        else None,
     }
+
+
+def _load_visualizations(model: ModelInfo) -> dict[str, Any]:
+    config = model.config or {}
+    artifact_paths = config.get("artifact_paths", {})
+    visualizations: dict[str, Any] = {}
+
+    roc_payload = _safe_load_json(artifact_paths.get("roc_curve_json_path"))
+    if roc_payload:
+        plot_path = artifact_paths.get("roc_curve_plot_path")
+        visualizations["roc_curve"] = {
+            **roc_payload,
+            "plot_artifact_key": "roc_curve_plot" if plot_path else None,
+            "plot_url": _artifact_download_url(model.id, "roc_curve_plot")
+            if plot_path and Path(plot_path).exists()
+            else None,
+        }
+
+    confusion_payload = _safe_load_json(artifact_paths.get("confusion_matrix_json_path"))
+    if confusion_payload:
+        plot_path = artifact_paths.get("confusion_matrix_plot_path")
+        normalized_plot_path = artifact_paths.get("confusion_matrix_normalized_plot_path")
+        visualizations["confusion_matrix"] = {
+            **confusion_payload,
+            "plot_artifact_key": "confusion_matrix_plot" if plot_path else None,
+            "plot_url": _artifact_download_url(model.id, "confusion_matrix_plot")
+            if plot_path and Path(plot_path).exists()
+            else None,
+            "normalized_plot_artifact_key": (
+                "confusion_matrix_normalized_plot" if normalized_plot_path else None
+            ),
+            "normalized_plot_url": _artifact_download_url(
+                model.id,
+                "confusion_matrix_normalized_plot",
+            )
+            if normalized_plot_path and Path(normalized_plot_path).exists()
+            else None,
+        }
+
+    attention_manifest = _safe_load_json(artifact_paths.get("attention_manifest_path"))
+    if attention_manifest:
+        attention_items = []
+        for item in attention_manifest.get("items", []):
+            artifact_key = item.get("artifact_key")
+            attention_items.append(
+                {
+                    **item,
+                    "image_url": _artifact_download_url(model.id, artifact_key)
+                    if artifact_key and item.get("image_path")
+                    else None,
+                }
+            )
+        visualizations["attention_maps"] = attention_items
+
+        statistics_key = attention_manifest.get("statistics_artifact_key")
+        statistics_path = attention_manifest.get("statistics_plot_path")
+        if statistics_key and statistics_path and Path(statistics_path).exists():
+            visualizations["attention_statistics"] = {
+                "artifact_key": statistics_key,
+                "image_url": _artifact_download_url(model.id, statistics_key),
+            }
+
+    calibration_path = artifact_paths.get("calibration_curve_plot_path")
+    if calibration_path and Path(calibration_path).exists():
+        visualizations["calibration_curve"] = {
+            "artifact_key": "calibration_curve_plot",
+            "image_url": _artifact_download_url(model.id, "calibration_curve_plot"),
+        }
+
+    probability_distribution_path = artifact_paths.get("probability_distribution_plot_path")
+    if probability_distribution_path and Path(probability_distribution_path).exists():
+        visualizations["probability_distribution"] = {
+            "artifact_key": "probability_distribution_plot",
+            "image_url": _artifact_download_url(model.id, "probability_distribution_plot"),
+        }
+
+    training_curves_path = artifact_paths.get("training_curves_plot_path")
+    if training_curves_path and Path(training_curves_path).exists():
+        visualizations["training_curves"] = {
+            "artifact_key": "training_curves_plot",
+            "image_url": _artifact_download_url(model.id, "training_curves_plot"),
+        }
+
+    return visualizations
 
 
 def _to_payload(model: ModelInfo) -> dict[str, Any]:
     checkpoint_path = model.checkpoint_path
     file_size = Path(checkpoint_path).stat().st_size if checkpoint_path and Path(checkpoint_path).exists() else None
     model_format = _infer_format(checkpoint_path)
+    metrics = model.metrics or {}
+    visualizations = _load_visualizations(model)
+    training_history = _load_training_history(model)
 
     return {
         "id": model.id,
@@ -227,7 +316,7 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
         "num_classes": model.num_classes,
         "accuracy": model.accuracy,
         "loss": model.loss,
-        "metrics": model.metrics,
+        "metrics": metrics,
         "num_parameters": model.num_parameters,
         "params": model.num_parameters,
         "model_size_mb": model.model_size_mb,
@@ -241,7 +330,8 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
         "dataset_name": model.dataset_name,
         "tags": model.tags,
         "result_files": _collect_result_files(model),
-        "visualizations": _build_demo_visualizations(model),
+        "training_history": training_history,
+        "visualizations": visualizations,
         "format": model_format,
         "created_at": model.created_at.isoformat(),
         "updated_at": model.updated_at.isoformat() if model.updated_at else None,
@@ -432,6 +522,7 @@ async def upload_model_file(
 
 
 @router.get("/{model_id}/download")
+@router.head("/{model_id}/download", include_in_schema=False)
 async def download_model(
     model_id: int,
     db: Session = Depends(get_db_session),
@@ -449,6 +540,7 @@ async def download_model(
 
 
 @router.get("/{model_id}/artifacts/{artifact_key}")
+@router.head("/{model_id}/artifacts/{artifact_key}", include_in_schema=False)
 async def download_model_artifact(
     model_id: int,
     artifact_key: str,
@@ -459,8 +551,7 @@ async def download_model_artifact(
     if not model:
         raise HTTPException(status_code=404, detail="模型不存在")
 
-    artifacts = {item["key"]: item for item in _collect_result_files(model)}
-    artifact = artifacts.get(artifact_key)
+    artifact = _build_artifact_index(model).get(artifact_key)
     if not artifact:
         raise HTTPException(status_code=404, detail="结果文件不存在")
 

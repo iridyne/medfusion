@@ -15,10 +15,54 @@ from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
+_EXECUTOR_RUNTIME_REQUIREMENTS: dict[str, tuple[str, str, str]] = {
+    "dataLoader": (
+        "med_core.data.dataset",
+        "create_dataset",
+        "缺少数据集工厂 med_core.data.dataset.create_dataset",
+    ),
+    "model": (
+        "med_core.models",
+        "ModelFactory",
+        "缺少模型工厂 med_core.models.ModelFactory",
+    ),
+    "training": (
+        "med_core.training.trainer",
+        "Trainer",
+        "缺少训练器 med_core.training.trainer.Trainer",
+    ),
+    "evaluation": (
+        "med_core.evaluation.evaluator",
+        "Evaluator",
+        "缺少评估器 med_core.evaluation.evaluator.Evaluator",
+    ),
+}
+
 
 class NodeExecutionError(Exception):
     """节点执行错误"""
 
+
+def _resolve_runtime_dependency(node_type: str) -> Any:
+    requirement = _EXECUTOR_RUNTIME_REQUIREMENTS.get(node_type)
+    if requirement is None:
+        raise ImportError(f"未知节点类型: {node_type}")
+
+    module_name, attribute_name, message = requirement
+    try:
+        module = __import__(module_name, fromlist=[attribute_name])
+        return getattr(module, attribute_name)
+    except Exception as exc:
+        raise ImportError(f"{message}: {exc}") from exc
+
+
+def get_executor_runtime_errors(node_type: str) -> list[str]:
+    """返回节点执行器的运行时依赖错误列表。"""
+    try:
+        _resolve_runtime_dependency(node_type)
+    except Exception as exc:
+        return [str(exc)]
+    return []
 
 
 class NodeExecutor:
@@ -91,8 +135,7 @@ class DataLoaderExecutor(NodeExecutor):
             if not dataset_path.exists():
                 raise NodeExecutionError(f"数据集不存在: {dataset_path}")
 
-            # 动态导入以避免循环依赖
-            from med_core.data.dataset import create_dataset
+            create_dataset = _resolve_runtime_dependency("dataLoader")
 
             # 创建数据集
             dataset = await asyncio.get_event_loop().run_in_executor(
@@ -164,8 +207,7 @@ class ModelExecutor(NodeExecutor):
 
             logger.info(f"Building model: backbone={backbone}, fusion={fusion}")
 
-            # 动态导入
-            from med_core.models import ModelFactory
+            model_factory = _resolve_runtime_dependency("model")
 
             # 创建模型配置
             config = {
@@ -179,7 +221,7 @@ class ModelExecutor(NodeExecutor):
 
             # 创建模型
             model = await asyncio.get_event_loop().run_in_executor(
-                None, ModelFactory.create, config,
+                None, model_factory.create, config,
             )
 
             # 移动到设备
@@ -232,12 +274,13 @@ class TrainingExecutor(NodeExecutor):
         """
         try:
             model = inputs.get("model")
-            dataloader = inputs.get("dataset")
+            train_dataloader = inputs.get("train_data") or inputs.get("dataset")
+            val_dataloader = inputs.get("val_data")
 
             if model is None:
                 raise NodeExecutionError("缺少输入: model")
-            if dataloader is None:
-                raise NodeExecutionError("缺少输入: dataset")
+            if train_dataloader is None:
+                raise NodeExecutionError("缺少输入: train_data")
 
             # 训练配置
             epochs = node_data.get("epochs", 10)
@@ -253,13 +296,13 @@ class TrainingExecutor(NodeExecutor):
                 f"Starting training: epochs={epochs}, lr={learning_rate}, optimizer={optimizer_name}",
             )
 
-            # 动态导入
-            from med_core.training.trainer import Trainer
+            trainer_class = _resolve_runtime_dependency("training")
 
             # 创建训练器
-            trainer = Trainer(
+            trainer = trainer_class(
                 model=model,
-                train_loader=dataloader,
+                train_loader=train_dataloader,
+                val_loader=val_dataloader,
                 epochs=epochs,
                 learning_rate=learning_rate,
                 optimizer=optimizer_name,
@@ -342,11 +385,10 @@ class EvaluationExecutor(NodeExecutor):
 
             logger.info(f"Starting evaluation: metrics={metrics}")
 
-            # 动态导入
-            from med_core.evaluation.evaluator import Evaluator
+            evaluator_class = _resolve_runtime_dependency("evaluation")
 
             # 创建评估器
-            evaluator = Evaluator(
+            evaluator = evaluator_class(
                 model=model, test_loader=test_data, device=self.device,
             )
 

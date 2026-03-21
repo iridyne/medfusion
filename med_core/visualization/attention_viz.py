@@ -11,6 +11,10 @@ import numpy as np
 import torch
 from matplotlib.figure import Figure
 
+from med_core.shared.visualization.font_utils import configure_matplotlib_fonts
+
+configure_matplotlib_fonts()
+
 
 def visualize_attention_overlay(
     image: torch.Tensor | np.ndarray,

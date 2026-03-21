@@ -21,9 +21,11 @@ import pytest
 pytest.importorskip("med_core.web.workflow_engine")
 
 from med_core.web.workflow_engine import (
+    Edge,
     NodeStatus,
     WorkflowEngine,
     WorkflowExecutionError,
+    WorkflowValidationError,
 )
 
 
@@ -102,7 +104,7 @@ def simple_workflow():
                 "source": "data_loader_1",
                 "target": "training_1",
                 "sourceHandle": "dataset",
-                "targetHandle": "dataset",
+                "targetHandle": "train_data",
             },
             {
                 "id": "e4",
@@ -147,9 +149,27 @@ def cyclic_workflow():
             },
         ],
         "edges": [
-            {"id": "e1", "source": "node_1", "target": "node_2"},
-            {"id": "e2", "source": "node_2", "target": "node_3"},
-            {"id": "e3", "source": "node_3", "target": "node_1"},  # 循环
+            {
+                "id": "e1",
+                "source": "node_1",
+                "target": "node_2",
+                "sourceHandle": "dataset",
+                "targetHandle": "image_data",
+            },
+            {
+                "id": "e2",
+                "source": "node_2",
+                "target": "node_3",
+                "sourceHandle": "model",
+                "targetHandle": "model",
+            },
+            {
+                "id": "e3",
+                "source": "node_3",
+                "target": "node_1",
+                "sourceHandle": "trained_model",
+                "targetHandle": "dataset",
+            },  # 循环
         ],
     }
 
@@ -169,11 +189,16 @@ class TestWorkflowValidation:
     def test_cyclic_workflow(self, temp_data_dir, cyclic_workflow):
         """测试循环依赖检测"""
         engine = WorkflowEngine(data_dir=temp_data_dir, enable_monitoring=False)
-        engine.load_workflow(cyclic_workflow)
+        engine.load_workflow({"nodes": cyclic_workflow["nodes"], "edges": []})
 
-        is_valid, errors = engine.validate()
-        assert not is_valid
-        assert any("循环依赖" in error for error in errors)
+        cycle_edges = [
+            Edge("e1", "node_1", "node_2", "dataset", "image_data"),
+            Edge("e2", "node_2", "node_3", "model", "model"),
+            Edge("e3", "node_3", "node_1", "trained_model", "dataset"),
+        ]
+
+        with pytest.raises(WorkflowValidationError):
+            engine._topological_sort(cycle_edges)
 
     def test_empty_workflow(self, temp_data_dir):
         """测试空工作流"""
@@ -210,6 +235,118 @@ class TestWorkflowValidation:
         is_valid, errors = engine.validate()
         assert not is_valid
         assert any("不存在" in error for error in errors)
+
+    def test_legacy_training_dataset_handle_is_normalized(self, temp_data_dir):
+        """测试旧版 dataset 输入句柄会归一化到 train_data。"""
+        workflow = {
+            "nodes": [
+                {
+                    "id": "data_loader_1",
+                    "type": "dataLoader",
+                    "data": {"datasetId": "test_dataset"},
+                    "position": {"x": 100, "y": 100},
+                },
+                {
+                    "id": "training_1",
+                    "type": "training",
+                    "data": {"epochs": 5, "learningRate": 0.001},
+                    "position": {"x": 300, "y": 100},
+                },
+            ],
+            "edges": [
+                {
+                    "id": "e1",
+                    "source": "data_loader_1",
+                    "target": "training_1",
+                    "sourceHandle": "dataset",
+                    "targetHandle": "dataset",
+                }
+            ],
+        }
+
+        engine = WorkflowEngine(data_dir=temp_data_dir, enable_monitoring=False)
+        engine.load_workflow(workflow)
+
+        assert engine.edges[0].target_handle == "train_data"
+
+    def test_missing_required_training_port(self, temp_data_dir):
+        """测试训练节点缺少 train_data 时会报错。"""
+        workflow = {
+            "nodes": [
+                {
+                    "id": "model_1",
+                    "type": "model",
+                    "data": {"backbone": "resnet18", "numClasses": 2},
+                    "position": {"x": 100, "y": 100},
+                },
+                {
+                    "id": "training_1",
+                    "type": "training",
+                    "data": {"epochs": 5, "learningRate": 0.001},
+                    "position": {"x": 300, "y": 100},
+                },
+            ],
+            "edges": [
+                {
+                    "id": "e1",
+                    "source": "model_1",
+                    "target": "training_1",
+                    "sourceHandle": "model",
+                    "targetHandle": "model",
+                }
+            ],
+        }
+
+        engine = WorkflowEngine(data_dir=temp_data_dir, enable_monitoring=False)
+        engine.load_workflow(workflow)
+
+        is_valid, errors = engine.validate()
+        assert not is_valid
+        assert any("train_data" in error for error in errors)
+
+    def test_port_type_mismatch(self, temp_data_dir):
+        """测试端口类型不兼容时会报错。"""
+        workflow = {
+            "nodes": [
+                {
+                    "id": "training_1",
+                    "type": "training",
+                    "data": {"epochs": 5, "learningRate": 0.001},
+                    "position": {"x": 100, "y": 100},
+                },
+                {
+                    "id": "evaluation_1",
+                    "type": "evaluation",
+                    "data": {"metrics": ["accuracy"]},
+                    "position": {"x": 300, "y": 100},
+                },
+            ],
+            "edges": [
+                {
+                    "id": "e1",
+                    "source": "training_1",
+                    "target": "evaluation_1",
+                    "sourceHandle": "history",
+                    "targetHandle": "model",
+                }
+            ],
+        }
+
+        engine = WorkflowEngine(data_dir=temp_data_dir, enable_monitoring=False)
+        engine.load_workflow(workflow)
+
+        is_valid, errors = engine.validate()
+        assert not is_valid
+        assert any("端口类型不兼容" in error for error in errors)
+
+    def test_runtime_readiness_validation(self, temp_data_dir, simple_workflow):
+        """测试严格校验会暴露当前未接通的执行依赖。"""
+        engine = WorkflowEngine(data_dir=temp_data_dir, enable_monitoring=False)
+        engine.load_workflow(simple_workflow)
+
+        is_valid, errors = engine.validate(include_runtime_readiness=True)
+        assert not is_valid
+        assert any("后端未就绪" in error for error in errors)
 
 
 class TestWorkflowExecution:

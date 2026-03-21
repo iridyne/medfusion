@@ -5,13 +5,13 @@ Generates professional Word and PDF reports for experiment comparisons,
 following medical SOP standards.
 """
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -31,8 +31,13 @@ from reportlab.platypus import (
 )
 
 matplotlib.use("Agg")  # Non-interactive backend
+import matplotlib.pyplot as plt
+
+from med_core.shared.visualization.font_utils import configure_matplotlib_fonts
 
 logger = logging.getLogger(__name__)
+
+configure_matplotlib_fonts()
 
 
 class ReportGenerator:
@@ -47,6 +52,91 @@ class ReportGenerator:
         """
         self.output_dir = Path(output_dir) if output_dir else Path.cwd()
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _safe_load_json(self, path: str | Path | None) -> dict[str, Any]:
+        if not path:
+            return {}
+        json_path = Path(path)
+        if not json_path.exists():
+            return {}
+        try:
+            return json.loads(json_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse report JSON artifact: %s", json_path)
+            return {}
+
+    def _resolve_artifact_paths(self, experiment: dict[str, Any]) -> dict[str, Any]:
+        config = experiment.get("config", {})
+        if isinstance(config, dict):
+            if "artifact_paths" in config and isinstance(config["artifact_paths"], dict):
+                return config["artifact_paths"]
+        if isinstance(experiment.get("artifact_paths"), dict):
+            return experiment["artifact_paths"]
+        return {}
+
+    def _resolve_visualization_assets(
+        self, experiment: dict[str, Any],
+    ) -> list[tuple[str, Path]]:
+        artifact_paths = self._resolve_artifact_paths(experiment)
+        experiment_name = experiment.get("name", "Experiment")
+        candidates: list[tuple[str, str | None]] = [
+            (f"{experiment_name} - Training Curves", artifact_paths.get("training_curves_plot_path")),
+            (f"{experiment_name} - ROC Curve", artifact_paths.get("roc_curve_plot_path")),
+            (
+                f"{experiment_name} - Confusion Matrix",
+                artifact_paths.get("confusion_matrix_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Normalized Confusion Matrix",
+                artifact_paths.get("confusion_matrix_normalized_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Calibration Curve",
+                artifact_paths.get("calibration_curve_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Probability Distribution",
+                artifact_paths.get("probability_distribution_plot_path"),
+            ),
+        ]
+
+        assets: list[tuple[str, Path]] = []
+        for title, path in candidates:
+            if path and Path(path).exists():
+                assets.append((title, Path(path)))
+
+        attention_manifest = self._safe_load_json(artifact_paths.get("attention_manifest_path"))
+        for item in attention_manifest.get("items", [])[:2]:
+            image_path = item.get("image_path")
+            if image_path and Path(image_path).exists():
+                assets.append(
+                    (
+                        f"{experiment_name} - {item.get('title', 'Attention Overlay')}",
+                        Path(image_path),
+                    )
+                )
+
+        statistics_path = attention_manifest.get("statistics_plot_path")
+        if statistics_path and Path(statistics_path).exists():
+            assets.append((f"{experiment_name} - Attention Statistics", Path(statistics_path)))
+
+        return assets
+
+    def _extract_history_entries(self, experiment: dict[str, Any]) -> list[dict[str, Any]]:
+        if isinstance(experiment.get("training_history"), dict):
+            entries = experiment["training_history"].get("entries")
+            if entries:
+                return entries
+
+        if isinstance(experiment.get("history"), dict):
+            entries = experiment["history"].get("entries")
+            if entries:
+                return entries
+
+        artifact_paths = self._resolve_artifact_paths(experiment)
+        history_payload = self._safe_load_json(artifact_paths.get("history_path"))
+        entries = history_payload.get("entries")
+        return entries if isinstance(entries, list) else []
 
     def generate_word_report(
         self,
@@ -337,12 +427,22 @@ class ReportGenerator:
             doc.add_picture(str(chart_path), width=Inches(6))
             doc.add_paragraph()
 
-        # Generate training curves
         curves_path = self._generate_training_curves(experiments)
         if curves_path:
             doc.add_paragraph("Training Curves:")
             doc.add_picture(str(curves_path), width=Inches(6))
             doc.add_paragraph()
+
+        embedded_assets = 0
+        for experiment in experiments:
+            for title, asset_path in self._resolve_visualization_assets(experiment):
+                doc.add_paragraph(title)
+                doc.add_picture(str(asset_path), width=Inches(6))
+                doc.add_paragraph()
+                embedded_assets += 1
+
+        if embedded_assets == 0 and not curves_path and not chart_path:
+            doc.add_paragraph("No visualization artifacts were available for embedding.")
 
     def _add_conclusions(
         self, doc: Document, experiments: list[dict], comparison_data: dict,
@@ -497,7 +597,6 @@ class ReportGenerator:
             elements.append(Image(str(chart_path), width=5 * inch, height=3 * inch))
             elements.append(Spacer(1, 20))
 
-        # Generate and add training curves
         curves_path = self._generate_training_curves(experiments)
         if curves_path:
             elements.append(
@@ -505,6 +604,22 @@ class ReportGenerator:
             )
             elements.append(Image(str(curves_path), width=5 * inch, height=3 * inch))
             elements.append(Spacer(1, 20))
+
+        embedded_assets = 0
+        for experiment in experiments:
+            for title, asset_path in self._resolve_visualization_assets(experiment):
+                elements.append(Paragraph(title, getSampleStyleSheet()["Heading2"]))
+                elements.append(Image(str(asset_path), width=5 * inch, height=3 * inch))
+                elements.append(Spacer(1, 20))
+                embedded_assets += 1
+
+        if embedded_assets == 0 and not curves_path and not chart_path:
+            elements.append(
+                Paragraph(
+                    "No visualization artifacts were available for embedding.",
+                    getSampleStyleSheet()["Normal"],
+                )
+            )
 
     def _generate_metrics_chart(self, experiments: list[dict]) -> Path | None:
         """Generate metrics comparison bar chart."""
@@ -547,32 +662,37 @@ class ReportGenerator:
             return None
 
     def _generate_training_curves(self, experiments: list[dict]) -> Path | None:
-        """Generate training curves (loss and accuracy over epochs)."""
+        """Generate training curves from real history artifacts when available."""
         try:
             fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+            plotted_any = False
 
             for exp in experiments:
-                # Generate mock training history (in real scenario, this would come from actual data)
-                epochs = np.arange(1, 51)
-                # Simulate decreasing loss
-                loss = 1.0 * np.exp(-epochs / 20) + 0.1 * np.random.random(50)
-                # Simulate increasing accuracy
-                accuracy = (
-                    1.0 - 0.5 * np.exp(-epochs / 15) + 0.05 * np.random.random(50)
-                )
+                entries = self._extract_history_entries(exp)
+                if not entries:
+                    continue
 
-                ax1.plot(epochs, loss, label=exp["name"], linewidth=2)
-                ax2.plot(epochs, accuracy, label=exp["name"], linewidth=2)
+                epochs = [entry.get("epoch") for entry in entries]
+                val_loss = [entry.get("val_loss") for entry in entries]
+                val_accuracy = [entry.get("val_accuracy") for entry in entries]
+
+                ax1.plot(epochs, val_loss, label=exp["name"], linewidth=2)
+                ax2.plot(epochs, val_accuracy, label=exp["name"], linewidth=2)
+                plotted_any = True
+
+            if not plotted_any:
+                plt.close(fig)
+                return None
 
             ax1.set_xlabel("Epoch")
-            ax1.set_ylabel("Loss")
-            ax1.set_title("Training Loss")
+            ax1.set_ylabel("Validation Loss")
+            ax1.set_title("Validation Loss Curves")
             ax1.legend()
             ax1.grid(alpha=0.3)
 
             ax2.set_xlabel("Epoch")
-            ax2.set_ylabel("Accuracy")
-            ax2.set_title("Training Accuracy")
+            ax2.set_ylabel("Validation Accuracy")
+            ax2.set_title("Validation Accuracy Curves")
             ax2.legend()
             ax2.grid(alpha=0.3)
 

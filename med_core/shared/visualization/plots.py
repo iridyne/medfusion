@@ -19,6 +19,8 @@ from sklearn.metrics import (  # type: ignore
     roc_curve,
 )
 
+from .font_utils import configure_matplotlib_fonts
+
 # Help static type-checkers in environments where third-party stubs are unavailable.
 # At runtime the normal imports above are used; during type-checking we expose a
 # lightweight alias `NPArray` for numpy arrays and Figure/Axes aliases to reduce
@@ -33,6 +35,8 @@ else:
     Axes = object  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+configure_matplotlib_fonts()
 
 # Publication-quality defaults
 plt.rcParams.update(

@@ -4,6 +4,7 @@ Medical ML Visualization Module
 Publication-ready plots for model evaluation and analysis.
 """
 
+from .font_utils import configure_matplotlib_fonts
 from .plots import (
     plot_calibration_curve,
     plot_confusion_matrix,
@@ -14,6 +15,7 @@ from .plots import (
 )
 
 __all__ = [
+    "configure_matplotlib_fonts",
     "plot_calibration_curve",
     "plot_confusion_matrix",
     "plot_pr_curve",

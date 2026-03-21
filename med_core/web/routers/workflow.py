@@ -85,7 +85,7 @@ async def validate_workflow(request: WorkflowValidateRequest) -> WorkflowValidat
         engine = WorkflowEngine(data_dir=settings.data_dir)
         engine.load_workflow(request.workflow.model_dump())
 
-        is_valid, errors = engine.validate()
+        is_valid, errors = engine.validate(include_runtime_readiness=True)
 
         return WorkflowValidateResponse(valid=is_valid, errors=errors)
 
@@ -111,7 +111,7 @@ async def execute_workflow(request: WorkflowExecuteRequest) -> WorkflowExecuteRe
         engine.load_workflow(request.workflow.model_dump())
 
         # 验证工作流
-        is_valid, errors = engine.validate()
+        is_valid, errors = engine.validate(include_runtime_readiness=True)
         if not is_valid:
             raise HTTPException(
                 status_code=400, detail=f"工作流验证失败: {', '.join(errors)}",
