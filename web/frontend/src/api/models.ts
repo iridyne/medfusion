@@ -38,13 +38,43 @@ export interface Model {
   accuracy?: number;
   loss?: number;
   metrics?: Record<string, any>;
+  config?: Record<string, any>;
+  config_path?: string;
   model_path: string;
+  checkpoint_path?: string;
   file_size?: number;
   format?: string;
   training_job_id?: number;
   trained_epochs?: number;
+  training_time?: number;
+  dataset_name?: string;
   tags?: string[];
+  result_files?: Array<{
+    key: string;
+    label: string;
+    path: string;
+    exists: boolean;
+  }>;
+  visualizations?: {
+    roc_curve?: {
+      auc: number;
+      points: Array<{
+        fpr: number;
+        tpr: number;
+      }>;
+    };
+    confusion_matrix?: {
+      labels: string[];
+      matrix: number[][];
+    };
+    attention_maps?: Array<{
+      title: string;
+      modality: string;
+      grid: number[][];
+    }>;
+  };
   created_at: string;
+  updated_at?: string;
   created_by?: string;
 }
 
@@ -167,6 +197,28 @@ export const downloadModel = async (id: number, filename?: string) => {
 }
 
 /**
+ * 下载模型结果产物
+ */
+export const downloadModelArtifact = async (
+  id: number,
+  artifactKey: string,
+  filename?: string
+) => {
+  const response = await api.get(`/models/${id}/artifacts/${artifactKey}`, {
+    responseType: 'blob',
+  })
+
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename || `${artifactKey}_${id}`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+/**
  * 更新模型信息
  */
 export const updateModel = async (id: number, data: ModelUpdate) => {
@@ -222,4 +274,3 @@ export const formatAccuracy = (accuracy?: number): string => {
   if (accuracy === undefined || accuracy === null) return 'N/A'
   return `${(accuracy * 100).toFixed(2)}%`
 }
-

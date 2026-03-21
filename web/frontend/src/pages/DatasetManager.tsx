@@ -8,14 +8,12 @@ import {
   Modal,
   Drawer,
   Input,
+  Descriptions,
   message,
-  Dropdown,
-  Popconfirm,
   Statistic,
   Row,
   Col,
   Progress,
-  Empty,
   Tooltip,
 } from "antd";
 import {
@@ -23,8 +21,6 @@ import {
   SearchOutlined,
   EyeOutlined,
   DeleteOutlined,
-  DownloadOutlined,
-  MoreOutlined,
   DatabaseOutlined,
   FileImageOutlined,
   TableOutlined,
@@ -35,8 +31,6 @@ import {
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import DatasetUploader from "../components/dataset/DatasetUploader";
-import DatasetPreview from "../components/dataset/DatasetPreview";
-import DatasetStatistics from "../components/dataset/DatasetStatistics";
 import { deleteDataset, getDatasets } from "../api/datasets";
 
 interface Dataset {
@@ -49,10 +43,12 @@ interface Dataset {
   classes: number;
   created_at: string;
   updated_at: string;
+  data_path?: string;
   description?: string;
   tags?: string[];
   progress?: number;
   error_message?: string;
+  analysis?: Record<string, any>;
 }
 
 const DatasetManager: React.FC = () => {
@@ -60,9 +56,8 @@ const DatasetManager: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [previewVisible, setPreviewVisible] = useState(false);
 
   // 获取数据集列表
   const fetchDatasets = async () => {
@@ -79,8 +74,10 @@ const DatasetManager: React.FC = () => {
         classes: item.num_classes || 0,
         created_at: item.created_at || new Date().toISOString(),
         updated_at: item.updated_at || item.created_at || new Date().toISOString(),
+        data_path: item.data_path,
         description: item.description,
         tags: item.tags || [],
+        analysis: item.analysis || undefined,
         progress:
           item.status === "processing" || item.status === "uploading"
             ? item.progress ?? 50
@@ -112,27 +109,10 @@ const DatasetManager: React.FC = () => {
     }
   };
 
-  // 下载数据集
-  const handleDownload = async (dataset: Dataset) => {
-    try {
-      // TODO: 调用后端 API
-      message.info(`开始下载 ${dataset.name}`);
-    } catch (error) {
-      message.error("下载失败");
-      console.error(error);
-    }
-  };
-
   // 查看详情
   const handleViewDetails = (dataset: Dataset) => {
     setSelectedDataset(dataset);
     setDrawerVisible(true);
-  };
-
-  // 预览数据
-  const handlePreview = (dataset: Dataset) => {
-    setSelectedDataset(dataset);
-    setPreviewVisible(true);
   };
 
   // 格式化文件大小
@@ -153,7 +133,7 @@ const DatasetManager: React.FC = () => {
   // 获取状态标签
   const getStatusTag = (status: Dataset["status"], progress?: number) => {
     const statusConfig = {
-      uploading: { color: "blue", icon: <SyncOutlined spin />, text: "上传中" },
+      uploading: { color: "blue", icon: <SyncOutlined spin />, text: "登记中" },
       processing: { color: "orange", icon: <ClockCircleOutlined />, text: "处理中" },
       ready: { color: "green", icon: <CheckCircleOutlined />, text: "就绪" },
       error: { color: "red", icon: <ExclamationCircleOutlined />, text: "错误" },
@@ -261,54 +241,33 @@ const DatasetManager: React.FC = () => {
     {
       title: "操作",
       key: "action",
-      width: 200,
-      fixed: "right",
+      width: 160,
       render: (_, record) => (
         <Space>
-          <Tooltip title="预览">
+          <Tooltip title="查看详情">
             <Button
               type="text"
               icon={<EyeOutlined />}
-              onClick={() => handlePreview(record)}
-              disabled={record.status !== "ready"}
+              onClick={() => handleViewDetails(record)}
             />
           </Tooltip>
-          <Tooltip title="下载">
+          <Tooltip title="删除">
             <Button
               type="text"
-              icon={<DownloadOutlined />}
-              onClick={() => handleDownload(record)}
-              disabled={record.status !== "ready"}
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                Modal.confirm({
+                  title: "确认删除",
+                  content: `确定要删除数据集 "${record.name}" 吗？此操作不可恢复。`,
+                  okText: "删除",
+                  okType: "danger",
+                  cancelText: "取消",
+                  onOk: () => handleDelete(record.id),
+                });
+              }}
             />
           </Tooltip>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: "details",
-                  label: "查看详情",
-                  onClick: () => handleViewDetails(record),
-                },
-                {
-                  key: "delete",
-                  label: "删除",
-                  danger: true,
-                  onClick: () => {
-                    Modal.confirm({
-                      title: "确认删除",
-                      content: `确定要删除数据集 "${record.name}" 吗？此操作不可恢复。`,
-                      okText: "删除",
-                      okType: "danger",
-                      cancelText: "取消",
-                      onOk: () => handleDelete(record.id),
-                    });
-                  },
-                },
-              ],
-            }}
-          >
-            <Button type="text" icon={<MoreOutlined />} />
-          </Dropdown>
         </Space>
       ),
     },
@@ -386,9 +345,9 @@ const DatasetManager: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setUploadModalVisible(true)}
+              onClick={() => setRegisterModalVisible(true)}
             >
-              上传数据集
+              登记数据集
             </Button>
           </Space>
         }
@@ -409,19 +368,19 @@ const DatasetManager: React.FC = () => {
 
       {/* 上传模态框 */}
       <Modal
-        title="上传数据集"
-        open={uploadModalVisible}
-        onCancel={() => setUploadModalVisible(false)}
+        title="登记本地数据集"
+        open={registerModalVisible}
+        onCancel={() => setRegisterModalVisible(false)}
         footer={null}
-        width={800}
+        width={720}
         destroyOnClose
       >
         <DatasetUploader
           onSuccess={() => {
-            setUploadModalVisible(false);
+            setRegisterModalVisible(false);
             fetchDatasets();
           }}
-          onCancel={() => setUploadModalVisible(false)}
+          onCancel={() => setRegisterModalVisible(false)}
         />
       </Modal>
 
@@ -435,23 +394,73 @@ const DatasetManager: React.FC = () => {
         destroyOnClose
       >
         {selectedDataset && (
-          <DatasetStatistics dataset={selectedDataset} />
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="数据集名称">
+              {selectedDataset.name}
+            </Descriptions.Item>
+            <Descriptions.Item label="数据类型">
+              {selectedDataset.type === "image"
+                ? "图像"
+                : selectedDataset.type === "tabular"
+                  ? "表格"
+                  : "多模态"}
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {getStatusTag(selectedDataset.status, selectedDataset.progress)}
+            </Descriptions.Item>
+            <Descriptions.Item label="本地目录路径">
+              <span style={{ wordBreak: "break-all" }}>
+                {selectedDataset.data_path || "-"}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="样本数">
+              {selectedDataset.samples.toLocaleString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="类别数">
+              {selectedDataset.classes || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="数据集大小">
+              {formatSize(selectedDataset.size)}
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {formatDate(selectedDataset.created_at)}
+            </Descriptions.Item>
+            <Descriptions.Item label="更新时间">
+              {formatDate(selectedDataset.updated_at)}
+            </Descriptions.Item>
+            <Descriptions.Item label="描述">
+              {selectedDataset.description || "暂无描述"}
+            </Descriptions.Item>
+            <Descriptions.Item label="标签">
+              {selectedDataset.tags && selectedDataset.tags.length > 0 ? (
+                <Space wrap>
+                  {selectedDataset.tags.map((tag) => (
+                    <Tag key={tag}>{tag}</Tag>
+                  ))}
+                </Space>
+              ) : (
+                "暂无标签"
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="分析结果">
+              {selectedDataset.analysis ? (
+                <pre
+                  style={{
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {JSON.stringify(selectedDataset.analysis, null, 2)}
+                </pre>
+              ) : (
+                "暂无分析结果"
+              )}
+            </Descriptions.Item>
+          </Descriptions>
         )}
       </Drawer>
-
-      {/* 预览模态框 */}
-      <Modal
-        title={`预览: ${selectedDataset?.name}`}
-        open={previewVisible}
-        onCancel={() => setPreviewVisible(false)}
-        footer={null}
-        width={1200}
-        destroyOnClose
-      >
-        {selectedDataset && (
-          <DatasetPreview dataset={selectedDataset} />
-        )}
-      </Modal>
     </div>
   );
 };

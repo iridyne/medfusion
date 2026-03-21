@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Alert,
   Card,
   Tag,
   Space,
@@ -12,36 +13,38 @@ import {
   Modal,
   Descriptions,
   message,
-  Upload,
-  Tabs,
+  Divider,
+  Typography,
 } from "antd";
 import {
   SearchOutlined,
   DownloadOutlined,
   DeleteOutlined,
   EyeOutlined,
-  UploadOutlined,
   ExperimentOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
-import { useTranslation } from "react-i18next";
-import { deleteModel, downloadModel, getModels } from "@/api/models";
+import {
+  deleteModel,
+  downloadModel,
+  getModels,
+  type Model as ApiModel,
+} from "@/api/models";
+import ModelResultPanel from "@/components/model/ModelResultPanel";
 import VirtualList from "@/components/VirtualList";
 
-interface Model {
-  id: string;
-  name: string;
-  backbone: string;
+const { Paragraph, Text } = Typography;
+
+interface Model extends ApiModel {
+  displayFormat: "pytorch" | "onnx" | "torchscript";
   numClasses: number;
   params: number;
-  accuracy?: number;
   createdAt: string;
-  description: string;
+  descriptionText: string;
   size: number;
-  format: "pytorch" | "onnx" | "torchscript";
 }
 
 export default function ModelLibrary() {
-  const { t } = useTranslation();
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>(models);
   const [loading, setLoading] = useState(false);
@@ -61,30 +64,30 @@ export default function ModelLibrary() {
       try {
         const data = await getModels();
         const mapped: Model[] = (data || []).map((item: any) => ({
-          id: String(item.id),
+          ...item,
           name: item.name || `model-${item.id}`,
           backbone: item.backbone || item.architecture || "unknown",
           numClasses: item.num_classes ?? 0,
           params: item.num_parameters ?? item.params ?? 0,
           accuracy: item.accuracy ?? undefined,
           createdAt: item.created_at || "",
-          description: item.description || "",
+          descriptionText: item.description || "",
           size:
             item.file_size ??
             (item.model_size_mb ? Math.round(item.model_size_mb * 1024 * 1024) : 0),
-          format: (item.format || "pytorch") as "pytorch" | "onnx" | "torchscript",
+          displayFormat: (item.format || "pytorch") as "pytorch" | "onnx" | "torchscript",
         }));
         setModels(mapped);
       } catch (error) {
         console.error("Failed to load models:", error);
-        message.error(t("models.loadError", { defaultValue: "加载模型列表失败" }));
+        message.error("加载模型列表失败");
       } finally {
         setLoading(false);
       }
     };
 
     fetchModels();
-  }, [t]);
+  }, []);
 
   const filterModels = () => {
     let filtered = models;
@@ -93,7 +96,7 @@ export default function ModelLibrary() {
       filtered = filtered.filter(
         (m) =>
           m.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          m.description.toLowerCase().includes(searchText.toLowerCase()),
+          m.descriptionText.toLowerCase().includes(searchText.toLowerCase()),
       );
     }
 
@@ -102,7 +105,7 @@ export default function ModelLibrary() {
     }
 
     if (filterFormat !== "all") {
-      filtered = filtered.filter((m) => m.format === filterFormat);
+      filtered = filtered.filter((m) => m.displayFormat === filterFormat);
     }
 
     setFilteredModels(filtered);
@@ -133,35 +136,30 @@ export default function ModelLibrary() {
   const handleDownload = (model: Model) => {
     void (async () => {
       try {
-        await downloadModel(Number(model.id), `${model.name}.${model.format === "onnx" ? "onnx" : "pth"}`);
-        message.success(t("models.downloadStarted", { name: model.name }));
+        await downloadModel(Number(model.id), `${model.name}.${model.displayFormat === "onnx" ? "onnx" : "pth"}`);
+        message.success(`已开始下载 ${model.name}`);
       } catch (error) {
         console.error("Failed to download model:", error);
-        message.error(t("models.downloadFailed", { defaultValue: "下载失败" }));
+        message.error("下载失败");
       }
     })();
   };
 
   const handleDelete = (model: Model) => {
     Modal.confirm({
-      title: t("common.confirmDelete"),
-      content: t("models.deleteConfirm", { name: model.name }),
+      title: "确认删除",
+      content: `确定要删除模型 "${model.name}" 吗？`,
       onOk: async () => {
         try {
           await deleteModel(Number(model.id));
           setModels((prev) => prev.filter((m) => m.id !== model.id));
-          message.success(t("models.deleteSuccess"));
+          message.success("模型已删除");
         } catch (error) {
           console.error("Failed to delete model:", error);
-          message.error(t("models.deleteFailed", { defaultValue: "删除失败" }));
+          message.error("删除失败");
         }
       },
     });
-  };
-
-  const handleUpload = () => {
-    message.info(t("models.uploadInProgress"));
-    // TODO: 实现上传逻辑
   };
 
   const backboneOptions = [
@@ -179,11 +177,13 @@ export default function ModelLibrary() {
 
   const totalParams = models.reduce((sum, m) => sum + m.params, 0);
   const totalSize = models.reduce((sum, m) => sum + m.size, 0);
+  const modelsWithAccuracy = models.filter((m) => m.accuracy !== undefined);
   const avgAccuracy =
-    models
-      .filter((m) => m.accuracy)
-      .reduce((sum, m) => sum + (m.accuracy || 0), 0) /
-    models.filter((m) => m.accuracy).length;
+    modelsWithAccuracy.length > 0
+      ? modelsWithAccuracy.reduce((sum, m) => sum + (m.accuracy || 0), 0) /
+        modelsWithAccuracy.length
+      : 0;
+  const latestModel = models[0];
 
   return (
     <div style={{ padding: 24 }}>
@@ -194,17 +194,80 @@ export default function ModelLibrary() {
           alignItems: "center",
         }}
       >
-        <h1>{t("nav.models")}</h1>
-        <Button type="primary" icon={<UploadOutlined />} onClick={handleUpload}>
-          {t("models.uploadModel")}
-        </Button>
+        <h1>模型库</h1>
       </div>
+
+      {latestModel && (
+        <Card
+          style={{ marginTop: 16 }}
+          bodyStyle={{ paddingBottom: 8 }}
+        >
+          <Row gutter={24}>
+            <Col span={16}>
+              <Space align="start">
+                <TrophyOutlined style={{ fontSize: 28, color: "#faad14", marginTop: 4 }} />
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700 }}>
+                    最新结果：{latestModel.name}
+                  </div>
+                  <Paragraph style={{ marginBottom: 12, marginTop: 8 }}>
+                    {latestModel.descriptionText || "这是最近一次训练自动沉淀下来的模型结果，适合直接展示多模态项目的训练产出。"}
+                  </Paragraph>
+                  <Space wrap>
+                    <Tag color="blue">{latestModel.backbone}</Tag>
+                    <Tag color="green">{latestModel.dataset_name || "未命名数据集"}</Tag>
+                    <Tag color="purple">{latestModel.displayFormat.toUpperCase()}</Tag>
+                    {latestModel.tags?.map((tag) => (
+                      <Tag key={tag}>{tag}</Tag>
+                    ))}
+                  </Space>
+                </div>
+              </Space>
+            </Col>
+            <Col span={8}>
+              <Row gutter={[12, 12]}>
+                <Col span={12}>
+                  <Statistic
+                    title="Accuracy"
+                    value={(latestModel.accuracy ?? 0) * 100}
+                    precision={2}
+                    suffix="%"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="AUC"
+                    value={latestModel.visualizations?.roc_curve?.auc ?? latestModel.accuracy ?? 0}
+                    precision={4}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Epochs"
+                    value={latestModel.trained_epochs ?? 0}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="训练时长"
+                    value={
+                      latestModel.training_time
+                        ? `${Math.round(latestModel.training_time)}s`
+                        : "-"
+                    }
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </Card>
+      )}
 
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={6}>
           <Card>
             <Statistic
-              title={t("models.totalModels")}
+              title="模型总数"
               value={models.length}
               prefix={<ExperimentOutlined />}
             />
@@ -213,7 +276,7 @@ export default function ModelLibrary() {
         <Col span={6}>
           <Card>
             <Statistic
-              title={t("models.totalParams")}
+              title="总参数量"
               value={formatParams(totalParams)}
             />
           </Card>
@@ -221,7 +284,7 @@ export default function ModelLibrary() {
         <Col span={6}>
           <Card>
             <Statistic
-              title={t("models.totalSize")}
+              title="总文件大小"
               value={formatSize(totalSize)}
             />
           </Card>
@@ -229,7 +292,7 @@ export default function ModelLibrary() {
         <Col span={6}>
           <Card>
             <Statistic
-              title={t("models.avgAccuracy")}
+              title="平均准确率"
               value={avgAccuracy * 100}
               precision={2}
               suffix="%"
@@ -243,7 +306,7 @@ export default function ModelLibrary() {
           <Row gutter={16}>
             <Col span={12}>
               <Input
-                placeholder={t("models.searchPlaceholder")}
+                placeholder="搜索模型名称或描述"
                 prefix={<SearchOutlined />}
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -253,12 +316,12 @@ export default function ModelLibrary() {
             <Col span={6}>
               <Select
                 style={{ width: "100%" }}
-                placeholder={t("models.filterBackbone")}
+                placeholder="按骨干网络筛选"
                 value={filterBackbone}
                 onChange={setFilterBackbone}
               >
                 <Select.Option value="all">
-                  {t("models.allBackbones")}
+                  全部骨干网络
                 </Select.Option>
                 {backboneOptions.map((opt) => (
                   <Select.Option key={opt} value={opt}>
@@ -270,12 +333,12 @@ export default function ModelLibrary() {
             <Col span={6}>
               <Select
                 style={{ width: "100%" }}
-                placeholder={t("models.filterFormat")}
+                placeholder="按格式筛选"
                 value={filterFormat}
                 onChange={setFilterFormat}
               >
                 <Select.Option value="all">
-                  {t("models.allFormats")}
+                  全部格式
                 </Select.Option>
                 <Select.Option value="pytorch">PyTorch</Select.Option>
                 <Select.Option value="onnx">ONNX</Select.Option>
@@ -311,15 +374,19 @@ export default function ModelLibrary() {
                         {(model.accuracy * 100).toFixed(2)}%
                       </Tag>
                     )}
-                    <Tag>{model.format.toUpperCase()}</Tag>
+                    <Tag>{model.displayFormat.toUpperCase()}</Tag>
                   </Space>
                   <div style={{ color: "#666", marginBottom: 8 }}>
-                    {model.description}
+                    {model.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
                   </div>
                   <div style={{ fontSize: 12, color: "#999" }}>
-                    {t("models.numClasses")}: {model.numClasses} |{" "}
-                    {t("models.size")}: {formatSize(model.size)} |{" "}
-                    {t("models.createdAt")}: {model.createdAt}
+                    数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
+                    {model.createdAt ? new Date(model.createdAt).toLocaleString("zh-CN") : "-"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
+                    AUC: {model.visualizations?.roc_curve?.auc?.toFixed(4) || "-"} | Loss:{" "}
+                    {model.loss?.toFixed(4) || "-"} | Attention Maps:{" "}
+                    {model.visualizations?.attention_maps?.length || 0}
                   </div>
                 </div>
                 <Space>
@@ -328,14 +395,14 @@ export default function ModelLibrary() {
                     icon={<EyeOutlined />}
                     onClick={() => handleViewDetail(model)}
                   >
-                    {t("common.detail")}
+                    详情
                   </Button>
                   <Button
                     size="small"
                     icon={<DownloadOutlined />}
                     onClick={() => handleDownload(model)}
                   >
-                    {t("common.download")}
+                    下载
                   </Button>
                   <Button
                     size="small"
@@ -343,7 +410,7 @@ export default function ModelLibrary() {
                     icon={<DeleteOutlined />}
                     onClick={() => handleDelete(model)}
                   >
-                    {t("common.delete")}
+                    删除
                   </Button>
                 </Space>
               </div>
@@ -353,13 +420,13 @@ export default function ModelLibrary() {
       </Card>
 
       <Modal
-        title={t("models.modelDetail")}
+        title="模型详情"
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
-        width={700}
+        width={1100}
         footer={[
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
-            {t("common.close")}
+            关闭
           </Button>,
           <Button
             key="download"
@@ -370,42 +437,62 @@ export default function ModelLibrary() {
               setDetailModalOpen(false);
             }}
           >
-            {t("common.download")}
+            下载
           </Button>,
         ]}
       >
         {selectedModel && (
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label={t("models.modelName")} span={2}>
-              {selectedModel.name}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.backbone")}>
-              {selectedModel.backbone}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.format")}>
-              {selectedModel.format.toUpperCase()}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.numClasses")}>
-              {selectedModel.numClasses}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.params")}>
-              {formatParams(selectedModel.params)}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.accuracy")}>
-              {selectedModel.accuracy
-                ? `${(selectedModel.accuracy * 100).toFixed(2)}%`
-                : "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.size")}>
-              {formatSize(selectedModel.size)}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.createdAt")} span={2}>
-              {selectedModel.createdAt}
-            </Descriptions.Item>
-            <Descriptions.Item label={t("models.description")} span={2}>
-              {selectedModel.description}
-            </Descriptions.Item>
-          </Descriptions>
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Alert
+              type="success"
+              showIcon
+              message="结果详情已强化"
+              description="当前详情页会同时展示多模态指标、ROC/AUC、混淆矩阵、注意力热力图和结果文件，适合直接用于演示。"
+            />
+
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="模型名称" span={2}>
+                {selectedModel.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="骨干网络">
+                {selectedModel.backbone}
+              </Descriptions.Item>
+              <Descriptions.Item label="格式">
+                {selectedModel.displayFormat.toUpperCase()}
+              </Descriptions.Item>
+              <Descriptions.Item label="数据集">
+                {selectedModel.dataset_name || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="类别数">
+                {selectedModel.numClasses}
+              </Descriptions.Item>
+              <Descriptions.Item label="参数量">
+                {formatParams(selectedModel.params)}
+              </Descriptions.Item>
+              <Descriptions.Item label="准确率">
+                {selectedModel.accuracy
+                  ? `${(selectedModel.accuracy * 100).toFixed(2)}%`
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loss">
+                {selectedModel.loss?.toFixed(4) || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="文件大小">
+                {formatSize(selectedModel.size)}
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间" span={2}>
+                {selectedModel.createdAt
+                  ? new Date(selectedModel.createdAt).toLocaleString("zh-CN")
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="描述" span={2}>
+                {selectedModel.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Divider style={{ margin: 0 }} />
+            <ModelResultPanel model={selectedModel} />
+          </Space>
         )}
       </Modal>
     </div>

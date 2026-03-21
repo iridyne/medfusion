@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout, ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import enUS from "antd/locale/en_US";
 import { useTranslation } from "react-i18next";
-import WorkflowEditor from "./pages/WorkflowEditor";
-import ConfigGenerator from "./pages/ConfigGenerator";
 import DatasetManager from "./pages/DatasetManager";
 import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
-import Preprocessing from "./pages/Preprocessing";
 import SystemMonitor from "./pages/SystemMonitor";
-import Settings from "./pages/Settings";
-import ExperimentComparison from "./pages/ExperimentComparison";
 import Sidebar from "./components/Sidebar";
 import {
   ThemeMode,
@@ -61,19 +56,17 @@ function App() {
         <Layout>
           <Content style={{ overflow: "auto" }}>
             <Routes>
-              <Route path="/" element={<WorkflowEditor />} />
-              <Route path="/workflow" element={<WorkflowEditor />} />
-              <Route path="/config" element={<ConfigGenerator />} />
+              <Route path="/" element={<Navigate to="/datasets" replace />} />
               <Route path="/datasets" element={<DatasetManager />} />
               <Route path="/training" element={<TrainingMonitor />} />
-              <Route path="/experiments" element={<ExperimentComparison />} />
               <Route path="/models" element={<ModelLibrary />} />
-              <Route path="/preprocessing" element={<Preprocessing />} />
               <Route path="/system" element={<SystemMonitor />} />
-              <Route
-                path="/settings"
-                element={<Settings onThemeChange={handleThemeChange} />}
-              />
+              <Route path="/workflow" element={<Navigate to="/datasets" replace />} />
+              <Route path="/config" element={<Navigate to="/datasets" replace />} />
+              <Route path="/experiments" element={<Navigate to="/datasets" replace />} />
+              <Route path="/preprocessing" element={<Navigate to="/datasets" replace />} />
+              <Route path="/settings" element={<Navigate to="/datasets" replace />} />
+              <Route path="*" element={<Navigate to="/datasets" replace />} />
             </Routes>
           </Content>
         </Layout>

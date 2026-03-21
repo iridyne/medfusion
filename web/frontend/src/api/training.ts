@@ -33,6 +33,9 @@ export interface TrainingJob {
 interface BackendTrainingJob {
   id: number;
   job_id: string;
+  experiment_name: string;
+  dataset_name?: string | null;
+  backbone?: string | null;
   status: string;
   progress: number;
   current_epoch: number;
@@ -44,6 +47,9 @@ interface BackendTrainingJob {
 
 interface BackendTrainingStatus {
   job_id: string;
+  experiment_name: string;
+  dataset_name?: string | null;
+  backbone?: string | null;
   status: string;
   progress: number;
   current_epoch: number;
@@ -56,7 +62,7 @@ function normalizeJob(job: BackendTrainingJob | BackendTrainingStatus): Training
   const jobId = "job_id" in job ? job.job_id : String((job as any).id ?? "");
   return {
     id: jobId,
-    name: jobId,
+    name: job.experiment_name || jobId,
     status: job.status as TrainingJob["status"],
     progress: Math.round(job.progress ?? 0),
     epoch: job.current_epoch ?? 0,

@@ -7,14 +7,16 @@ import json
 import logging
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..database import SessionLocal, get_db_session
-from ..models import TrainingJob
+from ..models import ModelInfo, TrainingJob
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,6 +24,16 @@ logger = logging.getLogger(__name__)
 _training_tasks: dict[str, asyncio.Task[None]] = {}
 _pause_flags: dict[str, bool] = {}
 _stop_flags: dict[str, bool] = {}
+
+_BACKBONE_PARAMETER_MAP: dict[str, int] = {
+    "resnet18": 11_700_000,
+    "resnet34": 21_800_000,
+    "resnet50": 25_600_000,
+    "resnet101": 44_500_000,
+    "efficientnet_b0": 5_300_000,
+    "vit_b16": 86_000_000,
+    "swin_tiny": 28_300_000,
+}
 
 
 class TrainingConfig(BaseModel):
@@ -38,6 +50,9 @@ class TrainingJobResponse(BaseModel):
 
     id: int
     job_id: str
+    experiment_name: str
+    dataset_name: str | None
+    backbone: str | None
     status: str
     progress: float
     current_epoch: int
@@ -57,6 +72,205 @@ def _get_job_or_404(db: Session, job_id: str) -> TrainingJob:
     return job
 
 
+def _extract_job_metadata(job: TrainingJob) -> dict[str, Any]:
+    config = job.config or {}
+    training_model_config = config.get("training_model_config", {})
+    dataset_config = config.get("dataset_config", {})
+    return {
+        "experiment_name": config.get("experiment_name") or f"training-{job.job_id[:8]}",
+        "dataset_name": dataset_config.get("dataset")
+        or dataset_config.get("dataset_name")
+        or dataset_config.get("name"),
+        "backbone": training_model_config.get("backbone"),
+        "num_classes": training_model_config.get("num_classes")
+        or dataset_config.get("num_classes"),
+    }
+
+
+def _estimate_num_parameters(backbone: str | None) -> int | None:
+    if not backbone:
+        return None
+    return _BACKBONE_PARAMETER_MAP.get(backbone)
+
+
+def _prepare_job_output(job_id: str) -> tuple[str, str]:
+    output_dir = settings.data_dir / "experiments" / job_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    log_file = output_dir / "training.log"
+    if not log_file.exists():
+        log_file.write_text("training started\n", encoding="utf-8")
+    return str(output_dir), str(log_file)
+
+
+def _write_demo_checkpoint(job: TrainingJob, metadata: dict[str, Any]) -> Path:
+    target_dir = settings.data_dir / "models"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = target_dir / f"{job.job_id}.pth"
+    checkpoint_payload = {
+        "job_id": job.job_id,
+        "status": job.status,
+        "experiment_name": metadata["experiment_name"],
+        "dataset_name": metadata["dataset_name"],
+        "backbone": metadata["backbone"],
+        "best_accuracy": job.best_accuracy,
+        "best_loss": job.best_loss,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+    }
+    checkpoint_path.write_text(
+        json.dumps(checkpoint_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return checkpoint_path
+
+
+def _write_result_artifacts(
+    job: TrainingJob,
+    metadata: dict[str, Any],
+    checkpoint_path: Path,
+) -> dict[str, str]:
+    output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    config_path = output_dir / "training-config.json"
+    metrics_path = output_dir / "metrics.json"
+    summary_path = output_dir / "summary.json"
+    report_path = output_dir / "report.md"
+    log_path = Path(job.log_file) if job.log_file else output_dir / "training.log"
+
+    metrics_payload = {
+        "best_accuracy": job.best_accuracy,
+        "best_loss": job.best_loss,
+        "best_epoch": job.best_epoch,
+        "final_accuracy": job.current_accuracy,
+        "final_loss": job.current_loss,
+        "progress": job.progress,
+    }
+    summary_payload = {
+        "job_id": job.job_id,
+        "experiment_name": metadata["experiment_name"],
+        "dataset_name": metadata["dataset_name"],
+        "backbone": metadata["backbone"],
+        "num_classes": metadata["num_classes"],
+        "total_epochs": job.total_epochs,
+        "training_time_seconds": (
+            (job.completed_at - job.started_at).total_seconds()
+            if job.completed_at and job.started_at
+            else None
+        ),
+        "artifacts": {
+            "checkpoint_path": str(checkpoint_path),
+            "config_path": str(config_path),
+            "metrics_path": str(metrics_path),
+            "summary_path": str(summary_path),
+            "report_path": str(report_path),
+            "log_path": str(log_path),
+        },
+        "metrics": metrics_payload,
+    }
+
+    config_path.write_text(
+        json.dumps(job.config or {}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    metrics_path.write_text(
+        json.dumps(metrics_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps(summary_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    report_path.write_text(
+        "\n".join(
+            [
+                f"# {metadata['experiment_name']} Result",
+                "",
+                f"- dataset: {metadata['dataset_name'] or 'unknown'}",
+                f"- backbone: {metadata['backbone'] or 'unknown'}",
+                f"- best_accuracy: {job.best_accuracy}",
+                f"- best_loss: {job.best_loss}",
+                f"- checkpoint: {checkpoint_path}",
+            ],
+        ),
+        encoding="utf-8",
+    )
+    log_path.write_text(
+        log_path.read_text(encoding="utf-8") + "training completed\n",
+        encoding="utf-8",
+    )
+
+    return {
+        "output_dir": str(output_dir),
+        "config_path": str(config_path),
+        "metrics_path": str(metrics_path),
+        "summary_path": str(summary_path),
+        "report_path": str(report_path),
+        "log_path": str(log_path),
+    }
+
+
+def _sync_completed_model(db: Session, job: TrainingJob) -> None:
+    metadata = _extract_job_metadata(job)
+    checkpoint_path = _write_demo_checkpoint(job, metadata)
+    artifact_paths = _write_result_artifacts(job, metadata, checkpoint_path)
+    file_size = checkpoint_path.stat().st_size
+    training_time = (
+        (job.completed_at - job.started_at).total_seconds()
+        if job.completed_at and job.started_at
+        else None
+    )
+
+    model = (
+        db.query(ModelInfo)
+        .filter(ModelInfo.checkpoint_path == str(checkpoint_path))
+        .first()
+    )
+    if model is None:
+        model = ModelInfo(
+            name=f"{metadata['experiment_name']}-model",
+            description="演示型 MVP 自动生成的训练产物",
+            model_type="classification",
+            architecture=metadata["backbone"] or "resnet18",
+            checkpoint_path=str(checkpoint_path),
+        )
+        db.add(model)
+
+    model.config = {
+        "job_id": job.job_id,
+        "training_config": (job.config or {}).get("training_config", {}),
+        "dataset_config": (job.config or {}).get("dataset_config", {}),
+        "artifact_paths": artifact_paths,
+        "result_summary": {
+            "experiment_name": metadata["experiment_name"],
+            "dataset_name": metadata["dataset_name"],
+            "backbone": metadata["backbone"],
+            "best_accuracy": job.best_accuracy,
+            "best_loss": job.best_loss,
+        },
+    }
+    model.config_path = artifact_paths["config_path"]
+    model.metrics = {
+        "best_accuracy": job.best_accuracy,
+        "best_loss": job.best_loss,
+        "final_accuracy": job.current_accuracy,
+        "final_loss": job.current_loss,
+        "best_epoch": job.best_epoch,
+    }
+    model.accuracy = job.best_accuracy or job.current_accuracy
+    model.loss = job.best_loss or job.current_loss
+    model.num_parameters = _estimate_num_parameters(metadata["backbone"])
+    model.model_size_mb = file_size / (1024 * 1024)
+    model.trained_epochs = job.total_epochs
+    model.training_time = training_time
+    model.dataset_name = metadata["dataset_name"]
+    model.num_classes = metadata["num_classes"]
+    model.tags = [
+        "demo-mvp",
+        f"job:{job.job_id}",
+        *(["auto-generated"] if True else []),
+    ]
+
+
 async def _simulate_training(job_id: str, total_epochs: int) -> None:
     """轻量训练模拟器：用于 Web UI 最小可用闭环。"""
     db = SessionLocal()
@@ -69,6 +283,11 @@ async def _simulate_training(job_id: str, total_epochs: int) -> None:
                 job = _get_job_or_404(db, job_id)
                 job.status = "stopped"
                 job.completed_at = datetime.utcnow()
+                if job.log_file:
+                    Path(job.log_file).write_text(
+                        Path(job.log_file).read_text(encoding="utf-8") + "training stopped\n",
+                        encoding="utf-8",
+                    )
                 db.commit()
                 return
 
@@ -96,11 +315,18 @@ async def _simulate_training(job_id: str, total_epochs: int) -> None:
             )
             if job.best_accuracy == current_accuracy:
                 job.best_epoch = epoch
+            if job.log_file:
+                Path(job.log_file).write_text(
+                    Path(job.log_file).read_text(encoding="utf-8")
+                    + f"epoch {epoch}: loss={current_loss:.4f}, accuracy={current_accuracy:.4f}\n",
+                    encoding="utf-8",
+                )
 
             if epoch >= total_epochs:
                 job.status = "completed"
                 job.completed_at = datetime.utcnow()
                 job.progress = 100.0
+                _sync_completed_model(db, job)
 
             db.commit()
     except Exception as e:
@@ -127,6 +353,7 @@ async def start_training(
     try:
         job_id = str(uuid.uuid4())
         total_epochs = int(config.training_config.get("epochs", 20))
+        output_dir, log_file = _prepare_job_output(job_id)
 
         job = TrainingJob(
             job_id=job_id,
@@ -139,6 +366,8 @@ async def start_training(
             started_at=datetime.utcnow(),
             current_loss=1.0,
             current_accuracy=0.5,
+            output_dir=output_dir,
+            log_file=log_file,
         )
         db.add(job)
         db.commit()
@@ -174,6 +403,9 @@ async def list_training_jobs(
         TrainingJobResponse(
             id=job.id,
             job_id=job.job_id,
+            experiment_name=_extract_job_metadata(job)["experiment_name"],
+            dataset_name=_extract_job_metadata(job)["dataset_name"],
+            backbone=_extract_job_metadata(job)["backbone"],
             status=job.status,
             progress=job.progress,
             current_epoch=job.current_epoch,
@@ -193,8 +425,12 @@ async def get_training_status(
 ) -> dict[str, Any]:
     """获取训练任务状态"""
     job = _get_job_or_404(db, job_id)
+    metadata = _extract_job_metadata(job)
     return {
         "job_id": job.job_id,
+        "experiment_name": metadata["experiment_name"],
+        "dataset_name": metadata["dataset_name"],
+        "backbone": metadata["backbone"],
         "status": job.status,
         "progress": job.progress,
         "current_epoch": job.current_epoch,
@@ -300,13 +536,16 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                 await asyncio.sleep(1.0)
                 continue
 
+            metadata = _extract_job_metadata(job)
             await websocket.send_json(
                 {
                     "type": "status_update",
                     "job_id": job.job_id,
+                    "experiment_name": metadata["experiment_name"],
                     "status": job.status,
                     "progress": job.progress,
                     "epoch": job.current_epoch,
+                    "total_epochs": job.total_epochs,
                     "loss": job.current_loss,
                     "accuracy": job.current_accuracy,
                 },

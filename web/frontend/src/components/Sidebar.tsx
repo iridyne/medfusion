@@ -3,15 +3,10 @@ import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  AppstoreOutlined,
   ExperimentOutlined,
   DatabaseOutlined,
-  FileImageOutlined,
   DashboardOutlined,
-  SettingOutlined,
-  ToolOutlined,
   InboxOutlined,
-  BarChartOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -24,16 +19,6 @@ export default function Sidebar() {
 
   const menuItems = [
     {
-      key: "/workflow",
-      icon: <AppstoreOutlined />,
-      label: t("nav.workflow"),
-    },
-    {
-      key: "/config",
-      icon: <ToolOutlined />,
-      label: "配置生成器",
-    },
-    {
       key: "/datasets",
       icon: <InboxOutlined />,
       label: "数据管理",
@@ -44,29 +29,14 @@ export default function Sidebar() {
       label: t("nav.training"),
     },
     {
-      key: "/experiments",
-      icon: <BarChartOutlined />,
-      label: "实验对比",
-    },
-    {
       key: "/models",
       icon: <DatabaseOutlined />,
       label: t("nav.models"),
     },
     {
-      key: "/preprocessing",
-      icon: <FileImageOutlined />,
-      label: t("nav.preprocessing"),
-    },
-    {
       key: "/system",
       icon: <DashboardOutlined />,
       label: t("nav.system"),
-    },
-    {
-      key: "/settings",
-      icon: <SettingOutlined />,
-      label: t("nav.settings"),
     },
   ];
 

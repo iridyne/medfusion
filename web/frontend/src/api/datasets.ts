@@ -9,6 +9,7 @@ export interface DatasetCreate {
   name: string;
   description?: string;
   data_path: string;
+  dataset_type?: "image" | "tabular" | "multimodal";
   num_samples?: number;
   num_classes?: number;
   train_samples?: number;
@@ -16,6 +17,7 @@ export interface DatasetCreate {
   test_samples?: number;
   class_distribution?: Record<string, any>;
   tags?: string[];
+  created_by?: string;
 }
 
 export interface DatasetUpdate {
@@ -35,12 +37,16 @@ export interface Dataset {
   name: string;
   description?: string;
   data_path: string;
+  dataset_type?: "image" | "tabular" | "multimodal";
+  status?: string;
+  size_bytes?: number;
   num_samples?: number;
   num_classes?: number;
   train_samples?: number;
   val_samples?: number;
   test_samples?: number;
   class_distribution?: Record<string, any>;
+  analysis?: Record<string, any>;
   tags?: string[];
   created_at: string;
   created_by?: string;

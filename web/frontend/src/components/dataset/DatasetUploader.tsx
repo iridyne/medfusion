@@ -1,226 +1,128 @@
 import React, { useState } from "react";
 import {
-  Upload,
+  Alert,
+  Button,
+  Divider,
   Form,
   Input,
+  InputNumber,
   Select,
-  Button,
   Space,
+  Typography,
   message,
-  Progress,
-  List,
-  Tag,
-  Alert,
-  Divider,
 } from "antd";
 import {
-  InboxOutlined,
+  DatabaseOutlined,
   FileImageOutlined,
   FileTextOutlined,
-  FileZipOutlined,
-  DeleteOutlined,
-  CheckCircleOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
-import type { UploadFile, UploadProps } from "antd/es/upload/interface";
 
-const { Dragger } = Upload;
+import { analyzeDataset, createDataset } from "@/api/datasets";
+
 const { TextArea } = Input;
+const { Paragraph, Text } = Typography;
 
 interface DatasetUploaderProps {
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-interface DatasetMetadata {
+interface DatasetRegisterValues {
   name: string;
   description?: string;
   type: "image" | "tabular" | "multimodal";
+  dataPath: string;
+  numSamples?: number;
+  numClasses?: number;
   tags?: string[];
+  createdBy?: string;
 }
 
-const DatasetUploader: React.FC<DatasetUploaderProps> = ({ onSuccess, onCancel }) => {
-  const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+const DatasetUploader: React.FC<DatasetUploaderProps> = ({
+  onSuccess,
+  onCancel,
+}) => {
+  const [form] = Form.useForm<DatasetRegisterValues>();
+  const [submitting, setSubmitting] = useState(false);
 
-  // 文件类型配置
-  const acceptedFileTypes = {
-    image: [".jpg", ".jpeg", ".png", ".dcm", ".nii", ".nii.gz"],
-    tabular: [".csv", ".xlsx", ".json"],
-    archive: [".zip", ".tar", ".tar.gz"],
-  };
-
-  // 获取文件图标
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.toLowerCase().split(".").pop();
-    if (["jpg", "jpeg", "png", "dcm", "nii"].includes(ext || "")) {
-      return <FileImageOutlined style={{ color: "#1890ff" }} />;
-    } else if (["csv", "xlsx", "json"].includes(ext || "")) {
-      return <FileTextOutlined style={{ color: "#52c41a" }} />;
-    } else if (["zip", "tar", "gz"].includes(ext || "")) {
-      return <FileZipOutlined style={{ color: "#faad14" }} />;
-    }
-    return <FileTextOutlined />;
-  };
-
-  // 验证文件类型
-  const validateFileType = (file: File, datasetType: string): boolean => {
-    const fileName = file.name.toLowerCase();
-    const ext = fileName.split(".").pop() || "";
-
-    if (datasetType === "image") {
-      return acceptedFileTypes.image.some((type) => fileName.endsWith(type));
-    } else if (datasetType === "tabular") {
-      return acceptedFileTypes.tabular.some((type) => fileName.endsWith(type));
-    } else if (datasetType === "multimodal") {
-      return (
-        acceptedFileTypes.image.some((type) => fileName.endsWith(type)) ||
-        acceptedFileTypes.tabular.some((type) => fileName.endsWith(type)) ||
-        acceptedFileTypes.archive.some((type) => fileName.endsWith(type))
-      );
-    }
-    return false;
-  };
-
-  // 上传配置
-  const uploadProps: UploadProps = {
-    name: "file",
-    multiple: true,
-    fileList,
-    beforeUpload: (file) => {
-      const datasetType = form.getFieldValue("type");
-      if (!datasetType) {
-        message.error("请先选择数据集类型");
-        return Upload.LIST_IGNORE;
-      }
-
-      if (!validateFileType(file, datasetType)) {
-        message.error(`文件 ${file.name} 类型不符合要求`);
-        return Upload.LIST_IGNORE;
-      }
-
-      // 检查文件大小（限制 5GB）
-      const maxSize = 5 * 1024 * 1024 * 1024;
-      if (file.size > maxSize) {
-        message.error(`文件 ${file.name} 超过 5GB 限制`);
-        return Upload.LIST_IGNORE;
-      }
-
-      setFileList((prev) => [...prev, file as UploadFile]);
-      return false; // 阻止自动上传
-    },
-    onRemove: (file) => {
-      setFileList((prev) => prev.filter((f) => f.uid !== file.uid));
-    },
-    showUploadList: false,
-  };
-
-  // 处理上传
-  const handleUpload = async () => {
+  const handleRegister = async () => {
     try {
       const values = await form.validateFields();
+      setSubmitting(true);
 
-      if (fileList.length === 0) {
-        message.error("请至少上传一个文件");
+      const created = await createDataset({
+        name: values.name,
+        description: values.description,
+        data_path: values.dataPath,
+        dataset_type: values.type,
+        num_samples: values.numSamples,
+        num_classes: values.numClasses,
+        tags: values.tags,
+        created_by: values.createdBy,
+      });
+
+      try {
+        await analyzeDataset(created.id);
+      } catch (error) {
+        console.warn("Failed to analyze dataset after registration:", error);
+      }
+
+      message.success("数据集已登记");
+      form.resetFields();
+      onSuccess();
+    } catch (error: any) {
+      if (error?.errorFields) {
         return;
       }
 
-      setUploading(true);
-      setUploadProgress(0);
-
-      // 创建 FormData
-      const formData = new FormData();
-      formData.append("name", values.name);
-      formData.append("type", values.type);
-      if (values.description) {
-        formData.append("description", values.description);
-      }
-      if (values.tags && values.tags.length > 0) {
-        formData.append("tags", JSON.stringify(values.tags));
-      }
-
-      // 添加文件
-      fileList.forEach((file) => {
-        if (file.originFileObj) {
-          formData.append("files", file.originFileObj);
-        }
-      });
-
-      // TODO: 调用后端 API
-      // const response = await fetch("/api/datasets/upload", {
-      //   method: "POST",
-      //   body: formData,
-      //   onUploadProgress: (progressEvent) => {
-      //     const percentCompleted = Math.round(
-      //       (progressEvent.loaded * 100) / progressEvent.total
-      //     );
-      //     setUploadProgress(percentCompleted);
-      //   },
-      // });
-
-      // 模拟上传进度
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        setUploadProgress(i);
-      }
-
-      message.success("数据集上传成功");
-      onSuccess();
-    } catch (error) {
-      message.error("上传失败");
-      console.error(error);
+      console.error("Failed to register dataset:", error);
+      message.error(error?.response?.data?.detail || "登记数据集失败");
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
   };
-
-  // 移除文件
-  const handleRemoveFile = (file: UploadFile) => {
-    setFileList((prev) => prev.filter((f) => f.uid !== file.uid));
-  };
-
-  // 格式化文件大小
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-  };
-
-  // 获取接受的文件类型提示
-  const getAcceptedTypesHint = (type: string): string => {
-    if (type === "image") {
-      return "支持: JPG, PNG, DICOM (.dcm), NIfTI (.nii, .nii.gz)";
-    } else if (type === "tabular") {
-      return "支持: CSV, Excel (.xlsx), JSON";
-    } else if (type === "multimodal") {
-      return "支持: 图像文件、表格文件、ZIP 压缩包";
-    }
-    return "";
-  };
-
-  const datasetType = Form.useWatch("type", form);
 
   return (
     <div>
+      <Alert
+        type="info"
+        showIcon
+        message="演示型 MVP 采用本地目录登记"
+        description="当前版本不在浏览器里直接上传大文件，而是登记一份本地数据目录，方便快速演示数据集管理和训练闭环。"
+        style={{ marginBottom: 16 }}
+      />
+
+      <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+        推荐填写真实存在的本地路径，例如
+        <Text code style={{ marginLeft: 8 }}>
+          /data/chest-xray-demo
+        </Text>
+        或
+        <Text code style={{ marginLeft: 8 }}>
+          D:\\datasets\\breast-ultrasound
+        </Text>
+        。
+      </Paragraph>
+
       <Form
         form={form}
         layout="vertical"
         initialValues={{ type: "image" }}
       >
-        {/* 基本信息 */}
         <Form.Item
           label="数据集名称"
           name="name"
           rules={[
             { required: true, message: "请输入数据集名称" },
-            { min: 3, message: "名称至少 3 个字符" },
+            { min: 2, message: "名称至少 2 个字符" },
             { max: 100, message: "名称最多 100 个字符" },
           ]}
         >
-          <Input placeholder="例如: Chest X-Ray Dataset" />
+          <Input
+            prefix={<DatabaseOutlined />}
+            placeholder="例如：Chest X-Ray Demo"
+          />
         </Form.Item>
 
         <Form.Item
@@ -228,10 +130,7 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({ onSuccess, onCancel }
           name="type"
           rules={[{ required: true, message: "请选择数据集类型" }]}
         >
-          <Select
-            placeholder="选择数据集类型"
-            onChange={() => setFileList([])} // 切换类型时清空文件列表
-          >
+          <Select placeholder="选择数据集类型">
             <Select.Option value="image">
               <Space>
                 <FileImageOutlined />
@@ -246,111 +145,84 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({ onSuccess, onCancel }
             </Select.Option>
             <Select.Option value="multimodal">
               <Space>
-                <FileZipOutlined />
+                <DatabaseOutlined />
                 多模态数据集
               </Space>
             </Select.Option>
           </Select>
         </Form.Item>
 
+        <Form.Item
+          label="本地目录路径"
+          name="dataPath"
+          rules={[
+            { required: true, message: "请输入本地目录路径" },
+            { min: 3, message: "路径看起来过短，请确认" },
+          ]}
+        >
+          <Input
+            prefix={<FolderOpenOutlined />}
+            placeholder="例如：/data/demo-dataset"
+          />
+        </Form.Item>
+
         <Form.Item label="描述" name="description">
           <TextArea
             rows={3}
-            placeholder="简要描述数据集的内容、来源和用途"
+            placeholder="简要描述数据内容、来源和适用场景"
             maxLength={500}
             showCount
           />
         </Form.Item>
 
+        <Divider />
+
+        <Space
+          size={16}
+          style={{ display: "flex", marginBottom: 8 }}
+          align="start"
+        >
+          <Form.Item label="样本数" name="numSamples" style={{ minWidth: 180 }}>
+            <InputNumber
+              min={0}
+              style={{ width: "100%" }}
+              placeholder="可选"
+            />
+          </Form.Item>
+
+          <Form.Item label="类别数" name="numClasses" style={{ minWidth: 180 }}>
+            <InputNumber
+              min={0}
+              style={{ width: "100%" }}
+              placeholder="可选"
+            />
+          </Form.Item>
+
+          <Form.Item label="创建人" name="createdBy" style={{ flex: 1 }}>
+            <Input placeholder="例如：lab-demo" />
+          </Form.Item>
+        </Space>
+
         <Form.Item label="标签" name="tags">
           <Select
             mode="tags"
-            placeholder="添加标签（按回车添加）"
-            style={{ width: "100%" }}
-          >
-            <Select.Option value="医学影像">医学影像</Select.Option>
-            <Select.Option value="分类">分类</Select.Option>
-            <Select.Option value="检测">检测</Select.Option>
-            <Select.Option value="分割">分割</Select.Option>
-            <Select.Option value="多模态">多模态</Select.Option>
-          </Select>
+            placeholder="添加标签，回车确认"
+            options={[
+              { value: "医学影像", label: "医学影像" },
+              { value: "分类", label: "分类" },
+              { value: "实验室演示", label: "实验室演示" },
+              { value: "多模态", label: "多模态" },
+            ]}
+          />
         </Form.Item>
-
-        <Divider />
-
-        {/* 文件上传区域 */}
-        <Form.Item label="上传文件">
-          {datasetType && (
-            <Alert
-              message={getAcceptedTypesHint(datasetType)}
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <Dragger {...uploadProps} disabled={!datasetType || uploading}>
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined />
-            </p>
-            <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-            <p className="ant-upload-hint">
-              支持单个或批量上传。请先选择数据集类型。
-            </p>
-          </Dragger>
-        </Form.Item>
-
-        {/* 文件列表 */}
-        {fileList.length > 0 && (
-          <Form.Item label={`已选择文件 (${fileList.length})`}>
-            <List
-              size="small"
-              bordered
-              dataSource={fileList}
-              style={{ maxHeight: 300, overflow: "auto" }}
-              renderItem={(file) => (
-                <List.Item
-                  actions={[
-                    <Button
-                      type="text"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleRemoveFile(file)}
-                      disabled={uploading}
-                    />,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={getFileIcon(file.name)}
-                    title={file.name}
-                    description={formatSize(file.size || 0)}
-                  />
-                </List.Item>
-              )}
-            />
-          </Form.Item>
-        )}
-
-        {/* 上传进度 */}
-        {uploading && (
-          <Form.Item>
-            <Progress percent={uploadProgress} status="active" />
-          </Form.Item>
-        )}
       </Form>
 
-      {/* 操作按钮 */}
       <Space style={{ width: "100%", justifyContent: "flex-end", marginTop: 24 }}>
-        <Button onClick={onCancel} disabled={uploading}>
+        <Button onClick={onCancel} disabled={submitting}>
           取消
         </Button>
-        <Button
-          type="primary"
-          onClick={handleUpload}
-          loading={uploading}
-          disabled={fileList.length === 0}
-        >
-          {uploading ? "上传中..." : "开始上传"}
+        <Button type="primary" onClick={handleRegister} loading={submitting}>
+          登记数据集
         </Button>
       </Space>
     </div>

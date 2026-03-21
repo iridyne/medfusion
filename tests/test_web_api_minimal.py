@@ -1,5 +1,7 @@
 """Minimal Web API contract tests for dataset/model/training routes."""
 
+import time
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -79,9 +81,27 @@ def test_web_basic_routes() -> None:
         assert job_status.status_code == 200
         assert job_status.json()["job_id"] == job_id
 
+        for _ in range(6):
+            current_status = client.get(f"/api/training/{job_id}/status")
+            assert current_status.status_code == 200
+            if current_status.json()["status"] == "completed":
+                break
+            time.sleep(0.6)
+        else:
+            raise AssertionError("training job did not complete in expected time")
+
+        refreshed_models = client.get("/api/models/")
+        assert refreshed_models.status_code == 200
+        generated_model = next(
+            item for item in refreshed_models.json() if item["name"] == "ci-exp-model"
+        )
+
         # Cleanup
         deleted_model = client.delete(f"/api/models/{model_id}")
         assert deleted_model.status_code == 200
+
+        deleted_generated_model = client.delete(f"/api/models/{generated_model['id']}")
+        assert deleted_generated_model.status_code == 200
 
         deleted_dataset = client.delete(f"/api/datasets/{dataset_id}")
         assert deleted_dataset.status_code == 200
