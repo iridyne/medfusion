@@ -95,9 +95,9 @@ model = build_model_from_config(config)
 ## 📖 文档
 
 - [完整文档](docs/README.md)
-- [API 参考](docs/api/README.md)
-- [配置指南](docs/guides/configuration.md)
-- [开发指南](docs/development/README.md)
+- [API 参考](docs/contents/api/med_core.md)
+- [配置指南](docs/contents/tutorials/fundamentals/configs.md)
+- [开发指南](docs/contents/guides/development/contributing.md)
 
 ## 🏗️ 架构
 

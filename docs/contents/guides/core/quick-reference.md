@@ -122,8 +122,8 @@ docker-compose --profile dev up jupyter
 ## 调试
 
 ```bash
-# 启用详细日志
-export MEDCORE_LOG_LEVEL=DEBUG
+# 启用详细日志（Web UI）
+export MEDFUSION_LOG_LEVEL=DEBUG
 python -m med_core.cli train --config configs/default.yaml
 
 # 检查 GPU
@@ -147,13 +147,10 @@ python -c "import torch; print(torch.cuda.memory_summary())"
 
 ```bash
 # 日志级别
-export MEDCORE_LOG_LEVEL=INFO
+export MEDFUSION_LOG_LEVEL=INFO
 
-# 数据目录
-export MEDCORE_DATA_DIR=/path/to/data
-
-# 输出目录
-export MEDCORE_OUTPUT_DIR=/path/to/outputs
+# Web UI 数据目录
+export MEDFUSION_DATA_DIR=/path/to/data
 
 # GPU 设备
 export CUDA_VISIBLE_DEVICES=0,1

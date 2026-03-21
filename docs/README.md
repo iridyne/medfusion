@@ -8,18 +8,18 @@
 
 **从入门到精通的完整学习路径：**
 - [教程总览](contents/tutorials/README.md) - 三种学习路径（快速入门/完整学习/深度学习）
-- [你的第一个模型](contents/tutorials/modules/02_first_model.md) - 30分钟快速上手
-- [配置文件详解](contents/tutorials/modules/03_understanding_configs.md) - 理解配置系统
-- [数据准备指南](contents/tutorials/modules/04_data_preparation.md) - 准备医学影像数据
-- [模型构建器 API](contents/tutorials/modules/05_builder_api.md) - 使用 Builder API
+- [你的第一个模型](contents/getting-started/first-model.md) - 30分钟快速上手
+- [配置文件详解](contents/tutorials/fundamentals/configs.md) - 理解配置系统
+- [数据准备指南](contents/tutorials/fundamentals/data-prep.md) - 准备医学影像数据
+- [模型构建器 API](contents/tutorials/fundamentals/builder-api.md) - 使用 Builder API
 - [查看所有教程模块](contents/tutorials/README.md#-所有教程模块)
 
 ### 🚀 快速开始
 
 **新手必读：**
-- [快速入门指南](contents/user-guides/QUICKSTART_GUIDE.md) - 新手避坑指南，常见问题和解决方案
-- [Docker 部署指南](contents/user-guides/DOCKER_GUIDE.md) - 使用 Docker 部署 MedFusion
-- [Web UI 快速入门](contents/user-guides/WEB_UI_QUICKSTART.md) - Web 界面使用指南
+- [快速入门指南](contents/getting-started/quickstart.md) - 新手避坑指南，常见问题和解决方案
+- [Docker 部署指南](contents/tutorials/deployment/docker.md) - 使用 Docker 部署 MedFusion
+- [Web UI 快速入门](contents/getting-started/web-ui.md) - Web 界面使用指南
 
 ### 📖 API 文档
 
@@ -46,17 +46,17 @@
 ### 📘 功能指南
 
 **核心指南：**
-- [快速参考](contents/guides/quick_reference.md) - 常用命令速查
-- [FAQ 和故障排除](contents/guides/faq_troubleshooting.md) - 常见问题解答
+- [快速参考](contents/guides/core/quick-reference.md) - 常用命令速查
+- [FAQ 和故障排除](contents/guides/core/faq.md) - 常见问题解答
 
 **高级功能指南**
-- [分布式训练](contents/guides/distributed_training.md) - 多 GPU 和多节点训练
-- [梯度检查点](contents/guides/gradient_checkpointing_guide.md) - 内存优化技术
-- [模型压缩](contents/guides/model_compression.md) - 模型剪枝和量化
-- [模型导出](contents/guides/model_export.md) - ONNX 和 TorchScript 导出
-- [数据缓存](contents/guides/data_caching.md) - 加速数据加载
-- [性能基准测试](contents/guides/performance_benchmarking.md) - 性能评估
-- [CI/CD 流程](contents/guides/ci_cd.md) - 持续集成和部署
+- [分布式训练](contents/guides/advanced-features/distributed-training.md) - 多 GPU 和多节点训练
+- [梯度检查点](contents/guides/advanced-features/gradient-checkpointing.md) - 内存优化技术
+- [模型压缩](contents/guides/advanced-features/model-compression.md) - 模型剪枝和量化
+- [模型导出](contents/tutorials/deployment/model-export.md) - ONNX 和 TorchScript 导出
+- [数据缓存](contents/guides/advanced-features/data-caching.md) - 加速数据加载
+- [性能基准测试](contents/guides/advanced-features/performance-benchmarking.md) - 性能评估
+- [CI/CD 流程](contents/guides/advanced-features/ci-cd.md) - 持续集成和部署
 
 **专题指南：**
 - [注意力机制](contents/guides/attention/mechanism.md) - CBAM, SE, ECA 详解
@@ -85,18 +85,18 @@
 ### 数据处理
 1. [数据加载器 API](contents/api/datasets.md)
 2. [数据预处理 API](contents/api/preprocessing.md)
-3. [数据缓存指南](contents/guides/data_caching.md)
+3. [数据缓存指南](contents/guides/advanced-features/data-caching.md)
 
 ### 训练和优化
 1. [训练器 API](contents/api/trainers.md)
-2. [分布式训练](contents/guides/distributed_training.md)
-3. [梯度检查点](contents/guides/gradient_checkpointing_guide.md)
-4. [性能基准测试](contents/guides/performance_benchmarking.md)
+2. [分布式训练](contents/guides/advanced-features/distributed-training.md)
+3. [梯度检查点](contents/guides/advanced-features/gradient-checkpointing.md)
+4. [性能基准测试](contents/guides/advanced-features/performance-benchmarking.md)
 
 ### 部署
-1. [Docker 部署](contents/user-guides/DOCKER_GUIDE.md)
-2. [模型导出](contents/guides/model_export.md)
-3. [CI/CD 流程](contents/guides/ci_cd.md)
+1. [Docker 部署](contents/tutorials/deployment/docker.md)
+2. [模型导出](contents/tutorials/deployment/model-export.md)
+3. [CI/CD 流程](contents/guides/advanced-features/ci-cd.md)
 
 ---
 

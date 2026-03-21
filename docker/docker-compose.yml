@@ -30,15 +30,11 @@ services:
       # CUDA 配置
       - CUDA_VISIBLE_DEVICES=0
       # MedFusion 配置
-      - MEDCORE_DATA_DIR=/app/data
-      - MEDCORE_OUTPUT_DIR=/app/outputs
-      - MEDCORE_LOG_DIR=/app/logs
-      - MEDCORE_CHECKPOINT_DIR=/app/checkpoints
-      - MEDCORE_LOG_LEVEL=INFO
+      - MEDFUSION_DATA_DIR=/app/data
+      - MEDFUSION_LOG_LEVEL=INFO
       # Web UI 配置
-      - MEDCORE_WEB_HOST=0.0.0.0
-      - MEDCORE_WEB_PORT=8000
-      - MEDCORE_WEB_RELOAD=false
+      - MEDFUSION_HOST=0.0.0.0
+      - MEDFUSION_PORT=8000
     deploy:
       resources:
         reservations:
@@ -73,14 +69,10 @@ services:
       - ./checkpoints:/app/checkpoints
       - ./configs:/app/configs:ro
     environment:
-      - MEDCORE_DATA_DIR=/app/data
-      - MEDCORE_OUTPUT_DIR=/app/outputs
-      - MEDCORE_LOG_DIR=/app/logs
-      - MEDCORE_CHECKPOINT_DIR=/app/checkpoints
-      - MEDCORE_LOG_LEVEL=INFO
-      - MEDCORE_WEB_HOST=0.0.0.0
-      - MEDCORE_WEB_PORT=8000
-      - MEDCORE_WEB_RELOAD=false
+      - MEDFUSION_DATA_DIR=/app/data
+      - MEDFUSION_LOG_LEVEL=INFO
+      - MEDFUSION_HOST=0.0.0.0
+      - MEDFUSION_PORT=8000
     restart: unless-stopped
     profiles:
       - cpu
@@ -112,8 +104,9 @@ services:
       - /app/web/frontend/node_modules
     environment:
       - CUDA_VISIBLE_DEVICES=0
-      - MEDCORE_LOG_LEVEL=DEBUG
-      - MEDCORE_WEB_RELOAD=true
+      - MEDFUSION_LOG_LEVEL=DEBUG
+      - MEDFUSION_HOST=0.0.0.0
+      - MEDFUSION_PORT=8000
     command: /bin/bash
     stdin_open: true
     tty: true

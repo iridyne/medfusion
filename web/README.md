@@ -118,9 +118,9 @@ web/frontend/src/  →  npm run build  →  web/frontend/dist/  →  复制  →
 
 ## 📚 相关文档
 
-- [架构设计文档](../docs/WEB_UI_ARCHITECTURE.md) - 详细的架构说明和设计决策
-- [快速入门指南](../docs/WEB_UI_QUICKSTART.md) - 用户使用教程
-- [项目状态报告](../docs/PROJECT_STATUS.md) - 当前开发进度
+- [架构设计文档](../docs/contents/architecture/WEB_UI_ARCHITECTURE.md) - 详细的架构说明和设计决策
+- [快速入门指南](../docs/contents/getting-started/web-ui.md) - 用户使用教程
+- [通用快速开始](../docs/contents/getting-started/quickstart.md) - 项目入门
 
 ## 🛠️ 技术栈
 

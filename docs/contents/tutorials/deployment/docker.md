@@ -111,7 +111,7 @@ docker run -d \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/checkpoints:/app/checkpoints \
   -v $(pwd)/configs:/app/configs:ro \
-  -e MEDCORE_LOG_LEVEL=INFO \
+  -e MEDFUSION_LOG_LEVEL=INFO \
   -e CUDA_VISIBLE_DEVICES=0 \
   --restart unless-stopped \
   medfusion/medfusion:latest
@@ -156,7 +156,7 @@ docker run -it \
 
 # 在容器内运行命令
 medfusion --help
-medfusion web --host 0.0.0.0 --port 8000
+medfusion web start --host 0.0.0.0 --port 8000
 ```
 
 ## 🎼 Docker Compose
@@ -195,7 +195,7 @@ docker exec -it medfusion-dev bash
 
 # 在容器内开发
 cd /app
-medfusion web --reload
+medfusion web start --reload
 ```
 
 ### 多服务编排
@@ -207,7 +207,7 @@ version: "3.8"
 services:
   medfusion-web:
     environment:
-      - MEDCORE_USE_WANDB=true
+      - MEDFUSION_USE_WANDB=true
       - WANDB_API_KEY=${WANDB_API_KEY}
     
   postgres:
@@ -282,19 +282,15 @@ docker run --rm \
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| `MEDCORE_DATA_DIR` | `/app/data` | 数据集目录 |
-| `MEDCORE_OUTPUT_DIR` | `/app/outputs` | 输出目录 |
-| `MEDCORE_LOG_DIR` | `/app/logs` | 日志目录 |
-| `MEDCORE_CHECKPOINT_DIR` | `/app/checkpoints` | 检查点目录 |
-| `MEDCORE_LOG_LEVEL` | `INFO` | 日志级别（DEBUG/INFO/WARNING/ERROR） |
+| `MEDFUSION_DATA_DIR` | `/app/data` | MedFusion 数据目录 |
+| `MEDFUSION_LOG_LEVEL` | `INFO` | 日志级别（DEBUG/INFO/WARNING/ERROR） |
 
 ### Web UI 配置
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| `MEDCORE_WEB_HOST` | `0.0.0.0` | 监听地址 |
-| `MEDCORE_WEB_PORT` | `8000` | 监听端口 |
-| `MEDCORE_WEB_RELOAD` | `false` | 热重载（开发模式） |
+| `MEDFUSION_HOST` | `0.0.0.0` | 监听地址 |
+| `MEDFUSION_PORT` | `8000` | 监听端口 |
 
 ### CUDA 配置
 
@@ -308,8 +304,9 @@ docker run --rm \
 ```bash
 # 创建 .env 文件
 cat > .env << EOF
-MEDCORE_LOG_LEVEL=DEBUG
-MEDCORE_WEB_RELOAD=true
+MEDFUSION_LOG_LEVEL=DEBUG
+MEDFUSION_HOST=0.0.0.0
+MEDFUSION_PORT=8000
 CUDA_VISIBLE_DEVICES=0,1
 EOF
 
@@ -488,7 +485,7 @@ docker run --network none medfusion/medfusion:latest
 - [NVIDIA Docker 文档](https://github.com/NVIDIA/nvidia-docker)
 - [Docker Compose 文档](https://docs.docker.com/compose/)
 - [MedFusion 主文档](../README.md)
-- [Web UI 快速入门](WEB_UI_QUICKSTART.md)
+- [Web UI 快速入门](../../getting-started/web-ui.md)
 
 ## 📝 更新日志
 

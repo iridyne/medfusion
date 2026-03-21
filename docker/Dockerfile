@@ -66,10 +66,10 @@ RUN mkdir -p \
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    MEDCORE_DATA_DIR=/app/data \
-    MEDCORE_OUTPUT_DIR=/app/outputs \
-    MEDCORE_LOG_DIR=/app/logs \
-    MEDCORE_CHECKPOINT_DIR=/app/checkpoints
+    MEDFUSION_DATA_DIR=/app/data \
+    MEDFUSION_LOG_LEVEL=INFO \
+    MEDFUSION_HOST=0.0.0.0 \
+    MEDFUSION_PORT=8000
 
 # 暴露 Web UI 端口
 EXPOSE 8000
