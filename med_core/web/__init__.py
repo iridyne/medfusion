@@ -5,7 +5,16 @@
 
 __version__ = "0.3.0"
 
-from .app import app
-from .config import settings
-
 __all__ = ["__version__", "app", "settings"]
+
+
+def __getattr__(name: str):
+    if name == "app":
+        from .app import app
+
+        return app
+    if name == "settings":
+        from .config import settings
+
+        return settings
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

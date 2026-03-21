@@ -7,6 +7,7 @@ import {
   DatabaseOutlined,
   DashboardOutlined,
   InboxOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 
 const { Sider } = Layout;
@@ -18,6 +19,11 @@ export default function Sidebar() {
   const { t } = useTranslation();
 
   const menuItems = [
+    {
+      key: "/workbench",
+      icon: <HomeOutlined />,
+      label: "工作台",
+    },
     {
       key: "/datasets",
       icon: <InboxOutlined />,

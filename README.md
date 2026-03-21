@@ -88,11 +88,14 @@ uv run medfusion preprocess --input-dir data/raw --output-dir data/processed
 ### 启动 Web UI
 
 ```bash
-# 使用启动脚本
-./start-webui.sh
+# 推荐：统一入口，直接进入工作台首页
+uv run medfusion start
 
-# 或手动启动
-uv run python -m med_core.web.cli web
+# 高级用法：指定主机、端口、热重载
+uv run medfusion start --host 0.0.0.0 --port 8080 --reload
+
+# 兼容旧入口
+uv run medfusion web
 
 # 访问 http://localhost:8000
 ```

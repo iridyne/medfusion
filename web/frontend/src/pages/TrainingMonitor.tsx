@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Badge,
@@ -88,6 +88,7 @@ const BACKBONE_OPTIONS = [
 
 export default function TrainingMonitor() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [form] = Form.useForm<CreateTrainingValues>();
   const [jobs, setJobs] = useState<TrainingJob[]>([]);
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
@@ -149,6 +150,16 @@ export default function TrainingMonitor() {
 
     return () => window.clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("action") !== "start") {
+      return;
+    }
+    setCreateModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     setMetricHistory(EMPTY_HISTORY);

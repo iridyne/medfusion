@@ -38,6 +38,7 @@ def _print_help() -> None:
     print("  medfusion <command> [args...]")
     print("")
     print("Commands:")
+    print("  start       启动 MedFusion 工作台（推荐入口）")
     print("  train       训练模型")
     print("  evaluate    评估模型")
     print("  preprocess  数据预处理")
@@ -53,6 +54,7 @@ def _print_help() -> None:
     print("  -V, --version  显示版本")
     print("")
     print("Recommended entrypoints:")
+    print("  medfusion start")
     print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
     print("  medfusion build-results --config configs/starter/quickstart.yaml --checkpoint <path>")
@@ -82,6 +84,17 @@ def _dispatch_web_command(command: str, args: list[str]) -> None:
     target.main(args=args, prog_name=f"medfusion {command}", standalone_mode=True)
 
 
+def _dispatch_start_command(args: list[str]) -> None:
+    try:
+        from med_core.web.cli import start as web_start
+    except ImportError:
+        print("❌ Web UI 依赖未安装")
+        print("💡 请运行: pip install medfusion[web]")
+        raise SystemExit(1) from None
+
+    web_start.main(args=args, prog_name="medfusion start", standalone_mode=True)
+
+
 def _run_legacy_command(
     command: Callable[..., None],
     args: Sequence[str],
@@ -105,6 +118,10 @@ def main() -> None:
 
     command = argv[0]
     args = argv[1:]
+
+    if command == "start":
+        _dispatch_start_command(args)
+        return
 
     if command == "train":
         _run_legacy_command(train, args, "medfusion train")

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Alert,
   Card,
@@ -79,6 +80,7 @@ function mapModelPayload(item: any): Model {
 }
 
 export default function ModelLibrary() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [importForm] = Form.useForm<ImportFormValues>();
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>(models);
@@ -121,6 +123,16 @@ export default function ModelLibrary() {
   useEffect(() => {
     void loadModels();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("action") !== "import") {
+      return;
+    }
+    setImportModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("action");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const filterModels = () => {
     let filtered = models;

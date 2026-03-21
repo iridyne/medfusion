@@ -68,8 +68,14 @@ Web UI 面向演示型 MVP，主打：
 启动方式：
 
 ```bash
-uv run medfusion web
+uv run medfusion start
 ```
+
+这里的 `start` 是现在推荐的新入口：
+
+- 直接进入工作台首页
+- 首页会把“快速演示训练 / 导入真实训练结果 / 数据准备”三条常用路径收口到一起
+- `medfusion web` 仍然保留，但更适合作为兼容入口或高级入口理解
 
 ## 当前推荐顺序
 
@@ -79,7 +85,7 @@ uv run medfusion web
 2. 先跑 `medfusion validate-config`
 3. 再跑 `medfusion train`
 4. 训练完再跑 `medfusion build-results`
-5. 再看 `Web UI`
+5. 最后用 `medfusion start` 进入工作台或结果页
 
 ### 做研究原型的人
 

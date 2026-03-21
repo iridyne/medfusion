@@ -8,6 +8,7 @@ import DatasetManager from "./pages/DatasetManager";
 import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
 import SystemMonitor from "./pages/SystemMonitor";
+import Workbench from "./pages/Workbench";
 import Sidebar from "./components/Sidebar";
 import {
   ThemeMode,
@@ -56,17 +57,18 @@ function App() {
         <Layout>
           <Content style={{ overflow: "auto" }}>
             <Routes>
-              <Route path="/" element={<Navigate to="/datasets" replace />} />
+              <Route path="/" element={<Navigate to="/workbench" replace />} />
+              <Route path="/workbench" element={<Workbench />} />
               <Route path="/datasets" element={<DatasetManager />} />
               <Route path="/training" element={<TrainingMonitor />} />
               <Route path="/models" element={<ModelLibrary />} />
               <Route path="/system" element={<SystemMonitor />} />
-              <Route path="/workflow" element={<Navigate to="/datasets" replace />} />
-              <Route path="/config" element={<Navigate to="/datasets" replace />} />
-              <Route path="/experiments" element={<Navigate to="/datasets" replace />} />
-              <Route path="/preprocessing" element={<Navigate to="/datasets" replace />} />
-              <Route path="/settings" element={<Navigate to="/datasets" replace />} />
-              <Route path="*" element={<Navigate to="/datasets" replace />} />
+              <Route path="/workflow" element={<Navigate to="/workbench" replace />} />
+              <Route path="/config" element={<Navigate to="/workbench" replace />} />
+              <Route path="/experiments" element={<Navigate to="/workbench" replace />} />
+              <Route path="/preprocessing" element={<Navigate to="/workbench" replace />} />
+              <Route path="/settings" element={<Navigate to="/workbench" replace />} />
+              <Route path="*" element={<Navigate to="/workbench" replace />} />
             </Routes>
           </Content>
         </Layout>
