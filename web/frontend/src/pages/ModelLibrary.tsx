@@ -24,7 +24,7 @@ import {
   ExperimentOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
-import { getModels } from "@/api/models";
+import { deleteModel, downloadModel, getModels } from "@/api/models";
 import VirtualList from "@/components/VirtualList";
 
 interface Model {
@@ -42,44 +42,7 @@ interface Model {
 
 export default function ModelLibrary() {
   const { t } = useTranslation();
-  const [models, setModels] = useState<Model[]>([
-    {
-      id: "1",
-      name: "肺癌分类模型 v1.0",
-      backbone: "resnet50",
-      numClasses: 3,
-      params: 25600000,
-      accuracy: 0.9234,
-      createdAt: "2024-02-20 10:30:00",
-      description: "基于 ResNet50 的肺癌三分类模型，在 LIDC-IDRI 数据集上训练",
-      size: 102400000,
-      format: "pytorch",
-    },
-    {
-      id: "2",
-      name: "多视图融合模型 v2.1",
-      backbone: "efficientnet_b2",
-      numClasses: 2,
-      params: 9200000,
-      accuracy: 0.9567,
-      createdAt: "2024-02-19 14:20:00",
-      description: "使用注意力融合的多视图模型，支持 4 个视图输入",
-      size: 36800000,
-      format: "pytorch",
-    },
-    {
-      id: "3",
-      name: "ViT 分类器",
-      backbone: "vit_b16",
-      numClasses: 5,
-      params: 86400000,
-      accuracy: 0.8891,
-      createdAt: "2024-02-18 09:15:00",
-      description: "Vision Transformer 基础模型，适用于高分辨率医学图像",
-      size: 345600000,
-      format: "pytorch",
-    },
-  ]);
+  const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>(models);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -91,6 +54,37 @@ export default function ModelLibrary() {
   useEffect(() => {
     filterModels();
   }, [searchText, filterBackbone, filterFormat, models]);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      setLoading(true);
+      try {
+        const data = await getModels();
+        const mapped: Model[] = (data || []).map((item: any) => ({
+          id: String(item.id),
+          name: item.name || `model-${item.id}`,
+          backbone: item.backbone || item.architecture || "unknown",
+          numClasses: item.num_classes ?? 0,
+          params: item.num_parameters ?? item.params ?? 0,
+          accuracy: item.accuracy ?? undefined,
+          createdAt: item.created_at || "",
+          description: item.description || "",
+          size:
+            item.file_size ??
+            (item.model_size_mb ? Math.round(item.model_size_mb * 1024 * 1024) : 0),
+          format: (item.format || "pytorch") as "pytorch" | "onnx" | "torchscript",
+        }));
+        setModels(mapped);
+      } catch (error) {
+        console.error("Failed to load models:", error);
+        message.error(t("models.loadError", { defaultValue: "加载模型列表失败" }));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchModels();
+  }, [t]);
 
   const filterModels = () => {
     let filtered = models;
@@ -137,17 +131,30 @@ export default function ModelLibrary() {
   };
 
   const handleDownload = (model: Model) => {
-    message.success(t("models.downloadStarted", { name: model.name }));
-    // TODO: 实现下载逻辑
+    void (async () => {
+      try {
+        await downloadModel(Number(model.id), `${model.name}.${model.format === "onnx" ? "onnx" : "pth"}`);
+        message.success(t("models.downloadStarted", { name: model.name }));
+      } catch (error) {
+        console.error("Failed to download model:", error);
+        message.error(t("models.downloadFailed", { defaultValue: "下载失败" }));
+      }
+    })();
   };
 
   const handleDelete = (model: Model) => {
     Modal.confirm({
       title: t("common.confirmDelete"),
       content: t("models.deleteConfirm", { name: model.name }),
-      onOk: () => {
-        setModels(models.filter((m) => m.id !== model.id));
-        message.success(t("models.deleteSuccess"));
+      onOk: async () => {
+        try {
+          await deleteModel(Number(model.id));
+          setModels((prev) => prev.filter((m) => m.id !== model.id));
+          message.success(t("models.deleteSuccess"));
+        } catch (error) {
+          console.error("Failed to delete model:", error);
+          message.error(t("models.deleteFailed", { defaultValue: "删除失败" }));
+        }
       },
     });
   };
@@ -231,7 +238,7 @@ export default function ModelLibrary() {
         </Col>
       </Row>
 
-      <Card style={{ marginTop: 16 }}>
+      <Card style={{ marginTop: 16 }} loading={loading}>
         <Space style={{ marginBottom: 16, width: "100%" }} direction="vertical">
           <Row gutter={16}>
             <Col span={12}>

@@ -5,7 +5,7 @@ import { getSystemResources } from '@/api/system'
 
 interface SystemResources {
   cpu: {
-    percent: number
+    usage_percent: number
     count: number
   }
   memory: {
@@ -16,10 +16,9 @@ interface SystemResources {
   gpu: Array<{
     id: number
     name: string
-    memory_used: number
+    memory_allocated: number
     memory_total: number
-    memory_percent: number
-    utilization: number
+    memory_reserved: number
   }>
 }
 
@@ -41,9 +40,8 @@ export default function SystemMonitor() {
     }
   }
 
-  const formatBytes = (bytes: number) => {
-    const gb = bytes / (1024 ** 3)
-    return `${gb.toFixed(2)} GB`
+  const formatGB = (value: number) => {
+    return `${value.toFixed(2)} GB`
   }
 
   return (
@@ -57,7 +55,7 @@ export default function SystemMonitor() {
               <Card title="CPU 使用率">
                 <Progress
                   type="circle"
-                  percent={Math.round(resources.cpu.percent)}
+                  percent={Math.round(resources.cpu.usage_percent)}
                   format={(percent) => `${percent}%`}
                 />
                 <div style={{ marginTop: 16 }}>
@@ -73,7 +71,7 @@ export default function SystemMonitor() {
                   format={(percent) => `${percent}%`}
                 />
                 <div style={{ marginTop: 16 }}>
-                  已使用: {formatBytes(resources.memory.used)} / {formatBytes(resources.memory.total)}
+                  已使用: {formatGB(resources.memory.used)} / {formatGB(resources.memory.total)}
                 </div>
               </Card>
             </Col>
@@ -87,14 +85,29 @@ export default function SystemMonitor() {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div>显存使用率</div>
-                      <Progress percent={Math.round(gpu.memory_percent)} />
+                      <Progress
+                        percent={
+                          gpu.memory_total > 0
+                            ? Math.round((gpu.memory_allocated / gpu.memory_total) * 100)
+                            : 0
+                        }
+                      />
                       <div style={{ fontSize: 12, color: '#666' }}>
-                        {formatBytes(gpu.memory_used)} / {formatBytes(gpu.memory_total)}
+                        {formatGB(gpu.memory_allocated)} / {formatGB(gpu.memory_total)}
                       </div>
                     </Col>
                     <Col span={12}>
-                      <div>GPU 利用率</div>
-                      <Progress percent={gpu.utilization} />
+                      <div>显存预留</div>
+                      <Progress
+                        percent={
+                          gpu.memory_total > 0
+                            ? Math.round((gpu.memory_reserved / gpu.memory_total) * 100)
+                            : 0
+                        }
+                      />
+                      <div style={{ fontSize: 12, color: '#666' }}>
+                        {formatGB(gpu.memory_reserved)}
+                      </div>
                     </Col>
                   </Row>
                 </div>

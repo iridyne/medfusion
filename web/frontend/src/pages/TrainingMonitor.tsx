@@ -30,7 +30,13 @@ import LazyChart from "../components/LazyChart";
 interface TrainingJob {
   id: string;
   name: string;
-  status: "running" | "paused" | "completed" | "failed";
+  status:
+    | "queued"
+    | "running"
+    | "paused"
+    | "completed"
+    | "failed"
+    | "stopped";
   progress: number;
   epoch: number;
   totalEpochs: number;
@@ -68,7 +74,7 @@ export default function TrainingMonitor() {
   // 初始化 WebSocket 连接
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/training/${selectedJob || "all"}`;
+    const wsUrl = `${protocol}//${window.location.hostname}:8000/api/training/ws/${selectedJob || "all"}`;
 
     wsClient.current = new WebSocketClient({
       url: wsUrl,
@@ -166,10 +172,10 @@ export default function TrainingMonitor() {
   // 加载训练任务列表
   const loadJobs = async () => {
     try {
-      const response = await trainingApi.listJobs();
-      setJobs(response.data);
-      if (response.data.length > 0 && !selectedJob) {
-        setSelectedJob(response.data[0].id);
+      const jobList = await trainingApi.listJobs();
+      setJobs(jobList);
+      if (jobList.length > 0 && !selectedJob) {
+        setSelectedJob(jobList[0].id);
       }
     } catch (error) {
       console.error("Failed to load training jobs:", error);
@@ -312,10 +318,12 @@ export default function TrainingMonitor() {
       key: "status",
       render: (status: string) => {
         const colorMap: Record<string, string> = {
+          queued: "default",
           running: "blue",
           paused: "orange",
           completed: "green",
           failed: "red",
+          stopped: "volcano",
         };
         return (
           <Tag color={colorMap[status]}>{t(`training.status_${status}`)}</Tag>

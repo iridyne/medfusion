@@ -37,6 +37,7 @@ import type { ColumnsType } from "antd/es/table";
 import DatasetUploader from "../components/dataset/DatasetUploader";
 import DatasetPreview from "../components/dataset/DatasetPreview";
 import DatasetStatistics from "../components/dataset/DatasetStatistics";
+import { deleteDataset, getDatasets } from "../api/datasets";
 
 interface Dataset {
   id: string;
@@ -67,55 +68,26 @@ const DatasetManager: React.FC = () => {
   const fetchDatasets = async () => {
     setLoading(true);
     try {
-      // TODO: 调用后端 API
-      // const response = await fetch("/api/datasets");
-      // const data = await response.json();
-      // setDatasets(data);
-
-      // 模拟数据
-      const mockData: Dataset[] = [
-        {
-          id: "1",
-          name: "Chest X-Ray Dataset",
-          type: "image",
-          status: "ready",
-          size: 1024 * 1024 * 500, // 500MB
-          samples: 5000,
-          classes: 2,
-          created_at: "2024-01-15T10:30:00Z",
-          updated_at: "2024-01-15T11:00:00Z",
-          description: "胸部 X 光图像数据集，包含正常和肺炎两类",
-          tags: ["医学影像", "分类"],
-        },
-        {
-          id: "2",
-          name: "Clinical Records",
-          type: "tabular",
-          status: "ready",
-          size: 1024 * 1024 * 10, // 10MB
-          samples: 10000,
-          classes: 3,
-          created_at: "2024-01-16T09:00:00Z",
-          updated_at: "2024-01-16T09:30:00Z",
-          description: "临床记录表格数据",
-          tags: ["表格数据", "多分类"],
-        },
-        {
-          id: "3",
-          name: "Multimodal Cancer Dataset",
-          type: "multimodal",
-          status: "processing",
-          size: 1024 * 1024 * 1024 * 2, // 2GB
-          samples: 3000,
-          classes: 4,
-          created_at: "2024-01-17T14:00:00Z",
-          updated_at: "2024-01-17T14:30:00Z",
-          description: "多模态癌症数据集（影像 + 临床数据）",
-          tags: ["多模态", "癌症"],
-          progress: 65,
-        },
-      ];
-      setDatasets(mockData);
+      const data = await getDatasets({ limit: 200 });
+      const mapped: Dataset[] = (data || []).map((item: any) => ({
+        id: String(item.id),
+        name: item.name,
+        type: (item.dataset_type || "image") as Dataset["type"],
+        status: (item.status || "ready") as Dataset["status"],
+        size: item.size_bytes || 0,
+        samples: item.num_samples || 0,
+        classes: item.num_classes || 0,
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || item.created_at || new Date().toISOString(),
+        description: item.description,
+        tags: item.tags || [],
+        progress:
+          item.status === "processing" || item.status === "uploading"
+            ? item.progress ?? 50
+            : undefined,
+        error_message: item.error_message,
+      }));
+      setDatasets(mapped);
     } catch (error) {
       message.error("获取数据集列表失败");
       console.error(error);
@@ -131,8 +103,7 @@ const DatasetManager: React.FC = () => {
   // 删除数据集
   const handleDelete = async (id: string) => {
     try {
-      // TODO: 调用后端 API
-      // await fetch(`/api/datasets/${id}`, { method: "DELETE" });
+      await deleteDataset(Number(id));
       message.success("数据集删除成功");
       fetchDatasets();
     } catch (error) {

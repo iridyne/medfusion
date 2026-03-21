@@ -41,38 +41,44 @@ export interface ExecuteResponse {
 }
 
 export const getNodes = async () => {
-  const response = await api.get("/workflows/nodes");
+  const response = await api.get("/workflows/");
   return response.data;
 };
 
 export const createWorkflow = async (workflow: Workflow) => {
-  const response = await api.post("/workflows/", workflow);
+  const response = await api.post("/workflows/execute", {
+    workflow: {
+      nodes: workflow.nodes,
+      edges: workflow.edges,
+    },
+    name: workflow.name,
+  });
   return response.data;
 };
 
 export const getWorkflow = async (workflowId: string) => {
-  const response = await api.get(`/workflows/${workflowId}`);
+  const response = await api.get(`/workflows/${workflowId}/status`);
   return response.data;
 };
 
 export const validateWorkflow = async (
   workflow: WorkflowData,
 ): Promise<ValidationResult> => {
-  const response = await api.post("/api/workflows/validate", { workflow });
+  const response = await api.post("/workflows/validate", { workflow });
   return response.data;
 };
 
 export const executeWorkflow = async (
   request: ExecuteRequest,
 ): Promise<ExecuteResponse> => {
-  const response = await api.post("/api/workflows/execute", request);
+  const response = await api.post("/workflows/execute", request);
   return response.data;
 };
 
 export const getWorkflowStatus = async (
   workflowId: string,
 ): Promise<WorkflowStatus> => {
-  const response = await api.get(`/api/workflows/${workflowId}/status`);
+  const response = await api.get(`/workflows/${workflowId}/status`);
   return response.data;
 };
 

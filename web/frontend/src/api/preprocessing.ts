@@ -2,9 +2,9 @@
  * 预处理 API 客户端
  */
 
-import axios from 'axios';
+import api from './index';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = '/preprocessing';
 
 // ==================== 类型定义 ====================
 
@@ -81,13 +81,13 @@ export const preprocessingAPI = {
    * 启动预处理任务
    */
   start: (data: PreprocessingTaskCreate) =>
-    axios.post<PreprocessingTask>(`${API_BASE}/preprocessing/start`, data),
+    api.post<PreprocessingTask>(`${API_BASE}/start`, data),
 
   /**
    * 获取任务状态
    */
   getStatus: (taskId: string) =>
-    axios.get<PreprocessingTask>(`${API_BASE}/preprocessing/status/${taskId}`),
+    api.get<PreprocessingTask>(`${API_BASE}/status/${taskId}`),
 
   /**
    * 列出预处理任务
@@ -99,7 +99,7 @@ export const preprocessingAPI = {
     sort_by?: string;
     order?: 'asc' | 'desc';
   }) =>
-    axios.get<PreprocessingTaskListResponse>(`${API_BASE}/preprocessing/list`, {
+    api.get<PreprocessingTaskListResponse>(`${API_BASE}/list`, {
       params,
     }),
 
@@ -107,19 +107,19 @@ export const preprocessingAPI = {
    * 取消任务
    */
   cancel: (taskId: string) =>
-    axios.post(`${API_BASE}/preprocessing/cancel/${taskId}`),
+    api.post(`${API_BASE}/cancel/${taskId}`),
 
   /**
    * 删除任务
    */
   delete: (taskId: number) =>
-    axios.delete(`${API_BASE}/preprocessing/${taskId}`),
+    api.delete(`${API_BASE}/${taskId}`),
 
   /**
    * 获取统计信息
    */
   statistics: () =>
-    axios.get<PreprocessingStatistics>(`${API_BASE}/preprocessing/statistics`),
+    api.get<PreprocessingStatistics>(`${API_BASE}/statistics`),
 
   /**
    * 创建 WebSocket 连接监控任务
@@ -130,7 +130,8 @@ export const preprocessingAPI = {
     onError?: (error: Event) => void,
     onClose?: () => void
   ): WebSocket => {
-    const wsUrl = `ws://localhost:8000/api/v1/preprocessing/ws/${taskId}`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/api/preprocessing/ws/${taskId}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onmessage = (event) => {
