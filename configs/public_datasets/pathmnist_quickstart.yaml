@@ -1,0 +1,69 @@
+project_name: "public-datasets"
+experiment_name: "pathmnist_quickstart"
+seed: 42
+device: "auto"
+
+data:
+  csv_path: "data/public/medmnist/pathmnist-demo/metadata.csv"
+  image_dir: "data/public/medmnist/pathmnist-demo"
+  image_path_column: "image_path"
+  target_column: "label"
+  numerical_features: []
+  categorical_features: []
+
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+  image_size: 64
+  batch_size: 16
+  num_workers: 0
+  pin_memory: false
+  augmentation_strength: "light"
+
+model:
+  num_classes: 9
+  use_auxiliary_heads: false
+
+  vision:
+    backbone: "mobilenetv3_small"
+    pretrained: false
+    freeze_backbone: false
+    feature_dim: 96
+    dropout: 0.2
+    attention_type: "none"
+
+  tabular:
+    hidden_dims: [16]
+    output_dim: 8
+    dropout: 0.1
+
+  fusion:
+    fusion_type: "concatenate"
+    hidden_dim: 96
+    dropout: 0.2
+
+training:
+  num_epochs: 3
+  mixed_precision: false
+  label_smoothing: 0.0
+  use_progressive_training: false
+  patience: 10
+  min_delta: 0.0
+  monitor: "accuracy"
+  mode: "max"
+
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.001
+    weight_decay: 0.0001
+
+  scheduler:
+    scheduler: "step"
+    step_size: 1
+    gamma: 0.8
+
+logging:
+  output_dir: "outputs/public_datasets/pathmnist_quickstart"
+  use_tensorboard: false
+  use_wandb: false

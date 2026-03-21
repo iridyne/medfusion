@@ -85,6 +85,25 @@ uv run python -m med_core.web.cli web
 
 - [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
 
+最快复制命令：
+
+```bash
+# 1) 最快验证图像训练主链：PathMNIST
+uv pip install medmnist
+uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
+uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_quickstart.yaml
+
+# 2) 最快验证表格指标主链：UCI Heart Disease
+uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
+uv run python -m med_core.cli train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+```
+
+说明：
+
+- `PathMNIST` 会写到 `data/public/medmnist/pathmnist-demo/`，配置文件可直接使用。
+- `UCI Heart Disease` 会写到 `data/public/uci/heart-disease-demo/`，配置文件可直接使用。
+- 当前 CLI 主链仍按统一多模态输入处理，所以 `PathMNIST` 走 dummy tabular fallback，`UCI Heart Disease` 会自动生成一张中性占位图。
+
 ### 代码示例
 
 **使用模型构建器创建多模态模型：**

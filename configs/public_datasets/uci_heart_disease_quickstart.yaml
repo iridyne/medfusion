@@ -1,0 +1,82 @@
+project_name: "public-datasets"
+experiment_name: "uci_heart_disease_quickstart"
+seed: 42
+device: "auto"
+
+data:
+  csv_path: "data/public/uci/heart-disease-demo/metadata.csv"
+  image_dir: "data/public/uci/heart-disease-demo"
+  image_path_column: "image_path"
+  target_column: "diagnosis_binary"
+  numerical_features:
+    - "age"
+    - "trestbps"
+    - "chol"
+    - "thalach"
+    - "oldpeak"
+  categorical_features:
+    - "sex"
+    - "cp"
+    - "fbs"
+    - "restecg"
+    - "exang"
+    - "slope"
+    - "ca"
+    - "thal"
+
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+  image_size: 64
+  batch_size: 16
+  num_workers: 0
+  pin_memory: false
+  augmentation_strength: "light"
+
+model:
+  num_classes: 2
+  use_auxiliary_heads: false
+
+  vision:
+    backbone: "mobilenetv3_small"
+    pretrained: false
+    freeze_backbone: true
+    feature_dim: 32
+    dropout: 0.1
+    attention_type: "none"
+
+  tabular:
+    hidden_dims: [64, 32]
+    output_dim: 32
+    dropout: 0.2
+
+  fusion:
+    fusion_type: "concatenate"
+    hidden_dim: 64
+    dropout: 0.2
+
+training:
+  num_epochs: 3
+  mixed_precision: false
+  label_smoothing: 0.0
+  use_progressive_training: false
+  patience: 10
+  min_delta: 0.0
+  monitor: "accuracy"
+  mode: "max"
+
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.001
+    weight_decay: 0.0001
+
+  scheduler:
+    scheduler: "step"
+    step_size: 1
+    gamma: 0.8
+
+logging:
+  output_dir: "outputs/public_datasets/uci_heart_disease_quickstart"
+  use_tensorboard: false
+  use_wandb: false

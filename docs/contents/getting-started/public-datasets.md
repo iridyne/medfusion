@@ -96,6 +96,57 @@
 - 再增加医学影像内容的可信度
 - 最后补更贴多视图 / 多模态叙事的数据
 
+## 可直接复制的最短命令
+
+### PathMNIST
+
+适合先验证图像训练、结果页和报告产物。
+
+```bash
+uv pip install medmnist
+uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
+uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_quickstart.yaml
+```
+
+输出目录固定为：
+
+- `data/public/medmnist/pathmnist-demo/`
+- `outputs/public_datasets/pathmnist_quickstart/`
+
+### UCI Heart Disease
+
+适合先验证 tabular 指标链路和二分类结果展示。
+
+```bash
+uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
+uv run python -m med_core.cli train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+```
+
+输出目录固定为：
+
+- `data/public/uci/heart-disease-demo/`
+- `outputs/public_datasets/uci_heart_disease_quickstart/`
+
+## 当前适配说明
+
+这里需要把实现边界讲清楚。
+
+当前 MedFusion CLI 的稳定主链还是统一的“图像 + 表格”多模态训练接口，还不是分别为 image-only / tabular-only 单独收敛好的入口。
+
+所以第一批公开数据集 quick validation 做了两层适配：
+
+1. `PathMNIST`
+   - 不强行伪造临床表格数据
+   - 直接走数据加载器的 dummy tabular fallback
+   - 目标是先验证图像训练、artifact 和结果展示链路
+
+2. `UCI Heart Disease`
+   - 保留真实表格特征
+   - 自动生成一张中性 placeholder 图像
+   - 目标是先验证 tabular 指标、validation 和报告链路
+
+这层适配是为了让公开数据集尽快进入当前 MVP 主链，不是最终的数据接入形态。
+
 ## README 和内容侧的使用建议
 
 在 README 里不要一次性堆太多数据集，建议只保留：
