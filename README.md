@@ -100,6 +100,12 @@ uv run medfusion web
 # 访问 http://localhost:8000
 ```
 
+进入工作台后，当前推荐顺序是：
+
+1. 打开“训练配置向导”生成真实训练 YAML
+2. 执行 `medfusion validate-config` / `medfusion train`
+3. 跑完后再用 `medfusion build-results` 或工作台导入结果
+
 ## 🧪 公开数据集快速验证
 
 如果你还没有私有医学数据，建议先用公开数据集验证框架和 Web UI 闭环。

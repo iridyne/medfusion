@@ -36,6 +36,12 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 `medfusion start` 会把 Web UI 作为默认入口收口起来，更适合新用户和演示场景。
 
+当前工作台里的推荐路径：
+
+1. 先进入“训练配置向导”，用表单生成真实 `ExperimentConfig`
+2. 再执行 `medfusion validate-config` / `medfusion train`
+3. 训练完成后导入结果到模型库查看 artifact
+
 ### 方法 2：使用启动脚本
 
 最简单的方式是使用提供的启动脚本：

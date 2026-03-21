@@ -9,6 +9,7 @@ import TrainingMonitor from "./pages/TrainingMonitor";
 import ModelLibrary from "./pages/ModelLibrary";
 import SystemMonitor from "./pages/SystemMonitor";
 import Workbench from "./pages/Workbench";
+import RunWizard from "./pages/RunWizard";
 import Sidebar from "./components/Sidebar";
 import {
   ThemeMode,
@@ -61,10 +62,10 @@ function App() {
               <Route path="/workbench" element={<Workbench />} />
               <Route path="/datasets" element={<DatasetManager />} />
               <Route path="/training" element={<TrainingMonitor />} />
+              <Route path="/config" element={<RunWizard />} />
               <Route path="/models" element={<ModelLibrary />} />
               <Route path="/system" element={<SystemMonitor />} />
               <Route path="/workflow" element={<Navigate to="/workbench" replace />} />
-              <Route path="/config" element={<Navigate to="/workbench" replace />} />
               <Route path="/experiments" element={<Navigate to="/workbench" replace />} />
               <Route path="/preprocessing" element={<Navigate to="/workbench" replace />} />
               <Route path="/settings" element={<Navigate to="/workbench" replace />} />

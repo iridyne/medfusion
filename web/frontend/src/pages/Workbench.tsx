@@ -14,6 +14,7 @@ import {
 } from "antd";
 import {
   ArrowRightOutlined,
+  ControlOutlined,
   ExperimentOutlined,
   ImportOutlined,
   DatabaseOutlined,
@@ -133,6 +134,13 @@ export default function Workbench() {
                   </Button>
                   <Button
                     size="large"
+                    icon={<ControlOutlined />}
+                    onClick={() => navigate("/config")}
+                  >
+                    训练配置向导
+                  </Button>
+                  <Button
+                    size="large"
                     icon={<ImportOutlined />}
                     onClick={() => navigate("/models?action=import")}
                   >
@@ -213,7 +221,7 @@ export default function Workbench() {
         </Row>
 
         <Row gutter={[16, 16]}>
-          <Col xs={24} lg={8}>
+          <Col xs={24} md={12} xl={6}>
             <Card
               title="1. 演示型 MVP"
               extra={<Tag color="processing">对外展示</Tag>}
@@ -235,9 +243,30 @@ export default function Workbench() {
             </Card>
           </Col>
 
-          <Col xs={24} lg={8}>
+          <Col xs={24} md={12} xl={6}>
             <Card
-              title="2. 真实结果导入"
+              title="2. 真实训练向导"
+              extra={<Tag color="blue">真实 schema</Tag>}
+            >
+              <Paragraph>
+                用表单替代手填 YAML，直接生成和 CLI 主链一致的训练配置。拖拽式模型搭建后面也会复用这层 RunSpec。
+              </Paragraph>
+              <Space direction="vertical" size={10} style={{ width: "100%" }}>
+                <Text code>先在向导里产出真实 config，再执行 train</Text>
+                <Button
+                  block
+                  icon={<ControlOutlined />}
+                  onClick={() => navigate("/config")}
+                >
+                  打开训练向导
+                </Button>
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} md={12} xl={6}>
+            <Card
+              title="3. 真实结果导入"
               extra={<Tag color="success">真实 artifact</Tag>}
             >
               <Paragraph>
@@ -256,13 +285,13 @@ export default function Workbench() {
             </Card>
           </Col>
 
-          <Col xs={24} lg={8}>
+          <Col xs={24} md={12} xl={6}>
             <Card
-              title="3. 数据准备"
+              title="4. 数据准备"
               extra={<Tag color="warning">前置步骤</Tag>}
             >
               <Paragraph>
-                先登记本地数据目录或准备公开验证数据集，再进入训练和结果展示。这个步骤后面会进一步变成向导式配置。
+                先登记本地数据目录或准备公开验证数据集，再进入训练和结果展示。后面会继续把公开数据集接入成一键验证入口。
               </Paragraph>
               <Space direction="vertical" size={10} style={{ width: "100%" }}>
                 <Text code>先准备 dataset，再开始真实训练</Text>

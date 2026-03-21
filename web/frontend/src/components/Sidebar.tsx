@@ -3,6 +3,7 @@ import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  ControlOutlined,
   ExperimentOutlined,
   DatabaseOutlined,
   DashboardOutlined,
@@ -33,6 +34,11 @@ export default function Sidebar() {
       key: "/training",
       icon: <ExperimentOutlined />,
       label: t("nav.training"),
+    },
+    {
+      key: "/config",
+      icon: <ControlOutlined />,
+      label: "训练向导",
     },
     {
       key: "/models",

@@ -20,6 +20,16 @@ from med_core.configs import ExperimentConfig
 logger = logging.getLogger(__name__)
 
 
+class _NullSummaryWriter:
+    """No-op writer used when TensorBoard logging is disabled."""
+
+    def add_scalar(self, *args, **kwargs) -> None:
+        return None
+
+    def close(self) -> None:
+        return None
+
+
 class BaseTrainer(ABC):
     """
     Abstract base trainer class.
@@ -70,7 +80,10 @@ class BaseTrainer(ABC):
 
         # Setup logging
         self.log_dir = config.log_dir
-        self.writer = SummaryWriter(log_dir=str(self.log_dir))
+        if config.logging.use_tensorboard:
+            self.writer = SummaryWriter(log_dir=str(self.log_dir))
+        else:
+            self.writer = _NullSummaryWriter()
 
         # Setup checkpointing
         self.checkpoint_dir = config.checkpoint_dir
