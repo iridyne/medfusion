@@ -61,6 +61,30 @@ uv run python -m med_core.web.cli web
 # 访问 http://localhost:8000
 ```
 
+## 🧪 公开数据集快速验证
+
+如果你还没有私有医学数据，建议先用公开数据集验证框架和 Web UI 闭环。
+
+推荐顺序：
+
+1. `最快上手`：从 [MedMNIST](https://medmnist.com/v2) 开始，下载成本低，适合快速验证训练、评估和结果展示链路。
+2. `表格任务`：用 [UCI Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease) 先验证结构化输入和基础分类流程。
+3. `真实医学影像`：再切到 [ISIC Challenge / HAM10000](https://challenge.isic-archive.com/data/) 或 [NIH ChestXray14](https://nihcc.app.box.com/v/ChestXray-NIHCC) 做更接近公开论文复现的实验。
+
+第一批推荐数据集：
+
+| Dataset | 模态 | 典型任务 | 为什么适合第一轮验证 |
+| --- | --- | --- | --- |
+| MedMNIST（如 PathMNIST / ChestMNIST / BreastMNIST） | 2D / 3D 医学图像 | 分类、多标签分类 | 下载最省事，最适合先验证训练与结果页 |
+| UCI Heart Disease | 表格 | 二分类 | 适合快速验证非图像主链、指标输出和报告 |
+| ISIC 2018 / 2019（含 HAM10000 来源） | 皮肤镜图像 | 分类、分割 | 公共医学图像里很常见，适合做对外演示 |
+| NIH ChestXray14 | X-ray | 多标签分类 | 经典胸片基准，适合后续做更真实的公开验证 |
+| ISIC MILK10k | 双图像 / 多视图 | 病灶分类 | 更接近多视图 / 多模态内容表达，适合后续传播 |
+
+详细清单、下载入口和推荐验证路径见：
+
+- [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
+
 ### 代码示例
 
 **使用模型构建器创建多模态模型：**
