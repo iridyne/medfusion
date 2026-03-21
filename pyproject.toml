@@ -80,9 +80,9 @@ docs = [
 
 [project.scripts]
 medfusion = "med_core.cli:main"
-med-train = "med_core.cli:train"
-med-evaluate = "med_core.cli:evaluate"
-med-preprocess = "med_core.cli:preprocess"
+med-train = "med_core.cli.train:train"
+med-evaluate = "med_core.cli.evaluate:evaluate"
+med-preprocess = "med_core.cli.preprocess:preprocess"
 
 
 
@@ -146,4 +146,3 @@ module = [
     "PIL.*",
 ]
 ignore_missing_imports = true
-

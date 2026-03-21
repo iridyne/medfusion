@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from med_core.preprocessing import ImagePreprocessor
@@ -16,9 +17,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def preprocess() -> None:
+def preprocess(
+    argv: Sequence[str] | None = None,
+    prog: str = "med-preprocess",
+) -> None:
     """Command-line entry point for image preprocessing."""
-    parser = argparse.ArgumentParser(description="Preprocess medical images")
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description="Preprocess medical images",
+    )
     parser.add_argument("--input-dir", type=str, required=True, help="Input directory")
     parser.add_argument(
         "--output-dir", type=str, required=True, help="Output directory",
@@ -37,7 +44,7 @@ def preprocess() -> None:
     parser.add_argument(
         "--enhance-contrast", action="store_true", help="Enhance contrast",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     input_path = Path(args.input_dir)
     if not input_path.exists():

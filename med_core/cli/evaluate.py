@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 import torch
@@ -35,9 +36,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def evaluate() -> None:
+def evaluate(
+    argv: Sequence[str] | None = None,
+    prog: str = "med-evaluate",
+) -> None:
     """Command-line entry point for evaluation."""
-    parser = argparse.ArgumentParser(description="Evaluate a medical multimodal model")
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description="Evaluate a medical multimodal model",
+    )
     parser.add_argument(
         "--config",
         type=str,
@@ -53,7 +60,7 @@ def evaluate() -> None:
     parser.add_argument(
         "--split", type=str, default="test", choices=["val", "test", "train"],
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     try:
         config = load_config(args.config)

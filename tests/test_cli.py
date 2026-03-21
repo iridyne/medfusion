@@ -2,6 +2,9 @@
 Tests for CLI module structure and imports.
 """
 
+from pathlib import Path
+import tomllib
+
 
 def test_cli_imports():
     """Test that CLI functions can be imported."""
@@ -47,3 +50,15 @@ def test_cli_module_structure():
     for func_name in cli_module.__all__:
         assert hasattr(cli_module, func_name)
         assert callable(getattr(cli_module, func_name))
+
+
+def test_console_script_targets_are_explicit_functions():
+    """Console scripts should point to concrete callables, not package attrs."""
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    project = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]
+    scripts = project["scripts"]
+
+    assert scripts["medfusion"] == "med_core.cli:main"
+    assert scripts["med-train"] == "med_core.cli.train:train"
+    assert scripts["med-evaluate"] == "med_core.cli.evaluate:evaluate"
+    assert scripts["med-preprocess"] == "med_core.cli.preprocess:preprocess"

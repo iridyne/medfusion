@@ -4,48 +4,19 @@ This module exposes:
 - ``main``: unified CLI entry for ``medfusion``
 - ``train``/``evaluate``/``preprocess``: legacy callable entry points used by
   ``med-train``/``med-evaluate``/``med-preprocess`` scripts.
-
-The command handlers are imported lazily so lightweight commands do not
-implicitly require heavyweight training dependencies.
 """
 
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from med_core.version import __version__
+from .evaluate import evaluate
+from .preprocess import preprocess
+from .train import train
 
 __all__ = ["evaluate", "main", "preprocess", "train"]
-
-
-def _load_train() -> Callable[[], None]:
-    from .train import train
-
-    return train
-
-
-def _load_evaluate() -> Callable[[], None]:
-    from .evaluate import evaluate
-
-    return evaluate
-
-
-def _load_preprocess() -> Callable[[], None]:
-    from .preprocess import preprocess
-
-    return preprocess
-
-
-def __getattr__(name: str) -> Callable[[], None]:
-    """Lazy attribute loader for command functions."""
-    if name == "train":
-        return _load_train()
-    if name == "evaluate":
-        return _load_evaluate()
-    if name == "preprocess":
-        return _load_preprocess()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _print_help() -> None:
@@ -64,6 +35,20 @@ def _print_help() -> None:
     print("Global options:")
     print("  -h, --help     显示帮助")
     print("  -V, --version  显示版本")
+    print("")
+    print("Recommended entrypoints:")
+    print("  medfusion train --config configs/starter/quickstart.yaml")
+    print("  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>")
+    print("  medfusion web")
+    print("")
+    print("Config directories:")
+    print("  configs/starter/          CLI 训练主链入门配置")
+    print("  configs/public_datasets/  公开数据集快速验证配置")
+    print("  configs/testing/          smoke / workflow 测试配置")
+    print("  configs/builder/          模型结构实验配置，不等价于 train schema")
+    print("")
+    print("Legacy aliases:")
+    print("  med-train / med-evaluate / med-preprocess")
 
 
 def _dispatch_web_command(command: str, args: list[str]) -> None:
@@ -76,6 +61,15 @@ def _dispatch_web_command(command: str, args: list[str]) -> None:
 
     target = web if command == "web" else data
     target.main(args=args, prog_name=f"medfusion {command}", standalone_mode=True)
+
+
+def _run_legacy_command(
+    command: Callable[..., None],
+    args: Sequence[str],
+    canonical_prog: str,
+) -> None:
+    """Run argparse-based subcommands under the unified medfusion CLI."""
+    command(argv=list(args), prog=canonical_prog)
 
 
 def main() -> None:
@@ -94,18 +88,15 @@ def main() -> None:
     args = argv[1:]
 
     if command == "train":
-        sys.argv = ["med-train", *args]
-        _load_train()()
+        _run_legacy_command(train, args, "medfusion train")
         return
 
     if command == "evaluate":
-        sys.argv = ["med-evaluate", *args]
-        _load_evaluate()()
+        _run_legacy_command(evaluate, args, "medfusion evaluate")
         return
 
     if command == "preprocess":
-        sys.argv = ["med-preprocess", *args]
-        _load_preprocess()()
+        _run_legacy_command(preprocess, args, "medfusion preprocess")
         return
 
     if command in {"web", "data"}:

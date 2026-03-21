@@ -3,6 +3,7 @@
 import argparse
 import logging
 import sys
+from collections.abc import Sequence
 
 from torch import optim
 
@@ -33,14 +34,20 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def train() -> None:
+def train(
+    argv: Sequence[str] | None = None,
+    prog: str = "med-train",
+) -> None:
     """Command-line entry point for training."""
-    parser = argparse.ArgumentParser(description="Train a medical multimodal model")
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        description="Train a medical multimodal model",
+    )
     parser.add_argument(
         "--config", type=str, required=True, help="Path to YAML configuration file",
     )
     parser.add_argument("--output-dir", type=str, help="Override output directory")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # 1. Load Configuration
     config = load_config(args.config)
