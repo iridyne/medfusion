@@ -25,7 +25,11 @@
 ### 1. 训练 CLI
 
 ```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
 uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
 ### 2. 公开数据集快速验证

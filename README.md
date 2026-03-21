@@ -39,10 +39,19 @@ pip install -e ".[dev,web]"
 ### 基础使用
 
 ```bash
-# 最快跑通训练主链
+# 1) 训练前先做配置与数据体检
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+
+# 2) 最快跑通训练主链
 uv run medfusion train --config configs/starter/quickstart.yaml
 
-# 评估模型
+# 3) 训练后生成结果页需要的 validation / 图表 / 报告 artifact
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth \
+  --split train
+
+# 4) 评估模型
 uv run medfusion evaluate \
   --config configs/starter/quickstart.yaml \
   --checkpoint outputs/quickstart/checkpoints/best.pth
@@ -68,6 +77,13 @@ uv run medfusion preprocess --input-dir data/raw --output-dir data/processed
 
 - [configs/README.md](configs/README.md)
 - [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
+
+推荐主链：
+
+1. `medfusion validate-config --config ...`
+2. `medfusion train --config ...`
+3. `medfusion build-results --config ... --checkpoint ...`
+4. 再进入 `Web UI` 或 `medfusion evaluate`
 
 ### 启动 Web UI
 

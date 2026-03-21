@@ -22,6 +22,7 @@ data:
   image_size: 224
   batch_size: 4  # 小 batch size 用于快速测试
   num_workers: 0  # 避免多进程问题
+  pin_memory: false
 
 # 模型配置 - 最简单的架构
 model:
@@ -46,6 +47,7 @@ model:
 # 训练配置 - 快速测试
 training:
   num_epochs: 3  # 只训练 3 个 epoch
+  use_progressive_training: false
   mixed_precision: false  # 避免混合精度问题
 
   optimizer:

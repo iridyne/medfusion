@@ -12,11 +12,21 @@ import sys
 from collections.abc import Callable, Sequence
 
 from med_core.version import __version__
+from .build_results import build_results
+from .doctor import doctor, validate_config
 from .evaluate import evaluate
 from .preprocess import preprocess
 from .train import train
 
-__all__ = ["evaluate", "main", "preprocess", "train"]
+__all__ = [
+    "build_results",
+    "doctor",
+    "evaluate",
+    "main",
+    "preprocess",
+    "train",
+    "validate_config",
+]
 
 
 def _print_help() -> None:
@@ -29,6 +39,9 @@ def _print_help() -> None:
     print("  train       训练模型")
     print("  evaluate    评估模型")
     print("  preprocess  数据预处理")
+    print("  validate-config  训练前配置与数据体检")
+    print("  doctor      validate-config 的短别名")
+    print("  build-results   训练后生成 validation / 图表 / 报告 artifact")
     print("  web         Web UI 管理命令")
     print("  data        Web UI 数据管理命令")
     print("")
@@ -37,7 +50,9 @@ def _print_help() -> None:
     print("  -V, --version  显示版本")
     print("")
     print("Recommended entrypoints:")
+    print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
+    print("  medfusion build-results --config configs/starter/quickstart.yaml --checkpoint <path>")
     print("  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>")
     print("  medfusion web")
     print("")
@@ -97,6 +112,18 @@ def main() -> None:
 
     if command == "preprocess":
         _run_legacy_command(preprocess, args, "medfusion preprocess")
+        return
+
+    if command == "validate-config":
+        _run_legacy_command(validate_config, args, "medfusion validate-config")
+        return
+
+    if command == "doctor":
+        _run_legacy_command(doctor, args, "medfusion doctor")
+        return
+
+    if command == "build-results":
+        _run_legacy_command(build_results, args, "medfusion build-results")
         return
 
     if command in {"web", "data"}:

@@ -31,6 +31,12 @@ from med_core.configs.validation import (
     validate_config,
     validate_config_or_exit,
 )
+from med_core.configs.doctor import (
+    ConfigDoctor,
+    ConfigDoctorReport,
+    DoctorIssue,
+    analyze_config,
+)
 
 __all__ = [
     # Base configs
@@ -58,6 +64,10 @@ __all__ = [
     "save_config",
     # Validation
     "ConfigValidator",
+    "ConfigDoctor",
+    "ConfigDoctorReport",
+    "DoctorIssue",
+    "analyze_config",
     "validate_config",
     "validate_config_or_exit",
 ]

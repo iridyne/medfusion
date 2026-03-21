@@ -7,7 +7,11 @@
 这是当前最适合新用户和对外演示的路径：
 
 ```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
 uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
 这条链使用的是当前 dataclass 驱动的训练配置，适合：
@@ -15,6 +19,15 @@ uv run medfusion train --config configs/starter/quickstart.yaml
 - 跑 mock 数据
 - 跑公开数据集 quick validation
 - 接 Web UI / artifact / validation / 报告
+
+其中三个命令分别解决三件事：
+
+- `validate-config`
+  - 在训练前检查 YAML、CSV 列、图像路径、样本规模和 split 是否明显有坑
+- `train`
+  - 真正产出 checkpoint 和 TensorBoard 日志
+- `build-results`
+  - 把 checkpoint 补成结果页可直接消费的 `metrics.json / validation.json / ROC / confusion / attention / report`
 
 对应配置目录：
 
@@ -63,8 +76,10 @@ uv run medfusion web
 ### 新用户
 
 1. `configs/starter/quickstart.yaml`
-2. `configs/public_datasets/`
-3. 再看 `Web UI`
+2. 先跑 `medfusion validate-config`
+3. 再跑 `medfusion train`
+4. 训练完再跑 `medfusion build-results`
+5. 再看 `Web UI`
 
 ### 做研究原型的人
 

@@ -9,7 +9,11 @@
 当前最稳定的训练入口是：
 
 ```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
 uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
 要注意：
@@ -17,6 +21,8 @@ uv run medfusion train --config configs/starter/quickstart.yaml
 - `configs/starter/`、`configs/public_datasets/`、`configs/testing/` 是当前 `medfusion train` 主链配置
 - `configs/builder/` 是 `MultiModalModelBuilder` / `build_model_from_config()` 的结构示例，不等价于 CLI 训练配置
 - `configs/legacy/` 是历史模板，不建议新用户从这里开始
+- 训练前先跑 `medfusion validate-config`
+- 训练后再跑 `medfusion build-results`，这样结果页和报告需要的 artifact 才完整
 
 ## 🚨 关键问题清单
 
