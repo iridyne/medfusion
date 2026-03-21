@@ -28,6 +28,17 @@ export interface ModelUpdate {
   tags?: string[];
 }
 
+export interface ModelImportRequest {
+  config_path: string;
+  checkpoint_path: string;
+  output_dir?: string;
+  split?: "train" | "val" | "test";
+  attention_samples?: number;
+  name?: string;
+  description?: string;
+  tags?: string[];
+}
+
 export interface Model {
   id: number;
   name: string;
@@ -268,6 +279,14 @@ export const getModel = async (id: number): Promise<Model> => {
  */
 export const createModel = async (data: ModelCreate) => {
   const response = await api.post('/models/', data)
+  return response.data
+}
+
+/**
+ * 导入真实训练结果到模型库
+ */
+export const importModelRun = async (data: ModelImportRequest): Promise<Model> => {
+  const response = await api.post('/models/import-run', data)
   return response.data
 }
 

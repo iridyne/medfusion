@@ -6,6 +6,7 @@ import {
   Space,
   Button,
   Input,
+  InputNumber,
   Select,
   Row,
   Col,
@@ -15,6 +16,7 @@ import {
   message,
   Divider,
   Typography,
+  Form,
 } from "antd";
 import {
   SearchOutlined,
@@ -23,12 +25,16 @@ import {
   EyeOutlined,
   ExperimentOutlined,
   TrophyOutlined,
+  ImportOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import {
   deleteModel,
   downloadModel,
   getModels,
+  importModelRun,
   type Model as ApiModel,
+  type ModelImportRequest,
 } from "@/api/models";
 import ModelResultPanel from "@/components/model/ModelResultPanel";
 import VirtualList from "@/components/VirtualList";
@@ -44,49 +50,76 @@ interface Model extends ApiModel {
   size: number;
 }
 
+interface ImportFormValues {
+  config_path: string;
+  checkpoint_path: string;
+  output_dir?: string;
+  split: "train" | "val" | "test";
+  attention_samples: number;
+  name?: string;
+  description?: string;
+  tags?: string;
+}
+
+function mapModelPayload(item: any): Model {
+  return {
+    ...item,
+    name: item.name || `model-${item.id}`,
+    backbone: item.backbone || item.architecture || "unknown",
+    numClasses: item.num_classes ?? 0,
+    params: item.num_parameters ?? item.params ?? 0,
+    accuracy: item.accuracy ?? undefined,
+    createdAt: item.created_at || "",
+    descriptionText: item.description || "",
+    size:
+      item.file_size ??
+      (item.model_size_mb ? Math.round(item.model_size_mb * 1024 * 1024) : 0),
+    displayFormat: (item.format || "pytorch") as "pytorch" | "onnx" | "torchscript",
+  };
+}
+
 export default function ModelLibrary() {
+  const [importForm] = Form.useForm<ImportFormValues>();
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>(models);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [filterBackbone, setFilterBackbone] = useState<string>("all");
   const [filterFormat, setFilterFormat] = useState<string>("all");
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     filterModels();
   }, [searchText, filterBackbone, filterFormat, models]);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      setLoading(true);
-      try {
-        const data = await getModels();
-        const mapped: Model[] = (data || []).map((item: any) => ({
-          ...item,
-          name: item.name || `model-${item.id}`,
-          backbone: item.backbone || item.architecture || "unknown",
-          numClasses: item.num_classes ?? 0,
-          params: item.num_parameters ?? item.params ?? 0,
-          accuracy: item.accuracy ?? undefined,
-          createdAt: item.created_at || "",
-          descriptionText: item.description || "",
-          size:
-            item.file_size ??
-            (item.model_size_mb ? Math.round(item.model_size_mb * 1024 * 1024) : 0),
-          displayFormat: (item.format || "pytorch") as "pytorch" | "onnx" | "torchscript",
-        }));
-        setModels(mapped);
-      } catch (error) {
-        console.error("Failed to load models:", error);
-        message.error("加载模型列表失败");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadModels = async (focusModelId?: number) => {
+    setLoading(true);
+    try {
+      const data = await getModels();
+      const mapped: Model[] = (data || []).map(mapModelPayload);
+      setModels(mapped);
 
-    fetchModels();
+      const targetModelId = focusModelId ?? selectedModel?.id;
+      if (targetModelId) {
+        const refreshedSelected = mapped.find((item) => item.id === targetModelId) || null;
+        setSelectedModel(refreshedSelected);
+        if (focusModelId && refreshedSelected) {
+          setDetailModalOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load models:", error);
+      message.error("加载模型列表失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadModels();
   }, []);
 
   const filterModels = () => {
@@ -153,6 +186,10 @@ export default function ModelLibrary() {
         try {
           await deleteModel(Number(model.id));
           setModels((prev) => prev.filter((m) => m.id !== model.id));
+          if (selectedModel?.id === model.id) {
+            setSelectedModel(null);
+            setDetailModalOpen(false);
+          }
           message.success("模型已删除");
         } catch (error) {
           console.error("Failed to delete model:", error);
@@ -160,6 +197,42 @@ export default function ModelLibrary() {
         }
       },
     });
+  };
+
+  const handleImport = async (values: ImportFormValues) => {
+    const parsedTags = (values.tags || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const payload: ModelImportRequest = {
+      config_path: values.config_path,
+      checkpoint_path: values.checkpoint_path,
+      output_dir: values.output_dir?.trim() || undefined,
+      split: values.split,
+      attention_samples: values.attention_samples,
+      name: values.name?.trim() || undefined,
+      description: values.description?.trim() || undefined,
+      tags: parsedTags.length ? parsedTags : undefined,
+    };
+
+    setImporting(true);
+    try {
+      const imported = await importModelRun(payload);
+      const mappedImported = mapModelPayload(imported);
+      setImportModalOpen(false);
+      importForm.resetFields();
+      setSelectedModel(mappedImported);
+      setDetailModalOpen(true);
+      await loadModels(mappedImported.id);
+      message.success(`已导入训练结果：${mappedImported.name}`);
+    } catch (error: any) {
+      console.error("Failed to import model run:", error);
+      const detail = error?.response?.data?.detail;
+      message.error(typeof detail === "string" ? detail : "导入训练结果失败");
+    } finally {
+      setImporting(false);
+    }
   };
 
   const backboneOptions = [
@@ -194,7 +267,23 @@ export default function ModelLibrary() {
           alignItems: "center",
         }}
       >
-        <h1>模型库</h1>
+        <h1 style={{ marginBottom: 0 }}>模型库</h1>
+        <Space>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => void loadModels()}
+            loading={loading}
+          >
+            刷新
+          </Button>
+          <Button
+            type="primary"
+            icon={<ImportOutlined />}
+            onClick={() => setImportModalOpen(true)}
+          >
+            导入训练结果
+          </Button>
+        </Space>
       </div>
 
       {latestModel && (
@@ -418,6 +507,110 @@ export default function ModelLibrary() {
           />
         </div>
       </Card>
+
+      <Modal
+        title="导入真实训练结果"
+        open={importModalOpen}
+        onCancel={() => {
+          if (!importing) {
+            setImportModalOpen(false);
+          }
+        }}
+        onOk={() => importForm.submit()}
+        confirmLoading={importing}
+        okText="开始导入"
+        cancelText="取消"
+        destroyOnClose
+        width={760}
+      >
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Alert
+            type="info"
+            showIcon
+            message="把真实 CLI 训练产物接进结果页"
+            description="这里会直接调用 /api/models/import-run：读取 config 和 checkpoint，生成 validation / ROC / 混淆矩阵 / attention artifact，并把结果写入模型库。"
+          />
+
+          <Form<ImportFormValues>
+            form={importForm}
+            layout="vertical"
+            initialValues={{
+              split: "test",
+              attention_samples: 4,
+              config_path: "configs/starter/quickstart.yaml",
+            }}
+            onFinish={(values) => void handleImport(values)}
+          >
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  label="配置文件路径"
+                  name="config_path"
+                  rules={[{ required: true, message: "请输入训练配置 YAML 路径" }]}
+                >
+                  <Input placeholder="例如：configs/starter/quickstart.yaml" />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item
+                  label="模型权重路径"
+                  name="checkpoint_path"
+                  rules={[{ required: true, message: "请输入 checkpoint 路径" }]}
+                >
+                  <Input placeholder="例如：outputs/quickstart/checkpoints/best.pth" />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item label="结果输出目录（可选）" name="output_dir">
+                  <Input placeholder="例如：outputs/quickstart" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item label="Validation Split" name="split">
+                  <Select
+                    options={[
+                      { label: "test", value: "test" },
+                      { label: "val", value: "val" },
+                      { label: "train", value: "train" },
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item label="Attention 样本数" name="attention_samples">
+                  <InputNumber min={0} max={16} style={{ width: "100%" }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item label="模型名称（可选）" name="name">
+                  <Input placeholder="例如：pathology-mvp-v1" />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item label="描述（可选）" name="description">
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="例如：真实 CLI 训练导入，用于 dashboard 演示和 README 截图"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item label="标签（可选）" name="tags">
+                  <Input placeholder="多个标签用英文逗号分隔，例如：mvp, xiaohongshu, real-run" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form>
+
+          <Card size="small" title="推荐链路">
+            <Space direction="vertical" size={4}>
+              <Text code>uv run medfusion validate-config --config &lt;config&gt;</Text>
+              <Text code>uv run medfusion train --config &lt;config&gt;</Text>
+              <Text code>uv run medfusion import-run --config &lt;config&gt; --checkpoint &lt;path&gt;</Text>
+            </Space>
+          </Card>
+        </Space>
+      </Modal>
 
       <Modal
         title="模型详情"
