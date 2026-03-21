@@ -13,6 +13,8 @@
 ## 文件说明
 
 - `slides.md` - 主演示文稿
+- `promo-mvp-slides.md` - 面向小红书 / B 站的推广版演示稿
+- `promo-scripts.md` - 口播脚本与录屏结构建议
 - `style.css` - 自定义样式
 - `uno.config.ts` - UnoCSS 配置
 - `global-bottom.vue` - 全局底部组件
@@ -20,7 +22,7 @@
 ## 安装依赖
 
 ```bash
-cd docs/presentations
+cd presentations
 npm install
 ```
 
@@ -30,11 +32,20 @@ npm install
 # 开发模式（实时预览）
 npm run dev
 
+# 推广版演示稿
+npm run dev:promo
+
 # 构建静态文件
 npm run build
 
+# 构建推广版
+npm run build:promo
+
 # 导出 PDF
 npm run export
+
+# 导出推广版 PDF / PNG
+npm run export:promo
 ```
 
 ## 访问演示
@@ -53,6 +64,12 @@ npm run export
 8. **配置系统** - YAML 配置和验证
 9. **性能优化** - 最佳实践和优化策略
 10. **快速开始** - 三步启动训练
+
+推广版演示稿更适合：
+
+- 小红书 60 到 90 秒口播
+- B 站 3 到 5 分钟讲解
+- Web UI + Slidev 混合录屏
 
 ## 快捷键
 

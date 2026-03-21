@@ -12,6 +12,9 @@ dist/
 *.pdf
 *.png
 slides-export/
+!assets/
+!assets/promo-demo/
+!assets/promo-demo/*.png
 
 # Cache
 .cache/
