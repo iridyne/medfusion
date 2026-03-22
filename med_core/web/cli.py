@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import settings
+from .static_assets import StaticAssetLocation, resolve_static_asset_location
 
 console = Console()
 
@@ -29,10 +30,18 @@ def find_free_port(start_port: int = 8000, max_attempts: int = 100) -> int:
     )
 
 
+def get_web_ui_location() -> StaticAssetLocation | None:
+    """检查前端资源位置。"""
+    return resolve_static_asset_location(
+        package_root=Path(__file__).parent,
+        data_dir=settings.data_dir,
+        version=settings.version,
+    )
+
+
 def check_web_ui_exists() -> bool:
     """检查前端资源是否存在"""
-    static_dir = settings.data_dir / "web-ui" / settings.version / "static"
-    return static_dir.exists() and (static_dir / "index.html").exists()
+    return get_web_ui_location() is not None
 
 
 def initialize_web_server() -> None:
@@ -50,12 +59,14 @@ def initialize_web_server() -> None:
 
         # 2. 检查前端资源
         task2 = progress.add_task("⏳ 检查前端资源...", total=None)
-        if not check_web_ui_exists():
+        location = get_web_ui_location()
+        if location is None:
             console.print("⚠️  前端资源未安装")
             console.print("💡 首次运行时会自动下载前端资源（功能开发中）")
             # TODO: 实现自动下载前端资源
         else:
-            console.print("✅ 前端资源就绪")
+            source_label = "内置资源" if location.source == "bundled" else "下载资源"
+            console.print(f"✅ 前端资源就绪（{source_label}）")
         progress.update(task2, completed=True)
 
 
@@ -131,8 +142,11 @@ def info() -> None:
     console.print(f"数据库: {settings.database_url}")
 
     # 检查前端资源
-    if check_web_ui_exists():
-        console.print("前端资源: ✅ 已安装")
+    location = get_web_ui_location()
+    if location is not None:
+        source_label = "内置资源" if location.source == "bundled" else "下载资源"
+        console.print(f"前端资源: ✅ 已安装（{source_label}）")
+        console.print(f"静态目录: {location.directory}")
     else:
         console.print("前端资源: ❌ 未安装")
 

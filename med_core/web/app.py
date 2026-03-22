@@ -16,6 +16,7 @@ from .api import datasets, models, system, training
 from .config import settings
 from .database import close_db, init_db
 from .routers import experiments, workflow_router
+from .static_assets import resolve_static_asset_location
 
 # 配置日志
 logging.basicConfig(
@@ -119,12 +120,24 @@ app.include_router(workflow_router)
 
 
 # 静态文件服务（前端）
-static_dir = Path(__file__).parent / "static"
-if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
-    logger.info(f"前端静态文件: {static_dir}")
+static_location = resolve_static_asset_location(
+    package_root=Path(__file__).parent,
+    data_dir=settings.data_dir,
+    version=settings.version,
+)
+if static_location is not None:
+    app.mount(
+        "/",
+        StaticFiles(directory=str(static_location.directory), html=True),
+        name="static",
+    )
+    logger.info(
+        "前端静态文件: %s (source=%s)",
+        static_location.directory,
+        static_location.source,
+    )
 else:
-    logger.warning(f"前端静态文件不存在: {static_dir}")
+    logger.warning("前端静态文件不存在: bundled/downloaded assets not found")
 
     @app.get("/")
     async def root() -> dict[str, str]:
