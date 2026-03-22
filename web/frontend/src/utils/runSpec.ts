@@ -448,6 +448,8 @@ function buildConfigObject(spec: RunSpec): Record<string, unknown> {
       mixed_precision: spec.training.mixedPrecision,
       gradient_clip: spec.training.gradientClip,
       use_progressive_training: spec.training.useProgressiveTraining,
+      monitor: "accuracy",
+      mode: "max",
       optimizer: {
         optimizer: spec.training.optimizer.optimizer,
         learning_rate: spec.training.optimizer.learningRate,

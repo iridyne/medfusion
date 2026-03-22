@@ -30,6 +30,16 @@ export interface TrainingJob {
   startTime: string;
 }
 
+export interface TrainingHistoryEntry {
+  epoch: number;
+  train_loss?: number | null;
+  val_loss?: number | null;
+  train_accuracy?: number | null;
+  val_accuracy?: number | null;
+  learning_rate?: number | null;
+  best_so_far?: boolean;
+}
+
 interface BackendTrainingJob {
   id: number;
   job_id: string;
@@ -89,6 +99,15 @@ export const getJob = async (jobId: string): Promise<TrainingJob> => {
   return normalizeJob(response.data);
 };
 
+export const getJobHistory = async (
+  jobId: string,
+): Promise<TrainingHistoryEntry[]> => {
+  const response = await api.get<{ entries?: TrainingHistoryEntry[] }>(
+    `/training/${jobId}/history`,
+  );
+  return response.data.entries || [];
+};
+
 /**
  * 创建并启动训练任务
  */
@@ -131,6 +150,7 @@ export const stopJob = async (jobId: string) => {
 export const trainingApi = {
   listJobs,
   getJob,
+  getJobHistory,
   createJob,
   startJob,
   pauseJob,

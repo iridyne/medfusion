@@ -36,6 +36,7 @@ import { EChartsOption } from "echarts";
 import { getDatasets } from "../api/datasets";
 import { getModels, type Model as ResultModel } from "../api/models";
 import trainingApi, {
+  type TrainingHistoryEntry,
   type TrainingJob,
   type TrainingJobCreate,
 } from "../api/training";
@@ -85,6 +86,23 @@ const BACKBONE_OPTIONS = [
   "vit_b16",
   "swin_tiny",
 ];
+
+function toMetricHistory(entries: TrainingHistoryEntry[]): MetricHistory {
+  if (!entries.length) {
+    return EMPTY_HISTORY;
+  }
+
+  return {
+    epochs: entries.map((entry) => entry.epoch),
+    trainLoss: entries.map((entry) => Number(entry.train_loss ?? 0)),
+    valLoss: entries.map((entry) => Number(entry.val_loss ?? entry.train_loss ?? 0)),
+    trainAcc: entries.map((entry) => Number(entry.train_accuracy ?? 0)),
+    valAcc: entries.map(
+      (entry) => Number(entry.val_accuracy ?? entry.train_accuracy ?? 0),
+    ),
+    learningRate: entries.map((entry) => Number(entry.learning_rate ?? 0)),
+  };
+}
 
 export default function TrainingMonitor() {
   const navigate = useNavigate();
@@ -138,6 +156,21 @@ export default function TrainingMonitor() {
     }
   };
 
+  const loadJobHistory = async (jobId: string) => {
+    if (!jobId) {
+      setMetricHistory(EMPTY_HISTORY);
+      return;
+    }
+
+    try {
+      const entries = await trainingApi.getJobHistory(jobId);
+      setMetricHistory(toMetricHistory(entries));
+    } catch (error) {
+      console.error("Failed to load training history:", error);
+      setMetricHistory(EMPTY_HISTORY);
+    }
+  };
+
   useEffect(() => {
     void loadJobs();
     void loadDatasets();
@@ -162,7 +195,7 @@ export default function TrainingMonitor() {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    setMetricHistory(EMPTY_HISTORY);
+    void loadJobHistory(selectedJob);
   }, [selectedJob]);
 
   useEffect(() => {
@@ -195,12 +228,25 @@ export default function TrainingMonitor() {
     };
   }, [selectedJob]);
 
-  const appendMetricSnapshot = (
-    epoch?: number,
-    loss?: number,
-    accuracy?: number,
-  ) => {
-    if (!epoch || loss === undefined || accuracy === undefined || epoch <= 0) {
+  const appendMetricSnapshot = (snapshot: {
+    epoch?: number;
+    trainLoss?: number;
+    valLoss?: number;
+    trainAccuracy?: number;
+    valAccuracy?: number;
+    learningRate?: number;
+  }) => {
+    const { epoch, trainLoss, valLoss, trainAccuracy, valAccuracy, learningRate } =
+      snapshot;
+
+    if (
+      !epoch ||
+      trainLoss === undefined ||
+      valLoss === undefined ||
+      trainAccuracy === undefined ||
+      valAccuracy === undefined ||
+      epoch <= 0
+    ) {
       return;
     }
 
@@ -209,19 +255,16 @@ export default function TrainingMonitor() {
         return prev;
       }
 
-      const previousLearningRate = prev.learningRate[prev.learningRate.length - 1];
-      const nextLearningRate =
-        previousLearningRate !== undefined
-          ? Math.max(previousLearningRate * 0.95, 0.00001)
-          : Number(form.getFieldValue("learningRate") ?? 0.001);
-
       return {
         epochs: [...prev.epochs, epoch],
-        trainLoss: [...prev.trainLoss, loss],
-        valLoss: [...prev.valLoss, Number((loss * 1.05).toFixed(4))],
-        trainAcc: [...prev.trainAcc, accuracy],
-        valAcc: [...prev.valAcc, Math.max(0, Number((accuracy - 0.03).toFixed(4)))],
-        learningRate: [...prev.learningRate, nextLearningRate],
+        trainLoss: [...prev.trainLoss, trainLoss],
+        valLoss: [...prev.valLoss, valLoss],
+        trainAcc: [...prev.trainAcc, trainAccuracy],
+        valAcc: [...prev.valAcc, valAccuracy],
+        learningRate: [
+          ...prev.learningRate,
+          learningRate ?? prev.learningRate[prev.learningRate.length - 1] ?? 0.001,
+        ],
       };
     });
   };
@@ -262,7 +305,14 @@ export default function TrainingMonitor() {
       });
 
       if (data.job_id === selectedJob) {
-        appendMetricSnapshot(data.epoch, data.loss, data.accuracy);
+        appendMetricSnapshot({
+          epoch: data.epoch,
+          trainLoss: data.train_loss,
+          valLoss: data.val_loss ?? data.loss,
+          trainAccuracy: data.train_accuracy,
+          valAccuracy: data.val_accuracy ?? data.accuracy,
+          learningRate: data.learning_rate,
+        });
       }
       return;
     }
@@ -271,6 +321,9 @@ export default function TrainingMonitor() {
       message.success("训练任务已完成，模型已同步到模型库");
       void loadJobs();
       void loadOutputs();
+      if (data.job_id === selectedJob) {
+        void loadJobHistory(data.job_id);
+      }
       return;
     }
 
