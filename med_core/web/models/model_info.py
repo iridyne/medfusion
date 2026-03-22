@@ -1,10 +1,9 @@
 """模型信息模型"""
 
-from datetime import datetime
-
 from sqlalchemy import JSON, Column, DateTime, Float, Integer, String, Text
 
 from ..database import Base
+from ..time_utils import utcnow
 
 
 class ModelInfo(Base):
@@ -48,8 +47,8 @@ class ModelInfo(Base):
     tags = Column(JSON, nullable=True)
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow, index=True)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"<ModelInfo(id={self.id}, name='{self.name}', architecture='{self.architecture}')>"

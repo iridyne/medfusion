@@ -1,10 +1,9 @@
 """训练任务模型"""
 
-from datetime import datetime
-
 from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 
 from ..database import Base
+from ..time_utils import utcnow
 
 
 class TrainingJob(Base):
@@ -52,7 +51,7 @@ class TrainingJob(Base):
     log_file = Column(String(500), nullable=True)
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 

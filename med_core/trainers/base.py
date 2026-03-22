@@ -4,6 +4,7 @@ Base trainer class for medical deep learning models.
 Defines the standard training loop, validation, checkpointing, and logging structure.
 """
 
+import json
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -91,10 +92,14 @@ class BaseTrainer(ABC):
         # Training state
         self.current_epoch = 0
         self.global_step = 0
-        self.best_metric = (
-            float("-inf") if config.training.mode == "max" else float("inf")
-        )
+        self.best_metric: float | None = None
+        self.best_metric_name: str | None = None
+        self.best_metric_mode: str | None = None
+        self.best_epoch: int | None = None
         self.patience_counter = 0
+        self._last_monitor_resolution: tuple[str, str] | None = None
+        self._history_path = Path(self.config.logging.output_dir) / "history.json"
+        self._best_history_epochs: set[int] = set()
 
     @abstractmethod
     def training_step(self, batch: Any, batch_idx: int) -> dict[str, torch.Tensor]:
@@ -150,10 +155,19 @@ class BaseTrainer(ABC):
             train_metrics: Aggregated training metrics
             val_metrics: Aggregated validation metrics
         """
+        monitor_resolution = self._resolve_monitor_metric(val_metrics)
+
         # Update scheduler
         if self.scheduler is not None:
             if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                self.scheduler.step(val_metrics.get(self.config.training.monitor, 0.0))
+                if monitor_resolution is not None:
+                    _, monitor_value, monitor_mode = monitor_resolution
+                    scheduler_value = (
+                        monitor_value
+                        if getattr(self.scheduler, "mode", monitor_mode) == monitor_mode
+                        else -monitor_value
+                    )
+                    self.scheduler.step(scheduler_value)
             else:
                 self.scheduler.step()
 
@@ -171,7 +185,9 @@ class BaseTrainer(ABC):
             f"Epoch {self.current_epoch}: "
             f"Train Loss: {train_metrics.get('loss', 0):.4f} | "
             f"Val Loss: {val_metrics.get('loss', 0):.4f} | "
-            f"Val Metric ({self.config.training.monitor}): {val_metrics.get(self.config.training.monitor, 0):.4f}",
+            "Val Metric "
+            f"({monitor_resolution[0] if monitor_resolution else self.config.training.monitor}): "
+            f"{(monitor_resolution[1] if monitor_resolution else val_metrics.get(self.config.training.monitor, 0.0)):.4f}",
         )
 
         # Checkpointing & Early Stopping
@@ -185,6 +201,7 @@ class BaseTrainer(ABC):
             Dictionary containing training history with keys like 'train_loss', 'val_loss', etc.
         """
         self.on_train_start()
+        self._initialize_history_file()
 
         # Initialize history tracking
         history = {
@@ -206,6 +223,7 @@ class BaseTrainer(ABC):
                 val_metrics = self._run_epoch(self.val_loader, training=False)
 
             self.on_epoch_end(train_metrics, val_metrics)
+            current_lr = float(self.optimizer.param_groups[0]["lr"])
 
             # Record history
             history["train_loss"].append(train_metrics.get("loss", 0.0))
@@ -225,6 +243,12 @@ class BaseTrainer(ABC):
                     if history_key not in history:
                         history[history_key] = []
                     history[history_key].append(value)
+
+            self._append_history_entry(
+                train_metrics=train_metrics,
+                val_metrics=val_metrics,
+                current_lr=current_lr,
+            )
 
             if self.patience_counter >= self.config.training.patience:
                 logger.info("Early stopping triggered")
@@ -281,18 +305,19 @@ class BaseTrainer(ABC):
 
     def _handle_checkpointing(self, val_metrics: dict[str, float]) -> None:
         """Handle model checkpointing and early stopping logic."""
-        current_metric = val_metrics.get(
-            self.config.training.monitor, val_metrics.get("loss"),
-        )
-
-        if current_metric is None:
-            logger.warning(
-                f"Metric {self.config.training.monitor} not found in validation metrics.",
-            )
+        monitor_resolution = self._resolve_monitor_metric(val_metrics)
+        if monitor_resolution is None:
             return
 
+        monitor_name, current_metric, monitor_mode = monitor_resolution
         is_improvement = False
-        if self.config.training.mode == "min":
+        if (
+            self.best_metric is None
+            or self.best_metric_name != monitor_name
+            or self.best_metric_mode != monitor_mode
+        ):
+            is_improvement = True
+        elif monitor_mode == "min":
             if current_metric < self.best_metric - self.config.training.min_delta:
                 is_improvement = True
         elif current_metric > self.best_metric + self.config.training.min_delta:
@@ -300,10 +325,14 @@ class BaseTrainer(ABC):
 
         if is_improvement:
             self.best_metric = current_metric
+            self.best_metric_name = monitor_name
+            self.best_metric_mode = monitor_mode
+            self.best_epoch = self.current_epoch + 1
+            self._best_history_epochs.add(self.best_epoch)
             self.patience_counter = 0
             self._save_checkpoint("best.pth", val_metrics)
             logger.info(
-                f"New best model saved with {self.config.training.monitor}: {self.best_metric:.4f}",
+                f"New best model saved with {monitor_name}: {self.best_metric:.4f}",
             )
         else:
             self.patience_counter += 1
@@ -329,6 +358,109 @@ class BaseTrainer(ABC):
         torch.save(checkpoint, temp_path)
         # Atomic rename
         temp_path.replace(path)
+
+    def _resolve_monitor_metric(
+        self, val_metrics: dict[str, float],
+    ) -> tuple[str, float, str] | None:
+        """Resolve the effective monitor metric from validation metrics."""
+        requested_monitor = self.config.training.monitor
+        candidate_names = [requested_monitor]
+        if requested_monitor.startswith("val_"):
+            candidate_names.append(requested_monitor.removeprefix("val_"))
+
+        for candidate_name in candidate_names:
+            candidate_value = val_metrics.get(candidate_name)
+            if candidate_value is None:
+                continue
+
+            resolution = (candidate_name, self.config.training.mode)
+            if candidate_name != requested_monitor and self._last_monitor_resolution != resolution:
+                logger.warning(
+                    "Metric %s not found in validation metrics; using %s instead.",
+                    requested_monitor,
+                    candidate_name,
+                )
+            self._last_monitor_resolution = resolution
+            return candidate_name, float(candidate_value), self.config.training.mode
+
+        fallback_loss = val_metrics.get("loss")
+        if fallback_loss is None:
+            logger.warning(
+                "Metric %s not found in validation metrics and no loss value is available.",
+                requested_monitor,
+            )
+            return None
+
+        resolution = ("loss", "min")
+        if self._last_monitor_resolution != resolution:
+            logger.warning(
+                "Metric %s not found in validation metrics; falling back to loss with mode=min.",
+                requested_monitor,
+            )
+        self._last_monitor_resolution = resolution
+        return "loss", float(fallback_loss), "min"
+
+    def _initialize_history_file(self) -> None:
+        """Create an empty epoch history file for incremental monitoring."""
+        self._history_path.parent.mkdir(parents=True, exist_ok=True)
+        self._write_history_payload(
+            {
+                "experiment_name": self.config.experiment_name,
+                "total_epochs": self.config.training.num_epochs,
+                "entries": [],
+            }
+        )
+
+    def _append_history_entry(
+        self,
+        train_metrics: dict[str, float],
+        val_metrics: dict[str, float],
+        current_lr: float,
+    ) -> None:
+        """Append the latest epoch metrics to the shared history artifact."""
+        payload = self._read_history_payload()
+        entries = payload.get("entries", [])
+        epoch_number = self.current_epoch + 1
+        entries.append(
+            {
+                "epoch": epoch_number,
+                "train_loss": float(train_metrics.get("loss", 0.0)),
+                "val_loss": float(val_metrics.get("loss", 0.0)),
+                "train_accuracy": self._optional_float(train_metrics.get("accuracy")),
+                "val_accuracy": self._optional_float(val_metrics.get("accuracy")),
+                "learning_rate": float(current_lr),
+                "best_so_far": epoch_number in self._best_history_epochs,
+            }
+        )
+        payload["entries"] = entries
+        payload["total_epochs"] = self.config.training.num_epochs
+        self._write_history_payload(payload)
+
+    def _read_history_payload(self) -> dict[str, Any]:
+        """Read the current history file safely."""
+        if not self._history_path.exists():
+            return {}
+        try:
+            return json.loads(self._history_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            logger.warning("Failed to parse training history: %s", self._history_path)
+            return {}
+
+    def _write_history_payload(self, payload: dict[str, Any]) -> None:
+        """Write history with a temporary file to avoid partial reads."""
+        temp_path = self._history_path.with_suffix(".tmp")
+        temp_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        temp_path.replace(self._history_path)
+
+    @staticmethod
+    def _optional_float(value: float | None) -> float | None:
+        """Normalize optional scalar values for JSON serialization."""
+        if value is None:
+            return None
+        return float(value)
 
     def load_checkpoint(self, path: str | Path) -> None:
         """Load model checkpoint."""

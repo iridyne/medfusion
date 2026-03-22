@@ -1,10 +1,9 @@
 """实验模型"""
 
-from datetime import datetime
-
 from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
 
 from ..database import Base
+from ..time_utils import utcnow
 
 
 class Experiment(Base):
@@ -32,7 +31,7 @@ class Experiment(Base):
     checkpoint_path = Column(String(500), nullable=True)
 
     # 时间戳
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 

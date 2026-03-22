@@ -215,7 +215,7 @@ class TrainingConfig(BaseConfig):
     early_stopping: bool = True
     patience: int = 20
     min_delta: float = 0.001
-    monitor: str = "val_auc"
+    monitor: str = "accuracy"
     mode: Literal["min", "max"] = "max"
 
     # Checkpointing

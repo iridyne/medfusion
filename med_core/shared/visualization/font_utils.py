@@ -3,8 +3,31 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from functools import lru_cache
 from pathlib import Path
+
+
+def _ensure_mpl_config_dir() -> None:
+    configured_dir = os.environ.get("MPLCONFIGDIR")
+    if configured_dir:
+        try:
+            Path(configured_dir).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        return
+
+    fallback_dir = Path(tempfile.gettempdir()) / "medfusion-matplotlib"
+    try:
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        os.environ["MPLCONFIGDIR"] = str(fallback_dir)
+    except OSError:
+        # Fall back to matplotlib's default behavior if temp directory creation fails.
+        pass
+
+
+_ensure_mpl_config_dir()
 
 import matplotlib
 from matplotlib import font_manager

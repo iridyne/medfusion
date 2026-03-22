@@ -1,12 +1,11 @@
 """数据库配置和管理"""
 
 import logging
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from .config import settings
 
@@ -65,7 +64,7 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def get_db_session() -> Generator[Session, None, None]:
+async def get_db_session() -> AsyncGenerator[Session, None]:
     """获取数据库会话（依赖注入）"""
     db = SessionLocal()
     try:

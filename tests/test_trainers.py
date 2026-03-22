@@ -124,6 +124,31 @@ class TestMultimodalTrainer:
         assert len(history["train_loss"]) == 2
         assert len(history["val_loss"]) == 2
 
+    def test_trainer_writes_history_json(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
+        """Training should emit an incremental history artifact for downstream monitoring."""
+        train_loader, val_loader = simple_dataloaders
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            simple_config.logging.output_dir = tmpdir
+            trainer = MultimodalTrainer(
+                model=simple_model,
+                train_loader=train_loader,
+                val_loader=val_loader,
+                config=simple_config,
+                device="cpu",
+            )
+
+            trainer.train()
+
+            history_path = Path(tmpdir) / "history.json"
+            assert history_path.exists()
+
+            payload = history_path.read_text(encoding="utf-8")
+            assert '"entries"' in payload
+            assert '"epoch": 1' in payload
+
     def test_trainer_with_mixed_precision(
         self, simple_model, simple_dataloaders, simple_config
     ):
@@ -414,6 +439,60 @@ class TestTrainerUtilities:
             final_lr = trainer.optimizer.param_groups[0]["lr"]
             # LR might increase or decrease depending on scheduler type
             assert final_lr != initial_lr or simple_config.training.num_epochs == 1
+
+    def test_monitor_alias_resolves_to_accuracy(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
+        """Trainer should accept val_* monitor aliases for validation metrics."""
+        train_loader, val_loader = simple_dataloaders
+        simple_config.training.monitor = "val_accuracy"
+        simple_config.training.mode = "max"
+
+        trainer = MultimodalTrainer(
+            model=simple_model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            config=simple_config,
+            device="cpu",
+        )
+
+        trainer._handle_checkpointing({"loss": 0.8, "accuracy": 0.7})
+        assert trainer.best_metric_name == "accuracy"
+        assert trainer.best_metric_mode == "max"
+        assert trainer.best_metric == pytest.approx(0.7)
+
+        trainer._handle_checkpointing({"loss": 0.9, "accuracy": 0.6})
+        assert trainer.best_metric == pytest.approx(0.7)
+
+        trainer._handle_checkpointing({"loss": 0.7, "accuracy": 0.82})
+        assert trainer.best_metric == pytest.approx(0.82)
+
+    def test_missing_monitor_falls_back_to_loss_with_min_mode(
+        self, simple_model, simple_dataloaders, simple_config
+    ):
+        """Invalid monitor names should safely fall back to minimizing loss."""
+        train_loader, val_loader = simple_dataloaders
+        simple_config.training.monitor = "val_auc"
+        simple_config.training.mode = "max"
+
+        trainer = MultimodalTrainer(
+            model=simple_model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            config=simple_config,
+            device="cpu",
+        )
+
+        trainer._handle_checkpointing({"loss": 0.8, "accuracy": 0.9})
+        assert trainer.best_metric_name == "loss"
+        assert trainer.best_metric_mode == "min"
+        assert trainer.best_metric == pytest.approx(0.8)
+
+        trainer._handle_checkpointing({"loss": 0.9, "accuracy": 0.95})
+        assert trainer.best_metric == pytest.approx(0.8)
+
+        trainer._handle_checkpointing({"loss": 0.6, "accuracy": 0.7})
+        assert trainer.best_metric == pytest.approx(0.6)
 
 
 if __name__ == "__main__":

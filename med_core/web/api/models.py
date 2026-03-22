@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -18,6 +17,7 @@ from ..config import settings
 from ..database import get_db_session
 from ..model_registry import import_model_run
 from ..models import ModelInfo
+from ..time_utils import utcnow
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -468,7 +468,7 @@ async def create_model(
 ) -> dict[str, Any]:
     """创建模型记录"""
     checkpoint_path = payload.model_path or str(
-        settings.data_dir / "models" / f"{payload.name}_{int(datetime.utcnow().timestamp())}.pth",
+        settings.data_dir / "models" / f"{payload.name}_{int(utcnow().timestamp())}.pth",
     )
     model = ModelInfo(
         name=payload.name,

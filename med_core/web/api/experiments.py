@@ -3,7 +3,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from ..database import get_db_session
@@ -15,14 +15,13 @@ router = APIRouter()
 class ExperimentResponse(BaseModel):
     """实验响应"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     description: str | None
     status: str
     created_at: str
-
-    class Config:
-        from_attributes = True
 
 
 @router.get("")

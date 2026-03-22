@@ -4,11 +4,16 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Web 应用配置"""
+
+    model_config = SettingsConfigDict(
+        env_prefix="MEDFUSION_",
+        case_sensitive=False,
+    )
 
     # 应用信息
     app_name: str = "MedFusion Web UI"
@@ -54,10 +59,6 @@ class Settings(BaseSettings):
     # 日志配置
     log_level: str = "INFO"
     log_file: Path | None = None
-
-    class Config:
-        env_prefix = "MEDFUSION_"
-        case_sensitive = False
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)

@@ -3,57 +3,80 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
+import csv
 import json
 import logging
+import os
+import shlex
+import shutil
+import signal
+import subprocess
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    confusion_matrix,
-    precision_recall_fscore_support,
-    roc_curve,
-)
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from med_core.shared.visualization import (
-    plot_calibration_curve,
-    plot_confusion_matrix,
-    plot_probability_distribution,
-    plot_roc_curve,
-    plot_training_curves,
-)
-from med_core.visualization.attention_viz import (
-    plot_attention_statistics,
-    visualize_attention_overlay,
-)
+from med_core.configs import load_config, save_config
 
 from ..config import settings
 from ..database import SessionLocal, get_db_session
-from ..model_registry import register_model_artifacts
-from ..models import TrainingJob
+from ..model_registry import import_model_run
+from ..models import DatasetInfo, TrainingJob
+from ..time_utils import utcnow
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _training_tasks: dict[str, asyncio.Task[None]] = {}
+_training_processes: dict[str, subprocess.Popen[str]] = {}
 _pause_flags: dict[str, bool] = {}
 _stop_flags: dict[str, bool] = {}
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_BACKBONE_ALIASES: dict[str, str] = {
+    "vit_b16": "vit_b_16",
+    "vit_b_16": "vit_b_16",
+    "swin_tiny": "swin_t",
+    "swin_t": "swin_t",
+}
+_IMAGE_COLUMN_CANDIDATES = (
+    "image_path",
+    "image",
+    "img_path",
+    "scan_path",
+    "filepath",
+    "file_path",
+)
+_TARGET_COLUMN_CANDIDATES = (
+    "label",
+    "diagnosis",
+    "diagnosis_binary",
+    "target",
+    "class",
+    "y",
+)
+_PATIENT_ID_COLUMN_CANDIDATES = (
+    "patient_id",
+    "patient",
+    "subject_id",
+    "study_id",
+    "id",
+)
 
 _BACKBONE_PARAMETER_MAP: dict[str, int] = {
     "resnet18": 11_700_000,
     "resnet34": 21_800_000,
     "resnet50": 25_600_000,
     "resnet101": 44_500_000,
+    "mobilenetv2": 3_500_000,
     "efficientnet_b0": 5_300_000,
+    "vit_b_16": 86_000_000,
     "vit_b16": 86_000_000,
+    "swin_t": 28_300_000,
     "swin_tiny": 28_300_000,
 }
 
@@ -70,6 +93,8 @@ class TrainingConfig(BaseModel):
 class TrainingJobResponse(BaseModel):
     """训练任务响应"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     job_id: str
     experiment_name: str
@@ -82,9 +107,6 @@ class TrainingJobResponse(BaseModel):
     current_loss: float | None
     current_accuracy: float | None
     created_at: str
-
-    class Config:
-        from_attributes = True
 
 
 def _get_job_or_404(db: Session, job_id: str) -> TrainingJob:
@@ -124,11 +146,421 @@ def _prepare_job_output(job_id: str) -> tuple[str, str]:
     return str(output_dir), str(log_file)
 
 
-def _seed_from_text(text: str) -> int:
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return int(digest[:16], 16) % (2**32)
+def _coerce_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    if isinstance(value, tuple):
+        return [str(item) for item in value if str(item).strip()]
+    if isinstance(value, str):
+        if not value.strip():
+            return []
+        if "," in value:
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return [value]
+    return [str(value)]
 
 
+def _normalize_backbone_name(backbone: str | None) -> str | None:
+    if not backbone:
+        return None
+    return _BACKBONE_ALIASES.get(backbone, backbone)
+
+
+def _resolve_path(path_value: str | Path | None) -> Path | None:
+    if not path_value:
+        return None
+    path = Path(path_value).expanduser()
+    if path.is_absolute():
+        return path
+
+    candidates = [
+        (_PROJECT_ROOT / path),
+        (Path.cwd() / path),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate.resolve()
+
+    return (_PROJECT_ROOT / path).resolve()
+
+
+def _pick_column(
+    headers: list[str],
+    *,
+    preferred: str | None = None,
+    candidates: tuple[str, ...],
+) -> str | None:
+    if preferred and preferred in headers:
+        return preferred
+    for candidate in candidates:
+        if candidate in headers:
+            return candidate
+    return None
+
+
+def _read_csv_preview(
+    csv_path: Path,
+    limit: int = 64,
+) -> tuple[list[str], list[dict[str, str]]]:
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        headers = list(reader.fieldnames or [])
+        rows: list[dict[str, str]] = []
+        for index, row in enumerate(reader):
+            rows.append(
+                {
+                    key: (value.strip() if isinstance(value, str) else value)
+                    for key, value in row.items()
+                }
+            )
+            if index + 1 >= limit:
+                break
+    return headers, rows
+
+
+def _infer_csv_path(dataset_path: Path | None, explicit_csv_path: str | None) -> Path:
+    if explicit_csv_path:
+        resolved = _resolve_path(explicit_csv_path)
+        if resolved is not None and resolved.exists():
+            return resolved
+        raise HTTPException(status_code=400, detail=f"CSV 文件不存在: {explicit_csv_path}")
+
+    if dataset_path is None:
+        raise HTTPException(status_code=400, detail="缺少 data_path 或 csv_path，无法生成真实训练配置")
+
+    if dataset_path.is_file():
+        if dataset_path.suffix.lower() != ".csv":
+            raise HTTPException(status_code=400, detail=f"不支持的数据描述文件: {dataset_path}")
+        return dataset_path
+
+    candidates = [
+        dataset_path / "metadata.csv",
+        dataset_path / "dataset.csv",
+        dataset_path / "labels.csv",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    csv_files = sorted(dataset_path.glob("*.csv"))
+    if len(csv_files) == 1:
+        return csv_files[0]
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"无法从 {dataset_path} 自动识别 CSV，请显式提供 csv_path",
+    )
+
+
+def _is_numeric_value(value: str) -> bool:
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _infer_feature_columns(
+    headers: list[str],
+    sample_rows: list[dict[str, str]],
+    excluded_columns: set[str],
+) -> tuple[list[str], list[str]]:
+    numerical_features: list[str] = []
+    categorical_features: list[str] = []
+
+    for column in headers:
+        if column in excluded_columns:
+            continue
+
+        values = [
+            row[column]
+            for row in sample_rows
+            if column in row and row[column] not in {None, ""}
+        ]
+        if not values:
+            continue
+
+        if all(_is_numeric_value(value) for value in values):
+            unique_values = {float(value) for value in values}
+            all_integer_like = all(float(value).is_integer() for value in values)
+            if all_integer_like and len(unique_values) <= min(10, max(2, len(values) // 2)):
+                categorical_features.append(column)
+            else:
+                numerical_features.append(column)
+            continue
+
+        categorical_features.append(column)
+
+    return numerical_features, categorical_features
+
+
+def _infer_num_classes(csv_path: Path, target_column: str, fallback: int | None) -> int:
+    if fallback is not None:
+        return int(fallback)
+
+    unique_values: set[str] = set()
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            value = row.get(target_column)
+            if value not in {None, ""}:
+                unique_values.add(str(value))
+    return max(len(unique_values), 2)
+
+
+def _infer_image_dir(
+    dataset_path: Path | None,
+    csv_path: Path,
+    sample_rows: list[dict[str, str]],
+    image_column: str,
+    explicit_image_dir: str | None,
+) -> Path:
+    if explicit_image_dir:
+        resolved = _resolve_path(explicit_image_dir)
+        if resolved is not None:
+            return resolved
+
+    sample_image_path = next(
+        (
+            row.get(image_column)
+            for row in sample_rows
+            if row.get(image_column) not in {None, ""}
+        ),
+        None,
+    )
+    if sample_image_path:
+        sample_path = Path(sample_image_path)
+        if sample_path.is_absolute():
+            return sample_path.parent
+
+    candidate_paths: list[Path] = []
+    if dataset_path is not None:
+        candidate_paths.extend(
+            [
+                dataset_path if dataset_path.is_dir() else dataset_path.parent,
+                (dataset_path / "images") if dataset_path.is_dir() else dataset_path.parent / "images",
+            ]
+        )
+    candidate_paths.extend([csv_path.parent, csv_path.parent / "images"])
+
+    checked: set[Path] = set()
+    for candidate in candidate_paths:
+        resolved = candidate.resolve()
+        if resolved in checked:
+            continue
+        checked.add(resolved)
+        if sample_image_path and (resolved / sample_image_path).exists():
+            return resolved
+
+    if dataset_path is not None and dataset_path.is_dir():
+        return dataset_path.resolve()
+    return csv_path.parent.resolve()
+
+
+def _resolve_dataset_spec(
+    db: Session,
+    dataset_config: dict[str, Any],
+) -> dict[str, Any]:
+    dataset_record: DatasetInfo | None = None
+    dataset_id = dataset_config.get("dataset_id")
+    if dataset_id is not None:
+        try:
+            dataset_record = (
+                db.query(DatasetInfo)
+                .filter(DatasetInfo.id == int(dataset_id))
+                .first()
+            )
+        except (TypeError, ValueError):
+            dataset_record = None
+
+    dataset_path = _resolve_path(
+        dataset_config.get("data_path")
+        or (dataset_record.data_path if dataset_record else None)
+    )
+    csv_path = _infer_csv_path(dataset_path, dataset_config.get("csv_path"))
+    headers, sample_rows = _read_csv_preview(csv_path)
+
+    image_path_column = _pick_column(
+        headers,
+        preferred=dataset_config.get("image_path_column"),
+        candidates=_IMAGE_COLUMN_CANDIDATES,
+    )
+    if image_path_column is None:
+        raise HTTPException(status_code=400, detail=f"CSV 中缺少图像路径列: {csv_path}")
+
+    target_column = _pick_column(
+        headers,
+        preferred=dataset_config.get("target_column"),
+        candidates=_TARGET_COLUMN_CANDIDATES,
+    )
+    if target_column is None:
+        raise HTTPException(status_code=400, detail=f"CSV 中缺少标签列: {csv_path}")
+
+    patient_id_column = _pick_column(
+        headers,
+        preferred=dataset_config.get("patient_id_column"),
+        candidates=_PATIENT_ID_COLUMN_CANDIDATES,
+    )
+
+    numerical_features = _coerce_list(dataset_config.get("numerical_features"))
+    categorical_features = _coerce_list(dataset_config.get("categorical_features"))
+    if not numerical_features and not categorical_features:
+        numerical_features, categorical_features = _infer_feature_columns(
+            headers,
+            sample_rows,
+            excluded_columns={
+                image_path_column,
+                target_column,
+                patient_id_column or "",
+            },
+        )
+
+    num_classes = _infer_num_classes(
+        csv_path=csv_path,
+        target_column=target_column,
+        fallback=dataset_config.get("num_classes")
+        or (dataset_record.num_classes if dataset_record else None),
+    )
+
+    image_dir = _infer_image_dir(
+        dataset_path=dataset_path,
+        csv_path=csv_path,
+        sample_rows=sample_rows,
+        image_column=image_path_column,
+        explicit_image_dir=dataset_config.get("image_dir"),
+    )
+
+    return {
+        "dataset_name": dataset_config.get("dataset")
+        or dataset_config.get("dataset_name")
+        or (dataset_record.name if dataset_record else None)
+        or csv_path.stem,
+        "csv_path": str(csv_path.resolve()),
+        "image_dir": str(image_dir.resolve()),
+        "image_path_column": image_path_column,
+        "target_column": target_column,
+        "patient_id_column": patient_id_column,
+        "numerical_features": numerical_features,
+        "categorical_features": categorical_features,
+        "num_classes": num_classes,
+        "data_path": str(dataset_path.resolve()) if dataset_path is not None else str(csv_path.parent.resolve()),
+    }
+
+
+def _build_training_config_artifact(
+    db: Session,
+    payload: TrainingConfig,
+    output_dir: Path,
+) -> dict[str, Any]:
+    config = load_config(_PROJECT_ROOT / "configs" / "starter" / "quickstart.yaml")
+
+    training_model_config = payload.training_model_config or {}
+    dataset_config = payload.dataset_config or {}
+    training_config = payload.training_config or {}
+    dataset_spec = _resolve_dataset_spec(db, dataset_config)
+
+    experiment_name = payload.experiment_name.strip() or f"training-{uuid.uuid4().hex[:8]}"
+    backbone = _normalize_backbone_name(
+        training_model_config.get("backbone") or config.model.vision.backbone
+    )
+    if backbone:
+        config.model.vision.backbone = backbone
+    config.model.vision.pretrained = bool(training_model_config.get("pretrained", False))
+    config.model.vision.freeze_backbone = bool(
+        training_model_config.get("freeze_backbone", False)
+    )
+
+    config.project_name = "web-training"
+    config.experiment_name = experiment_name
+    config.logging.experiment_name = experiment_name
+    config.logging.output_dir = str(output_dir.resolve())
+    config.logging.use_tensorboard = bool(training_config.get("use_tensorboard", False))
+    config.logging.use_wandb = False
+
+    config.data.csv_path = dataset_spec["csv_path"]
+    config.data.image_dir = dataset_spec["image_dir"]
+    config.data.image_path_column = dataset_spec["image_path_column"]
+    config.data.target_column = dataset_spec["target_column"]
+    config.data.patient_id_column = dataset_spec["patient_id_column"]
+    config.data.numerical_features = dataset_spec["numerical_features"]
+    config.data.categorical_features = dataset_spec["categorical_features"]
+    config.data.batch_size = int(
+        training_config.get("batch_size")
+        or training_config.get("batchSize")
+        or config.data.batch_size
+    )
+    config.data.num_workers = int(
+        training_config.get("num_workers")
+        or training_config.get("numWorkers")
+        or 0
+    )
+    config.data.pin_memory = bool(training_config.get("pin_memory", False))
+    if training_config.get("image_size") is not None:
+        config.data.image_size = int(training_config["image_size"])
+
+    resolved_num_classes = int(
+        training_model_config.get("num_classes")
+        or dataset_spec["num_classes"]
+        or config.model.num_classes
+    )
+    config.model.num_classes = resolved_num_classes
+
+    config.training.num_epochs = int(
+        training_config.get("epochs")
+        or training_config.get("num_epochs")
+        or training_config.get("numEpochs")
+        or config.training.num_epochs
+    )
+    config.training.use_progressive_training = bool(
+        training_config.get("use_progressive_training", False)
+    )
+    config.training.mixed_precision = bool(training_config.get("mixed_precision", False))
+    config.training.monitor = str(training_config.get("monitor") or "accuracy")
+    config.training.mode = str(
+        training_config.get("mode")
+        or ("min" if config.training.monitor == "loss" else "max")
+    )
+    config.training.optimizer.optimizer = str(
+        training_config.get("optimizer")
+        or config.training.optimizer.optimizer
+    )
+    config.training.optimizer.learning_rate = float(
+        training_config.get("learning_rate")
+        or training_config.get("learningRate")
+        or config.training.optimizer.learning_rate
+    )
+    if training_config.get("weight_decay") is not None:
+        config.training.optimizer.weight_decay = float(training_config["weight_decay"])
+    if training_config.get("scheduler") is not None:
+        config.training.scheduler.scheduler = str(training_config["scheduler"])
+    if training_config.get("step_size") is not None:
+        config.training.scheduler.step_size = int(training_config["step_size"])
+    if training_config.get("patience") is not None:
+        config.training.scheduler.patience = int(training_config["patience"])
+
+    if training_model_config.get("fusion_type") is not None:
+        config.model.fusion.fusion_type = str(training_model_config["fusion_type"])
+    if training_model_config.get("feature_dim") is not None:
+        config.model.vision.feature_dim = int(training_model_config["feature_dim"])
+    if training_model_config.get("tabular_output_dim") is not None:
+        config.model.tabular.output_dim = int(training_model_config["tabular_output_dim"])
+    if config.model.fusion.fusion_type == "concatenate":
+        config.model.fusion.hidden_dim = (
+            config.model.vision.feature_dim + config.model.tabular.output_dim
+        )
+
+    config_path = output_dir / "training-config.yaml"
+    save_config(config, config_path)
+
+    return {
+        "config_path": str(config_path.resolve()),
+        "dataset_spec": dataset_spec,
+        "backbone": config.model.vision.backbone,
+        "num_classes": resolved_num_classes,
+        "total_epochs": config.training.num_epochs,
+    }
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -139,32 +571,122 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+def _build_train_command(config_path: Path, output_dir: Path) -> list[str]:
+    if shutil.which("uv"):
+        return [
+            "uv",
+            "run",
+            "medfusion",
+            "train",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(output_dir),
+        ]
+
+    medfusion_executable = shutil.which("medfusion")
+    if medfusion_executable:
+        return [
+            medfusion_executable,
+            "train",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(output_dir),
+        ]
+
+    raise RuntimeError("找不到 medfusion 或 uv，可执行真实训练命令")
+
+
+def _signal_process(job_id: str, process_signal: signal.Signals) -> bool:
+    process = _training_processes.get(job_id)
+    if process is None or process.poll() is not None:
+        return False
+
+    try:
+        os.killpg(process.pid, process_signal)
+    except ProcessLookupError:
+        return False
+
+    return True
+
+
+def _resolve_checkpoint_path(output_dir: Path) -> Path | None:
+    checkpoint_dir = output_dir / "checkpoints"
+    preferred_candidates = [
+        checkpoint_dir / "best.pth",
+        checkpoint_dir / "last.pth",
+    ]
+    for candidate in preferred_candidates:
+        if candidate.exists():
+            return candidate
+    checkpoints = sorted(checkpoint_dir.glob("*.pth"))
+    return checkpoints[0] if checkpoints else None
+
+
+def _read_history_entries(job: TrainingJob) -> list[dict[str, Any]]:
+    history_payload = _read_json(_history_path_for_job(job))
+    entries = history_payload.get("entries", [])
+    return entries if isinstance(entries, list) else []
+
+
+def _sync_job_from_history(job: TrainingJob) -> dict[str, Any] | None:
+    entries = _read_history_entries(job)
+    if not entries:
+        return None
+
+    latest_entry = entries[-1]
+    current_epoch = int(latest_entry.get("epoch") or job.current_epoch or 0)
+    job.current_epoch = current_epoch
+    job.progress = round(_safe_rate(current_epoch, max(job.total_epochs, 1)) * 100, 2)
+    job.current_loss = _round_metric(
+        latest_entry.get("val_loss")
+        if latest_entry.get("val_loss") is not None
+        else latest_entry.get("train_loss")
     )
+    job.current_accuracy = _round_metric(
+        latest_entry.get("val_accuracy")
+        if latest_entry.get("val_accuracy") is not None
+        else latest_entry.get("train_accuracy")
+    )
+    job.current_lr = _round_metric(latest_entry.get("learning_rate"), digits=6)
+
+    val_losses = [
+        (int(entry.get("epoch", index + 1)), float(entry["val_loss"]))
+        for index, entry in enumerate(entries)
+        if entry.get("val_loss") is not None
+    ]
+    if val_losses:
+        best_loss_epoch, best_loss = min(val_losses, key=lambda item: item[1])
+        job.best_loss = best_loss
+        if job.best_epoch is None:
+            job.best_epoch = best_loss_epoch
+
+    val_accuracies = [
+        (int(entry.get("epoch", index + 1)), float(entry["val_accuracy"]))
+        for index, entry in enumerate(entries)
+        if entry.get("val_accuracy") is not None
+    ]
+    if val_accuracies:
+        best_accuracy_epoch, best_accuracy = max(val_accuracies, key=lambda item: item[1])
+        job.best_accuracy = best_accuracy
+        job.best_epoch = best_accuracy_epoch
+
+    return latest_entry
+
+
+def _tail_log(log_path: Path | None, max_lines: int = 40) -> str | None:
+    if log_path is None or not log_path.exists():
+        return None
+    lines = log_path.read_text(encoding="utf-8").splitlines()
+    if not lines:
+        return None
+    return "\n".join(lines[-max_lines:])
 
 
 def _history_path_for_job(job: TrainingJob) -> Path:
     output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
     return output_dir / "history.json"
-
-
-def _append_history_entry(job: TrainingJob, entry: dict[str, Any]) -> None:
-    history_path = _history_path_for_job(job)
-    payload = _read_json(history_path)
-    entries = payload.get("entries", [])
-    entries.append(entry)
-    payload["entries"] = entries
-    payload["job_id"] = job.job_id
-    _write_json(history_path, payload)
-
-
-def _clamp(value: float, lower: float, upper: float) -> float:
-    return max(lower, min(upper, value))
-
 
 def _round_metric(value: float | None, digits: int = 4) -> float | None:
     if value is None:
@@ -180,869 +702,106 @@ def _safe_rate(numerator: float | int, denominator: float | int) -> float:
     return float(numerator) / float(denominator)
 
 
-def _compute_expected_calibration_error(
-    y_true_binary: np.ndarray,
-    positive_scores: np.ndarray,
-    n_bins: int = 10,
-) -> tuple[float, list[dict[str, Any]]]:
-    """Compute expected calibration error for binary predictions."""
-    bin_edges = np.linspace(0.0, 1.0, n_bins + 1)
-    bin_indices = np.digitize(positive_scores, bin_edges[1:-1], right=True)
-    summaries: list[dict[str, Any]] = []
-    ece = 0.0
-
-    for bin_index in range(n_bins):
-        mask = bin_indices == bin_index
-        count = int(mask.sum())
-        if count == 0:
-            continue
-
-        confidence = float(np.mean(positive_scores[mask]))
-        accuracy = float(np.mean(y_true_binary[mask]))
-        gap = abs(confidence - accuracy)
-        ece += gap * (count / len(positive_scores))
-        summaries.append(
-            {
-                "bin_index": bin_index,
-                "range_start": round(float(bin_edges[bin_index]), 4),
-                "range_end": round(float(bin_edges[bin_index + 1]), 4),
-                "count": count,
-                "mean_confidence": round(confidence, 4),
-                "empirical_accuracy": round(accuracy, 4),
-                "gap": round(gap, 4),
-            }
-        )
-
-    return round(float(ece), 4), summaries
-
-
-def _generate_prediction_payload(
-    job: TrainingJob,
-    metadata: dict[str, Any],
-) -> dict[str, Any]:
-    num_classes = max(int(metadata.get("num_classes") or 2), 2)
-    sample_count = max(160, num_classes * 80)
-    labels = [f"Class {index}" for index in range(num_classes)]
-    rng = np.random.default_rng(_seed_from_text(f"predictions:{job.job_id}"))
-
-    y_true = np.arange(sample_count, dtype=int) % num_classes
-    rng.shuffle(y_true)
-
-    target_accuracy = _clamp(
-        float(job.best_accuracy or job.current_accuracy or 0.85),
-        0.55,
-        0.98,
-    )
-    probabilities = np.zeros((sample_count, num_classes), dtype=float)
-    y_pred = np.zeros(sample_count, dtype=int)
-
-    for index, true_label in enumerate(y_true):
-        is_correct = bool(rng.random() < target_accuracy)
-        if is_correct:
-            predicted_label = int(true_label)
-        else:
-            predicted_label = int(rng.integers(0, num_classes - 1))
-            if predicted_label >= true_label:
-                predicted_label += 1
-
-        raw_scores = rng.uniform(0.01, 0.18, size=num_classes)
-        raw_scores[predicted_label] += rng.uniform(0.55, 0.95)
-        if predicted_label != true_label:
-            raw_scores[true_label] += rng.uniform(0.08, 0.28)
-        else:
-            raw_scores[true_label] += rng.uniform(0.15, 0.32)
-
-        normalized = raw_scores / raw_scores.sum()
-        probabilities[index] = normalized
-        y_pred[index] = int(np.argmax(normalized))
-
-    positive_class_index = 1 if num_classes > 1 else 0
-    return {
-        "labels": labels,
-        "num_classes": num_classes,
-        "positive_class_index": positive_class_index,
-        "y_true": y_true.tolist(),
-        "y_pred": y_pred.tolist(),
-        "probabilities": probabilities.round(6).tolist(),
-    }
-
-
-def _downsample_attention(attention: np.ndarray, size: int = 8) -> list[list[float]]:
-    if attention.ndim != 2:
-        raise ValueError("Attention map must be 2D")
-    height, width = attention.shape
-    if height % size == 0 and width % size == 0:
-        block_h = height // size
-        block_w = width // size
-        reduced = attention.reshape(size, block_h, size, block_w).mean(axis=(1, 3))
-    else:
-        row_indices = np.linspace(0, height - 1, size).astype(int)
-        col_indices = np.linspace(0, width - 1, size).astype(int)
-        reduced = attention[np.ix_(row_indices, col_indices)]
-    return np.round(reduced, 4).tolist()
-
-
-def _generate_base_image(seed: str, size: int = 64) -> np.ndarray:
-    rng = np.random.default_rng(_seed_from_text(seed))
-    y_axis, x_axis = np.mgrid[0:size, 0:size]
-    center_x = rng.uniform(size * 0.25, size * 0.75)
-    center_y = rng.uniform(size * 0.25, size * 0.75)
-    radius = rng.uniform(size * 0.12, size * 0.26)
-
-    gaussian = np.exp(
-        -(((x_axis - center_x) ** 2 + (y_axis - center_y) ** 2) / (2 * radius**2))
-    )
-    diagonal = (x_axis + y_axis) / (2 * size)
-    noise = rng.uniform(0.0, 0.12, size=(size, size))
-    image = gaussian * 0.7 + diagonal * 0.2 + noise
-    image = (image - image.min()) / (image.max() - image.min() + 1e-8)
-    return image
-
-
-def _generate_attention_map(seed: str, size: int = 64) -> np.ndarray:
-    rng = np.random.default_rng(_seed_from_text(seed))
-    y_axis, x_axis = np.mgrid[0:size, 0:size]
-    centers = [
-        (
-            rng.uniform(size * 0.2, size * 0.8),
-            rng.uniform(size * 0.2, size * 0.8),
-            rng.uniform(size * 0.08, size * 0.18),
-            rng.uniform(0.4, 0.8),
-        )
-        for _ in range(2)
-    ]
-    attention = np.zeros((size, size), dtype=float)
-    for center_x, center_y, spread, weight in centers:
-        distance = (x_axis - center_x) ** 2 + (y_axis - center_y) ** 2
-        attention += weight * np.exp(-distance / (2 * (size * spread) ** 2))
-
-    attention += rng.uniform(0.0, 0.05, size=(size, size))
-    attention = (attention - attention.min()) / (attention.max() - attention.min() + 1e-8)
-    return attention
-
-
-def _generate_attention_artifacts(output_dir: Path, job_id: str) -> dict[str, Any]:
-    attention_dir = output_dir / "visualizations" / "attention"
-    attention_dir.mkdir(parents=True, exist_ok=True)
-
-    modalities = [
-        ("image", "影像模态注意力"),
-        ("tabular", "临床表格注意力"),
-        ("text", "病历文本注意力"),
-        ("fusion", "融合层注意力"),
-    ]
-    manifest_items: list[dict[str, Any]] = []
-    attention_history: list[np.ndarray] = []
-
-    for modality, title in modalities:
-        base_image = _generate_base_image(f"{job_id}:{modality}:image")
-        attention_map = _generate_attention_map(f"{job_id}:{modality}:attention")
-        artifact_key = f"attention_{modality}_overlay"
-        image_path = attention_dir / f"{artifact_key}.png"
-
-        figure = visualize_attention_overlay(
-            image=base_image,
-            attention=attention_map,
-            alpha=0.55,
-            title=title,
-            save_path=image_path,
-        )
-        figure.clf()
-
-        attention_history.append(attention_map)
-        manifest_items.append(
-            {
-                "title": title,
-                "modality": modality,
-                "artifact_key": artifact_key,
-                "image_path": str(image_path),
-                "grid": _downsample_attention(attention_map),
-                "mean_attention": round(float(attention_map.mean()), 4),
-                "peak_attention": round(float(attention_map.max()), 4),
-            }
-        )
-
-    statistics_path = attention_dir / "attention_statistics.png"
-    statistics_figure = plot_attention_statistics(
-        attention_history,
-        labels=[item["modality"] for item in manifest_items],
-        save_path=statistics_path,
-    )
-    statistics_figure.clf()
-
-    manifest = {
-        "items": manifest_items,
-        "statistics_artifact_key": "attention_statistics_plot",
-        "statistics_plot_path": str(statistics_path),
-    }
-    manifest_path = attention_dir / "attention_maps.json"
-    _write_json(manifest_path, manifest)
-
-    return {
-        "attention_manifest_path": str(manifest_path),
-        "attention_statistics_plot_path": str(statistics_path),
-    }
-
-
-def _generate_visualization_artifacts(
-    output_dir: Path,
-    job: TrainingJob,
-    metadata: dict[str, Any],
-    history_payload: dict[str, Any],
-) -> dict[str, Any]:
-    visualization_dir = output_dir / "visualizations"
-    visualization_dir.mkdir(parents=True, exist_ok=True)
-
-    predictions_payload = _generate_prediction_payload(job, metadata)
-    predictions_path = output_dir / "predictions.json"
-    _write_json(predictions_path, predictions_payload)
-
-    labels = predictions_payload["labels"]
-    num_classes = predictions_payload["num_classes"]
-    positive_class_index = predictions_payload["positive_class_index"]
-    y_true = np.asarray(predictions_payload["y_true"], dtype=int)
-    y_pred = np.asarray(predictions_payload["y_pred"], dtype=int)
-    probabilities = np.asarray(predictions_payload["probabilities"], dtype=float)
-    confidence = probabilities.max(axis=1)
-    correct_mask = y_true == y_pred
-
-    average = "binary" if num_classes == 2 else "macro"
-    positive_class_label = labels[positive_class_index]
-    y_true_binary = (y_true == positive_class_index).astype(int)
-    positive_scores = probabilities[:, positive_class_index]
-
-    precision, recall, f1_score, _ = precision_recall_fscore_support(
-        y_true,
-        y_pred,
-        average=average,
-        zero_division=0,
-    )
-    accuracy = accuracy_score(y_true, y_pred)
-    matrix = confusion_matrix(y_true, y_pred, labels=list(range(num_classes)))
-    (
-        per_class_precision,
-        per_class_recall,
-        per_class_f1,
-        per_class_support,
-    ) = precision_recall_fscore_support(
-        y_true,
-        y_pred,
-        labels=list(range(num_classes)),
-        average=None,
-        zero_division=0,
-    )
-    precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(
-        y_true,
-        y_pred,
-        average="macro",
-        zero_division=0,
-    )
-    precision_weighted, recall_weighted, f1_weighted, _ = precision_recall_fscore_support(
-        y_true,
-        y_pred,
-        average="weighted",
-        zero_division=0,
-    )
-    balanced_accuracy = float(np.mean(per_class_recall)) if len(per_class_recall) else 0.0
-    class_supports = np.bincount(y_true, minlength=num_classes)
-    predicted_distribution = np.bincount(y_pred, minlength=num_classes)
-    error_count = int((~correct_mask).sum())
-    misclassification_pairs = [
-        {
-            "actual": labels[row_index],
-            "predicted": labels[col_index],
-            "count": int(matrix[row_index, col_index]),
-        }
-        for row_index in range(num_classes)
-        for col_index in range(num_classes)
-        if row_index != col_index and int(matrix[row_index, col_index]) > 0
-    ]
-    misclassification_pairs.sort(key=lambda item: item["count"], reverse=True)
-    mean_confidence = float(np.mean(confidence))
-    mean_confidence_correct = (
-        float(np.mean(confidence[correct_mask])) if bool(correct_mask.any()) else None
-    )
-    mean_confidence_error = (
-        float(np.mean(confidence[~correct_mask])) if error_count > 0 else None
-    )
-    per_class_payload = [
-        {
-            "label": labels[class_index],
-            "support": int(per_class_support[class_index]),
-            "prevalence": round(_safe_rate(class_supports[class_index], len(y_true)), 4),
-            "precision": round(float(per_class_precision[class_index]), 4),
-            "recall": round(float(per_class_recall[class_index]), 4),
-            "f1_score": round(float(per_class_f1[class_index]), 4),
-            "predicted_count": int(predicted_distribution[class_index]),
-            "predicted_rate": round(
-                _safe_rate(predicted_distribution[class_index], len(y_pred)),
-                4,
-            ),
-        }
-        for class_index in range(num_classes)
-    ]
-
-    roc_points: list[dict[str, float]] = []
-    roc_auc: float | None = None
-    threshold_analysis: dict[str, Any] | None = None
-    calibration_summary: dict[str, Any] | None = None
-    roc_curve_path = visualization_dir / "roc_curve.png"
-    if np.unique(y_true_binary).size > 1:
-        fpr, tpr, thresholds = roc_curve(y_true_binary, positive_scores)
-        roc_auc = float(auc(fpr, tpr))
-        roc_points = [
-            {
-                "fpr": round(float(fpr_value), 4),
-                "tpr": round(float(tpr_value), 4),
-                "threshold": round(float(threshold_value), 4),
-            }
-            for fpr_value, tpr_value, threshold_value in zip(fpr, tpr, thresholds, strict=False)
-        ]
-        roc_figure, _ = plot_roc_curve(
-            y_true_binary,
-            positive_scores,
-            title=f"ROC Curve ({positive_class_label} vs Rest)",
-            save_path=roc_curve_path,
-        )
-        roc_figure.clf()
-
-        finite_threshold_indices = np.flatnonzero(np.isfinite(thresholds))
-        if finite_threshold_indices.size > 0:
-            optimal_index = int(
-                finite_threshold_indices[
-                    np.argmax((tpr - fpr)[finite_threshold_indices])
-                ]
-            )
-            optimal_threshold = float(thresholds[optimal_index])
-            optimal_prediction = (positive_scores >= optimal_threshold).astype(int)
-            threshold_matrix = confusion_matrix(
-                y_true_binary,
-                optimal_prediction,
-                labels=[0, 1],
-            )
-            tn, fp, fn, tp = threshold_matrix.ravel()
-            sensitivity = _safe_rate(tp, tp + fn)
-            specificity = _safe_rate(tn, tn + fp)
-            ppv = _safe_rate(tp, tp + fp)
-            npv = _safe_rate(tn, tn + fn)
-            threshold_analysis = {
-                "threshold": round(optimal_threshold, 4),
-                "youden_j": round(float(tpr[optimal_index] - fpr[optimal_index]), 4),
-                "sensitivity": round(sensitivity, 4),
-                "specificity": round(specificity, 4),
-                "ppv": round(ppv, 4),
-                "npv": round(npv, 4),
-                "confusion_matrix": threshold_matrix.astype(int).tolist(),
-            }
-
-        brier_score = float(np.mean((positive_scores - y_true_binary) ** 2))
-        ece, calibration_bins = _compute_expected_calibration_error(
-            y_true_binary,
-            positive_scores,
-        )
-        calibration_summary = {
-            "positive_class_label": positive_class_label,
-            "brier_score": round(brier_score, 4),
-            "ece": ece,
-            "n_bins": 10,
-            "bins": calibration_bins,
-        }
-    else:
-        roc_curve_path = None
-
-    confusion_matrix_path = visualization_dir / "confusion_matrix.png"
-    confusion_figure, _ = plot_confusion_matrix(
-        y_true,
-        y_pred,
-        class_names=labels,
-        title="Confusion Matrix",
-        save_path=confusion_matrix_path,
-    )
-    confusion_figure.clf()
-
-    normalized_confusion_matrix_path = visualization_dir / "confusion_matrix_normalized.png"
-    normalized_confusion_figure, _ = plot_confusion_matrix(
-        y_true,
-        y_pred,
-        class_names=labels,
-        title="Normalized Confusion Matrix",
-        normalize="true",
-        save_path=normalized_confusion_matrix_path,
-    )
-    normalized_confusion_figure.clf()
-
-    history_entries = history_payload.get("entries", [])
-    training_curves_path = visualization_dir / "training_curves.png"
-    training_curve_figure, _ = plot_training_curves(
-        [entry["train_loss"] for entry in history_entries],
-        val_losses=[entry["val_loss"] for entry in history_entries],
-        train_metrics={"Accuracy": [entry["train_accuracy"] for entry in history_entries]},
-        val_metrics={"Accuracy": [entry["val_accuracy"] for entry in history_entries]},
-        title="Training Curves",
-        save_path=training_curves_path,
-    )
-    training_curve_figure.clf()
-
-    calibration_curve_path = None
-    probability_distribution_path = None
-    if np.unique(y_true_binary).size > 1:
-        calibration_curve_path = visualization_dir / "calibration_curve.png"
-        calibration_figure, _ = plot_calibration_curve(
-            y_true_binary,
-            positive_scores,
-            title=f"Calibration Curve ({positive_class_label})",
-            save_path=calibration_curve_path,
-        )
-        calibration_figure.clf()
-
-        probability_distribution_path = visualization_dir / "probability_distribution.png"
-        probability_figure, _ = plot_probability_distribution(
-            y_true_binary,
-            positive_scores,
-            title=f"Prediction Probability Distribution ({positive_class_label})",
-            save_path=probability_distribution_path,
-        )
-        probability_figure.clf()
-
-    roc_payload = {
-        "artifact_key": "roc_curve_plot",
-        "positive_class_label": positive_class_label,
-        "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
-        "points": roc_points,
-        "plot_path": str(roc_curve_path) if roc_curve_path else None,
-    }
-    confusion_payload = {
-        "artifact_key": "confusion_matrix_plot",
-        "labels": labels,
-        "matrix": matrix.tolist(),
-        "plot_path": str(confusion_matrix_path),
-        "normalized_plot_path": str(normalized_confusion_matrix_path),
-    }
-    validation_overview = {
-        "sample_count": int(len(y_true)),
-        "num_classes": num_classes,
-        "positive_class_label": positive_class_label,
-        "positive_prevalence": round(_safe_rate(y_true_binary.sum(), len(y_true_binary)), 4),
-        "accuracy": round(float(accuracy), 4),
-        "balanced_accuracy": round(balanced_accuracy, 4),
-        "precision_macro": round(float(precision_macro), 4),
-        "recall_macro": round(float(recall_macro), 4),
-        "macro_f1": round(float(f1_macro), 4),
-        "weighted_f1": round(float(f1_weighted), 4),
-        "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
-        "mean_confidence": round(mean_confidence, 4),
-        "error_count": error_count,
-        "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
-        "best_epoch": job.best_epoch,
-    }
-    metrics_payload = {
-        "accuracy": round(float(accuracy), 4),
-        "precision": round(float(precision), 4),
-        "recall": round(float(recall), 4),
-        "f1_score": round(float(f1_score), 4),
-        "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
-        "balanced_accuracy": round(balanced_accuracy, 4),
-        "precision_macro": round(float(precision_macro), 4),
-        "recall_macro": round(float(recall_macro), 4),
-        "macro_f1": round(float(f1_macro), 4),
-        "weighted_f1": round(float(f1_weighted), 4),
-        "mean_confidence": round(mean_confidence, 4),
-        "mean_confidence_correct": _round_metric(mean_confidence_correct),
-        "mean_confidence_error": _round_metric(mean_confidence_error),
-        "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
-        "best_accuracy": round(float(job.best_accuracy or accuracy), 4),
-        "best_loss": round(float(job.best_loss or job.current_loss or 0.0), 4),
-        "best_epoch": job.best_epoch,
-        "final_accuracy": round(float(job.current_accuracy or accuracy), 4),
-        "final_loss": round(float(job.current_loss or 0.0), 4),
-        "progress": round(float(job.progress), 2),
-    }
-    if threshold_analysis:
-        metrics_payload.update(
-            {
-                "sensitivity": threshold_analysis["sensitivity"],
-                "specificity": threshold_analysis["specificity"],
-                "ppv": threshold_analysis["ppv"],
-                "npv": threshold_analysis["npv"],
-                "optimal_threshold": threshold_analysis["threshold"],
-            }
-        )
-    if calibration_summary:
-        metrics_payload.update(
-            {
-                "brier_score": calibration_summary["brier_score"],
-                "ece": calibration_summary["ece"],
-            }
-        )
-
-    validation_payload = {
-        "dataset": {
-            "name": metadata["dataset_name"],
-            "labels": labels,
-            "num_classes": num_classes,
-            "sample_count": int(len(y_true)),
-            "class_distribution": [
-                {
-                    "label": label,
-                    "count": int(class_supports[index]),
-                    "rate": round(_safe_rate(class_supports[index], len(y_true)), 4),
-                }
-                for index, label in enumerate(labels)
-            ],
-        },
-        "overview": validation_overview,
-        "per_class": per_class_payload,
-        "prediction_summary": {
-            "mean_confidence": round(mean_confidence, 4),
-            "mean_confidence_correct": _round_metric(mean_confidence_correct),
-            "mean_confidence_error": _round_metric(mean_confidence_error),
-            "error_count": error_count,
-            "error_rate": round(_safe_rate(error_count, len(y_true)), 4),
-            "top_misclassifications": misclassification_pairs[:5],
-        },
-        "threshold_analysis": threshold_analysis,
-        "calibration": calibration_summary,
-    }
-
-    roc_curve_json_path = output_dir / "roc_curve.json"
-    confusion_matrix_json_path = output_dir / "confusion_matrix.json"
-    metrics_path = output_dir / "metrics.json"
-    validation_path = output_dir / "validation.json"
-
-    _write_json(roc_curve_json_path, roc_payload)
-    _write_json(confusion_matrix_json_path, confusion_payload)
-    _write_json(metrics_path, metrics_payload)
-    _write_json(validation_path, validation_payload)
-
-    attention_artifacts = _generate_attention_artifacts(output_dir, job.job_id)
-
-    return {
-        "metrics": metrics_payload,
-        "validation": validation_payload,
-        "prediction_path": str(predictions_path),
-        "roc_curve_json_path": str(roc_curve_json_path),
-        "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
-        "confusion_matrix_json_path": str(confusion_matrix_json_path),
-        "confusion_matrix_plot_path": str(confusion_matrix_path),
-        "confusion_matrix_normalized_plot_path": str(normalized_confusion_matrix_path),
-        "training_curves_plot_path": str(training_curves_path),
-        "validation_path": str(validation_path),
-        "calibration_curve_plot_path": str(calibration_curve_path) if calibration_curve_path else None,
-        "probability_distribution_plot_path": str(probability_distribution_path)
-        if probability_distribution_path
-        else None,
-        **attention_artifacts,
-    }
-
-
-def _write_demo_checkpoint(job: TrainingJob, metadata: dict[str, Any]) -> Path:
-    target_dir = settings.data_dir / "models"
-    target_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = target_dir / f"{job.job_id}.pth"
-    checkpoint_payload = {
-        "job_id": job.job_id,
-        "status": job.status,
-        "experiment_name": metadata["experiment_name"],
-        "dataset_name": metadata["dataset_name"],
-        "backbone": metadata["backbone"],
-        "best_accuracy": job.best_accuracy,
-        "best_loss": job.best_loss,
-        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
-    }
-    checkpoint_path.write_text(
-        json.dumps(checkpoint_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return checkpoint_path
-
-
-def _write_result_artifacts(
-    job: TrainingJob,
-    metadata: dict[str, Any],
-    checkpoint_path: Path,
-) -> dict[str, str]:
-    output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    config_path = output_dir / "training-config.json"
-    summary_path = output_dir / "summary.json"
-    report_path = output_dir / "report.md"
-    log_path = Path(job.log_file) if job.log_file else output_dir / "training.log"
-    history_path = _history_path_for_job(job)
-    history_payload = _read_json(history_path)
-    history_entries = history_payload.get("entries", [])
-
-    visualization_artifacts = _generate_visualization_artifacts(
-        output_dir=output_dir,
-        job=job,
-        metadata=metadata,
-        history_payload=history_payload,
-    )
-    metrics_payload = visualization_artifacts["metrics"]
-    validation_payload = visualization_artifacts["validation"]
-    validation_overview = validation_payload.get("overview", {})
-    per_class_rows = validation_payload.get("per_class", [])
-    top_misclassifications = (
-        validation_payload.get("prediction_summary", {}).get("top_misclassifications", [])
-    )
-
-    summary_payload = {
-        "job_id": job.job_id,
-        "experiment_name": metadata["experiment_name"],
-        "dataset_name": metadata["dataset_name"],
-        "backbone": metadata["backbone"],
-        "num_classes": metadata["num_classes"],
-        "total_epochs": job.total_epochs,
-        "training_time_seconds": (
-            (job.completed_at - job.started_at).total_seconds()
-            if job.completed_at and job.started_at
-            else None
-        ),
-        "artifacts": {
-            "checkpoint_path": str(checkpoint_path),
-            "config_path": str(config_path),
-            "summary_path": str(summary_path),
-            "report_path": str(report_path),
-            "log_path": str(log_path),
-            "history_path": str(history_path),
-            **{
-                key: value
-                for key, value in visualization_artifacts.items()
-                if key not in {"metrics", "validation"} and value
-            },
-        },
-        "metrics": metrics_payload,
-        "validation_overview": validation_overview,
-    }
-
-    config_path.write_text(
-        json.dumps(job.config or {}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    summary_path.write_text(
-        json.dumps(summary_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    report_path.write_text(
-        "\n".join(
-            [
-                f"# {metadata['experiment_name']} 结果报告",
-                "",
-                "## 实验摘要",
-                "",
-                f"- 数据集: {metadata['dataset_name'] or 'unknown'}",
-                f"- Backbone: {metadata['backbone'] or 'unknown'}",
-                f"- Accuracy: {metrics_payload['accuracy']}",
-                f"- AUC: {metrics_payload['auc']}",
-                f"- F1: {metrics_payload['f1_score']}",
-                f"- Balanced Accuracy: {metrics_payload.get('balanced_accuracy', '-')}",
-                f"- Best Accuracy: {metrics_payload['best_accuracy']}",
-                f"- Best Loss: {metrics_payload['best_loss']}",
-                f"- Checkpoint: {checkpoint_path}",
-                "",
-                "## Validation 概览",
-                "",
-                f"- 样本数: {validation_overview.get('sample_count', '-')}",
-                f"- 类别数: {validation_overview.get('num_classes', '-')}",
-                f"- 正类标签: {validation_overview.get('positive_class_label', '-')}",
-                f"- 正类占比: {validation_overview.get('positive_prevalence', '-')}",
-                f"- 宏平均 F1: {validation_overview.get('macro_f1', '-')}",
-                f"- 加权 F1: {validation_overview.get('weighted_f1', '-')}",
-                f"- 平均置信度: {validation_overview.get('mean_confidence', '-')}",
-                f"- 错误率: {validation_overview.get('error_rate', '-')}",
-                "",
-                "## Per-class Metrics",
-                "",
-                "| Class | Support | Prevalence | Precision | Recall | F1 | Predicted |",
-                "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-                *[
-                    "| {label} | {support} | {prevalence} | {precision} | {recall} | {f1_score} | {predicted_count} |".format(
-                        **row
-                    )
-                    for row in per_class_rows
-                ],
-                "",
-                "## Visualizations",
-                "",
-                "![Training Curves](visualizations/training_curves.png)",
-                "",
-                "![ROC Curve](visualizations/roc_curve.png)"
-                if visualization_artifacts.get("roc_curve_plot_path")
-                else "",
-                "",
-                "![Confusion Matrix](visualizations/confusion_matrix.png)",
-                "",
-                "![Attention Statistics](visualizations/attention/attention_statistics.png)",
-                "",
-                "## Threshold Analysis",
-                "",
-                f"- Optimal Threshold: {metrics_payload.get('optimal_threshold', '-')}",
-                f"- Sensitivity: {metrics_payload.get('sensitivity', '-')}",
-                f"- Specificity: {metrics_payload.get('specificity', '-')}",
-                f"- PPV: {metrics_payload.get('ppv', '-')}",
-                f"- NPV: {metrics_payload.get('npv', '-')}",
-                "",
-                "## 常见误分类",
-                "",
-                *(
-                    [
-                        f"- {item['actual']} -> {item['predicted']}: {item['count']}"
-                        for item in top_misclassifications
-                    ]
-                    if top_misclassifications
-                    else ["- 无明显误分类聚集"]
-                ),
-                "",
-                "## History",
-                "",
-                f"- total_entries: {len(history_entries)}",
-            ],
-        ),
-        encoding="utf-8",
-    )
-    log_path.write_text(
-        log_path.read_text(encoding="utf-8") + "training completed\n",
-        encoding="utf-8",
-    )
-
-    return {
-        "output_dir": str(output_dir),
-        "config_path": str(config_path),
-        "metrics_path": str(output_dir / "metrics.json"),
-        "summary_path": str(summary_path),
-        "report_path": str(report_path),
-        "log_path": str(log_path),
-        "history_path": str(history_path),
-        **{
-            key: value
-            for key, value in visualization_artifacts.items()
-            if key not in {"metrics", "validation"} and value
-        },
-    }
-
-
-def _sync_completed_model(db: Session, job: TrainingJob) -> None:
-    metadata = _extract_job_metadata(job)
-    checkpoint_path = _write_demo_checkpoint(job, metadata)
-    artifact_paths = _write_result_artifacts(job, metadata, checkpoint_path)
-    metrics_payload = _read_json(Path(artifact_paths["metrics_path"]))
-    validation_payload = _read_json(Path(artifact_paths["validation_path"]))
-    training_time = (
-        (job.completed_at - job.started_at).total_seconds()
-        if job.completed_at and job.started_at
-        else None
-    )
-    register_model_artifacts(
-        db=db,
-        checkpoint_path=checkpoint_path,
-        artifact_paths=artifact_paths,
-        metrics=metrics_payload,
-        validation=validation_payload,
-        name=f"{metadata['experiment_name']}-model",
-        description="演示型 MVP 自动生成的训练产物",
-        architecture=metadata["backbone"] or "resnet18",
-        config_path=artifact_paths["config_path"],
-        tags=["demo-mvp", f"job:{job.job_id}", "auto-generated"],
-        trained_epochs=job.total_epochs,
-        training_time=training_time,
-        num_parameters=_estimate_num_parameters(metadata["backbone"]),
-        extra_config={
-            "job_id": job.job_id,
-            "import_source": "web-demo",
-            "training_config": (job.config or {}).get("training_config", {}),
-            "dataset_config": (job.config or {}).get("dataset_config", {}),
-        },
-    )
-
-
-async def _simulate_training(job_id: str, total_epochs: int) -> None:
-    """轻量训练模拟器：用于 Web UI 最小可用闭环。"""
+async def _run_real_training_job(job_id: str) -> None:
+    """Run a real training process in the background and sync its artifacts."""
     db = SessionLocal()
+    process: subprocess.Popen[str] | None = None
+    log_handle: Any | None = None
     try:
-        for epoch in range(1, total_epochs + 1):
-            while _pause_flags.get(job_id, False):
-                await asyncio.sleep(0.5)
+        job = _get_job_or_404(db, job_id)
+        resolved_run = (job.config or {}).get("resolved_run", {})
+        config_path = Path(resolved_run["config_path"])
+        output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
+        log_path = Path(job.log_file) if job.log_file else output_dir / "training.log"
+        command = _build_train_command(config_path, output_dir)
 
-            if _stop_flags.get(job_id, False):
-                job = _get_job_or_404(db, job_id)
-                job.status = "stopped"
-                job.completed_at = datetime.utcnow()
-                if job.log_file:
-                    Path(job.log_file).write_text(
-                        Path(job.log_file).read_text(encoding="utf-8") + "training stopped\n",
-                        encoding="utf-8",
-                    )
+        job.status = "running"
+        job.started_at = job.started_at or utcnow()
+        job.error_message = None
+        db.commit()
+
+        log_handle = log_path.open("a", encoding="utf-8", buffering=1)
+        log_handle.write(f"command: {' '.join(shlex.quote(part) for part in command)}\n")
+        env = os.environ.copy()
+        env.setdefault("PYTHONUNBUFFERED", "1")
+
+        process = subprocess.Popen(
+            command,
+            cwd=str(_PROJECT_ROOT),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+            start_new_session=True,
+        )
+        _training_processes[job_id] = process
+
+        while True:
+            await asyncio.sleep(1.0)
+            db.expire_all()
+            job = _get_job_or_404(db, job_id)
+            _sync_job_from_history(job)
+            return_code = process.poll()
+
+            if return_code is None:
+                if job.status not in {"paused", "stopped"}:
+                    job.status = "running"
+                db.commit()
+                continue
+
+            if job.status == "stopped":
+                job.completed_at = job.completed_at or utcnow()
                 db.commit()
                 return
 
-            await asyncio.sleep(1.0)
-            job = _get_job_or_404(db, job_id)
+            if return_code != 0:
+                job.status = "failed"
+                job.completed_at = utcnow()
+                job.error_message = _tail_log(log_path) or f"训练进程退出码: {return_code}"
+                db.commit()
+                return
 
-            progress = round(epoch / total_epochs * 100, 2)
-            current_loss = max(0.01, 1.0 - (epoch / total_epochs) * 0.9)
-            current_accuracy = min(0.99, 0.5 + (epoch / total_epochs) * 0.45)
-            learning_rate = max(
-                float((job.config or {}).get("training_config", {}).get("learningRate", 0.001))
-                * (0.94 ** max(epoch - 1, 0)),
-                0.00001,
-            )
-            val_loss = min(1.2, current_loss * 1.06)
-            val_accuracy = max(0.0, current_accuracy - 0.03)
+            checkpoint_path = _resolve_checkpoint_path(output_dir)
+            if checkpoint_path is None:
+                raise FileNotFoundError(f"训练完成但未找到 checkpoint: {output_dir / 'checkpoints'}")
 
-            job.status = "running"
-            job.current_epoch = epoch
-            job.progress = progress
-            job.current_loss = current_loss
-            job.current_accuracy = current_accuracy
-            job.current_lr = learning_rate
-            job.best_loss = (
-                current_loss
-                if job.best_loss is None
-                else min(job.best_loss, current_loss)
-            )
-            job.best_accuracy = (
-                current_accuracy
-                if job.best_accuracy is None
-                else max(job.best_accuracy, current_accuracy)
-            )
-            if job.best_accuracy == current_accuracy:
-                job.best_epoch = epoch
-            if job.log_file:
-                Path(job.log_file).write_text(
-                    Path(job.log_file).read_text(encoding="utf-8")
-                    + f"epoch {epoch}: loss={current_loss:.4f}, accuracy={current_accuracy:.4f}, lr={learning_rate:.6f}\n",
-                    encoding="utf-8",
-                )
-            _append_history_entry(
-                job,
-                {
-                    "epoch": epoch,
-                    "train_loss": round(float(current_loss), 4),
-                    "val_loss": round(float(val_loss), 4),
-                    "train_accuracy": round(float(min(current_accuracy + 0.02, 0.999)), 4),
-                    "val_accuracy": round(float(val_accuracy), 4),
-                    "learning_rate": round(float(learning_rate), 6),
-                    "best_so_far": job.best_epoch == epoch,
-                },
+            metadata = _extract_job_metadata(job)
+            import_model_run(
+                db=db,
+                config_path=config_path,
+                checkpoint_path=checkpoint_path,
+                output_dir=output_dir,
+                split="test",
+                attention_samples=4,
+                name=f"{metadata['experiment_name']}-model",
+                description="Web UI 触发的真实训练产物",
+                tags=["web-ui", f"job:{job.job_id}"],
+                import_source="web",
             )
 
-            if epoch >= total_epochs:
-                job.status = "completed"
-                job.completed_at = datetime.utcnow()
-                job.progress = 100.0
-                _sync_completed_model(db, job)
-
+            _sync_job_from_history(job)
+            job.status = "completed"
+            job.progress = 100.0
+            job.completed_at = utcnow()
+            job.error_message = None
             db.commit()
+            return
     except Exception as e:
-        logger.error(f"训练任务模拟失败: {job_id}, 错误: {e}")
+        logger.exception("真实训练任务失败: %s", job_id)
+        db.rollback()
         job = db.query(TrainingJob).filter(TrainingJob.job_id == job_id).first()
-        if job:
+        if job and job.status != "stopped":
             job.status = "failed"
             job.error_message = str(e)
-            job.completed_at = datetime.utcnow()
+            job.completed_at = utcnow()
             db.commit()
     finally:
+        if process is not None and process.poll() is None:
+            _signal_process(job_id, signal.SIGTERM)
+        if log_handle is not None:
+            log_handle.close()
         db.close()
+        _training_processes.pop(job_id, None)
         _training_tasks.pop(job_id, None)
         _pause_flags.pop(job_id, None)
         _stop_flags.pop(job_id, None)
@@ -1056,20 +815,46 @@ async def start_training(
     """开始训练任务"""
     try:
         job_id = str(uuid.uuid4())
-        total_epochs = int(config.training_config.get("epochs", 20))
         output_dir, log_file = _prepare_job_output(job_id)
+        resolved_run = _build_training_config_artifact(
+            db=db,
+            payload=config,
+            output_dir=Path(output_dir),
+        )
+        total_epochs = int(resolved_run["total_epochs"])
+
+        job_payload = config.model_dump()
+        job_payload.setdefault("training_model_config", {})
+        job_payload.setdefault("dataset_config", {})
+        job_payload["training_model_config"]["backbone"] = resolved_run["backbone"]
+        job_payload["training_model_config"]["num_classes"] = resolved_run["num_classes"]
+        job_payload["dataset_config"].update(
+            {
+                "dataset": resolved_run["dataset_spec"]["dataset_name"],
+                "data_path": resolved_run["dataset_spec"]["data_path"],
+                "csv_path": resolved_run["dataset_spec"]["csv_path"],
+                "image_dir": resolved_run["dataset_spec"]["image_dir"],
+                "image_path_column": resolved_run["dataset_spec"]["image_path_column"],
+                "target_column": resolved_run["dataset_spec"]["target_column"],
+                "patient_id_column": resolved_run["dataset_spec"]["patient_id_column"],
+                "numerical_features": resolved_run["dataset_spec"]["numerical_features"],
+                "categorical_features": resolved_run["dataset_spec"]["categorical_features"],
+                "num_classes": resolved_run["dataset_spec"]["num_classes"],
+            }
+        )
+        job_payload["resolved_run"] = resolved_run
 
         job = TrainingJob(
             job_id=job_id,
-            config=config.model_dump(),
+            config=job_payload,
             total_epochs=total_epochs,
             status="running",
             progress=0.0,
             current_epoch=0,
-            created_at=datetime.utcnow(),
-            started_at=datetime.utcnow(),
-            current_loss=1.0,
-            current_accuracy=0.5,
+            created_at=utcnow(),
+            started_at=utcnow(),
+            current_loss=None,
+            current_accuracy=None,
             output_dir=output_dir,
             log_file=log_file,
         )
@@ -1079,10 +864,12 @@ async def start_training(
 
         _pause_flags[job_id] = False
         _stop_flags[job_id] = False
-        _training_tasks[job_id] = asyncio.create_task(_simulate_training(job_id, total_epochs))
+        _training_tasks[job_id] = asyncio.create_task(_run_real_training_job(job_id))
 
         logger.info(f"训练任务已创建: {job_id}")
         return {"job_id": job_id, "status": "running", "message": "训练任务已启动"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"创建训练任务失败: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -1130,6 +917,8 @@ async def get_training_status(
     """获取训练任务状态"""
     job = _get_job_or_404(db, job_id)
     metadata = _extract_job_metadata(job)
+    latest_entry = _sync_job_from_history(job)
+    db.commit()
     return {
         "job_id": job.job_id,
         "experiment_name": metadata["experiment_name"],
@@ -1141,11 +930,27 @@ async def get_training_status(
         "total_epochs": job.total_epochs,
         "current_loss": job.current_loss,
         "current_accuracy": job.current_accuracy,
+        "current_lr": job.current_lr,
         "best_loss": job.best_loss,
         "best_accuracy": job.best_accuracy,
         "gpu_usage": job.gpu_usage,
         "gpu_memory": job.gpu_memory,
         "error_message": job.error_message,
+        "latest_history": latest_entry,
+    }
+
+
+@router.get("/{job_id}/history")
+async def get_training_history(
+    job_id: str,
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    """获取训练历史，用于真实曲线回放。"""
+    job = _get_job_or_404(db, job_id)
+    return {
+        "job_id": job.job_id,
+        "entries": _read_history_entries(job),
+        "total_epochs": job.total_epochs,
     }
 
 
@@ -1159,7 +964,8 @@ async def pause_training(
     if job.status != "running":
         raise HTTPException(status_code=400, detail="只能暂停正在运行的任务")
 
-    _pause_flags[job_id] = True
+    if not _signal_process(job_id, signal.SIGSTOP):
+        raise HTTPException(status_code=400, detail="训练进程未运行，无法暂停")
     job.status = "paused"
     db.commit()
     return {"message": "训练任务已暂停"}
@@ -1175,7 +981,8 @@ async def resume_training(
     if job.status != "paused":
         raise HTTPException(status_code=400, detail="只能恢复已暂停的任务")
 
-    _pause_flags[job_id] = False
+    if not _signal_process(job_id, signal.SIGCONT):
+        raise HTTPException(status_code=400, detail="训练进程未运行，无法恢复")
     job.status = "running"
     db.commit()
     return {"message": "训练任务已恢复"}
@@ -1191,10 +998,10 @@ async def stop_training(
     if job.status not in {"running", "paused", "queued"}:
         raise HTTPException(status_code=400, detail="无法停止该任务")
 
-    _stop_flags[job_id] = True
-    _pause_flags[job_id] = False
+    _signal_process(job_id, signal.SIGCONT)
+    _signal_process(job_id, signal.SIGTERM)
     job.status = "stopped"
-    job.completed_at = datetime.utcnow()
+    job.completed_at = utcnow()
     db.commit()
     return {"message": "训练任务已停止"}
 
@@ -1214,11 +1021,12 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                 payload = json.loads(text)
                 action = payload.get("action")
                 if action == "pause":
-                    _pause_flags[job_id] = True
+                    _signal_process(job_id, signal.SIGSTOP)
                 elif action == "resume":
-                    _pause_flags[job_id] = False
+                    _signal_process(job_id, signal.SIGCONT)
                 elif action == "stop":
-                    _stop_flags[job_id] = True
+                    _signal_process(job_id, signal.SIGCONT)
+                    _signal_process(job_id, signal.SIGTERM)
             except asyncio.TimeoutError:
                 pass
             except json.JSONDecodeError:
@@ -1241,6 +1049,8 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                 continue
 
             metadata = _extract_job_metadata(job)
+            latest_entry = _sync_job_from_history(job)
+            db.commit()
             await websocket.send_json(
                 {
                     "type": "status_update",
@@ -1252,6 +1062,11 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                     "total_epochs": job.total_epochs,
                     "loss": job.current_loss,
                     "accuracy": job.current_accuracy,
+                    "train_loss": latest_entry.get("train_loss") if latest_entry else None,
+                    "val_loss": latest_entry.get("val_loss") if latest_entry else None,
+                    "train_accuracy": latest_entry.get("train_accuracy") if latest_entry else None,
+                    "val_accuracy": latest_entry.get("val_accuracy") if latest_entry else None,
+                    "learning_rate": latest_entry.get("learning_rate") if latest_entry else None,
                 },
             )
 
