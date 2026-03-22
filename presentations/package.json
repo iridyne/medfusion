@@ -1,5 +1,6 @@
 {
   "name": "medfusion-presentation",
+  "license": "MIT",
   "type": "module",
   "private": true,
   "scripts": {
