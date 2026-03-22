@@ -24,3 +24,11 @@ def test_config_doctor_reports_missing_column(tmp_path: Path) -> None:
 
     assert report.ok is False
     assert any(item.code == "D104" for item in report.errors)
+
+
+def test_config_doctor_reports_builder_schema_mismatch() -> None:
+    report = analyze_config("configs/builder/smurf.yaml")
+
+    assert report.ok is False
+    assert any(item.code == "D002" for item in report.errors)
+    assert any("builder 风格配置" in item.message for item in report.errors)

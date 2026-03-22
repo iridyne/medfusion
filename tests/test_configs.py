@@ -25,6 +25,7 @@ from med_core.configs import (
     load_config,
     save_config,
 )
+from med_core.configs.config_loader import UnsupportedConfigSchemaError
 
 
 class TestConfigDataclasses(unittest.TestCase):
@@ -188,6 +189,16 @@ class TestConfigYAMLLoading(unittest.TestCase):
         """Test loading non-existent config file."""
         with self.assertRaises(FileNotFoundError):
             load_config(str(self.config_dir / "nonexistent.yaml"))
+
+    def test_load_builder_config_raises_clear_schema_error(self):
+        """Builder configs should fail fast with a clear train-schema mismatch error."""
+        with self.assertRaises(UnsupportedConfigSchemaError) as exc_info:
+            load_config("configs/builder/smurf.yaml")
+
+        message = str(exc_info.exception)
+        self.assertIn("builder 风格配置", message)
+        self.assertIn("build_model_from_config", message)
+        self.assertIn("configs/starter/", message)
 
 
 class TestConfigValidation(unittest.TestCase):

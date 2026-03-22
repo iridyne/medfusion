@@ -61,6 +61,7 @@ class GenericMultiModalModel(nn.Module):
         head: nn.Module,
         mil_aggregators: dict[str, nn.Module] | None = None,
         modality_names: list[str] | None = None,
+        modality_feature_dims: dict[str, int] | None = None,
     ):
         super().__init__()
 
@@ -69,10 +70,66 @@ class GenericMultiModalModel(nn.Module):
         self.fusion_module = fusion_module
         self.head = head
         self.mil_aggregators = nn.ModuleDict(mil_aggregators or {})
+        self.multimodal_attention: nn.Sequential | None = None
 
         # Validate
         if len(self.modality_backbones) < 2:
             raise ValueError("At least 2 modalities are required for multi-modal model")
+
+        if len(self.modality_names) > 2:
+            feature_dim = self._resolve_multimodal_feature_dim(modality_feature_dims)
+            hidden_dim = max(feature_dim // 4, 1)
+            self.multimodal_attention = nn.Sequential(
+                nn.Linear(feature_dim, hidden_dim),
+                nn.ReLU(),
+                nn.Linear(hidden_dim, 1),
+            )
+
+    def _resolve_multimodal_feature_dim(
+        self,
+        modality_feature_dims: dict[str, int] | None,
+    ) -> int:
+        """Resolve the shared feature dimension used for >2-modality pooling."""
+        resolved_dims: dict[str, int] = {}
+
+        for modality_name in self.modality_names:
+            if modality_feature_dims and modality_name in modality_feature_dims:
+                resolved_dims[modality_name] = int(modality_feature_dims[modality_name])
+                continue
+
+            aggregator = self.mil_aggregators.get(modality_name)
+            if aggregator is not None and hasattr(aggregator, "output_dim"):
+                resolved_dims[modality_name] = int(aggregator.output_dim)
+                continue
+
+            backbone = self.modality_backbones[modality_name]
+            if hasattr(backbone, "output_dim"):
+                resolved_dims[modality_name] = int(backbone.output_dim)
+
+        if len(resolved_dims) == len(self.modality_names):
+            unique_dims = set(resolved_dims.values())
+            if len(unique_dims) != 1:
+                raise ValueError(
+                    "For >2 modalities, all feature dimensions must match. "
+                    f"Got: {resolved_dims}",
+                )
+            feature_dim = next(iter(unique_dims))
+        elif hasattr(self.head, "input_dim"):
+            feature_dim = int(self.head.input_dim)
+        else:
+            raise ValueError(
+                "For >2 modalities, modality_feature_dims must be provided or "
+                "inferable from the modality backbones/head.",
+            )
+
+        if hasattr(self.head, "input_dim") and int(self.head.input_dim) != feature_dim:
+            raise ValueError(
+                "Head input dimension must match the shared multimodal feature dimension "
+                f"for >2 modalities. Got head.input_dim={self.head.input_dim}, "
+                f"feature_dim={feature_dim}",
+            )
+
+        return feature_dim
 
     def forward(
         self,
@@ -168,15 +225,10 @@ class GenericMultiModalModel(nn.Module):
                 feature_list, dim=1,
             )  # [B, num_modalities, feature_dim]
 
-            # Use learnable attention weights for weighted pooling
-            if not hasattr(self, 'multimodal_attention'):
-                # Initialize attention weights on first use
-                feature_dim = feature_tensor.size(-1)
-                self.multimodal_attention = nn.Sequential(
-                    nn.Linear(feature_dim, feature_dim // 4),
-                    nn.ReLU(),
-                    nn.Linear(feature_dim // 4, 1),
-                ).to(feature_tensor.device)
+            if self.multimodal_attention is None:
+                raise RuntimeError(
+                    "multimodal_attention was not initialized for a >2-modality model",
+                )
 
             # Compute attention scores: [B, num_modalities, 1]
             attention_scores = self.multimodal_attention(feature_tensor)
@@ -567,6 +619,7 @@ class MultiModalModelBuilder:
             head=head,
             mil_aggregators=mil_aggregators or None,
             modality_names=modality_names,
+            modality_feature_dims=modality_dims,
         )
 
         return model

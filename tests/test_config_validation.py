@@ -72,7 +72,6 @@ class TestConfigValidation:
         errors = validate_config(config)
         assert len(errors) == 0
 
-    @pytest.mark.skip(reason="Backbone validation not yet implemented")
     def test_invalid_backbone(self):
         """Test validation catches invalid backbone."""
         config = ExperimentConfig(
@@ -106,6 +105,55 @@ class TestConfigValidation:
         assert len(errors) > 0
         assert any("backbone" in e.path for e in errors)
         assert any(e.error_code == "E002" for e in errors)
+
+    def test_runtime_supported_backbone_and_fusion_pass_validation(self):
+        """Runtime-supported canonical values should also pass config validation."""
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="test_exp",
+            model=ModelConfig(
+                num_classes=2,
+                vision=VisionConfig(
+                    backbone="mobilenetv3_small",
+                    feature_dim=128,
+                    attention_type="none",
+                ),
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(
+                    fusion_type="cross_attention",
+                    hidden_dim=96,
+                    num_heads=4,
+                ),
+            ),
+            data=DataConfig(
+                data_root="data/",
+                csv_path="data.csv",
+                image_dir="images/",
+                train_ratio=0.7,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                batch_size=32,
+                image_size=224,
+            ),
+            training=TrainingConfig(
+                num_epochs=50,
+                optimizer=OptimizerConfig(
+                    optimizer="adam",
+                    learning_rate=1e-3,
+                ),
+                scheduler=SchedulerConfig(
+                    scheduler="cosine",
+                ),
+            ),
+            logging=LoggingConfig(
+                output_dir="outputs/",
+                use_tensorboard=True,
+                use_wandb=False,
+            ),
+        )
+
+        errors = validate_config(config)
+        assert len(errors) == 0
 
     def test_invalid_num_classes(self):
         """Test validation catches invalid num_classes."""

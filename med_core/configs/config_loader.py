@@ -26,6 +26,10 @@ from med_core.configs.base_config import (
 T = TypeVar("T", bound=BaseConfig)
 
 
+class UnsupportedConfigSchemaError(ValueError):
+    """Raised when a config file uses a different schema than the requested loader."""
+
+
 def _merge_dicts(base: dict, override: dict) -> dict:
     """Recursively merge override dict into base dict."""
     result = base.copy()
@@ -35,6 +39,44 @@ def _merge_dicts(base: dict, override: dict) -> dict:
         else:
             result[key] = value
     return result
+
+
+def _looks_like_builder_model_config(model_data: dict[str, Any]) -> bool:
+    """Detect builder-style model configs that cannot be loaded as ExperimentConfig."""
+    if "modalities" in model_data or "head" in model_data:
+        return True
+
+    fusion_config = model_data.get("fusion")
+    if isinstance(fusion_config, dict) and "strategy" in fusion_config:
+        return True
+
+    return False
+
+
+def _raise_for_unsupported_schema(
+    data: dict[str, Any],
+    config_path: Path,
+    config_class: type[T],
+) -> None:
+    """Fail fast with a clear error when the YAML uses a different config schema."""
+    if config_class is not ExperimentConfig:
+        return
+
+    model_data = data.get("model")
+    if not isinstance(model_data, dict):
+        return
+
+    if not _looks_like_builder_model_config(model_data):
+        return
+
+    raise UnsupportedConfigSchemaError(
+        "检测到 builder 风格配置，不能直接作为 CLI/Web 训练主链的 ExperimentConfig 读取。"
+        f"\n  config: {config_path}"
+        "\n  当前文件更像 `configs/builder/*` 结构，请使用 "
+        "`med_core.models.build_model_from_config()` 或 `MultiModalModelBuilder`。"
+        "\n  如果你想直接运行 `medfusion validate-config / train / build-results`，"
+        "请改用 `configs/starter/`、`configs/public_datasets/` 或 `configs/testing/` 下的 train schema。"
+    )
 
 
 def _dict_to_config(data: dict, config_class: type[T]) -> T:
@@ -151,6 +193,8 @@ def load_config(
     # Apply overrides
     if overrides:
         data = _merge_dicts(data, overrides)
+
+    _raise_for_unsupported_schema(data, config_path, config_class)
 
     return _dict_to_config(data, config_class)
 

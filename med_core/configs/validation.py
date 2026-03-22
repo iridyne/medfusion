@@ -8,9 +8,15 @@ clear error messages.
 import logging
 from dataclasses import dataclass
 
+from med_core.backbones.vision import list_available_backbones
 from med_core.configs.base_config import ExperimentConfig
+from med_core.fusion.strategies import list_available_fusions
 
 logger = logging.getLogger(__name__)
+
+
+VALID_BACKBONES = frozenset(list_available_backbones())
+VALID_FUSION_TYPES = frozenset(list_available_fusions())
 
 
 @dataclass
@@ -66,23 +72,13 @@ class ConfigValidator:
             )
 
         # Validate backbone
-        valid_backbones = {
-            "resnet18",
-            "resnet34",
-            "resnet50",
-            "resnet101",
-            "densenet121",
-            "efficientnet_b0",
-            "mobilenetv2",
-            "swin_tiny",
-        }
-        if model.vision.backbone not in valid_backbones:
+        if model.vision.backbone not in VALID_BACKBONES:
             self.errors.append(
                 ValidationError(
                     path="model.vision.backbone",
                     message=f"Invalid backbone: {model.vision.backbone}",
                     error_code="E002",
-                    suggestion=f"Choose from: {', '.join(sorted(valid_backbones))}",
+                    suggestion=f"Choose from: {', '.join(sorted(VALID_BACKBONES))}",
                 )
             )
 
@@ -108,14 +104,13 @@ class ConfigValidator:
             )
 
         # Validate fusion type
-        valid_fusion_types = {"concatenate", "bilinear", "attention", "gated"}
-        if model.fusion.fusion_type not in valid_fusion_types:
+        if model.fusion.fusion_type not in VALID_FUSION_TYPES:
             self.errors.append(
                 ValidationError(
                     path="model.fusion.fusion_type",
                     message=f"Invalid fusion_type: {model.fusion.fusion_type}",
                     error_code="E009",
-                    suggestion=f"Choose from: {', '.join(sorted(valid_fusion_types))}",
+                    suggestion=f"Choose from: {', '.join(sorted(VALID_FUSION_TYPES))}",
                 )
             )
 
