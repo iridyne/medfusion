@@ -13,6 +13,42 @@ from ..config import settings
 router = APIRouter()
 
 
+@router.get("/features")
+async def get_feature_status() -> dict[str, Any]:
+    """Expose stable and experimental feature boundaries for the current MVP."""
+    return {
+        "stable_paths": [
+            "/workbench",
+            "/datasets",
+            "/config",
+            "/training",
+            "/models",
+            "/system",
+        ],
+        "recommended_primary_flow": [
+            "workbench",
+            "run_wizard",
+            "training_monitor",
+            "model_library",
+        ],
+        "workflow": {
+            "enabled": settings.enable_experimental_workflow,
+            "status": (
+                "experimental" if settings.enable_experimental_workflow else "disabled"
+            ),
+            "ui_exposed": False,
+            "message": (
+                "Workflow editor is still experimental and is not part of the current MVP."
+            ),
+            "recommended_instead": [
+                "Use medfusion start -> Workbench",
+                "Generate config in Run Wizard",
+                "Run real training via /api/training or medfusion train",
+            ],
+        },
+    }
+
+
 @router.get("/info")
 async def get_system_info() -> dict[str, Any]:
     """获取系统信息"""

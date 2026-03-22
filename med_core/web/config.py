@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     auth_token: str | None = None
     secret_key: str = "change-this-in-production"
 
+    # 实验功能开关
+    enable_experimental_workflow: bool = False
+
     # 文件上传配置
     max_upload_size: int = 500 * 1024 * 1024  # 500MB
     allowed_extensions: set = {

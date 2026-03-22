@@ -27,6 +27,26 @@ router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 active_workflows: dict[str, WorkflowEngine] = {}
 
 
+def _workflow_disabled_detail() -> dict[str, Any]:
+    return {
+        "code": "workflow_experimental_disabled",
+        "message": (
+            "Workflow editor is experimental and disabled by default in the current MVP."
+        ),
+        "enable_env": "MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW=true",
+        "recommended_primary_flow": [
+            "Open Workbench with `medfusion start`",
+            "Create a real config in the Run Wizard",
+            "Use training monitor and model library for the current stable flow",
+        ],
+    }
+
+
+def _ensure_workflow_enabled() -> None:
+    if not settings.enable_experimental_workflow:
+        raise HTTPException(status_code=503, detail=_workflow_disabled_detail())
+
+
 class WorkflowData(BaseModel):
     """工作流数据模型"""
 
@@ -81,6 +101,7 @@ async def validate_workflow(request: WorkflowValidateRequest) -> WorkflowValidat
     - 端口类型匹配
     - 必需输入
     """
+    _ensure_workflow_enabled()
     try:
         engine = WorkflowEngine(data_dir=settings.data_dir)
         engine.load_workflow(request.workflow.model_dump())
@@ -102,6 +123,7 @@ async def execute_workflow(request: WorkflowExecuteRequest) -> WorkflowExecuteRe
     创建一个新的工作流执行实例，并在后台异步执行。
     返回 workflow_id 用于查询执行状态。
     """
+    _ensure_workflow_enabled()
     try:
         # 生成唯一 ID
         workflow_id = str(uuid.uuid4())
@@ -156,6 +178,7 @@ async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
     - 完成进度
     - 执行结果（如果已完成）
     """
+    _ensure_workflow_enabled()
     if workflow_id not in active_workflows:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
 
@@ -182,6 +205,7 @@ async def delete_workflow(workflow_id: str) -> dict[str, str]:
 
     清理已完成或失败的工作流。
     """
+    _ensure_workflow_enabled()
     if workflow_id not in active_workflows:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
 
@@ -197,6 +221,11 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) ->
     实时推送节点执行状态和进度。
     """
     await websocket.accept()
+
+    if not settings.enable_experimental_workflow:
+        await websocket.send_json({"type": "error", "detail": _workflow_disabled_detail()})
+        await websocket.close()
+        return
 
     if workflow_id not in active_workflows:
         await websocket.send_json({"error": f"工作流 {workflow_id} 不存在"})

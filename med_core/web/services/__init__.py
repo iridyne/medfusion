@@ -1,5 +1,5 @@
-"""服务模块"""
+"""Web service compatibility shims and shared helpers."""
 
-from .training_service import TrainingService
+from .training_service import RemovedTrainingServiceError, TrainingService
 
-__all__ = ["TrainingService"]
+__all__ = ["RemovedTrainingServiceError", "TrainingService"]

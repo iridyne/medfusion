@@ -1,69 +1,24 @@
-"""训练服务"""
+"""Deprecated legacy training service shim.
 
-import logging
-from concurrent.futures import ProcessPoolExecutor
-from typing import Any
+The real web training path is now owned by ``med_core.web.api.training`` and the
+``/api/training/*`` endpoints. This shim remains only to fail loudly and point
+callers at the supported path instead of silently running a second fake
+execution model.
+"""
 
-logger = logging.getLogger(__name__)
+from __future__ import annotations
+
+
+class RemovedTrainingServiceError(RuntimeError):
+    """Raised when legacy callers try to use the removed training service."""
 
 
 class TrainingService:
-    """训练任务管理服务"""
+    """Compatibility shim for the removed legacy training service."""
 
-    def __init__(self) -> None:
-        self.executor = ProcessPoolExecutor(max_workers=4)
-        self.jobs: dict[str, Any] = {}
-
-    def submit_job(self, job_id: str, config: dict[str, Any]) -> None:
-        """提交训练任务"""
-        logger.info(f"提交训练任务: {job_id}")
-
-        # 提交到进程池
-        future = self.executor.submit(self._run_training, job_id, config)
-        self.jobs[job_id] = future
-
-        logger.info(f"训练任务已提交到进程池: {job_id}")
-
-    def _run_training(self, job_id: str, config: dict[str, Any]) -> dict[str, Any]:
-        """运行训练任务（在子进程中执行）"""
-        try:
-            logger.info(f"开始训练任务: {job_id}")
-
-            # TODO: 实现实际的训练逻辑
-            # 1. 加载配置
-            # 2. 创建模型
-            # 3. 加载数据
-            # 4. 开始训练
-            # 5. 保存模型
-
-            logger.info(f"训练任务完成: {job_id}")
-            return {"status": "success"}
-
-        except Exception as e:
-            logger.error(f"训练任务失败: {job_id}, 错误: {e}")
-            return {"status": "failed", "error": str(e)}
-
-    def get_job_status(self, job_id: str) -> dict[str, Any]:
-        """获取任务状态"""
-        if job_id not in self.jobs:
-            return {"status": "not_found"}
-
-        future = self.jobs[job_id]
-
-        if future.running():
-            return {"status": "running"}
-        if future.done():
-            try:
-                result = future.result()
-                return result
-            except Exception as e:
-                return {"status": "failed", "error": str(e)}
-        else:
-            return {"status": "queued"}
-
-    def stop_job(self, job_id: str) -> None:
-        """停止任务"""
-        if job_id in self.jobs:
-            future = self.jobs[job_id]
-            future.cancel()
-            logger.info(f"训练任务已停止: {job_id}")
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        raise RemovedTrainingServiceError(
+            "Legacy med_core.web.services.TrainingService has been removed. "
+            "Use the real web training API (/api/training/start, /status, /history) "
+            "or the CLI entrypoints (`medfusion train`, `medfusion build-results`).",
+        )

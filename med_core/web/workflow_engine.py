@@ -143,25 +143,6 @@ class WorkflowEngine:
             self.resource_monitor = ResourceMonitor(interval=2.0, history_size=300)
             logger.info("Resource monitor enabled")
 
-    async def _execute_data_loader(
-        self,
-        node: Node,
-        inputs: dict[str, Any],
-    ) -> dict[str, Any]:
-        """执行数据加载节点"""
-        logger.info(f"Loading dataset: {node.data.get('datasetId')}")
-
-        # TODO: 实际的数据加载逻辑
-        # 这里返回模拟数据
-        return {
-            "dataset": {
-                "id": node.data.get("datasetId"),
-                "name": node.data.get("datasetName"),
-                "split": node.data.get("split", "train"),
-                "batch_size": node.data.get("batchSize", 32),
-            },
-        }
-
     def load_workflow(self, workflow_data: dict[str, Any]) -> None:
         """
         加载工作流数据
