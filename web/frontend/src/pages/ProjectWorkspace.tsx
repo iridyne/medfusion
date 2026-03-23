@@ -41,6 +41,7 @@ import {
   getProject,
   getProjects,
   getProjectTemplates,
+  updateProject,
   type Project,
   type ProjectCreate,
   type ProjectTaskType,
@@ -212,6 +213,12 @@ function getProjectNextAction(project: Project): {
   };
 }
 
+function getProjectStageProgress(project: Project): number {
+  const stages = getProjectStages(project);
+  const completed = stages.filter((stage) => stage.status === "completed").length;
+  return Math.round((completed / stages.length) * 100);
+}
+
 export default function ProjectWorkspace() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -224,6 +231,7 @@ export default function ProjectWorkspace() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [updatingProject, setUpdatingProject] = useState(false);
 
   const selectedTemplateId = Form.useWatch("template_id", form);
 
@@ -357,6 +365,22 @@ export default function ProjectWorkspace() {
     } catch (error: any) {
       console.error("Failed to export project bundle:", error);
       message.error(error?.response?.data?.detail || "导出项目交付包失败");
+    }
+  };
+
+  const handleBindDataset = async (projectId: number, datasetId?: number) => {
+    try {
+      setUpdatingProject(true);
+      await updateProject(projectId, {
+        dataset_id: datasetId,
+      });
+      await loadAll(projectId);
+      message.success(datasetId ? "项目已绑定数据集" : "项目数据集已清空");
+    } catch (error) {
+      console.error("Failed to update project dataset:", error);
+      message.error("更新项目数据集失败");
+    } finally {
+      setUpdatingProject(false);
     }
   };
 
@@ -537,9 +561,13 @@ export default function ProjectWorkspace() {
             extra={<Tag color="blue">{TASK_LABELS[focusProject.task_type]}</Tag>}
           >
             <Row gutter={[16, 16]} align="middle">
-              <Col xs={24} lg={16}>
+              <Col xs={24} lg={14}>
                 <Space direction="vertical" size={8} style={{ width: "100%" }}>
                   <Text>{focusNextAction.description}</Text>
+                  <Progress
+                    percent={getProjectStageProgress(focusProject)}
+                    status={focusProject.status === "failed" ? "exception" : "active"}
+                  />
                   <Space wrap>
                     <Tag color={getStatusTagColor(focusProject.status)}>
                       {focusProject.status}
@@ -551,7 +579,7 @@ export default function ProjectWorkspace() {
                   </Space>
                 </Space>
               </Col>
-              <Col xs={24} lg={8}>
+              <Col xs={24} lg={10}>
                 <Space wrap>
                   <Button
                     type="primary"
@@ -563,6 +591,11 @@ export default function ProjectWorkspace() {
                   <Button onClick={() => void handleViewProject(focusProject.id)}>
                     查看详情
                   </Button>
+                  {focusProject.dataset_id || focusProject.dataset_name ? null : (
+                    <Button onClick={() => void handleViewProject(focusProject.id)}>
+                      绑定数据集
+                    </Button>
+                  )}
                 </Space>
               </Col>
             </Row>
@@ -740,6 +773,32 @@ export default function ProjectWorkspace() {
                 >
                   {getProjectNextAction(selectedProject).label}
                 </Button>
+              </Space>
+            </Card>
+
+            <Card size="small" title="项目数据绑定">
+              <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                <Text type="secondary">
+                  如果项目还没有绑定数据集，可以直接在这里补上，不需要回到数据管理页。
+                </Text>
+                <Select
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  value={selectedProject.dataset_id ?? undefined}
+                  loading={updatingProject}
+                  placeholder="选择一个已登记数据集"
+                  options={datasets.map((dataset) => ({
+                    label: dataset.name,
+                    value: dataset.id,
+                  }))}
+                  onChange={(value) =>
+                    void handleBindDataset(
+                      selectedProject.id,
+                      value ? Number(value) : undefined,
+                    )
+                  }
+                />
               </Space>
             </Card>
 
