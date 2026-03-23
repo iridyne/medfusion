@@ -37,6 +37,9 @@ export interface ModelImportRequest {
   name?: string;
   description?: string;
   tags?: string[];
+  project_id?: number;
+  project_name?: string;
+  task_type?: string;
 }
 
 export interface Model {

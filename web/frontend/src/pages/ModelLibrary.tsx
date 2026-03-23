@@ -20,6 +20,7 @@ import {
   Form,
 } from "antd";
 import {
+  ArrowLeftOutlined,
   SearchOutlined,
   DownloadOutlined,
   DeleteOutlined,
@@ -231,6 +232,7 @@ export default function ModelLibrary() {
       name: values.name?.trim() || undefined,
       description: values.description?.trim() || undefined,
       tags: parsedTags.length ? parsedTags : undefined,
+      project_id: scopedProjectId ? Number(scopedProjectId) : undefined,
     };
 
     setImporting(true);
@@ -265,15 +267,16 @@ export default function ModelLibrary() {
     "swin_tiny",
   ];
 
-  const totalParams = models.reduce((sum, m) => sum + m.params, 0);
-  const totalSize = models.reduce((sum, m) => sum + m.size, 0);
-  const modelsWithAccuracy = models.filter((m) => m.accuracy !== undefined);
+  const visibleModels = scopedProjectId ? filteredModels : models;
+  const totalParams = visibleModels.reduce((sum, m) => sum + m.params, 0);
+  const totalSize = visibleModels.reduce((sum, m) => sum + m.size, 0);
+  const modelsWithAccuracy = visibleModels.filter((m) => m.accuracy !== undefined);
   const avgAccuracy =
     modelsWithAccuracy.length > 0
       ? modelsWithAccuracy.reduce((sum, m) => sum + (m.accuracy || 0), 0) /
         modelsWithAccuracy.length
       : 0;
-  const latestModel = models[0];
+  const latestModel = visibleModels[0];
 
   return (
     <div style={{ padding: 24 }}>
@@ -286,6 +289,14 @@ export default function ModelLibrary() {
       >
         <h1 style={{ marginBottom: 0 }}>模型库</h1>
         <Space>
+          {scopedProjectId ? (
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => setSearchParams(new URLSearchParams())}
+            >
+              退出项目过滤
+            </Button>
+          ) : null}
           <Button
             icon={<ReloadOutlined />}
             onClick={() => void loadModels()}
@@ -387,7 +398,7 @@ export default function ModelLibrary() {
           <Card>
             <Statistic
               title="模型总数"
-              value={models.length}
+              value={visibleModels.length}
               prefix={<ExperimentOutlined />}
             />
           </Card>
