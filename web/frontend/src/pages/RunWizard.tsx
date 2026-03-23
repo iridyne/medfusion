@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -16,6 +16,7 @@ import {
   Tag,
   Typography,
   message,
+  Segmented,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -28,6 +29,7 @@ import {
 
 import {
   ATTENTION_TYPE_OPTIONS,
+  applyLocalProTaskTemplate,
   AUGMENTATION_OPTIONS,
   buildResultsCommand,
   buildTrainCommand,
@@ -39,11 +41,13 @@ import {
   OPTIMIZER_OPTIONS,
   RUN_PRESET_OPTIONS,
   SCHEDULER_OPTIONS,
+  type LocalProTaskType,
   type RunPresetId,
   type RunSpec,
   validateRunSpec,
   VISION_BACKBONE_OPTIONS,
 } from "@/utils/runSpec";
+import { getProject } from "@/api/projects";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -59,9 +63,13 @@ function toConfigFileName(experimentName: string): string {
 
 export default function RunWizard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(0);
   const [preset, setPreset] = useState<RunPresetId>("quickstart");
   const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset("quickstart"));
+  const [doctorMode, setDoctorMode] = useState(false);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [templateInitialized, setTemplateInitialized] = useState(false);
 
   const issues = useMemo(() => validateRunSpec(spec), [spec]);
   const yamlPreview = useMemo(() => buildYamlFromRunSpec(spec), [spec]);
@@ -73,6 +81,98 @@ export default function RunWizard() {
   const warningCount = issues.filter((item) => item.level === "warning").length;
   const recommendedFusionDim = spec.model.vision.featureDim + spec.model.tabular.outputDim;
   const readyToRun = errorCount === 0;
+  const projectId = searchParams.get("projectId");
+  const contextProjectName = searchParams.get("projectName");
+  const taskType = searchParams.get("taskType") as LocalProTaskType | null;
+  const templateId = searchParams.get("template");
+
+  useEffect(() => {
+    if (templateInitialized) {
+      return;
+    }
+
+    if (taskType) {
+      setSpec((prev) => {
+        const templated = applyLocalProTaskTemplate(taskType, prev);
+        if (contextProjectName) {
+          templated.projectName = contextProjectName;
+          templated.logging.outputDir = inferOutputDir(
+            templated.projectName,
+            templated.experimentName,
+          );
+        }
+        if (templateId) {
+          templated.templateId = templateId;
+        }
+        return templated;
+      });
+      setDoctorMode(true);
+      setTemplateInitialized(true);
+      return;
+    }
+
+    if (templateId === "binary_basic") {
+      setSpec((prev) => applyLocalProTaskTemplate("binary_classification", prev));
+      setDoctorMode(true);
+      setTemplateInitialized(true);
+      return;
+    }
+    if (templateId === "multimodal_research") {
+      setSpec((prev) => applyLocalProTaskTemplate("multimodal_research", prev));
+      setDoctorMode(true);
+      setTemplateInitialized(true);
+      return;
+    }
+    if (templateId === "cox_survival") {
+      setSpec((prev) => applyLocalProTaskTemplate("cox_survival", prev));
+      setDoctorMode(true);
+      setTemplateInitialized(true);
+      return;
+    }
+
+    setTemplateInitialized(true);
+  }, [contextProjectName, taskType, templateId, templateInitialized]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectName(contextProjectName || null);
+      return;
+    }
+
+    const numericProjectId = Number(projectId);
+    if (!Number.isFinite(numericProjectId)) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const project = await getProject(numericProjectId);
+        setProjectName(project.name);
+        if (project.task_type) {
+          setDoctorMode(true);
+        }
+        setSpec((prev) => {
+          const next =
+            project.task_type && !taskType
+              ? applyLocalProTaskTemplate(project.task_type, prev)
+              : { ...prev };
+          next.projectName = project.name;
+          if (project.template_id) {
+            next.templateId = project.template_id;
+          }
+          if (project.task_type) {
+            next.taskType = project.task_type;
+          }
+          if (project.output_dir) {
+            next.logging.outputDir = project.output_dir;
+          }
+          return next;
+        });
+      } catch (error) {
+        console.error("Failed to load project context:", error);
+      }
+    })();
+  }, [contextProjectName, projectId]);
 
   const updateSpec = (patch: Partial<RunSpec>) => {
     setSpec((prev) => ({ ...prev, ...patch }));
@@ -186,32 +286,47 @@ export default function RunWizard() {
 
   const renderBasicsStep = () => (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Card size="small" title="选择起步 preset">
-        <Row gutter={[12, 12]}>
-          {RUN_PRESET_OPTIONS.map((item) => (
-            <Col xs={24} md={8} key={item.id}>
-              <Card
-                size="small"
-                hoverable
-                onClick={() => applyPreset(item.id)}
-                style={{
-                  borderColor: preset === item.id ? "#1677ff" : undefined,
-                  boxShadow: preset === item.id ? "0 0 0 2px rgba(22,119,255,0.12)" : undefined,
-                  cursor: "pointer",
-                }}
-              >
-                <Space direction="vertical" size={6} style={{ width: "100%" }}>
-                  <Space>
-                    <Text strong>{item.label}</Text>
-                    {preset === item.id ? <Tag color="processing">当前</Tag> : null}
+      {doctorMode ? (
+        <Alert
+          type={spec.taskType === "cox_survival" ? "warning" : "info"}
+          showIcon
+          message={projectName ? `当前项目：${projectName}` : "当前为医生模式"}
+          description={
+            spec.taskType === "cox_survival"
+              ? "当前项目已切换到 Cox 模板，但真实训练主链尚未支持 Cox 执行，因此这里只做项目和配置骨架。"
+              : "当前向导已优先按模板和项目上下文组织，建议先完成项目级配置，再进入训练或结果导出。"
+          }
+        />
+      ) : null}
+
+      {!doctorMode ? (
+        <Card size="small" title="选择起步 preset">
+          <Row gutter={[12, 12]}>
+            {RUN_PRESET_OPTIONS.map((item) => (
+              <Col xs={24} md={8} key={item.id}>
+                <Card
+                  size="small"
+                  hoverable
+                  onClick={() => applyPreset(item.id)}
+                  style={{
+                    borderColor: preset === item.id ? "#1677ff" : undefined,
+                    boxShadow: preset === item.id ? "0 0 0 2px rgba(22,119,255,0.12)" : undefined,
+                    cursor: "pointer",
+                  }}
+                >
+                  <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                    <Space>
+                      <Text strong>{item.label}</Text>
+                      {preset === item.id ? <Tag color="processing">当前</Tag> : null}
+                    </Space>
+                    <Text type="secondary">{item.description}</Text>
                   </Space>
-                  <Text type="secondary">{item.description}</Text>
-                </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Card>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      ) : null}
 
       <Card size="small" title="实验元信息">
         <Form layout="vertical">
@@ -234,24 +349,28 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item label="device">
-                <Select
-                  value={spec.device}
-                  options={DEVICE_OPTIONS.map((value) => ({ label: value, value }))}
-                  onChange={(value) => updateSpec({ device: value })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item label="seed">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  value={spec.seed}
-                  onChange={(value) => updateSpec({ seed: Number(value ?? 42) })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={12}>
+                  <Form.Item label="device">
+                    <Select
+                      value={spec.device}
+                      options={DEVICE_OPTIONS.map((value) => ({ label: value, value }))}
+                      onChange={(value) => updateSpec({ device: value })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item label="seed">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      value={spec.seed}
+                      onChange={(value) => updateSpec({ seed: Number(value ?? 42) })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
           </Row>
           <Form.Item label="description">
             <Input.TextArea
@@ -261,15 +380,25 @@ export default function RunWizard() {
               placeholder="可选，用于结果页和 README 说明"
             />
           </Form.Item>
-          <Form.Item label="tags">
-            <Select
-              mode="tags"
-              tokenSeparators={[","]}
-              value={spec.tags}
-              onChange={(value) => updateSpec({ tags: value })}
-              placeholder="输入标签后回车，例如 showcase, validation"
-            />
-          </Form.Item>
+          {!doctorMode ? (
+            <Form.Item label="tags">
+              <Select
+                mode="tags"
+                tokenSeparators={[","]}
+                value={spec.tags}
+                onChange={(value) => updateSpec({ tags: value })}
+                placeholder="输入标签后回车，例如 showcase, validation"
+              />
+            </Form.Item>
+          ) : (
+            <Space wrap>
+              {spec.templateId ? <Tag color="purple">{spec.templateId}</Tag> : null}
+              {spec.taskType ? <Tag color="blue">{spec.taskType}</Tag> : null}
+              {spec.tags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
+              ))}
+            </Space>
+          )}
         </Form>
       </Card>
     </Space>
@@ -280,8 +409,16 @@ export default function RunWizard() {
       <Alert
         type="info"
         showIcon
-        message="当前训练主链是图像 + 表格双分支"
-        description="除了图像路径和标签列，还需要至少一个 numerical_features 或 categorical_features。"
+        message={
+          spec.taskType === "cox_survival"
+            ? "当前 Cox 模板仍沿用图像 + 表格主链骨架"
+            : "当前训练主链是图像 + 表格双分支"
+        }
+        description={
+          spec.taskType === "cox_survival"
+            ? "真实 Cox 执行链尚未补齐，因此这里先保留数据字段骨架，用于项目规划和后续实现。"
+            : "除了图像路径和标签列，还需要至少一个 numerical_features 或 categorical_features。"
+        }
       />
 
       <Card size="small" title="数据路径与字段">
@@ -500,34 +637,38 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="vision.dropout">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={0.9}
-                  step={0.05}
-                  value={spec.model.vision.dropout}
-                  onChange={(value) => updateVision({ dropout: Number(value ?? 0.3) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item label="pretrained" valuePropName="checked">
-                <Switch
-                  checked={spec.model.vision.pretrained}
-                  onChange={(checked) => updateVision({ pretrained: checked })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item label="freeze_backbone" valuePropName="checked">
-                <Switch
-                  checked={spec.model.vision.freezeBackbone}
-                  onChange={(checked) => updateVision({ freezeBackbone: checked })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={6}>
+                  <Form.Item label="vision.dropout">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      max={0.9}
+                      step={0.05}
+                      value={spec.model.vision.dropout}
+                      onChange={(value) => updateVision({ dropout: Number(value ?? 0.3) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Form.Item label="pretrained" valuePropName="checked">
+                    <Switch
+                      checked={spec.model.vision.pretrained}
+                      onChange={(checked) => updateVision({ pretrained: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Form.Item label="freeze_backbone" valuePropName="checked">
+                    <Switch
+                      checked={spec.model.vision.freezeBackbone}
+                      onChange={(checked) => updateVision({ freezeBackbone: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
           </Row>
         </Form>
       </Card>
@@ -562,18 +703,20 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="tabular.dropout">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={0.9}
-                  step={0.05}
-                  value={spec.model.tabular.dropout}
-                  onChange={(value) => updateTabular({ dropout: Number(value ?? 0.2) })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <Col xs={24} md={6}>
+                <Form.Item label="tabular.dropout">
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={0.9}
+                    step={0.05}
+                    value={spec.model.tabular.dropout}
+                    onChange={(value) => updateTabular({ dropout: Number(value ?? 0.2) })}
+                  />
+                </Form.Item>
+              </Col>
+            ) : null}
             <Col xs={24} md={8}>
               <Form.Item label="fusion.fusion_type">
                 <Select
@@ -597,18 +740,20 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={8}>
-              <Form.Item label="fusion.dropout">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={0.9}
-                  step={0.05}
-                  value={spec.model.fusion.dropout}
-                  onChange={(value) => updateFusion({ dropout: Number(value ?? 0.3) })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <Col xs={24} md={8}>
+                <Form.Item label="fusion.dropout">
+                  <InputNumber
+                    style={{ width: "100%" }}
+                    min={0}
+                    max={0.9}
+                    step={0.05}
+                    value={spec.model.fusion.dropout}
+                    onChange={(value) => updateFusion({ dropout: Number(value ?? 0.3) })}
+                  />
+                </Form.Item>
+              </Col>
+            ) : null}
             <Col xs={24} md={8}>
               <Form.Item label="fusion.num_heads">
                 <InputNumber
@@ -619,40 +764,44 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={12} md={8}>
-              <Form.Item label="use_auxiliary_heads" valuePropName="checked">
-                <Switch
-                  checked={spec.model.useAuxiliaryHeads}
-                  onChange={(checked) => updateModel({ useAuxiliaryHeads: checked })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={8}>
-              <Form.Item
-                label="attention supervision"
-                extra={spec.model.vision.attentionType !== "cbam" ? "当前仅在 CBAM 下可用" : undefined}
-                valuePropName="checked"
-              >
-                <Switch
-                  checked={spec.training.useAttentionSupervision}
-                  disabled={spec.model.vision.attentionType !== "cbam"}
-                  onChange={(checked) => updateTraining({ useAttentionSupervision: checked })}
-                />
-              </Form.Item>
-            </Col>
-            {spec.training.useAttentionSupervision ? (
-              <Col xs={24} md={8}>
-                <Form.Item label="attention_loss_weight">
-                  <InputNumber
-                    style={{ width: "100%" }}
-                    min={0.01}
-                    max={1}
-                    step={0.01}
-                    value={spec.training.attentionLossWeight}
-                    onChange={(value) => updateTraining({ attentionLossWeight: Number(value ?? 0.1) })}
-                  />
-                </Form.Item>
-              </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={12} md={8}>
+                  <Form.Item label="use_auxiliary_heads" valuePropName="checked">
+                    <Switch
+                      checked={spec.model.useAuxiliaryHeads}
+                      onChange={(checked) => updateModel({ useAuxiliaryHeads: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} md={8}>
+                  <Form.Item
+                    label="attention supervision"
+                    extra={spec.model.vision.attentionType !== "cbam" ? "当前仅在 CBAM 下可用" : undefined}
+                    valuePropName="checked"
+                  >
+                    <Switch
+                      checked={spec.training.useAttentionSupervision}
+                      disabled={spec.model.vision.attentionType !== "cbam"}
+                      onChange={(checked) => updateTraining({ useAttentionSupervision: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+                {spec.training.useAttentionSupervision ? (
+                  <Col xs={24} md={8}>
+                    <Form.Item label="attention_loss_weight">
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        min={0.01}
+                        max={1}
+                        step={0.01}
+                        value={spec.training.attentionLossWeight}
+                        onChange={(value) => updateTraining({ attentionLossWeight: Number(value ?? 0.1) })}
+                      />
+                    </Form.Item>
+                  </Col>
+                ) : null}
+              </>
             ) : null}
           </Row>
         </Form>
@@ -764,98 +913,102 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="optimizer.weight_decay">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={1e-4}
-                  value={spec.training.optimizer.weightDecay}
-                  onChange={(value) => updateOptimizer({ weightDecay: Number(value ?? 0) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="optimizer.momentum">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  max={0.999}
-                  step={0.05}
-                  disabled={spec.training.optimizer.optimizer !== "sgd"}
-                  value={spec.training.optimizer.momentum}
-                  onChange={(value) => updateOptimizer({ momentum: Number(value ?? 0.9) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.scheduler">
-                <Select
-                  value={spec.training.scheduler.scheduler}
-                  options={SCHEDULER_OPTIONS.map((value) => ({ label: value, value }))}
-                  onChange={(value) => updateScheduler({ scheduler: value })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.min_lr">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={1e-6}
-                  value={spec.training.scheduler.minLr}
-                  onChange={(value) => updateScheduler({ minLr: Number(value ?? 1e-6) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.step_size">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={1}
-                  disabled={spec.training.scheduler.scheduler !== "step"}
-                  value={spec.training.scheduler.stepSize}
-                  onChange={(value) => updateScheduler({ stepSize: Number(value ?? 1) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.gamma">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.01}
-                  max={0.99}
-                  step={0.05}
-                  disabled={spec.training.scheduler.scheduler !== "step"}
-                  value={spec.training.scheduler.gamma}
-                  onChange={(value) => updateScheduler({ gamma: Number(value ?? 0.1) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.patience">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={1}
-                  disabled={spec.training.scheduler.scheduler !== "plateau"}
-                  value={spec.training.scheduler.patience}
-                  onChange={(value) => updateScheduler({ patience: Number(value ?? 5) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="scheduler.factor">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.05}
-                  max={0.9}
-                  step={0.05}
-                  disabled={spec.training.scheduler.scheduler !== "plateau"}
-                  value={spec.training.scheduler.factor}
-                  onChange={(value) => updateScheduler({ factor: Number(value ?? 0.5) })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={6}>
+                  <Form.Item label="optimizer.weight_decay">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      step={1e-4}
+                      value={spec.training.optimizer.weightDecay}
+                      onChange={(value) => updateOptimizer({ weightDecay: Number(value ?? 0) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="optimizer.momentum">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      max={0.999}
+                      step={0.05}
+                      disabled={spec.training.optimizer.optimizer !== "sgd"}
+                      value={spec.training.optimizer.momentum}
+                      onChange={(value) => updateOptimizer({ momentum: Number(value ?? 0.9) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.scheduler">
+                    <Select
+                      value={spec.training.scheduler.scheduler}
+                      options={SCHEDULER_OPTIONS.map((value) => ({ label: value, value }))}
+                      onChange={(value) => updateScheduler({ scheduler: value })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.min_lr">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      step={1e-6}
+                      value={spec.training.scheduler.minLr}
+                      onChange={(value) => updateScheduler({ minLr: Number(value ?? 1e-6) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.step_size">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={1}
+                      disabled={spec.training.scheduler.scheduler !== "step"}
+                      value={spec.training.scheduler.stepSize}
+                      onChange={(value) => updateScheduler({ stepSize: Number(value ?? 1) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.gamma">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0.01}
+                      max={0.99}
+                      step={0.05}
+                      disabled={spec.training.scheduler.scheduler !== "step"}
+                      value={spec.training.scheduler.gamma}
+                      onChange={(value) => updateScheduler({ gamma: Number(value ?? 0.1) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.patience">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={1}
+                      disabled={spec.training.scheduler.scheduler !== "plateau"}
+                      value={spec.training.scheduler.patience}
+                      onChange={(value) => updateScheduler({ patience: Number(value ?? 5) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="scheduler.factor">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0.05}
+                      max={0.9}
+                      step={0.05}
+                      disabled={spec.training.scheduler.scheduler !== "plateau"}
+                      value={spec.training.scheduler.factor}
+                      onChange={(value) => updateScheduler({ factor: Number(value ?? 0.5) })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
           </Row>
         </Form>
       </Card>
@@ -910,7 +1063,21 @@ export default function RunWizard() {
           <Button icon={<CopyOutlined />} onClick={() => void copyText(yamlPreview, "YAML 已复制")}>复制 YAML</Button>
           <Button icon={<DownloadOutlined />} onClick={downloadYaml}>下载 YAML</Button>
           <Button icon={<CopyOutlined />} onClick={() => void copyText(trainCommand, "训练命令已复制")}>复制训练命令</Button>
-          <Button icon={<ExperimentOutlined />} onClick={() => navigate("/training")}>打开训练监控</Button>
+          <Button
+            icon={<ExperimentOutlined />}
+            onClick={() => {
+              const next = new URLSearchParams();
+              if (projectId) next.set("projectId", projectId);
+              if (projectName) next.set("projectName", projectName);
+              if (spec.taskType) next.set("taskType", spec.taskType);
+              if (projectId || projectName || spec.taskType) {
+                next.set("action", "start");
+              }
+              navigate(`/training${next.toString() ? `?${next.toString()}` : ""}`);
+            }}
+          >
+            打开训练监控
+          </Button>
         </Space>
       </Card>
 
@@ -953,6 +1120,18 @@ export default function RunWizard() {
   return (
     <div style={{ padding: 24 }}>
       <Space direction="vertical" size={20} style={{ width: "100%" }}>
+        {projectName ? (
+          <Alert
+            type={spec.taskType === "cox_survival" ? "warning" : "info"}
+            showIcon
+            message={`项目上下文：${projectName}`}
+            description={
+              spec.taskType === "cox_survival"
+                ? "Cox 模板已经进入项目向导，但真实训练主链尚未支持执行；当前阶段先把项目、模板和配置链打通。"
+                : "当前向导已与项目工作区绑定，生成的配置和后续训练都会围绕这个项目组织。"
+            }
+          />
+        ) : null}
         <Card
           bordered={false}
           style={{
@@ -977,6 +1156,14 @@ export default function RunWizard() {
                 >
                   Real RunSpec
                 </Tag>
+                <Segmented
+                  value={doctorMode ? "doctor" : "advanced"}
+                  onChange={(value) => setDoctorMode(value === "doctor")}
+                  options={[
+                    { label: "医生模式", value: "doctor" },
+                    { label: "高级模式", value: "advanced" },
+                  ]}
+                />
                 <Title level={2} style={{ color: "#fff", margin: 0 }}>
                   真实训练配置向导
                 </Title>
