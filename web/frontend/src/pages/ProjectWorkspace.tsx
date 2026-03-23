@@ -11,6 +11,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Progress,
   Row,
   Select,
   Space,
@@ -54,11 +55,161 @@ const TASK_LABELS: Record<ProjectTaskType, string> = {
   multimodal_research: "多模态研究",
 };
 
+type ProjectStageStatus = "pending" | "active" | "completed" | "blocked";
+
+interface ProjectStage {
+  key: string;
+  title: string;
+  description: string;
+  status: ProjectStageStatus;
+}
+
+function getStageStatusLabel(status: ProjectStageStatus): string {
+  switch (status) {
+    case "completed":
+      return "已完成";
+    case "active":
+      return "进行中";
+    case "blocked":
+      return "受阻";
+    default:
+      return "待开始";
+  }
+}
+
 interface CreateProjectValues {
   name: string;
   description?: string;
   template_id: string;
   dataset_id?: number;
+}
+
+function getStageColor(status: ProjectStageStatus): string {
+  switch (status) {
+    case "completed":
+      return "#52c41a";
+    case "active":
+      return "#1677ff";
+    case "blocked":
+      return "#faad14";
+    default:
+      return "#d9d9d9";
+  }
+}
+
+function getStatusTagColor(status: string): string {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "running":
+    case "active":
+      return "processing";
+    case "paused":
+    case "blocked":
+      return "warning";
+    case "pending":
+    case "draft":
+      return "default";
+    case "failed":
+      return "error";
+    default:
+      return "default";
+  }
+}
+
+function getProjectStages(project: Project): ProjectStage[] {
+  const hasDataset = Boolean(project.dataset_id || project.dataset_name);
+  const hasConfig = Boolean(project.config_path);
+  const latestJob = project.latest_job;
+  const hasTraining = Boolean(latestJob);
+  const hasResults = Boolean(project.latest_model_id || project.latest_model);
+
+  return [
+    {
+      key: "dataset",
+      title: "数据准备",
+      description: hasDataset ? "已绑定数据集" : "需要先选择项目数据集",
+      status: hasDataset ? "completed" : "active",
+    },
+    {
+      key: "config",
+      title: "配置生成",
+      description: hasConfig ? "已生成配置" : "建议先进入项目向导生成配置",
+      status: hasConfig ? "completed" : hasDataset ? "active" : "pending",
+    },
+    {
+      key: "training",
+      title: "训练执行",
+      description: hasTraining
+        ? `最近状态：${latestJob?.status || "unknown"}`
+        : "尚未启动训练任务",
+      status: hasTraining
+        ? latestJob?.status === "completed"
+          ? "completed"
+          : latestJob?.status === "failed"
+            ? "blocked"
+            : "active"
+        : hasConfig
+          ? "active"
+          : "pending",
+    },
+    {
+      key: "results",
+      title: "结果导出",
+      description: hasResults ? "已有结果可查看和导出" : "训练完成后可生成结果包",
+      status: hasResults ? "completed" : hasTraining ? "active" : "pending",
+    },
+  ];
+}
+
+function getProjectNextAction(project: Project): {
+  label: string;
+  description: string;
+  route: string;
+} {
+  if (!project.dataset_id && !project.dataset_name) {
+    return {
+      label: "绑定数据集",
+      description: "先去数据管理准备或登记项目数据集。",
+      route: "/datasets",
+    };
+  }
+
+  if (!project.config_path) {
+    return {
+      label: "生成项目配置",
+      description: "进入项目向导，按模板生成真实训练配置。",
+      route: `/config?projectId=${project.id}&projectName=${encodeURIComponent(
+        project.name,
+      )}&taskType=${project.task_type}&template=${project.template_id}`,
+    };
+  }
+
+  if (!project.latest_job) {
+    return {
+      label: "启动训练",
+      description: "配置已就绪，建议进入训练监控发起项目训练。",
+      route: `/training?projectId=${project.id}&projectName=${encodeURIComponent(
+        project.name,
+      )}&taskType=${project.task_type}&action=start`,
+    };
+  }
+
+  if (!project.latest_model) {
+    return {
+      label: "查看训练进度",
+      description: "项目已启动训练，先关注训练状态和历史曲线。",
+      route: `/training?projectId=${project.id}&projectName=${encodeURIComponent(
+        project.name,
+      )}&taskType=${project.task_type}`,
+    };
+  }
+
+  return {
+    label: "查看项目结果",
+    description: "结果已经生成，可以查看 artifact 并导出项目交付包。",
+    route: `/models?projectId=${project.id}`,
+  };
 }
 
 export default function ProjectWorkspace() {
@@ -233,7 +384,7 @@ export default function ProjectWorkspace() {
       title: "状态",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => <Tag color={status === "completed" ? "success" : "processing"}>{status}</Tag>,
+      render: (status: string) => <Tag color={getStatusTagColor(status)}>{status}</Tag>,
     },
     {
       title: "数据集",
@@ -257,6 +408,18 @@ export default function ProjectWorkspace() {
       key: "updated_at",
       render: (value: string | null | undefined) =>
         value ? new Date(value).toLocaleString("zh-CN") : "-",
+    },
+    {
+      title: "下一步",
+      key: "next",
+      render: (_, record) => {
+        const nextAction = getProjectNextAction(record);
+        return (
+          <Button size="small" type="link" onClick={() => navigate(nextAction.route)}>
+            {nextAction.label}
+          </Button>
+        );
+      },
     },
     {
       title: "操作",
@@ -306,6 +469,8 @@ export default function ProjectWorkspace() {
   const totalProjects = projects.length;
   const completedProjects = projects.filter((item) => item.status === "completed").length;
   const runningProjects = projects.filter((item) => item.status === "running").length;
+  const focusProject = selectedProject ?? projects[0] ?? null;
+  const focusNextAction = focusProject ? getProjectNextAction(focusProject) : null;
 
   return (
     <div style={{ padding: 24 }}>
@@ -365,6 +530,44 @@ export default function ProjectWorkspace() {
             </Card>
           </Col>
         </Row>
+
+        {focusProject && focusNextAction ? (
+          <Card
+            title={`当前焦点项目：${focusProject.name}`}
+            extra={<Tag color="blue">{TASK_LABELS[focusProject.task_type]}</Tag>}
+          >
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} lg={16}>
+                <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                  <Text>{focusNextAction.description}</Text>
+                  <Space wrap>
+                    <Tag color={getStatusTagColor(focusProject.status)}>
+                      {focusProject.status}
+                    </Tag>
+                    <Tag>{focusProject.template_id}</Tag>
+                    {focusProject.dataset_name ? (
+                      <Tag color="green">{focusProject.dataset_name}</Tag>
+                    ) : null}
+                  </Space>
+                </Space>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Space wrap>
+                  <Button
+                    type="primary"
+                    icon={<RocketOutlined />}
+                    onClick={() => navigate(focusNextAction.route)}
+                  >
+                    {focusNextAction.label}
+                  </Button>
+                  <Button onClick={() => void handleViewProject(focusProject.id)}>
+                    查看详情
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+        ) : null}
 
         <Card
           title="模板入口"
@@ -497,6 +700,48 @@ export default function ProjectWorkspace() {
                 {selectedProject.output_dir || "-"}
               </Descriptions.Item>
             </Descriptions>
+
+            <Card size="small" title="项目阶段">
+              <Row gutter={[12, 12]}>
+                {getProjectStages(selectedProject).map((stage) => (
+                  <Col xs={24} md={12} key={stage.key}>
+                    <Card
+                      size="small"
+                      bodyStyle={{ padding: 12 }}
+                      style={{
+                        borderColor: getStageColor(stage.status),
+                        boxShadow:
+                          stage.status === "active"
+                            ? "0 0 0 2px rgba(22,119,255,0.08)"
+                            : undefined,
+                      }}
+                    >
+                      <Space direction="vertical" size={6} style={{ width: "100%" }}>
+                        <Space>
+                          <Text strong>{stage.title}</Text>
+                          <Tag color={getStatusTagColor(stage.status === "blocked" ? "failed" : stage.status)}>
+                            {getStageStatusLabel(stage.status)}
+                          </Tag>
+                        </Space>
+                        <Text type="secondary">{stage.description}</Text>
+                      </Space>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </Card>
+
+            <Card size="small" title="下一步建议">
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                <Text>{getProjectNextAction(selectedProject).description}</Text>
+                <Button
+                  type="primary"
+                  onClick={() => navigate(getProjectNextAction(selectedProject).route)}
+                >
+                  {getProjectNextAction(selectedProject).label}
+                </Button>
+              </Space>
+            </Card>
 
             <Card size="small" title="最近运行">
               {selectedProject.latest_job ? (
