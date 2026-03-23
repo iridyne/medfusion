@@ -3,6 +3,7 @@ import { Layout, Menu } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  AppstoreOutlined,
   ControlOutlined,
   ExperimentOutlined,
   DatabaseOutlined,
@@ -24,6 +25,11 @@ export default function Sidebar() {
       key: "/workbench",
       icon: <HomeOutlined />,
       label: "工作台",
+    },
+    {
+      key: "/projects",
+      icon: <AppstoreOutlined />,
+      label: "项目工作区",
     },
     {
       key: "/datasets",

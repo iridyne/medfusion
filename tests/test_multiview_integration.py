@@ -176,7 +176,8 @@ def test_multiview_pipeline():
     print("✓ All tests passed!")
     print("=" * 60)
 
-    return model, trainer
+    assert model is not None
+    assert trainer is not None
 
 
 def test_single_view_backward_compatibility():
@@ -229,7 +230,7 @@ def test_single_view_backward_compatibility():
 
 if __name__ == "__main__":
     # Run integration test
-    model, trainer = test_multiview_pipeline()
+    test_multiview_pipeline()
 
     # Test backward compatibility
     test_single_view_backward_compatibility()

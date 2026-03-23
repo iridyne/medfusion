@@ -85,6 +85,12 @@ uv run medfusion preprocess --input-dir data/raw --output-dir data/processed
 3. `medfusion build-results --config ... --checkpoint ...`
 4. 再进入 `Web UI` 或 `medfusion evaluate`
 
+补充说明：
+
+- `examples/` 主要是 API 演示、专题功能脚本和历史搭建方式说明，不是单一的官方训练入口。
+- 如果你想确认当前稳定路径，请优先看 [examples/README.md](examples/README.md) 和 `configs/starter/`。
+- `configs/builder/` / `MultiModalModelBuilder` 适合结构实验，不等价于当前 CLI / Web 训练主链。
+
 ### 启动 Web UI
 
 ```bash
@@ -234,7 +240,7 @@ medfusion/
 │   └── cli/                     # 命令行接口
 ├── configs/                     # 配置模板
 ├── tests/                       # 测试套件
-├── examples/                    # 使用示例
+├── examples/                    # API / 功能演示（见 examples/README.md）
 └── docs/                        # 文档
 ```
 

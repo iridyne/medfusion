@@ -106,7 +106,7 @@
 
 - **GitHub 仓库**: [iridite/medfusion](https://github.com/iridyne/medfusion)
 - **配置模板**: `configs/` - YAML 配置文件示例
-- **示例代码**: `examples/` - 使用示例
+- **示例代码**: `examples/README.md` - 先看示例分类，再决定是否进入具体脚本
 - **测试代码**: `tests/` - 单元测试和集成测试
 
 ---

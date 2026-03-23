@@ -1,6 +1,11 @@
 """
 End-to-end training demonstration using synthetic data.
 
+Status:
+- Historical Python API assembly demo
+- Useful for understanding how the framework was originally wired together
+- Not the current official CLI / Web training mainline
+
 This script demonstrates how to use the Med-Core framework to:
 1. Generate synthetic multimodal medical data
 2. Configure a flexible experiment

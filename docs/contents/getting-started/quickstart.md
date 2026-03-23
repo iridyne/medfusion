@@ -21,6 +21,7 @@ uv run medfusion build-results \
 - `configs/starter/`、`configs/public_datasets/`、`configs/testing/` 是当前 `medfusion train` 主链配置
 - `configs/builder/` 是 `MultiModalModelBuilder` / `build_model_from_config()` 的结构示例，不等价于 CLI 训练配置
 - `configs/legacy/` 是历史模板，不建议新用户从这里开始
+- `examples/` 主要是 API / 专题功能演示，不是当前最稳定的训练入口；先看 `examples/README.md`
 - 训练前先跑 `medfusion validate-config`
 - 训练后再跑 `medfusion build-results`，这样结果页和报告需要的 artifact 才完整
 
@@ -430,7 +431,7 @@ for fusion in ["concatenate", "gated", "attention"]:
 如果遇到本指南未涵盖的问题：
 
 1. 检查 GitHub Issues
-2. 查看 `examples/` 目录中的示例
+2. 先看 `examples/README.md`，确认你需要的是主链、builder 结构示例，还是专题功能 demo
 3. 阅读 `CLAUDE.md` 开发者文档
 4. 提交新的 Issue 并附上：
    - 完整的错误信息

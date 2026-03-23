@@ -432,6 +432,7 @@ def create_dataloaders(
         Dictionary of DataLoaders with keys 'train', 'val', 'test'
     """
     dataloaders = {}
+    effective_pin_memory = pin_memory and torch.cuda.is_available()
 
     # Training dataloader with optional weighted sampling
     if use_weighted_sampling:
@@ -446,7 +447,7 @@ def create_dataloaders(
             batch_size=batch_size,
             sampler=sampler,
             num_workers=num_workers,
-            pin_memory=pin_memory,
+            pin_memory=effective_pin_memory,
             drop_last=True,
         )
     else:
@@ -455,7 +456,7 @@ def create_dataloaders(
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
-            pin_memory=pin_memory,
+            pin_memory=effective_pin_memory,
             drop_last=True,
         )
 
@@ -465,7 +466,7 @@ def create_dataloaders(
         batch_size=batch_size,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=pin_memory,
+        pin_memory=effective_pin_memory,
     )
 
     # Test dataloader (if provided)
@@ -475,7 +476,7 @@ def create_dataloaders(
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=pin_memory,
+            pin_memory=effective_pin_memory,
         )
 
     return dataloaders

@@ -76,7 +76,7 @@ class TestImagePreprocessor:
         """Test preprocessing grayscale image."""
         # Create a grayscale image
         img_array = np.random.randint(0, 255, (100, 100), dtype=np.uint8)
-        img = Image.fromarray(img_array, mode="L")
+        img = Image.fromarray(img_array)
         img_path = tmp_path / "test_gray.jpg"
         img.save(img_path)
 

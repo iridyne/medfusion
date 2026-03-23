@@ -87,7 +87,7 @@ def visualize_attention_overlay(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -193,7 +193,7 @@ def visualize_attention_comparison(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -299,7 +299,7 @@ def visualize_attention_supervision_loss(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -414,7 +414,7 @@ def visualize_mil_attention(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -501,6 +501,6 @@ def plot_attention_statistics(
 
     # 保存
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig

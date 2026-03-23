@@ -119,6 +119,9 @@ export default function TrainingMonitor() {
   const wsClient = useRef<WebSocketClient | null>(null);
 
   const currentJob = jobs.find((job) => job.id === selectedJob);
+  const contextProjectId = searchParams.get("projectId");
+  const contextProjectName = searchParams.get("projectName");
+  const contextTaskType = searchParams.get("taskType");
 
   const loadJobs = async () => {
     try {
@@ -396,6 +399,9 @@ export default function TrainingMonitor() {
           batch_size: values.batchSize,
           learning_rate: values.learningRate,
         },
+        project_id: contextProjectId ? Number(contextProjectId) : undefined,
+        project_name: contextProjectName || undefined,
+        task_type: contextTaskType || undefined,
       };
 
       const response = await trainingApi.createJob(payload);
@@ -505,6 +511,12 @@ export default function TrainingMonitor() {
       key: "name",
     },
     {
+      title: "所属项目",
+      dataIndex: "projectName",
+      key: "projectName",
+      render: (value?: string) => value || "-",
+    },
+    {
       title: "状态",
       dataIndex: "status",
       key: "status",
@@ -601,6 +613,15 @@ export default function TrainingMonitor() {
 
   return (
     <div style={{ padding: 24 }}>
+      {contextProjectName ? (
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="info"
+          showIcon
+          message={`当前项目：${contextProjectName}`}
+          description="从项目工作区进入后，启动的训练任务会自动挂接到当前项目。"
+        />
+      ) : null}
       <div
         style={{
           display: "flex",

@@ -27,6 +27,10 @@ from med_core.fusion.kronecker import (
     KroneckerFusion,
     MultimodalKroneckerFusion,
 )
+from med_core.fusion.multimodal import (
+    MultimodalConcatenateFusion,
+    MultimodalGatedFusion,
+)
 from med_core.fusion.multiview_model import (
     MultiViewMultiModalFusionModel,
     create_multiview_fusion_model,
@@ -54,6 +58,8 @@ __all__ = [
     "create_fusion_model",
     "MultiViewMultiModalFusionModel",
     "create_multiview_fusion_model",
+    "MultimodalConcatenateFusion",
+    "MultimodalGatedFusion",
     # Basic fusion strategies
     "ConcatenateFusion",
     "GatedFusion",

@@ -1,8 +1,19 @@
 """Tests for GenericMultiModalModel and MultiModalModelBuilder."""
 
+import pytest
 import torch
-from torch import nn, optim
+from torch import nn
 
+from med_core.fusion.fused_attention import (
+    FusedAttentionFusion,
+    MultimodalFusedAttention,
+)
+from med_core.fusion.kronecker import CompactKroneckerFusion, KroneckerFusion
+from med_core.fusion.multimodal import (
+    MultimodalConcatenateFusion,
+    MultimodalGatedFusion,
+)
+from med_core.fusion.self_attention import MultimodalSelfAttentionFusion
 from med_core.models import MultiModalModelBuilder
 
 
@@ -18,8 +29,7 @@ class DummyBackbone(nn.Module):
         return self.proj(x)
 
 
-def test_three_modality_builder_registers_attention_before_forward() -> None:
-    """The >2-modality pooling module should exist before the optimizer is built."""
+def test_three_modality_concat_builder_uses_real_multimodal_fusion() -> None:
     model = (
         MultiModalModelBuilder()
         .add_modality("mod1", backbone=DummyBackbone())
@@ -30,18 +40,8 @@ def test_three_modality_builder_registers_attention_before_forward() -> None:
         .build()
     )
 
-    assert model.multimodal_attention is not None
-
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    optimizer_param_ids = {
-        id(param)
-        for group in optimizer.param_groups
-        for param in group["params"]
-    }
-    attention_params = list(model.multimodal_attention.parameters())
-
-    assert attention_params
-    assert all(id(param) in optimizer_param_ids for param in attention_params)
+    assert isinstance(model.fusion_module, MultimodalConcatenateFusion)
+    assert model.multimodal_attention is None
 
     logits, features = model(
         {
@@ -53,11 +53,170 @@ def test_three_modality_builder_registers_attention_before_forward() -> None:
     )
 
     assert logits.shape == (2, 2)
-    assert features["fused_features"].shape == (2, 8)
-    assert "fusion_aux" in features
-    assert features["fusion_aux"]["multimodal_attention_weights"].shape == (2, 3)
+    assert features["fused_features"].shape == (2, 24)
 
     loss = logits.sum()
     loss.backward()
 
-    assert all(param.grad is not None for param in attention_params)
+    concat_params = list(model.fusion_module.parameters())
+    assert concat_params
+    assert all(param.grad is not None for param in concat_params)
+
+
+def test_three_modality_gated_builder_uses_real_multimodal_fusion() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("mod1", backbone=DummyBackbone())
+        .add_modality("mod2", backbone=DummyBackbone())
+        .add_modality("mod3", backbone=DummyBackbone())
+        .set_fusion("gated", output_dim=10)
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, MultimodalGatedFusion)
+
+    logits, features = model(
+        {
+            "mod1": torch.randn(2, 4),
+            "mod2": torch.randn(2, 4),
+            "mod3": torch.randn(2, 4),
+        },
+        return_features=True,
+    )
+
+    assert logits.shape == (2, 2)
+    assert features["fused_features"].shape == (2, 10)
+    assert "fusion_aux" in features
+    assert features["fusion_aux"]["gate_values"].shape == (2, 3)
+
+
+def test_three_modality_attention_builder_uses_real_multimodal_fusion() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("mod1", backbone=DummyBackbone())
+        .add_modality("mod2", backbone=DummyBackbone())
+        .add_modality("mod3", backbone=DummyBackbone())
+        .set_fusion("attention", output_dim=12, num_heads=4)
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, MultimodalSelfAttentionFusion)
+
+    logits, features = model(
+        {
+            "mod1": torch.randn(2, 4),
+            "mod2": torch.randn(2, 4),
+            "mod3": torch.randn(2, 4),
+        },
+        return_features=True,
+    )
+
+    assert logits.shape == (2, 2)
+    assert features["fused_features"].shape == (2, 12)
+    assert "fusion_aux" in features
+    assert features["fusion_aux"]["attention_weights"].shape[0] == 2
+
+
+def test_three_modality_fused_attention_builder_uses_real_multimodal_fusion() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("mod1", backbone=DummyBackbone())
+        .add_modality("mod2", backbone=DummyBackbone())
+        .add_modality("mod3", backbone=DummyBackbone())
+        .set_fusion("fused_attention", output_dim=12, num_heads=4)
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, MultimodalFusedAttention)
+
+    logits = model(
+        {
+            "mod1": torch.randn(2, 4),
+            "mod2": torch.randn(2, 4),
+            "mod3": torch.randn(2, 4),
+        }
+    )
+
+    assert logits.shape == (2, 2)
+
+
+def test_three_modality_cross_attention_is_rejected() -> None:
+    with pytest.raises(ValueError, match=">2 modalities"):
+        (
+            MultiModalModelBuilder()
+            .add_modality("mod1", backbone=DummyBackbone())
+            .add_modality("mod2", backbone=DummyBackbone())
+            .add_modality("mod3", backbone=DummyBackbone())
+            .set_fusion("cross_attention")
+            .set_head("classification", num_classes=2)
+            .build()
+        )
+
+
+def test_builder_uses_real_kronecker_fusion_for_small_models() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("image", backbone=DummyBackbone(output_dim=8))
+        .add_modality("tabular", backbone=DummyBackbone(output_dim=8))
+        .set_fusion("kronecker", output_dim=6)
+        .set_head("classification", num_classes=3)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, KroneckerFusion)
+
+    logits = model(
+        {
+            "image": torch.randn(2, 4),
+            "tabular": torch.randn(2, 4),
+        }
+    )
+
+    assert logits.shape == (2, 3)
+
+
+def test_builder_uses_compact_kronecker_for_large_projections() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("image", backbone=DummyBackbone(output_dim=512))
+        .add_modality("tabular", backbone=DummyBackbone(output_dim=512))
+        .set_fusion("kronecker", output_dim=64)
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, CompactKroneckerFusion)
+
+    logits = model(
+        {
+            "image": torch.randn(2, 4),
+            "tabular": torch.randn(2, 4),
+        }
+    )
+
+    assert logits.shape == (2, 2)
+
+
+def test_builder_uses_real_fused_attention_module() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("image", backbone=DummyBackbone(output_dim=16))
+        .add_modality("tabular", backbone=DummyBackbone(output_dim=16))
+        .set_fusion("fused_attention", output_dim=12, num_heads=4, use_kronecker=False)
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.fusion_module, FusedAttentionFusion)
+
+    logits = model(
+        {
+            "image": torch.randn(2, 4),
+            "tabular": torch.randn(2, 4),
+        }
+    )
+
+    assert logits.shape == (2, 2)

@@ -17,12 +17,24 @@ from med_core.backbones import (
 from med_core.backbones.swin_2d import SwinTransformer2DBackbone
 from med_core.backbones.swin_3d import SwinTransformer3DBackbone
 from med_core.fusion import create_fusion_module
+from med_core.fusion.fused_attention import (
+    FusedAttentionFusion,
+    MultimodalFusedAttention,
+)
+from med_core.fusion.kronecker import CompactKroneckerFusion, KroneckerFusion
+from med_core.fusion.multimodal import (
+    MultimodalConcatenateFusion,
+    MultimodalGatedFusion,
+)
+from med_core.fusion.self_attention import MultimodalSelfAttentionFusion
 from med_core.heads import ClassificationHead
 from med_core.heads.survival import (
     CoxSurvivalHead,
     DeepSurvivalHead,
     DiscreteTimeSurvivalHead,
 )
+
+_MAX_FULL_KRONECKER_PARAMS = 10_000_000
 
 
 class GenericMultiModalModel(nn.Module):
@@ -76,7 +88,7 @@ class GenericMultiModalModel(nn.Module):
         if len(self.modality_backbones) < 2:
             raise ValueError("At least 2 modalities are required for multi-modal model")
 
-        if len(self.modality_names) > 2:
+        if len(self.modality_names) > 2 and isinstance(self.fusion_module, nn.Identity):
             feature_dim = self._resolve_multimodal_feature_dim(modality_feature_dims)
             hidden_dim = max(feature_dim // 4, 1)
             self.multimodal_attention = nn.Sequential(
@@ -218,25 +230,41 @@ class GenericMultiModalModel(nn.Module):
                 fused_features = self.fusion_module(feat1, feat2)
                 fusion_aux = None
         else:
-            # Multi-modal fusion (>2 modalities)
-            # Stack features and use attention-based pooling
             feature_list = [modality_features[name] for name in self.modality_names]
-            feature_tensor = torch.stack(
-                feature_list, dim=1,
-            )  # [B, num_modalities, feature_dim]
+            if isinstance(self.fusion_module, nn.Identity):
+                feature_tensor = torch.stack(
+                    feature_list, dim=1,
+                )  # [B, num_modalities, feature_dim]
 
-            if self.multimodal_attention is None:
-                raise RuntimeError(
-                    "multimodal_attention was not initialized for a >2-modality model",
-                )
+                if self.multimodal_attention is None:
+                    raise RuntimeError(
+                        "multimodal_attention was not initialized for a >2-modality model",
+                    )
 
-            # Compute attention scores: [B, num_modalities, 1]
-            attention_scores = self.multimodal_attention(feature_tensor)
-            attention_weights = torch.softmax(attention_scores, dim=1)
-
-            # Weighted sum: [B, feature_dim]
-            fused_features = (feature_tensor * attention_weights).sum(dim=1)
-            fusion_aux = {"multimodal_attention_weights": attention_weights.squeeze(-1)}
+                attention_scores = self.multimodal_attention(feature_tensor)
+                attention_weights = torch.softmax(attention_scores, dim=1)
+                fused_features = (feature_tensor * attention_weights).sum(dim=1)
+                fusion_aux = {
+                    "multimodal_attention_weights": attention_weights.squeeze(-1),
+                }
+            elif (
+                hasattr(self.fusion_module, "forward")
+                and "return_attention" in self.fusion_module.forward.__code__.co_varnames
+            ):
+                fusion_result = self.fusion_module(feature_list, return_attention=True)
+                if isinstance(fusion_result, tuple):
+                    fused_features, attention = fusion_result
+                    fusion_aux = {"attention_weights": attention}
+                else:
+                    fused_features = fusion_result
+                    fusion_aux = None
+            else:
+                fusion_result = self.fusion_module(feature_list)
+                if isinstance(fusion_result, tuple):
+                    fused_features, fusion_aux = fusion_result
+                else:
+                    fused_features = fusion_result
+                    fusion_aux = None
 
         # Apply task head
         output = self.head(fused_features)
@@ -543,47 +571,115 @@ class MultiModalModelBuilder:
             }
 
             # Handle special fusion types
-            if fusion_strategy in ["kronecker", "fused_attention"]:
-                # These are not in the standard fusion registry
-                # For now, fall back to concatenate and clear incompatible kwargs
-                fusion_strategy = "concatenate"
-                # Only keep output_dim if present
-                fusion_kwargs = {
-                    k: v for k, v in fusion_kwargs.items() if k == "output_dim"
-                }
+            if fusion_strategy == "kronecker":
+                fusion_dim = int(fusion_kwargs.pop("output_dim", min(dim1, dim2)))
+                dropout = float(fusion_kwargs.pop("dropout", 0.1))
+                use_bilinear = bool(fusion_kwargs.pop("use_bilinear", False))
+                sketch_dim = int(fusion_kwargs.pop("sketch_dim", 2048))
+
+                # A full Kronecker projection at common medical feature sizes
+                # can easily reach hundreds of MB or more. Use the exact module
+                # for smaller models and switch to the compact approximation when
+                # the projection would become unreasonably large.
+                if use_bilinear or (dim1 * dim2 * fusion_dim) <= _MAX_FULL_KRONECKER_PARAMS:
+                    fusion_module = KroneckerFusion(
+                        dim1=dim1,
+                        dim2=dim2,
+                        output_dim=fusion_dim,
+                        dropout=dropout,
+                        use_bilinear=use_bilinear,
+                    )
+                else:
+                    fusion_module = CompactKroneckerFusion(
+                        dim1=dim1,
+                        dim2=dim2,
+                        output_dim=fusion_dim,
+                        sketch_dim=sketch_dim,
+                        dropout=dropout,
+                    )
+            elif fusion_strategy == "fused_attention":
+                fusion_dim = int(fusion_kwargs.pop("output_dim", min(dim1, dim2)))
+                fusion_module = FusedAttentionFusion(
+                    dim1=dim1,
+                    dim2=dim2,
+                    output_dim=fusion_dim,
+                    num_heads=int(fusion_kwargs.pop("num_heads", 8)),
+                    dropout=float(fusion_kwargs.pop("dropout", 0.1)),
+                    use_kronecker=bool(fusion_kwargs.pop("use_kronecker", True)),
+                )
             elif fusion_strategy in fusion_alias_map:
                 fusion_strategy = fusion_alias_map[fusion_strategy]
+                # Determine output dimension
+                if "output_dim" not in fusion_kwargs:
+                    if fusion_strategy == "concatenate":
+                        fusion_kwargs["output_dim"] = dim1 + dim2
+                    else:
+                        fusion_kwargs["output_dim"] = min(dim1, dim2)
+
+                fusion_module = create_fusion_module(
+                    fusion_type=fusion_strategy,
+                    vision_dim=dim1,
+                    tabular_dim=dim2,
+                    **fusion_kwargs,
+                )
+                fusion_dim = fusion_kwargs["output_dim"]
             else:
                 raise ValueError(
                     f"Unknown fusion strategy: {fusion_strategy}. "
                     f"Available: {list(fusion_alias_map.keys()) + ['kronecker', 'fused_attention']}",
                 )
-
-            # Determine output dimension
-            if "output_dim" not in fusion_kwargs:
-                if fusion_strategy == "concatenate":
-                    fusion_kwargs["output_dim"] = dim1 + dim2
-                else:
-                    fusion_kwargs["output_dim"] = min(dim1, dim2)
-
-            fusion_module = create_fusion_module(
-                fusion_type=fusion_strategy,
-                vision_dim=dim1,
-                tabular_dim=dim2,
-                **fusion_kwargs,
-            )
-            fusion_dim = fusion_kwargs["output_dim"]
         else:
-            # Multi-modal fusion (>2 modalities)
-            # For now, use simple mean pooling
-            # All modalities should have same dimension
             dims = list(modality_dims.values())
-            if len(set(dims)) > 1:
-                raise ValueError(
-                    f"For >2 modalities, all feature dimensions must match. Got: {modality_dims}",
+            fusion_strategy = self._fusion_config["strategy"]
+            fusion_kwargs = self._fusion_config["kwargs"].copy()
+
+            if fusion_strategy in {"concat", "concatenate"}:
+                fusion_dim = int(fusion_kwargs.pop("output_dim", sum(dims)))
+                fusion_module = MultimodalConcatenateFusion(
+                    modality_dims=dims,
+                    output_dim=fusion_dim,
+                    dropout=float(fusion_kwargs.pop("dropout", 0.1)),
                 )
-            fusion_dim = dims[0]
-            fusion_module = nn.Identity()  # Placeholder
+            elif fusion_strategy == "gated":
+                fusion_dim = int(fusion_kwargs.pop("output_dim", min(dims)))
+                fusion_module = MultimodalGatedFusion(
+                    modality_dims=dims,
+                    output_dim=fusion_dim,
+                    dropout=float(fusion_kwargs.pop("dropout", 0.1)),
+                )
+            elif fusion_strategy == "attention":
+                fusion_dim = int(fusion_kwargs.pop("output_dim", min(dims)))
+                fusion_module = MultimodalSelfAttentionFusion(
+                    modality_dims=dims,
+                    output_dim=fusion_dim,
+                    num_heads=int(fusion_kwargs.pop("num_heads", 8)),
+                    dropout=float(fusion_kwargs.pop("dropout", 0.1)),
+                )
+            elif fusion_strategy == "fused_attention":
+                fusion_dim = int(fusion_kwargs.pop("output_dim", min(dims)))
+                fusion_module = MultimodalFusedAttention(
+                    modality_dims=dims,
+                    output_dim=fusion_dim,
+                    num_heads=int(fusion_kwargs.pop("num_heads", 8)),
+                    fusion_strategy=str(fusion_kwargs.pop("multimodal_strategy", "sequential")),
+                    dropout=float(fusion_kwargs.pop("dropout", 0.1)),
+                )
+            elif fusion_strategy == "kronecker":
+                raise ValueError(
+                    "Fusion strategy 'kronecker' is not currently supported for >2 modalities "
+                    "in MultiModalModelBuilder. Use 'concat', 'gated', 'attention', or "
+                    "'fused_attention', or reduce to 2 modalities.",
+                )
+            elif fusion_strategy in {"cross_attention", "bilinear"}:
+                raise ValueError(
+                    f"Fusion strategy '{fusion_strategy}' is not currently supported for "
+                    ">2 modalities in MultiModalModelBuilder.",
+                )
+            else:
+                raise ValueError(
+                    f"Unknown fusion strategy: {fusion_strategy}. "
+                    "Available for >2 modalities: ['concat', 'gated', 'attention', 'fused_attention']",
+                )
 
         # Build task head
         head_type = self._head_config["task_type"]

@@ -1,6 +1,11 @@
 """
 Multi-Modal Model Builder Demo
 
+Status:
+- Builder API structure demo
+- Useful for flexible modality composition experiments
+- Not equivalent to the current `medfusion train` config schema
+
 This script demonstrates how to use the MultiModalModelBuilder to create
 various multi-modal models for medical imaging tasks.
 """
@@ -200,7 +205,7 @@ def example_three_modalities():
             input_dim=15,
             feature_dim=256,
         )
-        .set_fusion("concat")  # For >2 modalities, uses mean pooling internally
+        .set_fusion("concat", output_dim=256)  # Actual concatenate + projection for >2 modalities
         .set_head("classification", num_classes=3)
         .build()
     )

@@ -2,6 +2,7 @@
 测试模型导出功能
 """
 
+import importlib.util
 import tempfile
 from pathlib import Path
 
@@ -14,6 +15,9 @@ from med_core.utils.export import (
     MultiModalExporter,
     export_model,
 )
+
+ONNX_AVAILABLE = importlib.util.find_spec("onnx") is not None
+requires_onnx = pytest.mark.skipif(not ONNX_AVAILABLE, reason="onnx not installed")
 
 
 class SimpleModel(nn.Module):
@@ -72,6 +76,7 @@ class TestModelExporter:
         assert exporter.input_shape == (3, 224, 224)
         assert exporter.device == "cpu"
 
+    @requires_onnx
     def test_export_onnx(self):
         """测试导出 ONNX"""
         model = SimpleModel()
@@ -120,6 +125,7 @@ class TestModelExporter:
             result = exporter.verify_torchscript(output_path)
             assert result is True
 
+    @requires_onnx
     def test_dynamic_axes(self):
         """测试动态轴"""
         model = SimpleModel()
@@ -155,6 +161,7 @@ class TestMultiModalExporter:
         assert exporter.model is not None
         assert len(exporter.input_shapes) == 2
 
+    @requires_onnx
     def test_export_onnx(self):
         """测试导出 ONNX"""
         model = MultiModalModel()
@@ -199,6 +206,7 @@ class TestMultiModalExporter:
 class TestExportModel:
     """测试 export_model 便捷函数"""
 
+    @requires_onnx
     def test_export_onnx(self):
         """测试导出 ONNX"""
         model = SimpleModel()

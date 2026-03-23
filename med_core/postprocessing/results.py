@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from PIL import Image
@@ -23,7 +24,11 @@ from torch.utils.data import DataLoader
 
 from med_core.backbones import create_tabular_backbone, create_vision_backbone
 from med_core.configs import load_config
-from med_core.datasets import MedicalMultimodalDataset, get_val_transforms, split_dataset
+from med_core.datasets import (
+    MedicalMultimodalDataset,
+    get_val_transforms,
+    split_dataset,
+)
 from med_core.evaluation.interpretability import GradCAM
 from med_core.fusion import MultiModalFusionModel, create_fusion_module
 from med_core.shared.visualization import (
@@ -406,7 +411,7 @@ def _generate_attention_artifacts(
             ),
             save_path=image_path,
         )
-        figure.clf()
+        plt.close(figure)
 
         heatmaps.append(attention_map)
         manifest_items.append(
@@ -431,7 +436,7 @@ def _generate_attention_artifacts(
         labels=[item["title"] for item in manifest_items],
         save_path=statistics_path,
     )
-    statistics_figure.clf()
+    plt.close(statistics_figure)
 
     manifest = {
         "items": manifest_items,

@@ -252,7 +252,7 @@ model = (
     .add_modality("xray", backbone="resnet18", modality_type="vision", feature_dim=256)
     .add_modality("ct", backbone="swin3d_tiny", modality_type="vision3d", in_channels=1, feature_dim=256)
     .add_modality("clinical", backbone="mlp", modality_type="tabular", input_dim=15, feature_dim=256)
-    .set_fusion("concat")  # 对于 >2 模态，内部使用 mean pooling
+    .set_fusion("concat", output_dim=256)  # 对于 >2 模态，实际执行 concatenate + projection
     .set_head("classification", num_classes=3)
     .build()
 )

@@ -4,6 +4,7 @@
 支持将 PyTorch 模型导出为 ONNX 和 TorchScript 格式。
 """
 
+import importlib.util
 import logging
 import warnings
 from pathlib import Path
@@ -13,6 +14,33 @@ import torch
 from torch import nn
 
 logger = logging.getLogger(__name__)
+
+
+def _has_optional_dependency(module_name: str) -> bool:
+    """Return whether an optional dependency is installed."""
+    return importlib.util.find_spec(module_name) is not None
+
+
+def _freeze_for_serialization(
+    module: torch.jit.ScriptModule,
+    optimize: bool,
+) -> torch.jit.ScriptModule:
+    """
+    Freeze TorchScript modules before saving.
+
+    `optimize_for_inference()` can produce artifacts that are fast in-memory but
+    fail to reload once serialized for some models. Freezing keeps the saved
+    artifact portable while still applying basic inference-oriented cleanup.
+    """
+    module = module.eval()
+    if not optimize:
+        return module
+
+    try:
+        return torch.jit.freeze(module)
+    except Exception as exc:  # pragma: no cover - best effort logging path
+        logger.warning("Failed to freeze TorchScript module, saving unoptimized graph: %s", exc)
+        return module
 
 
 class ModelExporter:
@@ -99,6 +127,12 @@ class ModelExporter:
         logger.info(f"  Input shape: {dummy_input.shape}")
         logger.info(f"  Opset version: {opset_version}")
 
+        if not _has_optional_dependency("onnx"):
+            raise RuntimeError(
+                "ONNX export requires the optional dependency `onnx`. "
+                "Install it before calling export_onnx().",
+            )
+
         # 导出
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -112,6 +146,7 @@ class ModelExporter:
                 output_names=output_names,
                 dynamic_axes=dynamic_axes,
                 verbose=verbose,
+                dynamo=False,
                 **kwargs,
             )
 
@@ -150,19 +185,26 @@ class ModelExporter:
             logger.info(f"  Input shape: {dummy_input.shape}")
 
             traced_model = torch.jit.trace(self.model, dummy_input, **kwargs)
-
-            if optimize:
-                traced_model = torch.jit.optimize_for_inference(traced_model)
-
+            traced_model = _freeze_for_serialization(traced_model, optimize=optimize)
             traced_model.save(str(output_path))
 
         elif method == "script":
             # 使用 script 方法
-            scripted_model = torch.jit.script(self.model, **kwargs)
+            try:
+                scripted_model = torch.jit.script(self.model, **kwargs)
+            except (OSError, RuntimeError) as exc:
+                logger.warning(
+                    "torch.jit.script failed for %s, falling back to trace export: %s",
+                    self.model.__class__.__name__,
+                    exc,
+                )
+                dummy_input = torch.randn(1, *self.input_shape).to(self.device)
+                scripted_model = torch.jit.trace(self.model, dummy_input)
 
-            if optimize:
-                scripted_model = torch.jit.optimize_for_inference(scripted_model)
-
+            scripted_model = _freeze_for_serialization(
+                scripted_model,
+                optimize=optimize,
+            )
             scripted_model.save(str(output_path))
 
         else:
@@ -407,6 +449,12 @@ class MultiModalExporter(ModelExporter):
         for name, dummy_input in zip(input_names, dummy_inputs):
             logger.info(f"  {name}: {dummy_input.shape}")
 
+        if not _has_optional_dependency("onnx"):
+            raise RuntimeError(
+                "ONNX export requires the optional dependency `onnx`. "
+                "Install it before calling export_onnx().",
+            )
+
         # 导出
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -420,6 +468,7 @@ class MultiModalExporter(ModelExporter):
                 output_names=output_names,
                 dynamic_axes=dynamic_axes,
                 verbose=verbose,
+                dynamo=False,
                 **kwargs,
             )
 
@@ -446,18 +495,24 @@ class MultiModalExporter(ModelExporter):
                 logger.info(f"  {name}: {dummy_input.shape}")
 
             traced_model = torch.jit.trace(self.model, dummy_inputs, **kwargs)
-
-            if optimize:
-                traced_model = torch.jit.optimize_for_inference(traced_model)
-
+            traced_model = _freeze_for_serialization(traced_model, optimize=optimize)
             traced_model.save(str(output_path))
 
         elif method == "script":
-            scripted_model = torch.jit.script(self.model, **kwargs)
+            try:
+                scripted_model = torch.jit.script(self.model, **kwargs)
+            except (OSError, RuntimeError) as exc:
+                logger.warning(
+                    "torch.jit.script failed for %s, falling back to trace export: %s",
+                    self.model.__class__.__name__,
+                    exc,
+                )
+                scripted_model = torch.jit.trace(self.model, self._create_dummy_inputs())
 
-            if optimize:
-                scripted_model = torch.jit.optimize_for_inference(scripted_model)
-
+            scripted_model = _freeze_for_serialization(
+                scripted_model,
+                optimize=optimize,
+            )
             scripted_model.save(str(output_path))
 
         else:

@@ -92,10 +92,11 @@ export default function ModelLibrary() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const scopedProjectId = searchParams.get("projectId");
 
   useEffect(() => {
     filterModels();
-  }, [searchText, filterBackbone, filterFormat, models]);
+  }, [searchText, filterBackbone, filterFormat, models, scopedProjectId]);
 
   const loadModels = async (focusModelId?: number) => {
     setLoading(true);
@@ -136,6 +137,10 @@ export default function ModelLibrary() {
 
   const filterModels = () => {
     let filtered = models;
+
+    if (scopedProjectId) {
+      filtered = filtered.filter((m) => String(m.project_id ?? "") === scopedProjectId);
+    }
 
     if (searchText) {
       filtered = filtered.filter(
@@ -298,6 +303,16 @@ export default function ModelLibrary() {
         </Space>
       </div>
 
+      {scopedProjectId ? (
+        <Alert
+          style={{ marginTop: 16 }}
+          type="info"
+          showIcon
+          message={`当前只显示项目 ${scopedProjectId} 的结果`}
+          description="这是从项目工作区跳转过来的结果视图，用于聚焦当前项目导出的模型与 artifact。"
+        />
+      ) : null}
+
       {latestModel && (
         <Card
           style={{ marginTop: 16 }}
@@ -318,6 +333,9 @@ export default function ModelLibrary() {
                     <Tag color="blue">{latestModel.backbone}</Tag>
                     <Tag color="green">{latestModel.dataset_name || "未命名数据集"}</Tag>
                     <Tag color="purple">{latestModel.displayFormat.toUpperCase()}</Tag>
+                    {latestModel.project_name ? (
+                      <Tag color="cyan">{latestModel.project_name}</Tag>
+                    ) : null}
                     {latestModel.tags?.map((tag) => (
                       <Tag key={tag}>{tag}</Tag>
                     ))}
@@ -481,7 +499,7 @@ export default function ModelLibrary() {
                     {model.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
                   </div>
                   <div style={{ fontSize: 12, color: "#999" }}>
-                    数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
+                    数据集: {model.dataset_name || "-"} | 项目: {model.project_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
                     {model.createdAt ? new Date(model.createdAt).toLocaleString("zh-CN") : "-"}
                   </div>
                   <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>

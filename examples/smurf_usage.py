@@ -1,6 +1,11 @@
 """
 SMuRF Model Usage Examples
 
+Status:
+- Direct model API demo
+- Useful for understanding SMuRF / MIL interfaces
+- Not the current official end-to-end training entrypoint
+
 This script demonstrates how to use the SMuRF (Survival Multimodal
 Radiology-Pathology Fusion) model for multimodal medical imaging analysis.
 """

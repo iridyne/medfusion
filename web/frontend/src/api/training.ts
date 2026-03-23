@@ -16,11 +16,18 @@ export interface TrainingJobCreate {
   training_model_config: Record<string, any>;
   dataset_config: Record<string, any>;
   training_config: Record<string, any>;
+  project_id?: number;
+  project_name?: string;
+  task_type?: string;
+  template_id?: string;
 }
 
 export interface TrainingJob {
   id: string;
   name: string;
+  projectId?: number;
+  projectName?: string;
+  taskType?: string;
   status: "queued" | "running" | "paused" | "completed" | "failed" | "stopped";
   progress: number;
   epoch: number;
@@ -46,6 +53,9 @@ interface BackendTrainingJob {
   experiment_name: string;
   dataset_name?: string | null;
   backbone?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  task_type?: string | null;
   status: string;
   progress: number;
   current_epoch: number;
@@ -60,6 +70,9 @@ interface BackendTrainingStatus {
   experiment_name: string;
   dataset_name?: string | null;
   backbone?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  task_type?: string | null;
   status: string;
   progress: number;
   current_epoch: number;
@@ -73,6 +86,9 @@ function normalizeJob(job: BackendTrainingJob | BackendTrainingStatus): Training
   return {
     id: jobId,
     name: job.experiment_name || jobId,
+    projectId: job.project_id ?? undefined,
+    projectName: job.project_name ?? undefined,
+    taskType: job.task_type ?? undefined,
     status: job.status as TrainingJob["status"],
     progress: Math.round(job.progress ?? 0),
     epoch: job.current_epoch ?? 0,
