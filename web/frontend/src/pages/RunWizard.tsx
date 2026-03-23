@@ -51,6 +51,43 @@ import { getProject } from "@/api/projects";
 
 const { Paragraph, Text, Title } = Typography;
 
+const DOCTOR_TEMPLATE_COPY: Record<
+  LocalProTaskType,
+  {
+    label: string;
+    summary: string;
+    required: string[];
+    outputs: string[];
+    warning?: string;
+  }
+> = {
+  binary_classification: {
+    label: "二分类预测",
+    summary: "面向基础预测任务，优先保留项目名、数据路径、目标列和少量训练参数。",
+    required: ["csv_path", "image_dir", "image_path_column", "target_column"],
+    outputs: ["训练曲线", "ROC 曲线", "混淆矩阵", "Word/PDF 报告"],
+  },
+  cox_survival: {
+    label: "Cox 生存分析",
+    summary: "当前先保留项目和配置骨架，帮助定义数据字段与输出结构。",
+    required: ["csv_path", "image_dir", "survival_time", "event"],
+    outputs: ["项目配置", "后续 Cox 执行入口", "结果交付包骨架"],
+    warning: "当前真实训练主链尚未支持 Cox 执行，模板仅用于项目占位和后续实现规划。",
+  },
+  multimodal_research: {
+    label: "多模态研究",
+    summary: "面向图像 + 表格主链，突出 attention、多模态结果和项目级导出。",
+    required: [
+      "csv_path",
+      "image_dir",
+      "image_path_column",
+      "target_column",
+      "至少一个表格特征",
+    ],
+    outputs: ["训练曲线", "ROC 曲线", "attention 可视化", "项目交付包"],
+  },
+};
+
 function toConfigFileName(experimentName: string): string {
   const normalized = experimentName
     .trim()
@@ -85,6 +122,7 @@ export default function RunWizard() {
   const contextProjectName = searchParams.get("projectName");
   const taskType = searchParams.get("taskType") as LocalProTaskType | null;
   const templateId = searchParams.get("template");
+  const doctorTemplate = spec.taskType ? DOCTOR_TEMPLATE_COPY[spec.taskType] : null;
 
   useEffect(() => {
     if (templateInitialized) {
@@ -299,6 +337,35 @@ export default function RunWizard() {
         />
       ) : null}
 
+      {doctorMode && doctorTemplate ? (
+        <Card size="small" title={`当前模板：${doctorTemplate.label}`}>
+          <Space direction="vertical" size={10} style={{ width: "100%" }}>
+            <Text>{doctorTemplate.summary}</Text>
+            <div>
+              <Text strong>关键输入</Text>
+              <div style={{ marginTop: 8 }}>
+                {doctorTemplate.required.map((item) => (
+                  <Tag key={item}>{item}</Tag>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Text strong>预期输出</Text>
+              <div style={{ marginTop: 8 }}>
+                {doctorTemplate.outputs.map((item) => (
+                  <Tag color="green" key={item}>
+                    {item}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+            {doctorTemplate.warning ? (
+              <Alert type="warning" showIcon message={doctorTemplate.warning} />
+            ) : null}
+          </Space>
+        </Card>
+      ) : null}
+
       {!doctorMode ? (
         <Card size="small" title="选择起步 preset">
           <Row gutter={[12, 12]}>
@@ -495,45 +562,49 @@ export default function RunWizard() {
         </Form>
       </Card>
 
-      <Card size="small" title="数据划分与 dataloader">
+      <Card size="small" title={doctorMode ? "训练数据基础设置" : "数据划分与 dataloader"}>
         <Form layout="vertical">
           <Row gutter={16}>
-            <Col xs={24} md={8}>
-              <Form.Item label="train_ratio">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.05}
-                  max={0.95}
-                  step={0.05}
-                  value={spec.data.trainRatio}
-                  onChange={(value) => updateData({ trainRatio: Number(value ?? 0.7) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item label="val_ratio">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.05}
-                  max={0.9}
-                  step={0.05}
-                  value={spec.data.valRatio}
-                  onChange={(value) => updateData({ valRatio: Number(value ?? 0.15) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={8}>
-              <Form.Item label="test_ratio">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0.05}
-                  max={0.9}
-                  step={0.05}
-                  value={spec.data.testRatio}
-                  onChange={(value) => updateData({ testRatio: Number(value ?? 0.15) })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={8}>
+                  <Form.Item label="train_ratio">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0.05}
+                      max={0.95}
+                      step={0.05}
+                      value={spec.data.trainRatio}
+                      onChange={(value) => updateData({ trainRatio: Number(value ?? 0.7) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item label="val_ratio">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0.05}
+                      max={0.9}
+                      step={0.05}
+                      value={spec.data.valRatio}
+                      onChange={(value) => updateData({ valRatio: Number(value ?? 0.15) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={8}>
+                  <Form.Item label="test_ratio">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0.05}
+                      max={0.9}
+                      step={0.05}
+                      value={spec.data.testRatio}
+                      onChange={(value) => updateData({ testRatio: Number(value ?? 0.15) })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
             <Col xs={24} md={6}>
               <Form.Item label="image_size">
                 <InputNumber
@@ -555,32 +626,38 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="num_workers">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  value={spec.data.numWorkers}
-                  onChange={(value) => updateData({ numWorkers: Number(value ?? 0) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="augmentation_strength">
-                <Select
-                  value={spec.data.augmentationStrength}
-                  options={AUGMENTATION_OPTIONS.map((value) => ({ label: value, value }))}
-                  onChange={(value) => updateData({ augmentationStrength: value })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={6}>
+                  <Form.Item label="num_workers">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      value={spec.data.numWorkers}
+                      onChange={(value) => updateData({ numWorkers: Number(value ?? 0) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={6}>
+                  <Form.Item label="augmentation_strength">
+                    <Select
+                      value={spec.data.augmentationStrength}
+                      options={AUGMENTATION_OPTIONS.map((value) => ({ label: value, value }))}
+                      onChange={(value) => updateData({ augmentationStrength: value })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
           </Row>
-          <Form.Item label="pin_memory" valuePropName="checked">
-            <Switch
-              checked={spec.data.pinMemory}
-              onChange={(checked) => updateData({ pinMemory: checked })}
-            />
-          </Form.Item>
+          {!doctorMode ? (
+            <Form.Item label="pin_memory" valuePropName="checked">
+              <Switch
+                checked={spec.data.pinMemory}
+                onChange={(checked) => updateData({ pinMemory: checked })}
+              />
+            </Form.Item>
+          ) : null}
         </Form>
       </Card>
     </Space>
@@ -824,36 +901,40 @@ export default function RunWizard() {
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} md={6}>
-              <Form.Item label="gradient_clip">
-                <InputNumber
-                  style={{ width: "100%" }}
-                  min={0}
-                  step={0.1}
-                  value={spec.training.gradientClip ?? 0}
-                  onChange={(value) => updateTraining({ gradientClip: value === null ? null : Number(value) })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item label="mixed_precision" valuePropName="checked">
-                <Switch
-                  checked={spec.training.mixedPrecision}
-                  onChange={(checked) => updateTraining({ mixedPrecision: checked })}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Item label="use_progressive_training" valuePropName="checked">
-                <Switch
-                  checked={spec.training.useProgressiveTraining}
-                  onChange={(checked) => updateTraining({ useProgressiveTraining: checked })}
-                />
-              </Form.Item>
-            </Col>
+            {!doctorMode ? (
+              <>
+                <Col xs={24} md={6}>
+                  <Form.Item label="gradient_clip">
+                    <InputNumber
+                      style={{ width: "100%" }}
+                      min={0}
+                      step={0.1}
+                      value={spec.training.gradientClip ?? 0}
+                      onChange={(value) => updateTraining({ gradientClip: value === null ? null : Number(value) })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Form.Item label="mixed_precision" valuePropName="checked">
+                    <Switch
+                      checked={spec.training.mixedPrecision}
+                      onChange={(checked) => updateTraining({ mixedPrecision: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={12} md={6}>
+                  <Form.Item label="use_progressive_training" valuePropName="checked">
+                    <Switch
+                      checked={spec.training.useProgressiveTraining}
+                      onChange={(checked) => updateTraining({ useProgressiveTraining: checked })}
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
           </Row>
 
-          {spec.training.useProgressiveTraining ? (
+          {!doctorMode && spec.training.useProgressiveTraining ? (
             <Row gutter={16}>
               <Col xs={24} md={8}>
                 <Form.Item label="stage1_epochs">

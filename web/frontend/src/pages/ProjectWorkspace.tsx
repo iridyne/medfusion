@@ -29,6 +29,7 @@ import {
   FolderOpenOutlined,
   PlusOutlined,
   RocketOutlined,
+  ControlOutlined,
 } from "@ant-design/icons";
 
 import { getDatasets, type Dataset } from "@/api/datasets";
@@ -154,7 +155,12 @@ export default function ProjectWorkspace() {
       message.success("项目已创建");
       setCreateModalOpen(false);
       form.resetFields();
-      await loadAll(created.id);
+      await loadAll();
+      navigate(
+        `/config?projectId=${created.id}&projectName=${encodeURIComponent(
+          created.name,
+        )}&taskType=${created.task_type}&template=${created.template_id}`,
+      );
     } catch (error: any) {
       if (error?.errorFields) {
         return;
@@ -257,6 +263,19 @@ export default function ProjectWorkspace() {
       key: "action",
       render: (_, record) => (
         <Space>
+          <Button
+            size="small"
+            icon={<ControlOutlined />}
+            onClick={() =>
+              navigate(
+                `/config?projectId=${record.id}&projectName=${encodeURIComponent(
+                  record.name,
+                )}&taskType=${record.task_type}&template=${record.template_id}`,
+              )
+            }
+          >
+            向导
+          </Button>
           <Button
             size="small"
             icon={<EyeOutlined />}
@@ -502,7 +521,15 @@ export default function ProjectWorkspace() {
 
             <Card size="small" title="结果与导出">
               <Space wrap>
-                <Button onClick={() => navigate(`/config?projectId=${selectedProject.id}`)}>
+                <Button
+                  onClick={() =>
+                    navigate(
+                      `/config?projectId=${selectedProject.id}&projectName=${encodeURIComponent(
+                        selectedProject.name,
+                      )}&taskType=${selectedProject.task_type}&template=${selectedProject.template_id}`,
+                    )
+                  }
+                >
                   打开项目向导
                 </Button>
                 <Button
