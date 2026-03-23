@@ -65,6 +65,11 @@ interface ProjectStage {
   status: ProjectStageStatus;
 }
 
+interface ExportArtifactSummary {
+  label: string;
+  ready: boolean;
+}
+
 function getStageStatusLabel(status: ProjectStageStatus): string {
   switch (status) {
     case "completed":
@@ -217,6 +222,31 @@ function getProjectStageProgress(project: Project): number {
   const stages = getProjectStages(project);
   const completed = stages.filter((stage) => stage.status === "completed").length;
   return Math.round((completed / stages.length) * 100);
+}
+
+function getProjectExportArtifacts(project: Project): ExportArtifactSummary[] {
+  return [
+    {
+      label: "训练配置 YAML",
+      ready: Boolean(project.config_path),
+    },
+    {
+      label: "训练输出目录",
+      ready: Boolean(project.output_dir),
+    },
+    {
+      label: "训练任务记录",
+      ready: Boolean(project.latest_job),
+    },
+    {
+      label: "模型结果",
+      ready: Boolean(project.latest_model),
+    },
+    {
+      label: "项目交付包",
+      ready: Boolean(project.output_dir || project.config_path),
+    },
+  ];
 }
 
 export default function ProjectWorkspace() {
@@ -600,6 +630,78 @@ export default function ProjectWorkspace() {
               </Col>
             </Row>
           </Card>
+        ) : null}
+
+        {focusProject ? (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card title="最近结果摘要">
+                {focusProject.latest_model ? (
+                  <Space direction="vertical" size={10} style={{ width: "100%" }}>
+                    <Descriptions size="small" column={1}>
+                      <Descriptions.Item label="模型名称">
+                        {focusProject.latest_model.name}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="架构">
+                        {focusProject.latest_model.architecture || "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Accuracy">
+                        {focusProject.latest_model.accuracy !== null &&
+                        focusProject.latest_model.accuracy !== undefined
+                          ? `${(focusProject.latest_model.accuracy * 100).toFixed(2)}%`
+                          : "-"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Loss">
+                        {focusProject.latest_model.loss !== null &&
+                        focusProject.latest_model.loss !== undefined
+                          ? focusProject.latest_model.loss.toFixed(4)
+                          : "-"}
+                      </Descriptions.Item>
+                    </Descriptions>
+                    <Space wrap>
+                      <Button onClick={() => navigate(`/models?projectId=${focusProject.id}`)}>
+                        打开结果页
+                      </Button>
+                      <Button
+                        type="primary"
+                        icon={<ExportOutlined />}
+                        onClick={() => void handleExport(focusProject.id)}
+                      >
+                        导出项目包
+                      </Button>
+                    </Space>
+                  </Space>
+                ) : (
+                  <Text type="secondary">项目还没有沉淀下来的模型结果。</Text>
+                )}
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card title="导出内容概览">
+                <Row gutter={[12, 12]}>
+                  {getProjectExportArtifacts(focusProject).map((item) => (
+                    <Col xs={24} md={12} key={item.label}>
+                      <Card
+                        size="small"
+                        bodyStyle={{ padding: 12 }}
+                        style={{
+                          borderColor: item.ready ? "#b7eb8f" : "#f0f0f0",
+                          background: item.ready ? "#f6ffed" : undefined,
+                        }}
+                      >
+                        <Space direction="vertical" size={6}>
+                          <Text strong>{item.label}</Text>
+                          <Tag color={item.ready ? "success" : "default"}>
+                            {item.ready ? "已就绪" : "未生成"}
+                          </Tag>
+                        </Space>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </Card>
+            </Col>
+          </Row>
         ) : null}
 
         <Card
