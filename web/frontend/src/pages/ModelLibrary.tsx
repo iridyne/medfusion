@@ -20,7 +20,6 @@ import {
   Form,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   SearchOutlined,
   DownloadOutlined,
   DeleteOutlined,
@@ -93,11 +92,10 @@ export default function ModelLibrary() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const scopedProjectId = searchParams.get("projectId");
 
   useEffect(() => {
     filterModels();
-  }, [searchText, filterBackbone, filterFormat, models, scopedProjectId]);
+  }, [searchText, filterBackbone, filterFormat, models]);
 
   const loadModels = async (focusModelId?: number) => {
     setLoading(true);
@@ -138,10 +136,6 @@ export default function ModelLibrary() {
 
   const filterModels = () => {
     let filtered = models;
-
-    if (scopedProjectId) {
-      filtered = filtered.filter((m) => String(m.project_id ?? "") === scopedProjectId);
-    }
 
     if (searchText) {
       filtered = filtered.filter(
@@ -232,7 +226,6 @@ export default function ModelLibrary() {
       name: values.name?.trim() || undefined,
       description: values.description?.trim() || undefined,
       tags: parsedTags.length ? parsedTags : undefined,
-      project_id: scopedProjectId ? Number(scopedProjectId) : undefined,
     };
 
     setImporting(true);
@@ -267,16 +260,15 @@ export default function ModelLibrary() {
     "swin_tiny",
   ];
 
-  const visibleModels = scopedProjectId ? filteredModels : models;
-  const totalParams = visibleModels.reduce((sum, m) => sum + m.params, 0);
-  const totalSize = visibleModels.reduce((sum, m) => sum + m.size, 0);
-  const modelsWithAccuracy = visibleModels.filter((m) => m.accuracy !== undefined);
+  const totalParams = models.reduce((sum, m) => sum + m.params, 0);
+  const totalSize = models.reduce((sum, m) => sum + m.size, 0);
+  const modelsWithAccuracy = models.filter((m) => m.accuracy !== undefined);
   const avgAccuracy =
     modelsWithAccuracy.length > 0
       ? modelsWithAccuracy.reduce((sum, m) => sum + (m.accuracy || 0), 0) /
         modelsWithAccuracy.length
       : 0;
-  const latestModel = visibleModels[0];
+  const latestModel = models[0];
 
   return (
     <div style={{ padding: 24 }}>
@@ -289,14 +281,6 @@ export default function ModelLibrary() {
       >
         <h1 style={{ marginBottom: 0 }}>模型库</h1>
         <Space>
-          {scopedProjectId ? (
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => setSearchParams(new URLSearchParams())}
-            >
-              退出项目过滤
-            </Button>
-          ) : null}
           <Button
             icon={<ReloadOutlined />}
             onClick={() => void loadModels()}
@@ -313,16 +297,6 @@ export default function ModelLibrary() {
           </Button>
         </Space>
       </div>
-
-      {scopedProjectId ? (
-        <Alert
-          style={{ marginTop: 16 }}
-          type="info"
-          showIcon
-          message={`当前只显示项目 ${scopedProjectId} 的结果`}
-          description="这是从项目工作区跳转过来的结果视图，用于聚焦当前项目导出的模型与 artifact。"
-        />
-      ) : null}
 
       {latestModel && (
         <Card
@@ -344,9 +318,6 @@ export default function ModelLibrary() {
                     <Tag color="blue">{latestModel.backbone}</Tag>
                     <Tag color="green">{latestModel.dataset_name || "未命名数据集"}</Tag>
                     <Tag color="purple">{latestModel.displayFormat.toUpperCase()}</Tag>
-                    {latestModel.project_name ? (
-                      <Tag color="cyan">{latestModel.project_name}</Tag>
-                    ) : null}
                     {latestModel.tags?.map((tag) => (
                       <Tag key={tag}>{tag}</Tag>
                     ))}
@@ -398,7 +369,7 @@ export default function ModelLibrary() {
           <Card>
             <Statistic
               title="模型总数"
-              value={visibleModels.length}
+              value={models.length}
               prefix={<ExperimentOutlined />}
             />
           </Card>
@@ -510,7 +481,7 @@ export default function ModelLibrary() {
                     {model.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
                   </div>
                   <div style={{ fontSize: 12, color: "#999" }}>
-                    数据集: {model.dataset_name || "-"} | 项目: {model.project_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
+                    数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
                     {model.createdAt ? new Date(model.createdAt).toLocaleString("zh-CN") : "-"}
                   </div>
                   <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>

@@ -37,9 +37,6 @@ export interface ModelImportRequest {
   name?: string;
   description?: string;
   tags?: string[];
-  project_id?: number;
-  project_name?: string;
-  task_type?: string;
 }
 
 export interface Model {
@@ -54,9 +51,6 @@ export interface Model {
   metrics?: Record<string, any>;
   config?: Record<string, any>;
   config_path?: string;
-  project_id?: number;
-  project_name?: string;
-  task_type?: string;
   model_path: string;
   checkpoint_path?: string;
   file_size?: number;

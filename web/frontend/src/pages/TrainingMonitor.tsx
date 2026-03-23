@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
@@ -22,7 +22,6 @@ import {
   Tabs,
 } from "antd";
 import {
-  ArrowLeftOutlined,
   DisconnectOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
@@ -118,26 +117,14 @@ export default function TrainingMonitor() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const wsClient = useRef<WebSocketClient | null>(null);
-  const contextProjectId = searchParams.get("projectId");
-  const contextProjectName = searchParams.get("projectName");
-  const contextTaskType = searchParams.get("taskType");
-  const visibleJobs = useMemo(
-    () =>
-      contextProjectId
-        ? jobs.filter((job) => String(job.projectId ?? "") === contextProjectId)
-        : jobs,
-    [contextProjectId, jobs],
-  );
-  const currentJob = visibleJobs.find((job) => job.id === selectedJob);
+
+  const currentJob = jobs.find((job) => job.id === selectedJob);
 
   const loadJobs = async () => {
     try {
       const jobList = await trainingApi.listJobs();
       setJobs(jobList);
-      const scopedJobs = contextProjectId
-        ? jobList.filter((job) => String(job.projectId ?? "") === contextProjectId)
-        : jobList;
-      setSelectedJob((current) => current || scopedJobs[0]?.id || "");
+      setSelectedJob((current) => current || jobList[0]?.id || "");
     } catch (error) {
       console.error("Failed to load training jobs:", error);
       message.error("加载训练任务失败");
@@ -210,16 +197,6 @@ export default function TrainingMonitor() {
   useEffect(() => {
     void loadJobHistory(selectedJob);
   }, [selectedJob]);
-
-  useEffect(() => {
-    if (!visibleJobs.length) {
-      setSelectedJob("");
-      return;
-    }
-    if (!visibleJobs.some((job) => job.id === selectedJob)) {
-      setSelectedJob(visibleJobs[0].id);
-    }
-  }, [selectedJob, visibleJobs]);
 
   useEffect(() => {
     if (!selectedJob) {
@@ -419,9 +396,6 @@ export default function TrainingMonitor() {
           batch_size: values.batchSize,
           learning_rate: values.learningRate,
         },
-        project_id: contextProjectId ? Number(contextProjectId) : undefined,
-        project_name: contextProjectName || undefined,
-        task_type: contextTaskType || undefined,
       };
 
       const response = await trainingApi.createJob(payload);
@@ -531,12 +505,6 @@ export default function TrainingMonitor() {
       key: "name",
     },
     {
-      title: "所属项目",
-      dataIndex: "projectName",
-      key: "projectName",
-      render: (value?: string) => value || "-",
-    },
-    {
       title: "状态",
       dataIndex: "status",
       key: "status",
@@ -633,15 +601,6 @@ export default function TrainingMonitor() {
 
   return (
     <div style={{ padding: 24 }}>
-      {contextProjectName ? (
-        <Alert
-          style={{ marginBottom: 16 }}
-          type="info"
-          showIcon
-          message={`当前项目：${contextProjectName}`}
-          description="从项目工作区进入后，启动的训练任务会自动挂接到当前项目。"
-        />
-      ) : null}
       <div
         style={{
           display: "flex",
@@ -652,20 +611,10 @@ export default function TrainingMonitor() {
         <div>
           <h1 style={{ marginBottom: 4 }}>训练监控</h1>
           <div style={{ color: "#666" }}>
-            {contextProjectName
-              ? "当前已切到项目范围视图，只展示这个项目相关的训练任务。"
-              : "这是演示型 MVP 的主页面，用来发起训练并展示进度。"}
+            这是演示型 MVP 的主页面，用来发起训练并展示进度。
           </div>
         </div>
         <Space>
-          {contextProjectId ? (
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/projects")}
-            >
-              返回项目工作区
-            </Button>
-          ) : null}
           <Badge
             status={wsConnected ? "success" : "default"}
             text={wsConnected ? "实时连接已建立" : "未连接到当前任务"}
@@ -691,14 +640,14 @@ export default function TrainingMonitor() {
       <Row gutter={16} style={{ marginTop: 16, marginBottom: 16 }}>
         <Col span={8}>
           <Card>
-            <Statistic title="训练任务总数" value={visibleJobs.length} />
+            <Statistic title="训练任务总数" value={jobs.length} />
           </Card>
         </Col>
         <Col span={8}>
           <Card>
             <Statistic
               title="运行中"
-              value={visibleJobs.filter((job) => job.status === "running").length}
+              value={jobs.filter((job) => job.status === "running").length}
             />
           </Card>
         </Col>
@@ -706,7 +655,7 @@ export default function TrainingMonitor() {
           <Card>
             <Statistic
               title="已完成"
-              value={visibleJobs.filter((job) => job.status === "completed").length}
+              value={jobs.filter((job) => job.status === "completed").length}
             />
           </Card>
         </Col>
@@ -722,7 +671,7 @@ export default function TrainingMonitor() {
               <Card>
                 <Table
                   columns={columns}
-                  dataSource={visibleJobs}
+                  dataSource={jobs}
                   rowKey="id"
                   pagination={false}
                   locale={{

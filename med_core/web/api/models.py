@@ -58,9 +58,6 @@ class ModelImportRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     tags: list[str] | None = None
-    project_id: int | None = None
-    project_name: str | None = None
-    task_type: str | None = None
 
 
 def _infer_format(path: str | None) -> str:
@@ -331,7 +328,6 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
     visualizations = _load_visualizations(model)
     training_history = _load_training_history(model)
     validation = _load_validation(model)
-    config = model.config or {}
 
     return {
         "id": model.id,
@@ -352,9 +348,6 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
         "checkpoint_path": checkpoint_path,
         "config": model.config,
         "config_path": model.config_path,
-        "project_id": config.get("project_id"),
-        "project_name": config.get("project_name"),
-        "task_type": config.get("task_type"),
         "trained_epochs": model.trained_epochs,
         "training_time": model.training_time,
         "dataset_name": model.dataset_name,
@@ -515,11 +508,6 @@ async def import_model(
             description=payload.description,
             tags=payload.tags,
             import_source="api",
-            extra_config={
-                "project_id": payload.project_id,
-                "project_name": payload.project_name,
-                "task_type": payload.task_type,
-            },
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

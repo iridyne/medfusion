@@ -13,7 +13,6 @@ import {
   Typography,
 } from "antd";
 import {
-  AppstoreOutlined,
   ArrowRightOutlined,
   ControlOutlined,
   ExperimentOutlined,
@@ -142,13 +141,6 @@ export default function Workbench() {
                   </Button>
                   <Button
                     size="large"
-                    icon={<AppstoreOutlined />}
-                    onClick={() => navigate("/projects")}
-                  >
-                    项目工作区
-                  </Button>
-                  <Button
-                    size="large"
                     icon={<ImportOutlined />}
                     onClick={() => navigate("/models?action=import")}
                   >
@@ -229,27 +221,6 @@ export default function Workbench() {
         </Row>
 
         <Row gutter={[16, 16]}>
-          <Col xs={24} md={12} xl={6}>
-            <Card
-              title="0. 项目工作区"
-              extra={<Tag color="cyan">Local Pro</Tag>}
-            >
-              <Paragraph>
-                从项目而不是模型出发，把数据、配置、训练、结果和导出收口到同一个本地工作区里。
-              </Paragraph>
-              <Space direction="vertical" size={10} style={{ width: "100%" }}>
-                <Text code>先建项目，再选模板，再跑训练</Text>
-                <Button
-                  block
-                  icon={<AppstoreOutlined />}
-                  onClick={() => navigate("/projects")}
-                >
-                  打开项目工作区
-                </Button>
-              </Space>
-            </Card>
-          </Col>
-
           <Col xs={24} md={12} xl={6}>
             <Card
               title="1. 演示型 MVP"

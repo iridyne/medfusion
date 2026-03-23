@@ -25,7 +25,7 @@ from med_core.configs import load_config, save_config
 from ..config import settings
 from ..database import SessionLocal, get_db_session
 from ..model_registry import import_model_run
-from ..models import DatasetInfo, ProjectInfo, TrainingJob
+from ..models import DatasetInfo, TrainingJob
 from ..time_utils import utcnow
 
 router = APIRouter()
@@ -88,10 +88,6 @@ class TrainingConfig(BaseModel):
     training_model_config: dict[str, Any]
     dataset_config: dict[str, Any]
     training_config: dict[str, Any]
-    project_id: int | None = None
-    project_name: str | None = None
-    task_type: str | None = None
-    template_id: str | None = None
 
 
 class TrainingJobResponse(BaseModel):
@@ -104,9 +100,6 @@ class TrainingJobResponse(BaseModel):
     experiment_name: str
     dataset_name: str | None
     backbone: str | None
-    project_id: int | None = None
-    project_name: str | None = None
-    task_type: str | None = None
     status: str
     progress: float
     current_epoch: int
@@ -135,16 +128,7 @@ def _extract_job_metadata(job: TrainingJob) -> dict[str, Any]:
         "backbone": training_model_config.get("backbone"),
         "num_classes": training_model_config.get("num_classes")
         or dataset_config.get("num_classes"),
-        "project_id": config.get("project_id"),
-        "project_name": config.get("project_name"),
-        "task_type": config.get("task_type"),
     }
-
-
-def _maybe_get_project(db: Session, project_id: int | None) -> ProjectInfo | None:
-    if project_id is None:
-        return None
-    return db.query(ProjectInfo).filter(ProjectInfo.id == int(project_id)).first()
 
 
 def _estimate_num_parameters(backbone: str | None) -> int | None:
@@ -782,7 +766,7 @@ async def _run_real_training_job(job_id: str) -> None:
                 raise FileNotFoundError(f"训练完成但未找到 checkpoint: {output_dir / 'checkpoints'}")
 
             metadata = _extract_job_metadata(job)
-            imported_model = import_model_run(
+            import_model_run(
                 db=db,
                 config_path=config_path,
                 checkpoint_path=checkpoint_path,
@@ -793,11 +777,6 @@ async def _run_real_training_job(job_id: str) -> None:
                 description="Web UI 触发的真实训练产物",
                 tags=["web-ui", f"job:{job.job_id}"],
                 import_source="web",
-                extra_config={
-                    "project_id": metadata["project_id"],
-                    "project_name": metadata["project_name"],
-                    "task_type": metadata["task_type"],
-                },
             )
 
             _sync_job_from_history(job)
@@ -805,12 +784,6 @@ async def _run_real_training_job(job_id: str) -> None:
             job.progress = 100.0
             job.completed_at = utcnow()
             job.error_message = None
-
-            project = _maybe_get_project(db, metadata["project_id"])
-            if project is not None:
-                project.latest_model_id = imported_model.id
-                project.status = "completed"
-                project.updated_at = utcnow()
             db.commit()
             return
     except Exception as e:
@@ -821,11 +794,6 @@ async def _run_real_training_job(job_id: str) -> None:
             job.status = "failed"
             job.error_message = str(e)
             job.completed_at = utcnow()
-            metadata = _extract_job_metadata(job)
-            project = _maybe_get_project(db, metadata["project_id"])
-            if project is not None:
-                project.status = "failed"
-                project.updated_at = utcnow()
             db.commit()
     finally:
         if process is not None and process.poll() is None:
@@ -854,7 +822,6 @@ async def start_training(
             output_dir=Path(output_dir),
         )
         total_epochs = int(resolved_run["total_epochs"])
-        project = _maybe_get_project(db, config.project_id)
 
         job_payload = config.model_dump()
         job_payload.setdefault("training_model_config", {})
@@ -875,14 +842,6 @@ async def start_training(
                 "num_classes": resolved_run["dataset_spec"]["num_classes"],
             }
         )
-        job_payload["project_id"] = project.id if project is not None else config.project_id
-        job_payload["project_name"] = (
-            project.name
-            if project is not None
-            else (config.project_name or resolved_run["dataset_spec"]["dataset_name"])
-        )
-        job_payload["task_type"] = config.task_type
-        job_payload["template_id"] = config.template_id
         job_payload["resolved_run"] = resolved_run
 
         job = TrainingJob(
@@ -902,14 +861,6 @@ async def start_training(
         db.add(job)
         db.commit()
         db.refresh(job)
-
-        if project is not None:
-            project.output_dir = output_dir
-            project.config_path = resolved_run["config_path"]
-            project.latest_job_id = job_id
-            project.status = "running"
-            project.updated_at = utcnow()
-            db.commit()
 
         _pause_flags[job_id] = False
         _stop_flags[job_id] = False
@@ -946,9 +897,6 @@ async def list_training_jobs(
             experiment_name=_extract_job_metadata(job)["experiment_name"],
             dataset_name=_extract_job_metadata(job)["dataset_name"],
             backbone=_extract_job_metadata(job)["backbone"],
-            project_id=_extract_job_metadata(job)["project_id"],
-            project_name=_extract_job_metadata(job)["project_name"],
-            task_type=_extract_job_metadata(job)["task_type"],
             status=job.status,
             progress=job.progress,
             current_epoch=job.current_epoch,
@@ -976,9 +924,6 @@ async def get_training_status(
         "experiment_name": metadata["experiment_name"],
         "dataset_name": metadata["dataset_name"],
         "backbone": metadata["backbone"],
-        "project_id": metadata["project_id"],
-        "project_name": metadata["project_name"],
-        "task_type": metadata["task_type"],
         "status": job.status,
         "progress": job.progress,
         "current_epoch": job.current_epoch,
@@ -1022,11 +967,6 @@ async def pause_training(
     if not _signal_process(job_id, signal.SIGSTOP):
         raise HTTPException(status_code=400, detail="训练进程未运行，无法暂停")
     job.status = "paused"
-    metadata = _extract_job_metadata(job)
-    project = _maybe_get_project(db, metadata["project_id"])
-    if project is not None:
-        project.status = "paused"
-        project.updated_at = utcnow()
     db.commit()
     return {"message": "训练任务已暂停"}
 
@@ -1044,11 +984,6 @@ async def resume_training(
     if not _signal_process(job_id, signal.SIGCONT):
         raise HTTPException(status_code=400, detail="训练进程未运行，无法恢复")
     job.status = "running"
-    metadata = _extract_job_metadata(job)
-    project = _maybe_get_project(db, metadata["project_id"])
-    if project is not None:
-        project.status = "running"
-        project.updated_at = utcnow()
     db.commit()
     return {"message": "训练任务已恢复"}
 
@@ -1067,11 +1002,6 @@ async def stop_training(
     _signal_process(job_id, signal.SIGTERM)
     job.status = "stopped"
     job.completed_at = utcnow()
-    metadata = _extract_job_metadata(job)
-    project = _maybe_get_project(db, metadata["project_id"])
-    if project is not None:
-        project.status = "stopped"
-        project.updated_at = utcnow()
     db.commit()
     return {"message": "训练任务已停止"}
 

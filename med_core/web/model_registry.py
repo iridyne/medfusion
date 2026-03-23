@@ -228,7 +228,6 @@ def import_model_run(
     description: str | None = None,
     tags: list[str] | None = None,
     import_source: str = "cli",
-    extra_config: dict[str, Any] | None = None,
 ) -> ModelInfo:
     """Build artifacts from a real run and register them in ModelInfo."""
     config_path = Path(config_path)
@@ -268,6 +267,5 @@ def import_model_run(
             "import_source": import_source,
             "source_config_path": str(config_path),
             "config_snapshot": config_snapshot,
-            **(extra_config or {}),
         },
     )
