@@ -47,7 +47,7 @@ data:
   region2_pathology_column: region2_pathology_paths
 
   hipt_embeddings_dir: demo/smurf_e2e/data/elbow_dryrun/hipt_embeddings
-  max_instances_per_modality: 3
+  max_instances_per_modality: 5
   image_size: 64
 
 mock_data:
