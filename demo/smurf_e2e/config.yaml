@@ -1,0 +1,63 @@
+seed: 42
+device: auto
+output_dir: demo/smurf_e2e/outputs
+
+model:
+  # 基于 medfusion 的 MultiModalModelBuilder 组装“SMuRF风格多区域多模态”
+  vision_backbone: mobilenetv3_small
+  vision_feature_dim: 96
+  pathology_feature_dim: 96
+  tabular_feature_dim: 64
+
+  # patch_mil | hipt
+  pathology_encoder:
+    type: patch_mil
+    embedding_dim: 192
+  fusion_strategy: fused_attention   # concat | gated | attention | fused_attention
+  fusion_output_dim: 128
+  fusion_num_heads: 4
+  num_classes: 2
+
+training:
+  epochs: 4
+  batch_size: 2
+  num_workers: 0
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-2
+  survival_loss_weight: 0.3
+
+# 你要的输入定义：
+# 1) 表格化临床数据
+# 2) 第一区域 病理/CT 图像（非连续）
+# 3) 第二区域 病理/CT 图像（非连续）
+data:
+  csv_path: demo/smurf_e2e/data/mock/metadata.csv
+  label_column: label
+  split_column: split
+  enable_survival: true
+  survival_time_column: survival_time
+  survival_event_column: event
+
+  # 表格特征
+  tabular_numerical_columns: [age, bmi, crp]
+  tabular_categorical_columns: [sex, smoking]
+
+  # 非连续图像序列列（单列可写单路径，或 JSON 数组，或用 | 分隔）
+  region1_ct_column: region1_ct_paths
+  region1_pathology_column: region1_pathology_paths
+  region2_ct_column: region2_ct_paths
+  region2_pathology_column: region2_pathology_paths
+
+  # hipt 模式下离线 embedding 存放目录（prepare-hipt / prepare-mock 自动生成）
+  hipt_embeddings_dir: demo/smurf_e2e/data/mock/hipt_embeddings
+
+  # 非连续序列处理策略
+  max_instances_per_modality: 3
+  image_size: 64
+
+# 仅用于 prepare-mock（快速跑通端到端）
+mock_data:
+  num_samples: 96
+  min_instances: 2
+  max_instances: 6
+  image_shape: [64, 64]   # 单帧 2D

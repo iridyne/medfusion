@@ -4,6 +4,7 @@ import pytest
 import torch
 from torch import nn
 
+from med_core.backbones import HIPTEmbeddingBackbone
 from med_core.fusion.fused_attention import (
     FusedAttentionFusion,
     MultimodalFusedAttention,
@@ -220,3 +221,35 @@ def test_builder_uses_real_fused_attention_module() -> None:
     )
 
     assert logits.shape == (2, 2)
+
+
+def test_builder_supports_embedding_modality_with_mil_aggregation() -> None:
+    model = (
+        MultiModalModelBuilder()
+        .add_modality("image", backbone=DummyBackbone(output_dim=8))
+        .add_modality(
+            "pathology",
+            backbone="hipt",
+            modality_type="embedding",
+            feature_dim=8,
+            embedding_dim=16,
+        )
+        .add_mil_aggregation("pathology", strategy="attention", attention_dim=4)
+        .set_fusion("concat")
+        .set_head("classification", num_classes=2)
+        .build()
+    )
+
+    assert isinstance(model.modality_backbones["pathology"], HIPTEmbeddingBackbone)
+
+    logits, features = model(
+        {
+            "image": torch.randn(2, 4),
+            "pathology": torch.randn(2, 5, 16),
+        },
+        return_features=True,
+    )
+
+    assert logits.shape == (2, 2)
+    assert features["modality_features"]["pathology_patches"].shape == (2, 5, 8)
+    assert features["modality_features"]["pathology"].shape == (2, 8)

@@ -11,6 +11,7 @@ from torch import nn
 
 from med_core.aggregators import MILAggregator
 from med_core.backbones import (
+    HIPTEmbeddingBackbone,
     create_tabular_backbone,
     create_vision_backbone,
 )
@@ -331,7 +332,9 @@ class MultiModalModelBuilder:
         self,
         name: str,
         backbone: str | nn.Module,
-        modality_type: Literal["vision", "vision3d", "tabular", "custom"] = "vision",
+        modality_type: Literal[
+            "vision", "vision3d", "tabular", "embedding", "custom"
+        ] = "vision",
         feature_dim: int | None = None,
         **kwargs: Any,
     ) -> "MultiModalModelBuilder":
@@ -341,7 +344,7 @@ class MultiModalModelBuilder:
         Args:
             name: Modality name (e.g., 'ct', 'pathology', 'clinical')
             backbone: Backbone name (e.g., 'resnet18', 'swin3d_small') or module
-            modality_type: Type of modality ('vision', 'vision3d', 'tabular', 'custom')
+            modality_type: Type of modality ('vision', 'vision3d', 'tabular', 'embedding', 'custom')
             feature_dim: Output feature dimension (if None, use backbone default)
             **kwargs: Additional arguments for backbone creation
 
@@ -464,7 +467,7 @@ class MultiModalModelBuilder:
             backbone = config["backbone"]
             modality_type = config["modality_type"]
             feature_dim = config["feature_dim"]
-            kwargs = config["kwargs"]
+            kwargs = config["kwargs"].copy()
 
             # Create backbone
             if isinstance(backbone, nn.Module):
@@ -530,6 +533,33 @@ class MultiModalModelBuilder:
                     output_dim=feature_dim or 64,
                     **kwargs,
                 )
+                modality_backbones[name] = bb
+                modality_dims[name] = bb.output_dim
+            elif modality_type == "embedding":
+                if not isinstance(backbone, str):
+                    raise ValueError(
+                        f"Embedding modality '{name}' expects a string backbone identifier",
+                    )
+
+                input_dim = kwargs.pop("input_dim", kwargs.pop("embedding_dim", None))
+                if input_dim is None:
+                    raise ValueError(
+                        f"input_dim (or embedding_dim) required for embedding modality '{name}'",
+                    )
+
+                normalized_backbone = backbone.lower().replace("-", "_")
+                if normalized_backbone in {"hipt", "hipt_embedding", "hipt_encoder"}:
+                    bb = HIPTEmbeddingBackbone(
+                        input_dim=int(input_dim),
+                        feature_dim=feature_dim or 512,
+                        **kwargs,
+                    )
+                else:
+                    raise ValueError(
+                        f"Unsupported embedding backbone: {backbone}. "
+                        "Available: ['hipt']",
+                    )
+
                 modality_backbones[name] = bb
                 modality_dims[name] = bb.output_dim
             else:

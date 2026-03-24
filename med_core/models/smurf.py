@@ -1,14 +1,16 @@
 """
-SMuRF: Survival Multimodal Radiology-Pathology Fusion Model
+SMuRF: Survival Multimodal Radiology-Pathology Fusion Model.
 
 This module implements the SMuRF architecture using the generic multi-modal
-model builder. SMuRF combines 3D radiology (CT) and 2D pathology features
-for classification and survival prediction tasks.
+model builder. SMuRF combines 3D radiology (CT) and pathology features for
+classification and survival-related tasks.
 
-Note: This is a refactored implementation that uses the generic MultiModalModelBuilder
-internally, eliminating code duplication and automatically benefiting from all
-framework features (gradient checkpointing, attention supervision, etc.).
+Pathology encoder options:
+- patch_mil (default): 2D patch images with a vision backbone
+- hipt: offline/precomputed embedding vectors (HIPT-style)
 """
+
+from __future__ import annotations
 
 from typing import Any, Literal
 
@@ -17,38 +19,58 @@ from torch import nn
 
 from med_core.models.builder import MultiModalModelBuilder
 
+PathologyEncoderType = Literal["patch_mil", "hipt"]
+
+
+def _normalize_pathology_encoder(pathology_encoder: str) -> PathologyEncoderType:
+    normalized = str(pathology_encoder).strip().lower()
+    if normalized not in {"patch_mil", "hipt"}:
+        raise ValueError(
+            f"Invalid pathology_encoder: {pathology_encoder}. "
+            "Available: ['patch_mil', 'hipt']",
+        )
+    return normalized  # type: ignore[return-value]
+
+
+def _add_pathology_modality(
+    builder: MultiModalModelBuilder,
+    pathology_backbone: dict[str, Any],
+    pathology_encoder: PathologyEncoderType,
+    pathology_feature_dim: int,
+) -> None:
+    """Attach pathology modality according to encoder type."""
+    if pathology_encoder == "patch_mil":
+        pathology_variant = pathology_backbone.get("variant", "small")
+        pathology_in_channels = pathology_backbone.get("in_channels", 3)
+        builder.add_modality(
+            "pathology",
+            backbone=f"swin2d_{pathology_variant}",
+            modality_type="vision",
+            feature_dim=pathology_feature_dim,
+            in_channels=pathology_in_channels,
+        )
+        return
+
+    embedding_dim = int(
+        pathology_backbone.get(
+            "embedding_dim",
+            pathology_backbone.get("input_dim", 192),
+        )
+    )
+    embedding_dropout = float(pathology_backbone.get("dropout", 0.1))
+
+    builder.add_modality(
+        "pathology",
+        backbone="hipt",
+        modality_type="embedding",
+        feature_dim=pathology_feature_dim,
+        input_dim=embedding_dim,
+        dropout=embedding_dropout,
+    )
+
 
 class SMuRFModel(nn.Module):
-    """
-    SMuRF model for multimodal medical imaging.
-
-    Combines 3D radiology imaging (CT scans) with 2D pathology imaging
-    (histopathology slides) using advanced fusion strategies.
-
-    This is a convenience wrapper around GenericMultiModalModel that provides
-    a domain-specific API for radiology-pathology fusion.
-
-    Args:
-        radiology_backbone: Configuration for 3D radiology backbone
-        pathology_backbone: Configuration for 2D pathology backbone
-        fusion_strategy: Fusion method ('concat', 'kronecker', 'fused_attention')
-        num_classes: Number of classification classes
-        radiology_feature_dim: Output dimension for radiology features
-        pathology_feature_dim: Output dimension for pathology features
-        fusion_hidden_dim: Hidden dimension for fusion module
-        dropout: Dropout rate
-
-    Example:
-        >>> model = SMuRFModel(
-        ...     radiology_backbone={'variant': 'small'},
-        ...     pathology_backbone={'variant': 'small'},
-        ...     fusion_strategy='fused_attention',
-        ...     num_classes=4
-        ... )
-        >>> ct = torch.randn(2, 1, 64, 128, 128)
-        >>> pathology = torch.randn(2, 3, 224, 224)
-        >>> logits = model(ct, pathology)
-    """
+    """SMuRF model for radiology-pathology fusion."""
 
     def __init__(
         self,
@@ -62,17 +84,17 @@ class SMuRFModel(nn.Module):
         pathology_feature_dim: int = 512,
         fusion_hidden_dim: int = 256,
         dropout: float = 0.3,
+        pathology_encoder: PathologyEncoderType = "patch_mil",
     ):
         super().__init__()
 
         self.fusion_strategy = fusion_strategy
         self.num_classes = num_classes
+        self.pathology_encoder = _normalize_pathology_encoder(pathology_encoder)
 
         # Build model using generic builder
         radiology_variant = radiology_backbone.get("variant", "small")
         radiology_in_channels = radiology_backbone.get("in_channels", 1)
-        pathology_variant = pathology_backbone.get("variant", "small")
-        pathology_in_channels = pathology_backbone.get("in_channels", 3)
 
         # Map fusion strategy names
         fusion_map = {
@@ -96,12 +118,11 @@ class SMuRFModel(nn.Module):
             feature_dim=radiology_feature_dim,
             in_channels=radiology_in_channels,
         )
-        builder.add_modality(
-            "pathology",
-            backbone=f"swin2d_{pathology_variant}",
-            modality_type="vision",
-            feature_dim=pathology_feature_dim,
-            in_channels=pathology_in_channels,
+        _add_pathology_modality(
+            builder=builder,
+            pathology_backbone=pathology_backbone,
+            pathology_encoder=self.pathology_encoder,
+            pathology_feature_dim=pathology_feature_dim,
         )
 
         # Set fusion
@@ -126,17 +147,14 @@ class SMuRFModel(nn.Module):
         pathology: torch.Tensor,
         return_features: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, dict]:
-        """
-        Forward pass.
+        """Forward pass.
 
         Args:
             radiology: 3D CT scan [B, C, D, H, W]
-            pathology: 2D histopathology [B, C, H, W]
+            pathology:
+                - patch_mil: [B, C, H, W]
+                - hipt: [B, D]
             return_features: Return intermediate features
-
-        Returns:
-            Classification logits [B, num_classes]
-            If return_features=True, also returns feature dict
         """
         inputs = {
             "radiology": radiology,
@@ -156,33 +174,7 @@ class SMuRFModel(nn.Module):
 
 
 class SMuRFWithMIL(nn.Module):
-    """
-    SMuRF model with Multiple Instance Learning (MIL) for pathology.
-
-    Handles multiple pathology patches per sample using attention-based
-    aggregation before fusion with radiology features.
-
-    Args:
-        radiology_backbone: Configuration for 3D radiology backbone
-        pathology_backbone: Configuration for 2D pathology backbone
-        fusion_strategy: Fusion method
-        num_classes: Number of classification classes
-        radiology_feature_dim: Output dimension for radiology features
-        pathology_feature_dim: Output dimension for pathology features
-        fusion_hidden_dim: Hidden dimension for fusion module
-        mil_attention_dim: Attention dimension for MIL aggregation
-        dropout: Dropout rate
-
-    Example:
-        >>> model = SMuRFWithMIL(
-        ...     radiology_backbone={'variant': 'small'},
-        ...     pathology_backbone={'variant': 'small'},
-        ...     num_classes=4
-        ... )
-        >>> ct = torch.randn(2, 1, 64, 128, 128)
-        >>> pathology_patches = torch.randn(2, 10, 3, 224, 224)  # 10 patches
-        >>> logits = model(ct, pathology_patches)
-    """
+    """SMuRF model with MIL for pathology."""
 
     def __init__(
         self,
@@ -197,17 +189,17 @@ class SMuRFWithMIL(nn.Module):
         fusion_hidden_dim: int = 256,
         mil_attention_dim: int = 128,
         dropout: float = 0.3,
+        pathology_encoder: PathologyEncoderType = "patch_mil",
     ):
         super().__init__()
 
         self.fusion_strategy = fusion_strategy
         self.num_classes = num_classes
+        self.pathology_encoder = _normalize_pathology_encoder(pathology_encoder)
 
         # Build model using generic builder with MIL
         radiology_variant = radiology_backbone.get("variant", "small")
         radiology_in_channels = radiology_backbone.get("in_channels", 1)
-        pathology_variant = pathology_backbone.get("variant", "small")
-        pathology_in_channels = pathology_backbone.get("in_channels", 3)
 
         # Map fusion strategy names
         fusion_map = {
@@ -224,12 +216,11 @@ class SMuRFWithMIL(nn.Module):
             feature_dim=radiology_feature_dim,
             in_channels=radiology_in_channels,
         )
-        builder.add_modality(
-            "pathology",
-            backbone=f"swin2d_{pathology_variant}",
-            modality_type="vision",
-            feature_dim=pathology_feature_dim,
-            in_channels=pathology_in_channels,
+        _add_pathology_modality(
+            builder=builder,
+            pathology_backbone=pathology_backbone,
+            pathology_encoder=self.pathology_encoder,
+            pathology_feature_dim=pathology_feature_dim,
         )
 
         # Add MIL aggregation for pathology
@@ -261,17 +252,14 @@ class SMuRFWithMIL(nn.Module):
         pathology_patches: torch.Tensor,
         return_features: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, dict]:
-        """
-        Forward pass with MIL aggregation.
+        """Forward pass with MIL aggregation.
 
         Args:
             radiology: 3D CT scan [B, C, D, H, W]
-            pathology_patches: Multiple pathology patches [B, N, C, H, W]
+            pathology_patches:
+                - patch_mil: [B, N, C, H, W]
+                - hipt: [B, N, D]
             return_features: Return intermediate features
-
-        Returns:
-            Classification logits [B, num_classes]
-            If return_features=True, also returns feature dict
         """
         inputs = {
             "radiology": radiology,
@@ -302,23 +290,7 @@ def smurf_small(
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFModel:
-    """
-    Create a small SMuRF model.
-
-    Args:
-        num_classes: Number of classification classes
-        fusion_strategy: Fusion method
-        **kwargs: Additional arguments
-
-    Returns:
-        SMuRF model with small backbones
-
-    Example:
-        >>> model = smurf_small(num_classes=4, fusion_strategy='fused_attention')
-        >>> ct = torch.randn(2, 1, 64, 128, 128)
-        >>> pathology = torch.randn(2, 3, 224, 224)
-        >>> logits = model(ct, pathology)
-    """
+    """Create a small SMuRF model."""
     return SMuRFModel(
         radiology_backbone={"variant": "small"},
         pathology_backbone={"variant": "small"},
@@ -335,20 +307,7 @@ def smurf_base(
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFModel:
-    """
-    Create a base SMuRF model.
-
-    Args:
-        num_classes: Number of classification classes
-        fusion_strategy: Fusion method
-        **kwargs: Additional arguments
-
-    Returns:
-        SMuRF model with base backbones
-
-    Example:
-        >>> model = smurf_base(num_classes=4, fusion_strategy='fused_attention')
-    """
+    """Create a base SMuRF model."""
     return SMuRFModel(
         radiology_backbone={"variant": "base"},
         pathology_backbone={"variant": "base"},
@@ -368,23 +327,7 @@ def smurf_with_mil_small(
     ] = "fused_attention",
     **kwargs: Any,
 ) -> SMuRFWithMIL:
-    """
-    Create a small SMuRF model with MIL.
-
-    Args:
-        num_classes: Number of classification classes
-        fusion_strategy: Fusion method
-        **kwargs: Additional arguments
-
-    Returns:
-        SMuRF model with MIL and small backbones
-
-    Example:
-        >>> model = smurf_with_mil_small(num_classes=4)
-        >>> ct = torch.randn(2, 1, 64, 128, 128)
-        >>> pathology_patches = torch.randn(2, 10, 3, 224, 224)
-        >>> logits = model(ct, pathology_patches)
-    """
+    """Create a small SMuRF model with MIL."""
     return SMuRFWithMIL(
         radiology_backbone={"variant": "small"},
         pathology_backbone={"variant": "small"},

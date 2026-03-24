@@ -171,6 +171,23 @@ class TestSMuRFModel:
                 num_classes=4,
             )
 
+    def test_hipt_pathology_encoder_forward(self):
+        """Test HIPT embedding pathology encoder forward pass."""
+        model = SMuRFModel(
+            radiology_backbone={"variant": "tiny"},
+            pathology_backbone={"embedding_dim": 32},
+            pathology_encoder="hipt",
+            fusion_strategy="concat",
+            num_classes=4,
+        )
+
+        ct = torch.randn(2, 1, 32, 64, 64)
+        pathology = torch.randn(2, 32)
+
+        logits = model(ct, pathology)
+
+        assert logits.shape == (2, 4)
+
 
 class TestSMuRFWithMIL:
     """Test suite for SMuRFWithMIL."""
@@ -275,6 +292,25 @@ class TestSMuRFWithMIL:
             logits = model(ct, pathology_patches)
 
             assert logits.shape == (2, 4)
+
+    def test_mil_with_hipt_pathology_encoder(self):
+        """Test MIL forward with HIPT embedding pathology encoder."""
+        model = SMuRFWithMIL(
+            radiology_backbone={"variant": "tiny"},
+            pathology_backbone={"embedding_dim": 32},
+            pathology_encoder="hipt",
+            fusion_strategy="concat",
+            num_classes=4,
+        )
+
+        ct = torch.randn(2, 1, 32, 64, 64)
+        pathology_embeddings = torch.randn(2, 5, 32)
+
+        logits, features = model(ct, pathology_embeddings, return_features=True)
+
+        assert logits.shape == (2, 4)
+        assert features["pathology_patches"].shape == (2, 5, 512)
+        assert features["pathology_aggregated"].shape == (2, 512)
 
 
 class TestPrebuiltModels:

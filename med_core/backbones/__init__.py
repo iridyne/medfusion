@@ -18,6 +18,7 @@ from med_core.backbones.base import (
     BaseTabularBackbone,
     BaseVisionBackbone,
 )
+from med_core.backbones.hipt import HIPTEmbeddingBackbone
 from med_core.backbones.multiview_vision import (
     MultiViewVisionBackbone,
     create_multiview_vision_backbone,
@@ -61,6 +62,8 @@ __all__ = [
     "ViTBackbone",
     "SwinBackbone",
     "create_vision_backbone",
+    # Embedding backbones
+    "HIPTEmbeddingBackbone",
     # Multi-view support
     "MultiViewVisionBackbone",
     "create_multiview_vision_backbone",

@@ -62,6 +62,9 @@ class DataConfig(BaseConfig):
     patient_id_column: str | None = None
     image_path_column: str = "image_path"
 
+    # Optional offline pathology embeddings (e.g., HIPT exports)
+    hipt_embeddings_dir: str | None = None
+
     # Dataloader settings
     batch_size: int = 16
     num_workers: int = 4
@@ -162,6 +165,10 @@ class ModelConfig(BaseConfig):
     vision: VisionConfig = field(default_factory=VisionConfig)
     tabular: TabularConfig = field(default_factory=TabularConfig)
     fusion: FusionConfig = field(default_factory=FusionConfig)
+
+    # Pathology encoder selection
+    pathology_encoder: Literal["patch_mil", "hipt"] = "patch_mil"
+    hipt_embedding_dim: int = 192
 
     # Multi-task auxiliary heads
     use_auxiliary_heads: bool = True
