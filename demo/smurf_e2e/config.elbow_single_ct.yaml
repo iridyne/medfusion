@@ -1,6 +1,6 @@
 seed: 42
 device: auto
-output_dir: demo/smurf_e2e/outputs_elbow_single_ct
+output_dir: demo/smurf_e2e/outputs/elbow_single_ct
 
 model:
   vision_backbone: mobilenetv3_small

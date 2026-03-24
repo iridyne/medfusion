@@ -79,7 +79,7 @@ uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_s
 
 ## 输出文件在哪里看
 
-以单 CT 模式为例：`demo/smurf_e2e/outputs_elbow_single_ct/`
+以单 CT 模式为例：`demo/smurf_e2e/outputs/elbow_single_ct/`
 
 - `checkpoints/best_smurf_multiregion.pth`：模型参数
 - `history.json`：训练过程
