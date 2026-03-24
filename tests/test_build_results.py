@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
@@ -12,13 +13,29 @@ from med_core.fusion import MultiModalFusionModel, create_fusion_module
 from med_core.postprocessing import build_results_artifacts
 
 
-def _create_checkpoint_and_logs(tmp_path: Path) -> tuple[Path, Path]:
+def _create_checkpoint_and_logs(
+    tmp_path: Path,
+    *,
+    include_survival: bool = False,
+) -> tuple[Path, Path]:
     config = load_config("configs/starter/quickstart.yaml")
     config.logging.output_dir = str(tmp_path / "run")
     config.data.image_size = 64
     config.data.batch_size = 8
     config.data.num_workers = 0
     config.model.vision.pretrained = False
+    if include_survival:
+        source_csv = Path(config.data.csv_path)
+        dataframe = pd.read_csv(source_csv)
+        dataframe["survival_time"] = [
+            30 + (index * 17) % 720 for index in range(len(dataframe))
+        ]
+        dataframe["event"] = [1 if index % 3 else 0 for index in range(len(dataframe))]
+        survival_csv_path = tmp_path / "metadata_with_survival.csv"
+        dataframe.to_csv(survival_csv_path, index=False)
+        config.data.csv_path = str(survival_csv_path)
+        config.data.survival_time_column = "survival_time"
+        config.data.survival_event_column = "event"
 
     config_path = tmp_path / "quickstart-test.yaml"
     save_config(config, config_path)
@@ -112,6 +129,8 @@ def test_build_results_artifacts_from_real_checkpoint(tmp_path: Path) -> None:
     assert result.validation["overview"]["split"] == "train"
     assert result.validation["overview"]["sample_count"] > 0
     assert 0.0 <= result.metrics["accuracy"] <= 1.0
+    assert result.validation.get("survival") is None
+    assert result.validation["global_feature_importance"]["top_features"]
     assert "validation_path" in result.artifact_paths
 
     expected_files = [
@@ -126,3 +145,39 @@ def test_build_results_artifacts_from_real_checkpoint(tmp_path: Path) -> None:
     ]
     for path in expected_files:
         assert path.exists(), f"Missing artifact: {path}"
+
+
+def test_build_results_artifacts_include_survival_and_importance_when_configured(
+    tmp_path: Path,
+) -> None:
+    config_path, checkpoint_path = _create_checkpoint_and_logs(
+        tmp_path,
+        include_survival=True,
+    )
+
+    result = build_results_artifacts(
+        config_path=config_path,
+        checkpoint_path=checkpoint_path,
+        split="train",
+        attention_samples=2,
+        importance_sample_limit=8,
+    )
+
+    output_dir = Path(result.output_dir)
+    report_path = output_dir / "report.md"
+    report_text = report_path.read_text(encoding="utf-8")
+
+    assert result.validation["survival"]["c_index"] is not None
+    assert result.validation["survival"]["sample_count"] > 0
+    assert result.validation["global_feature_importance"]["top_features"]
+    assert result.metrics["c_index"] is not None
+    assert result.artifact_paths["survival_path"].endswith("survival.json")
+    assert result.artifact_paths["kaplan_meier_plot_path"].endswith("kaplan_meier_curve.png")
+    assert result.artifact_paths["risk_score_distribution_plot_path"].endswith("risk_score_distribution.png")
+    assert result.artifact_paths["feature_importance_path"].endswith("feature_importance.json")
+    assert result.artifact_paths["feature_importance_bar_plot_path"].endswith("feature_importance_bar.png")
+    assert result.artifact_paths["feature_importance_beeswarm_plot_path"].endswith(
+        "feature_importance_beeswarm.png"
+    )
+    assert "## Survival Analysis" in report_text
+    assert "## Global Feature Importance" in report_text

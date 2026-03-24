@@ -125,7 +125,10 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const predictionSummary = validation?.prediction_summary;
   const thresholdAnalysis = validation?.threshold_analysis;
   const calibration = validation?.calibration;
+  const survival = validation?.survival;
+  const globalFeatureImportance = validation?.global_feature_importance;
   const perClassRows = validation?.per_class || [];
+  const importanceTopFeatures = globalFeatureImportance?.top_features || [];
   const summary = (model.config?.result_summary || {}) as Record<string, any>;
   const trainingHistory = model.training_history?.entries || [];
   const auxiliaryVisuals = [
@@ -143,6 +146,26 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
       key: model.visualizations?.probability_distribution?.artifact_key,
       title: "概率分布图",
       imageUrl: model.visualizations?.probability_distribution?.image_url,
+    },
+    {
+      key: model.visualizations?.survival_curve?.artifact_key,
+      title: "Kaplan-Meier 曲线",
+      imageUrl: model.visualizations?.survival_curve?.image_url,
+    },
+    {
+      key: model.visualizations?.risk_score_distribution?.artifact_key,
+      title: "风险分数分布图",
+      imageUrl: model.visualizations?.risk_score_distribution?.image_url,
+    },
+    {
+      key: model.visualizations?.feature_importance_bar?.artifact_key,
+      title: "变量重要性柱状图",
+      imageUrl: model.visualizations?.feature_importance_bar?.image_url,
+    },
+    {
+      key: model.visualizations?.feature_importance_beeswarm?.artifact_key,
+      title: "变量重要性蜂群图",
+      imageUrl: model.visualizations?.feature_importance_beeswarm?.image_url,
     },
     {
       key: model.visualizations?.attention_statistics?.artifact_key,
@@ -185,6 +208,10 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
       value: formatMetric(
         rocCurve?.auc ?? validationOverview?.auc ?? model.metrics?.auc,
       ),
+    },
+    {
+      title: "C-index",
+      value: formatMetric(survival?.c_index ?? model.metrics?.c_index),
     },
     {
       title: "宏平均 F1",
@@ -250,7 +277,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
         type="info"
         showIcon
         message="多模态结果面板"
-        description="当前面板直接消费训练后沉淀下来的 artifact 和 validation 摘要，包括训练历史、ROC、混淆矩阵、per-class 指标、阈值分析、注意力图和报告文件。"
+        description="当前面板直接消费训练后沉淀下来的 artifact 和 validation 摘要，包括训练历史、ROC、混淆矩阵、per-class 指标、阈值分析、survival 分析、SHAP-style 变量重要性、注意力图和报告文件。"
       />
 
       <Row gutter={[16, 16]}>
@@ -713,6 +740,90 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                 )}
               </div>
             </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={12}>
+          <Card title="Survival 分析">
+            {survival ? (
+              <Descriptions column={1} size="small" labelStyle={{ width: 160 }}>
+                <Descriptions.Item label="C-index">
+                  {formatMetric(survival.c_index)}
+                </Descriptions.Item>
+                <Descriptions.Item label="样本数">
+                  {formatCount(survival.sample_count)}
+                </Descriptions.Item>
+                <Descriptions.Item label="事件数">
+                  {formatCount(survival.event_count)}
+                </Descriptions.Item>
+                <Descriptions.Item label="事件率">
+                  {formatPercent(survival.event_rate)}
+                </Descriptions.Item>
+                <Descriptions.Item label="删失率">
+                  {formatPercent(survival.censoring_rate)}
+                </Descriptions.Item>
+                <Descriptions.Item label="风险来源">
+                  {survival.risk_score_source || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="中位生存时间">
+                  {formatMetric(survival.median_survival_time)}
+                </Descriptions.Item>
+                <Descriptions.Item label="分组阈值">
+                  {formatMetric(survival.risk_group_threshold)}
+                </Descriptions.Item>
+              </Descriptions>
+            ) : (
+              <Empty description="当前结果未配置 survival 分析" />
+            )}
+          </Card>
+        </Col>
+
+        <Col xs={24} xl={12}>
+          <Card title="全局变量重要性">
+            {importanceTopFeatures.length ? (
+              <Table
+                rowKey="feature"
+                pagination={false}
+                size="small"
+                dataSource={importanceTopFeatures}
+                columns={[
+                  {
+                    title: "变量",
+                    dataIndex: "feature",
+                    key: "feature",
+                  },
+                  {
+                    title: "Mean |Contribution|",
+                    dataIndex: "mean_abs_contribution",
+                    key: "mean_abs_contribution",
+                    align: "right" as const,
+                    render: (value: number) => formatMetric(value, 6),
+                  },
+                  {
+                    title: "Mean Contribution",
+                    dataIndex: "mean_contribution",
+                    key: "mean_contribution",
+                    align: "right" as const,
+                    render: (value: number) => formatMetric(value, 6),
+                  },
+                ]}
+              />
+            ) : (
+              <Empty description="当前结果暂无变量重要性摘要" />
+            )}
+            {globalFeatureImportance?.method ? (
+              <Paragraph style={{ marginTop: 12, marginBottom: 0 }}>
+                <Text type="secondary">
+                  {globalFeatureImportance.method}
+                  {" · "}
+                  {globalFeatureImportance.score_name || "-"}
+                  {" · samples="}
+                  {globalFeatureImportance.sample_count ?? "-"}
+                </Text>
+              </Paragraph>
+            ) : null}
           </Card>
         </Col>
       </Row>

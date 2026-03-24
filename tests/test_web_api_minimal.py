@@ -165,7 +165,10 @@ async def test_web_basic_routes(api_client) -> None:
 
 
 async def test_web_can_import_real_cli_run(api_client, tmp_path) -> None:
-    config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
+    config_path, checkpoint_path = _create_checkpoint_and_logs(
+        tmp_path,
+        include_survival=True,
+    )
 
     imported = await api_client.post(
         "/api/models/import-run",
@@ -174,6 +177,9 @@ async def test_web_can_import_real_cli_run(api_client, tmp_path) -> None:
             "checkpoint_path": str(checkpoint_path),
             "split": "train",
             "attention_samples": 2,
+            "survival_time_column": "survival_time",
+            "survival_event_column": "event",
+            "importance_sample_limit": 8,
             "name": "ci-imported-real-run",
             "tags": ["ci-import"],
         },
@@ -184,6 +190,14 @@ async def test_web_can_import_real_cli_run(api_client, tmp_path) -> None:
     assert payload["validation"]["overview"]["split"] == "train"
     assert payload["visualizations"]["confusion_matrix"]["plot_url"]
     assert payload["visualizations"]["attention_maps"]
+    assert payload["validation"]["survival"]["c_index"] is not None
+    assert payload["visualizations"]["survival_curve"]["image_url"]
+    assert payload["visualizations"]["risk_score_distribution"]["image_url"]
+    assert payload["validation"]["global_feature_importance"]["top_features"]
+    assert payload["visualizations"]["feature_importance_bar"]["image_url"]
+    assert payload["visualizations"]["feature_importance_beeswarm"]["image_url"]
+    assert any(artifact["key"] == "survival" for artifact in payload["result_files"])
+    assert any(artifact["key"] == "feature_importance" for artifact in payload["result_files"])
     assert any(artifact["key"] == "report" for artifact in payload["result_files"])
 
     listed = await api_client.get("/api/models/")

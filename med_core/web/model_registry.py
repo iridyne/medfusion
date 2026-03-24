@@ -120,6 +120,7 @@ def _build_result_summary(
         "best_loss": metrics.get("best_loss"),
         "balanced_accuracy": overview.get("balanced_accuracy", metrics.get("balanced_accuracy")),
         "macro_f1": overview.get("macro_f1", metrics.get("macro_f1")),
+        "c_index": metrics.get("c_index"),
         "sample_count": overview.get("sample_count"),
     }
 
@@ -224,6 +225,11 @@ def import_model_run(
     output_dir: str | Path | None = None,
     split: str = "test",
     attention_samples: int = 4,
+    enable_survival: bool = True,
+    survival_time_column: str | None = None,
+    survival_event_column: str | None = None,
+    enable_importance: bool = True,
+    importance_sample_limit: int = 128,
     name: str | None = None,
     description: str | None = None,
     tags: list[str] | None = None,
@@ -244,6 +250,11 @@ def import_model_run(
         output_dir=output_dir,
         split=split,
         attention_samples=max(attention_samples, 0),
+        enable_survival=enable_survival,
+        survival_time_column=survival_time_column,
+        survival_event_column=survival_event_column,
+        enable_importance=enable_importance,
+        importance_sample_limit=max(importance_sample_limit, 0),
     )
     summary_payload = _read_json(result.artifact_paths.get("summary_path"))
     config_snapshot = _read_json(result.artifact_paths.get("config_path"))

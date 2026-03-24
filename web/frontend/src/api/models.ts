@@ -34,6 +34,9 @@ export interface ModelImportRequest {
   output_dir?: string;
   split?: "train" | "val" | "test";
   attention_samples?: number;
+  survival_time_column?: string;
+  survival_event_column?: string;
+  importance_sample_limit?: number;
   name?: string;
   description?: string;
   tags?: string[];
@@ -157,6 +160,58 @@ export interface Model {
         gap: number;
       }>;
     } | null;
+    survival?: {
+      time_column?: string;
+      event_column?: string;
+      risk_score_source?: string;
+      sample_count?: number;
+      event_count?: number;
+      event_rate?: number;
+      censoring_rate?: number;
+      median_survival_time?: number | null;
+      risk_group_threshold?: number;
+      c_index?: number | null;
+      risk_distribution?: {
+        min?: number;
+        median?: number;
+        max?: number;
+        mean?: number;
+        std?: number;
+      };
+      kaplan_meier?: {
+        groups?: Array<{
+          label: string;
+          count: number;
+          event_count: number;
+          curve: Array<{
+            time: number;
+            survival: number;
+            at_risk?: number;
+            events?: number;
+          }>;
+        }>;
+      };
+    } | null;
+    global_feature_importance?: {
+      method?: string;
+      score_name?: string;
+      sample_count?: number;
+      feature_count?: number;
+      top_features?: Array<{
+        feature: string;
+        mean_abs_contribution: number;
+        mean_contribution: number;
+        std_contribution: number;
+        sample_count: number;
+      }>;
+      features?: Array<{
+        feature: string;
+        mean_abs_contribution: number;
+        mean_contribution: number;
+        std_contribution: number;
+        sample_count: number;
+      }>;
+    } | null;
   } | null;
   visualizations?: {
     roc_curve?: {
@@ -196,6 +251,27 @@ export interface Model {
       image_url: string;
     };
     probability_distribution?: {
+      artifact_key: string;
+      image_url: string;
+    };
+    survival_curve?: {
+      artifact_key: string;
+      image_url: string;
+      c_index?: number | null;
+    };
+    risk_score_distribution?: {
+      artifact_key: string;
+      image_url: string;
+    };
+    feature_importance_bar?: {
+      artifact_key: string;
+      image_url: string;
+      top_features?: Array<{
+        feature: string;
+        mean_abs_contribution: number;
+      }>;
+    };
+    feature_importance_beeswarm?: {
       artifact_key: string;
       image_url: string;
     };

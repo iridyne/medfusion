@@ -229,6 +229,8 @@ class ConfigDoctor:
         optional_columns = (
             list(config.data.numerical_features)
             + list(config.data.categorical_features)
+            + ([config.data.survival_time_column] if config.data.survival_time_column else [])
+            + ([config.data.survival_event_column] if config.data.survival_event_column else [])
             + ([config.data.patient_id_column] if config.data.patient_id_column else [])
         )
         expected_columns = [column for column in required_columns + optional_columns if column]

@@ -31,6 +31,11 @@ from med_core.datasets import (
 )
 from med_core.evaluation.interpretability import GradCAM
 from med_core.fusion import MultiModalFusionModel, create_fusion_module
+from med_core.postprocessing.analysis import (
+    build_global_feature_importance_artifacts,
+    build_survival_artifacts,
+    resolve_survival_columns,
+)
 from med_core.shared.visualization import (
     plot_calibration_curve,
     plot_confusion_matrix,
@@ -56,6 +61,8 @@ class InferenceArtifacts:
     y_true: np.ndarray
     y_pred: np.ndarray
     probabilities: np.ndarray
+    risk_scores: np.ndarray
+    risk_score_source: str
     sample_records: list[dict[str, Any]]
 
 
@@ -248,12 +255,20 @@ def _run_inference(
         labels = [f"Class {index}" for index in range(num_classes)]
 
     confidence = probabilities_array.max(axis=1)
+    if num_classes == 2:
+        risk_scores = probabilities_array[:, 1]
+        risk_score_source = "positive_class_probability"
+    else:
+        risk_scores = confidence
+        risk_score_source = "max_predicted_probability"
     sample_records = [
         {
             "index": index,
+            "patient_id": dataset.get_patient_id(index) if hasattr(dataset, "get_patient_id") else None,
             "true_label": labels[int(y_true_array[index])],
             "predicted_label": labels[int(y_pred_array[index])],
             "confidence": round(float(confidence[index]), 4),
+            "risk_score": round(float(risk_scores[index]), 6),
         }
         for index in range(len(y_true_array))
     ]
@@ -265,8 +280,36 @@ def _run_inference(
         y_true=y_true_array,
         y_pred=y_pred_array,
         probabilities=probabilities_array,
+        risk_scores=risk_scores,
+        risk_score_source=risk_score_source,
         sample_records=sample_records,
     )
+
+
+def _resolve_survival_cutoff(
+    config: Any,
+    model: MultiModalFusionModel,
+    device: torch.device,
+    batch_size: int,
+    split: str,
+    time_column: str | None,
+    event_column: str | None,
+) -> tuple[float | None, str]:
+    if not time_column or not event_column or split == "train":
+        return None, "current_split_median"
+
+    try:
+        train_dataset = _load_split_dataset(config, "train")
+        train_inference = _run_inference(
+            model=model,
+            dataset=train_dataset,
+            device=device,
+            batch_size=batch_size,
+        )
+        return float(np.median(train_inference.risk_scores)), "train_split_median"
+    except Exception as exc:
+        logger.warning("Failed to resolve train survival cutoff, fallback to current split median: %s", exc)
+        return None, "current_split_median"
 
 
 def _compute_expected_calibration_error(
@@ -459,6 +502,8 @@ def _build_metrics_payload(
     dataset_name: str | None,
     split: str,
     attention_artifacts: dict[str, Any],
+    survival_payload: dict[str, Any] | None,
+    importance_payload: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     labels = inference.labels
     num_classes = inference.num_classes
@@ -565,7 +610,7 @@ def _build_metrics_payload(
             title=f"ROC Curve ({positive_class_label} vs Rest)",
             save_path=roc_curve_path,
         )
-        roc_figure.clf()
+        plt.close(roc_figure)
 
         finite_threshold_indices = np.flatnonzero(np.isfinite(thresholds))
         if finite_threshold_indices.size > 0:
@@ -606,7 +651,7 @@ def _build_metrics_payload(
         title="Confusion Matrix",
         save_path=confusion_matrix_path,
     )
-    confusion_figure.clf()
+    plt.close(confusion_figure)
 
     normalized_confusion_matrix_path = visualization_dir / "confusion_matrix_normalized.png"
     normalized_confusion_figure, _ = plot_confusion_matrix(
@@ -617,7 +662,7 @@ def _build_metrics_payload(
         normalize="true",
         save_path=normalized_confusion_matrix_path,
     )
-    normalized_confusion_figure.clf()
+    plt.close(normalized_confusion_figure)
 
     has_train_accuracy = any(
         entry.get("train_accuracy") is not None for entry in history_entries
@@ -655,7 +700,7 @@ def _build_metrics_payload(
             title="Training Curves",
             save_path=training_curves_path,
         )
-        training_curve_figure.clf()
+        plt.close(training_curve_figure)
 
     calibration_curve_path = None
     probability_distribution_path = None
@@ -667,7 +712,7 @@ def _build_metrics_payload(
             title=f"Calibration Curve ({positive_class_label})",
             save_path=calibration_curve_path,
         )
-        calibration_figure.clf()
+        plt.close(calibration_figure)
 
         probability_distribution_path = visualization_dir / "probability_distribution.png"
         probability_figure, _ = plot_probability_distribution(
@@ -676,7 +721,7 @@ def _build_metrics_payload(
             title=f"Prediction Probability Distribution ({positive_class_label})",
             save_path=probability_distribution_path,
         )
-        probability_figure.clf()
+        plt.close(probability_figure)
 
     roc_payload = {
         "artifact_key": "roc_curve_plot",
@@ -749,6 +794,8 @@ def _build_metrics_payload(
                 "ece": calibration_summary["ece"],
             }
         )
+    if survival_payload:
+        metrics_payload["c_index"] = survival_payload.get("c_index")
 
     validation_payload = {
         "dataset": {
@@ -777,6 +824,8 @@ def _build_metrics_payload(
         },
         "threshold_analysis": threshold_analysis,
         "calibration": calibration_summary,
+        "survival": survival_payload,
+        "global_feature_importance": importance_payload,
     }
 
     predictions_payload = {
@@ -786,6 +835,8 @@ def _build_metrics_payload(
         "y_true": y_true.tolist(),
         "y_pred": y_pred.tolist(),
         "probabilities": np.round(probabilities, 6).tolist(),
+        "risk_scores": np.round(inference.risk_scores, 6).tolist(),
+        "risk_score_source": inference.risk_score_source,
         "samples": inference.sample_records,
     }
 
@@ -844,6 +895,8 @@ def _write_summary_and_report(
     validation_overview = validation_payload.get("overview", {})
     per_class_rows = validation_payload.get("per_class", [])
     top_misclassifications = validation_payload.get("prediction_summary", {}).get("top_misclassifications", [])
+    survival_payload = validation_payload.get("survival") or {}
+    importance_payload = validation_payload.get("global_feature_importance") or {}
 
     summary_payload = {
         "experiment_name": config.experiment_name,
@@ -863,6 +916,8 @@ def _write_summary_and_report(
         },
         "metrics": metrics_payload,
         "validation_overview": validation_overview,
+        "survival": survival_payload or None,
+        "global_feature_importance": importance_payload or None,
     }
     _write_json(summary_path, summary_payload)
 
@@ -883,6 +938,7 @@ def _write_summary_and_report(
         f"- AUC: {metrics_payload.get('auc')}",
         f"- F1: {metrics_payload.get('f1_score')}",
         f"- Balanced Accuracy: {metrics_payload.get('balanced_accuracy', '-')}",
+        f"- C-index: {metrics_payload.get('c_index', '-')}",
         f"- Best Epoch: {metrics_payload.get('best_epoch', '-')}",
         f"- Best Accuracy: {metrics_payload.get('best_accuracy', '-')}",
         f"- Best Loss: {metrics_payload.get('best_loss', '-')}",
@@ -919,6 +975,14 @@ def _write_summary_and_report(
         "",
         "![Attention Statistics](visualizations/attention/attention_statistics.png)" if artifact_paths.get("attention_statistics_plot_path") else "",
         "",
+        "![Kaplan-Meier Curve](visualizations/kaplan_meier_curve.png)" if artifact_paths.get("kaplan_meier_plot_path") else "",
+        "",
+        "![Risk Score Distribution](visualizations/risk_score_distribution.png)" if artifact_paths.get("risk_score_distribution_plot_path") else "",
+        "",
+        "![Global Feature Importance Bar](visualizations/feature_importance_bar.png)" if artifact_paths.get("feature_importance_bar_plot_path") else "",
+        "",
+        "![Global Feature Importance Beeswarm](visualizations/feature_importance_beeswarm.png)" if artifact_paths.get("feature_importance_beeswarm_plot_path") else "",
+        "",
         "## Threshold Analysis",
         "",
         f"- Optimal Threshold: {metrics_payload.get('optimal_threshold', '-')}",
@@ -939,6 +1003,32 @@ def _write_summary_and_report(
         "",
         f"- total_entries: {len(history_entries)}",
     ]
+    if survival_payload:
+        report_lines.extend(
+            [
+                "",
+                "## Survival Analysis",
+                "",
+                f"- Survival Sample Count: {survival_payload.get('sample_count', '-')}",
+                f"- Event Rate: {survival_payload.get('event_rate', '-')}",
+                f"- C-index: {survival_payload.get('c_index', '-')}",
+                f"- Risk Score Source: {survival_payload.get('risk_score_source', '-')}",
+            ]
+        )
+    if importance_payload:
+        report_lines.extend(
+            [
+                "",
+                "## Global Feature Importance",
+                "",
+                f"- Method: {importance_payload.get('method', '-')}",
+                f"- Score Name: {importance_payload.get('score_name', '-')}",
+                *[
+                    f"- {item['feature']}: {item['mean_abs_contribution']}"
+                    for item in importance_payload.get("top_features", [])[:5]
+                ],
+            ]
+        )
     report_path.write_text("\n".join(line for line in report_lines if line is not None), encoding="utf-8")
 
     return {
@@ -956,6 +1046,11 @@ def build_results_artifacts(
     output_dir: str | Path | None = None,
     split: str = "test",
     attention_samples: int = 4,
+    enable_survival: bool = True,
+    survival_time_column: str | None = None,
+    survival_event_column: str | None = None,
+    enable_importance: bool = True,
+    importance_sample_limit: int = 128,
 ) -> BuildResultsOutput:
     """Generate validation artifacts from a real config and checkpoint."""
     if split not in {"train", "val", "test"}:
@@ -984,6 +1079,20 @@ def build_results_artifacts(
         device=device,
         batch_size=config.data.batch_size,
     )
+    resolved_time_column, resolved_event_column = resolve_survival_columns(
+        config,
+        override_time_column=survival_time_column,
+        override_event_column=survival_event_column,
+    )
+    survival_cutoff, survival_cutoff_source = _resolve_survival_cutoff(
+        config=config,
+        model=model,
+        device=device,
+        batch_size=config.data.batch_size,
+        split=split,
+        time_column=resolved_time_column,
+        event_column=resolved_event_column,
+    )
     attention_artifacts = _generate_attention_artifacts(
         model=model,
         dataset=dataset,
@@ -993,6 +1102,39 @@ def build_results_artifacts(
         inference=inference,
         sample_limit=attention_samples,
     )
+    survival_payload, survival_artifact_paths = (None, {})
+    if enable_survival:
+        survival_payload, survival_artifact_paths = build_survival_artifacts(
+            dataset=dataset,
+            output_dir=actual_output_dir,
+            risk_scores=inference.risk_scores,
+            risk_score_source=inference.risk_score_source,
+            time_column=resolved_time_column,
+            event_column=resolved_event_column,
+            cutoff=survival_cutoff,
+            cutoff_source=survival_cutoff_source,
+            split=split,
+        )
+
+    def _score_fn(image_batch: torch.Tensor, tabular_batch: torch.Tensor) -> np.ndarray:
+        outputs = model(image_batch, tabular_batch)
+        logits = outputs["logits"] if isinstance(outputs, dict) else outputs
+        probabilities = torch.softmax(logits, dim=1)
+        if probabilities.shape[1] == 2:
+            return probabilities[:, 1].detach().cpu().numpy()
+        return probabilities.max(dim=1).values.detach().cpu().numpy()
+
+    importance_payload, importance_artifact_paths = (None, {})
+    if enable_importance and importance_sample_limit > 0:
+        importance_payload, importance_artifact_paths = build_global_feature_importance_artifacts(
+            dataset=dataset,
+            device=device,
+            output_dir=actual_output_dir,
+            batch_size=min(max(config.data.batch_size, 1), 16),
+            sample_limit=max(importance_sample_limit, 0),
+            score_name=inference.risk_score_source,
+            score_fn=_score_fn,
+        )
     metrics_payload, validation_payload, visualization_paths = _build_metrics_payload(
         output_dir=actual_output_dir,
         inference=inference,
@@ -1000,7 +1142,14 @@ def build_results_artifacts(
         dataset_name=Path(config.data.csv_path).stem,
         split=split,
         attention_artifacts=attention_artifacts,
+        survival_payload=survival_payload,
+        importance_payload=importance_payload,
     )
+    visualization_paths = {
+        **visualization_paths,
+        **survival_artifact_paths,
+        **importance_artifact_paths,
+    }
     summary_paths = _write_summary_and_report(
         output_dir=actual_output_dir,
         config_path=config_path,

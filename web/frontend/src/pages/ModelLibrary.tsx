@@ -57,6 +57,9 @@ interface ImportFormValues {
   output_dir?: string;
   split: "train" | "val" | "test";
   attention_samples: number;
+  survival_time_column?: string;
+  survival_event_column?: string;
+  importance_sample_limit: number;
   name?: string;
   description?: string;
   tags?: string;
@@ -223,6 +226,9 @@ export default function ModelLibrary() {
       output_dir: values.output_dir?.trim() || undefined,
       split: values.split,
       attention_samples: values.attention_samples,
+      survival_time_column: values.survival_time_column?.trim() || undefined,
+      survival_event_column: values.survival_event_column?.trim() || undefined,
+      importance_sample_limit: values.importance_sample_limit,
       name: values.name?.trim() || undefined,
       description: values.description?.trim() || undefined,
       tags: parsedTags.length ? parsedTags : undefined,
@@ -540,7 +546,7 @@ export default function ModelLibrary() {
             type="info"
             showIcon
             message="把真实 CLI 训练产物接进结果页"
-            description="这里会直接调用 /api/models/import-run：读取 config 和 checkpoint，生成 validation / ROC / 混淆矩阵 / attention artifact，并把结果写入模型库。"
+            description="这里会直接调用 /api/models/import-run：读取 config 和 checkpoint，生成 validation / ROC / 混淆矩阵 / attention artifact，并在可配置时附加 survival 和 SHAP-style 全局变量重要性。"
           />
 
           <Form<ImportFormValues>
@@ -549,6 +555,7 @@ export default function ModelLibrary() {
             initialValues={{
               split: "test",
               attention_samples: 4,
+              importance_sample_limit: 128,
               config_path: "configs/starter/quickstart.yaml",
             }}
             onFinish={(values) => void handleImport(values)}
@@ -594,8 +601,23 @@ export default function ModelLibrary() {
                 </Form.Item>
               </Col>
               <Col xs={24} md={8}>
+                <Form.Item label="Importance 样本数" name="importance_sample_limit">
+                  <InputNumber min={0} max={512} style={{ width: "100%" }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
                 <Form.Item label="模型名称（可选）" name="name">
                   <Input placeholder="例如：pathology-mvp-v1" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item label="Survival 时间列（可选）" name="survival_time_column">
+                  <Input placeholder="例如：survival_time" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item label="Survival 事件列（可选）" name="survival_event_column">
+                  <Input placeholder="例如：event" />
                 </Form.Item>
               </Col>
               <Col span={24}>
@@ -652,7 +674,7 @@ export default function ModelLibrary() {
               type="success"
               showIcon
               message="结果详情已强化"
-              description="当前详情页会同时展示多模态指标、ROC/AUC、混淆矩阵、注意力热力图和结果文件，适合直接用于演示。"
+              description="当前详情页会同时展示多模态指标、ROC/AUC、混淆矩阵、survival 分析、SHAP-style 变量重要性、注意力热力图和结果文件。"
             />
 
             <Descriptions bordered column={2}>

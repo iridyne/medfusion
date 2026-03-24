@@ -98,6 +98,22 @@ class ReportGenerator:
                 f"{experiment_name} - Probability Distribution",
                 artifact_paths.get("probability_distribution_plot_path"),
             ),
+            (
+                f"{experiment_name} - Kaplan-Meier Curve",
+                artifact_paths.get("kaplan_meier_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Risk Score Distribution",
+                artifact_paths.get("risk_score_distribution_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Global Feature Importance",
+                artifact_paths.get("feature_importance_bar_plot_path"),
+            ),
+            (
+                f"{experiment_name} - Feature Importance Beeswarm",
+                artifact_paths.get("feature_importance_beeswarm_plot_path"),
+            ),
         ]
 
         assets: list[tuple[str, Path]] = []

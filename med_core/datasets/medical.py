@@ -59,6 +59,8 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
         target_transform: Any = None,
         feature_names: list[str] | None = None,
         patient_ids: list[str] | None = None,
+        sample_indices: list[int] | None = None,
+        metadata_frame: pd.DataFrame | None = None,
     ):
         """
         Initialize medical multimodal dataset.
@@ -82,6 +84,12 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
 
         self.feature_names = feature_names or []
         self.patient_ids = patient_ids or []
+        self.sample_indices = sample_indices or list(range(len(image_paths)))
+        self.metadata_frame = (
+            metadata_frame.reset_index(drop=True).copy()
+            if metadata_frame is not None
+            else None
+        )
 
     def load_image(self, path: Path) -> Image.Image:
         """
@@ -243,6 +251,8 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
             target_transform=target_transform,
             feature_names=feature_names,
             patient_ids=patient_ids,
+            sample_indices=valid_indices,
+            metadata_frame=df,
         )
 
         return dataset, scaler
@@ -340,6 +350,30 @@ class MedicalMultimodalDataset(BaseMultimodalDataset):
         if self.patient_ids and idx < len(self.patient_ids):
             return self.patient_ids[idx]
         return None
+
+    def subset(self, indices: list[int]) -> "MedicalMultimodalDataset":
+        """Create a subset while preserving feature names and sample metadata."""
+        metadata_frame = None
+        if self.metadata_frame is not None:
+            metadata_frame = self.metadata_frame.iloc[indices].reset_index(drop=True)
+
+        patient_ids = None
+        if self.patient_ids:
+            patient_ids = [self.patient_ids[index] for index in indices]
+
+        sample_indices = [self.sample_indices[index] for index in indices]
+
+        return type(self)(
+            image_paths=[self.image_paths[index] for index in indices],
+            tabular_data=self.tabular_data[indices],
+            labels=self.labels[indices],
+            transform=self.transform,
+            target_transform=self.target_transform,
+            feature_names=list(self.feature_names),
+            patient_ids=patient_ids,
+            sample_indices=sample_indices,
+            metadata_frame=metadata_frame,
+        )
 
 
 def split_dataset(

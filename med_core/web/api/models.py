@@ -55,6 +55,11 @@ class ModelImportRequest(BaseModel):
     output_dir: str | None = None
     split: Literal["train", "val", "test"] = "test"
     attention_samples: int = 4
+    enable_survival: bool = True
+    survival_time_column: str | None = None
+    survival_event_column: str | None = None
+    enable_importance: bool = True
+    importance_sample_limit: int = 128
     name: str | None = None
     description: str | None = None
     tags: list[str] | None = None
@@ -139,6 +144,28 @@ def _build_artifact_index(model: ModelInfo) -> dict[str, dict[str, Any]]:
             "概率分布图",
             artifact_paths.get("probability_distribution_plot_path"),
         ),
+        (
+            "survival",
+            "生存分析摘要",
+            artifact_paths.get("survival_json_path") or artifact_paths.get("survival_path"),
+        ),
+        ("kaplan_meier_plot", "KM 曲线图", artifact_paths.get("kaplan_meier_plot_path")),
+        (
+            "risk_score_distribution_plot",
+            "风险分数分布图",
+            artifact_paths.get("risk_score_distribution_plot_path"),
+        ),
+        ("feature_importance", "全局变量重要性", artifact_paths.get("feature_importance_path")),
+        (
+            "feature_importance_bar_plot",
+            "变量重要性柱状图",
+            artifact_paths.get("feature_importance_bar_plot_path"),
+        ),
+        (
+            "feature_importance_beeswarm_plot",
+            "变量重要性蜂群图",
+            artifact_paths.get("feature_importance_beeswarm_plot_path"),
+        ),
     ]
 
     artifact_index: dict[str, dict[str, Any]] = {}
@@ -205,6 +232,9 @@ def _collect_result_files(model: ModelInfo) -> list[dict[str, Any]]:
                 "roc_curve_plot",
                 "confusion_matrix_plot",
                 "training_curves_plot",
+                "survival",
+                "kaplan_meier_plot",
+                "feature_importance",
             }
             else 1,
             item["label"],
@@ -302,6 +332,41 @@ def _load_visualizations(model: ModelInfo) -> dict[str, Any]:
         visualizations["probability_distribution"] = {
             "artifact_key": "probability_distribution_plot",
             "image_url": _artifact_download_url(model.id, "probability_distribution_plot"),
+        }
+
+    survival_payload = _safe_load_json(artifact_paths.get("survival_path"))
+    kaplan_meier_path = artifact_paths.get("kaplan_meier_plot_path")
+    if survival_payload and kaplan_meier_path and Path(kaplan_meier_path).exists():
+        visualizations["survival_curve"] = {
+            "artifact_key": "kaplan_meier_plot",
+            "image_url": _artifact_download_url(model.id, "kaplan_meier_plot"),
+            "c_index": survival_payload.get("c_index"),
+        }
+
+    risk_distribution_path = artifact_paths.get("risk_score_distribution_plot_path")
+    if risk_distribution_path and Path(risk_distribution_path).exists():
+        visualizations["risk_score_distribution"] = {
+            "artifact_key": "risk_score_distribution_plot",
+            "image_url": _artifact_download_url(model.id, "risk_score_distribution_plot"),
+        }
+
+    importance_payload = _safe_load_json(
+        artifact_paths.get("global_feature_importance_json_path")
+        or artifact_paths.get("feature_importance_path")
+    )
+    importance_bar_path = artifact_paths.get("feature_importance_bar_plot_path")
+    if importance_payload and importance_bar_path and Path(importance_bar_path).exists():
+        visualizations["feature_importance_bar"] = {
+            "artifact_key": "feature_importance_bar_plot",
+            "image_url": _artifact_download_url(model.id, "feature_importance_bar_plot"),
+            "top_features": importance_payload.get("top_features", []),
+        }
+
+    importance_beeswarm_path = artifact_paths.get("feature_importance_beeswarm_plot_path")
+    if importance_beeswarm_path and Path(importance_beeswarm_path).exists():
+        visualizations["feature_importance_beeswarm"] = {
+            "artifact_key": "feature_importance_beeswarm_plot",
+            "image_url": _artifact_download_url(model.id, "feature_importance_beeswarm_plot"),
         }
 
     training_curves_path = artifact_paths.get("training_curves_plot_path")
@@ -504,6 +569,11 @@ async def import_model(
             output_dir=payload.output_dir,
             split=payload.split,
             attention_samples=payload.attention_samples,
+            enable_survival=payload.enable_survival,
+            survival_time_column=payload.survival_time_column,
+            survival_event_column=payload.survival_event_column,
+            enable_importance=payload.enable_importance,
+            importance_sample_limit=payload.importance_sample_limit,
             name=payload.name,
             description=payload.description,
             tags=payload.tags,

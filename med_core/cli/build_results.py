@@ -34,6 +34,25 @@ def build_results(
         help="How many attention / Grad-CAM samples to export",
     )
     parser.add_argument(
+        "--survival-time-column",
+        help="Optional survival time column override for KM / c-index artifacts",
+    )
+    parser.add_argument(
+        "--survival-event-column",
+        help="Optional survival event column override for KM / c-index artifacts",
+    )
+    parser.add_argument(
+        "--disable-importance",
+        action="store_true",
+        help="Disable SHAP-style global feature importance artifacts",
+    )
+    parser.add_argument(
+        "--importance-sample-limit",
+        type=int,
+        default=128,
+        help="How many samples to use for SHAP-style global feature importance (0 disables)",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Print the generated artifact payload as JSON",
@@ -46,6 +65,11 @@ def build_results(
         output_dir=args.output_dir,
         split=args.split,
         attention_samples=max(args.attention_samples, 0),
+        enable_survival=not getattr(args, "disable_survival", False),
+        survival_time_column=args.survival_time_column,
+        survival_event_column=args.survival_event_column,
+        enable_importance=not getattr(args, "disable_importance", False),
+        importance_sample_limit=max(args.importance_sample_limit, 0),
     )
     payload = {
         "output_dir": result.output_dir,
@@ -66,7 +90,8 @@ def build_results(
         "Metrics: "
         f"accuracy={result.metrics.get('accuracy')}, "
         f"auc={result.metrics.get('auc')}, "
-        f"macro_f1={result.metrics.get('macro_f1')}"
+        f"macro_f1={result.metrics.get('macro_f1')}, "
+        f"c_index={result.metrics.get('c_index')}"
     )
     print(
         "Validation: "

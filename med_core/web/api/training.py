@@ -724,6 +724,7 @@ async def _run_real_training_job(job_id: str) -> None:
         log_handle.write(f"command: {' '.join(shlex.quote(part) for part in command)}\n")
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
+        env.setdefault("UV_CACHE_DIR", str(settings.data_dir / "uv-cache"))
 
         process = subprocess.Popen(
             command,

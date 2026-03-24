@@ -2,8 +2,11 @@
 Tests for CLI module structure and imports.
 """
 
+import json
 from pathlib import Path
 import tomllib
+
+from test_build_results import _create_checkpoint_and_logs
 
 
 def test_cli_imports():
@@ -66,3 +69,37 @@ def test_console_script_targets_are_explicit_functions():
     assert scripts["med-train"] == "med_core.cli.train:train"
     assert scripts["med-evaluate"] == "med_core.cli.evaluate:evaluate"
     assert scripts["med-preprocess"] == "med_core.cli.preprocess:preprocess"
+
+
+def test_build_results_cli_supports_survival_and_importance_options(
+    tmp_path,
+    capsys,
+):
+    from med_core.cli.build_results import build_results
+
+    config_path, checkpoint_path = _create_checkpoint_and_logs(
+        tmp_path,
+        include_survival=True,
+    )
+
+    build_results(
+        [
+            "--config",
+            str(config_path),
+            "--checkpoint",
+            str(checkpoint_path),
+            "--split",
+            "train",
+            "--survival-time-column",
+            "survival_time",
+            "--survival-event-column",
+            "event",
+            "--importance-sample-limit",
+            "8",
+            "--json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["validation"]["survival"]["c_index"] is not None
+    assert payload["validation"]["global_feature_importance"]["top_features"]

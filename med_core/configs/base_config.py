@@ -57,6 +57,8 @@ class DataConfig(BaseConfig):
     categorical_features: list[str] = field(default_factory=list)
     numerical_features: list[str] = field(default_factory=list)
     target_column: str = "label"
+    survival_time_column: str | None = None
+    survival_event_column: str | None = None
     patient_id_column: str | None = None
     image_path_column: str = "image_path"
 
