@@ -1203,7 +1203,14 @@ def cmd_train(config_path: Path) -> None:
     epochs = int(config["training"].get("epochs", 4))
     history: list[dict[str, float | int]] = []
     best_val_acc = -1.0
+    best_epoch = 0
     best_ckpt = paths.checkpoints_dir / "best_smurf_multiregion.pth"
+
+    early_cfg = config["training"].get("early_stopping", {})
+    es_enabled = bool(early_cfg.get("enabled", False))
+    es_patience = int(early_cfg.get("patience", 0))
+    es_min_delta = float(early_cfg.get("min_delta", 0.0))
+    no_improve_epochs = 0
 
     for epoch in range(1, epochs + 1):
         tr = run_epoch(model, train_loader, device, criterion, optimizer, enable_survival, surv_w)
@@ -1229,8 +1236,17 @@ def cmd_train(config_path: Path) -> None:
             f"val_loss={va['loss']:.4f} val_acc={va['acc']:.4f}"
         )
 
-        if va["acc"] >= best_val_acc:
+        if best_val_acc < 0:
+            improved = True
+        elif es_enabled:
+            improved = va["acc"] > (best_val_acc + es_min_delta)
+        else:
+            improved = va["acc"] >= best_val_acc
+
+        if improved:
             best_val_acc = va["acc"]
+            best_epoch = epoch
+            no_improve_epochs = 0
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
@@ -1238,15 +1254,42 @@ def cmd_train(config_path: Path) -> None:
                     "training_config": config["training"],
                     "data_config": config["data"],
                     "best_val_acc": best_val_acc,
+                    "best_epoch": best_epoch,
                 },
                 best_ckpt,
             )
+        else:
+            no_improve_epochs += 1
+
+        if es_enabled and es_patience > 0 and no_improve_epochs >= es_patience:
+            print(
+                f"[train] early stop at epoch={epoch:03d} "
+                f"(best_epoch={best_epoch:03d}, best_val_acc={best_val_acc:.4f}, "
+                f"patience={es_patience}, min_delta={es_min_delta})"
+            )
+            break
 
     history_path = paths.output_dir / "history.json"
     with history_path.open("w", encoding="utf-8") as f:
-        json.dump({"entries": history, "best_val_acc": best_val_acc}, f, ensure_ascii=False, indent=2)
+        json.dump(
+            {
+                "entries": history,
+                "best_val_acc": best_val_acc,
+                "best_epoch": best_epoch,
+                "early_stopping": {
+                    "enabled": es_enabled,
+                    "patience": es_patience,
+                    "min_delta": es_min_delta,
+                    "stopped_early": bool(es_enabled and len(history) < epochs),
+                },
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
 
     print(f"[train] best checkpoint: {best_ckpt}")
+    print(f"[train] best_epoch={best_epoch} best_val_acc={best_val_acc:.4f}")
     print(f"[train] history: {history_path}")
 
 

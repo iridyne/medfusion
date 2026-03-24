@@ -59,13 +59,19 @@
 
 ### 对应配置
 
-使用：`demo/smurf_e2e/config.elbow_single_ct.yaml`
+基础配置：`demo/smurf_e2e/config.elbow_single_ct.yaml`
+
+另外新增了两档更实用的配置：
+
+- `config.elbow_single_ct_fast.yaml`：快速演示档（1 epoch，出结果快）
+- `config.elbow_single_ct_stable.yaml`：稳定复现档（最多 20 epoch + early stopping）
 
 关键开关：
 
 - `data.single_branch_mode: true`
 - `data.ct_column: ct_paths`
 - `data.enable_survival: false`（先求稳定跑通）
+- `training.early_stopping`（可选，稳定档默认开启）
 
 ---
 
@@ -82,11 +88,26 @@
 
 ### 一键顺序
 
+推荐直接用分档脚本：
+
+```bash
+# 快速演示档（默认）
+bash demo/smurf_e2e/run_single_ct.sh fast
+
+# 稳定复现档（含 early stopping）
+bash demo/smurf_e2e/run_single_ct.sh stable
+
+# 如已准备好数据可跳过 prepare
+SKIP_PREPARE=1 bash demo/smurf_e2e/run_single_ct.sh stable
+```
+
+如果你想手工执行：
+
 ```bash
 uv run python demo/smurf_e2e/build_elbow_dryrun.py
-uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct.yaml train
-uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct.yaml evaluate
-uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct.yaml report
+uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml train
+uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml evaluate
+uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml report
 ```
 
 ---

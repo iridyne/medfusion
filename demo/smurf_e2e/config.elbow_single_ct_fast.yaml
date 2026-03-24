@@ -1,6 +1,6 @@
 seed: 42
 device: auto
-output_dir: demo/smurf_e2e/outputs/elbow_single_ct
+output_dir: demo/smurf_e2e/outputs/elbow_single_ct_fast
 
 model:
   vision_backbone: mobilenetv3_small
@@ -16,6 +16,7 @@ model:
   num_classes: 2
 
 training:
+  # 医生演示快速版：追求 2~5 分钟内出结果
   epochs: 1
   batch_size: 2
   num_workers: 0
@@ -32,19 +33,16 @@ data:
   label_column: label
   split_column: split
 
-  # 先用分类跑通；后续如果有可靠随访数据再打开
   enable_survival: false
   survival_time_column: survival_time
   survival_event_column: event
 
-  # 单CT分支开关
   single_branch_mode: true
   ct_column: ct_paths
 
   tabular_numerical_columns: [age, bmi, crp]
   tabular_categorical_columns: [sex, smoking]
 
-  # 这些字段在单CT模式下不会被使用，但保留以兼容旧流程
   region1_ct_column: region1_ct_paths
   region1_pathology_column: region1_pathology_paths
   region2_ct_column: region2_ct_paths
