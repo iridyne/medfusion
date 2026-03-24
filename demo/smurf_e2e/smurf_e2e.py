@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -776,6 +777,145 @@ def _plot_attention_vector(values: list[float], title: str, save_path: Path, col
     plt.close(fig)
 
 
+def build_visual_gallery(output_dir: Path) -> dict[str, Any]:
+    """把所有可视化图复制到统一目录，方便查看。"""
+    vis_root = output_dir / "visualizations"
+    vis_root.mkdir(parents=True, exist_ok=True)
+
+    gallery_dir = vis_root / "gallery"
+    gallery_dir.mkdir(parents=True, exist_ok=True)
+
+    image_ext = {".png", ".jpg", ".jpeg", ".webp"}
+    copied_items: list[dict[str, str]] = []
+
+    for src in sorted(vis_root.rglob("*")):
+        if not src.is_file() or src.suffix.lower() not in image_ext:
+            continue
+        if gallery_dir in src.parents:
+            continue
+
+        rel = src.relative_to(vis_root)
+        flat_name = "__".join(rel.parts)
+        dst = gallery_dir / flat_name
+        shutil.copy2(src, dst)
+
+        copied_items.append(
+            {
+                "source": str(src),
+                "gallery_image": str(dst),
+            }
+        )
+
+    manifest = {
+        "gallery_dir": str(gallery_dir),
+        "count": len(copied_items),
+        "items": copied_items,
+    }
+    manifest_path = gallery_dir / "gallery_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest["manifest_path"] = str(manifest_path)
+    return manifest
+
+
+def _normalize_01(arr: np.ndarray) -> np.ndarray:
+    arr = arr.astype(np.float32)
+    mn = float(np.min(arr))
+    mx = float(np.max(arr))
+    if mx - mn < 1e-8:
+        return np.zeros_like(arr, dtype=np.float32)
+    return (arr - mn) / (mx - mn)
+
+
+def _pick_ct_modality_key(inputs: dict[str, torch.Tensor]) -> str | None:
+    for key in ["ct", "region1_ct", "region2_ct"]:
+        if key in inputs:
+            return key
+    return None
+
+
+def _save_ct_overlay_artifact(
+    model: MultiTaskSmurfModel,
+    dataset: MultiRegionSmurfDataset,
+    device: torch.device,
+    sample_index: int,
+    mil_attention: dict[str, list[float]],
+    output_dir: Path,
+) -> dict[str, Any] | None:
+    raw = dataset[sample_index]
+    if len(raw) == 4:
+        inputs, label, _, _ = raw
+    else:
+        inputs, label = raw
+
+    ct_key = _pick_ct_modality_key(inputs)
+    if ct_key is None:
+        return None
+
+    batch_inputs: dict[str, torch.Tensor] = {}
+    for k, v in inputs.items():
+        t = v.unsqueeze(0).to(device)
+        if k == ct_key:
+            t = t.requires_grad_(True)
+        batch_inputs[k] = t
+
+    model.eval()
+    logits, risk = model(batch_inputs)
+    # 用风险头做归因，贴近临床“风险分数”解释
+    target_score = risk[0]
+    model.zero_grad(set_to_none=True)
+    target_score.backward()
+
+    ct_tensor = batch_inputs[ct_key]
+    if ct_tensor.grad is None:
+        return None
+
+    grad = ct_tensor.grad.detach()[0]  # [N,C,H,W]
+    instances = ct_tensor.detach()[0]  # [N,C,H,W]
+
+    saliency = grad.abs().mean(dim=1).cpu().numpy()  # [N,H,W]
+    images = instances.mean(dim=1).cpu().numpy()  # [N,H,W]
+
+    weights = mil_attention.get(ct_key, [])
+    if weights:
+        top_idx = int(np.argmax(np.asarray(weights, dtype=np.float32)))
+    else:
+        top_idx = 0
+    top_idx = int(np.clip(top_idx, 0, images.shape[0] - 1))
+
+    base_img = _normalize_01(images[top_idx])
+    heat = _normalize_01(saliency[top_idx])
+
+    overlay_dir = output_dir / "visualizations" / "ct_overlay"
+    overlay_dir.mkdir(parents=True, exist_ok=True)
+    out_path = overlay_dir / f"sample_{sample_index}_{ct_key}_overlay.png"
+
+    fig, ax = plt.subplots(figsize=(4.8, 4.8))
+    ax.imshow(base_img, cmap="gray")
+    ax.imshow(heat, cmap="jet", alpha=0.45)
+    ax.set_title(f"CT Overlay | {ct_key} | sample {sample_index}")
+    ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+
+    with torch.no_grad():
+        prob = torch.softmax(logits, dim=1)
+        pred = torch.argmax(prob, dim=1)
+
+    return {
+        "artifact_key": f"sample_{sample_index}_{ct_key}_overlay",
+        "title": f"CT Overlay | {ct_key} | sample {sample_index}",
+        "image_path": str(out_path),
+        "sample_index": sample_index,
+        "modality": ct_key,
+        "type": "ct_overlay",
+        "true_label": int(label.item()),
+        "pred_label": int(pred.item()),
+        "smurf_score": float(torch.sigmoid(risk[0]).item()),
+        "top_instance_index": top_idx,
+    }
+
+
 def generate_attention_artifacts(
     model: MultiTaskSmurfModel,
     dataset: MultiRegionSmurfDataset,
@@ -813,6 +953,17 @@ def generate_attention_artifacts(
                     "smurf_score": payload["smurf_score"],
                 }
             )
+
+        overlay_item = _save_ct_overlay_artifact(
+            model=model,
+            dataset=dataset,
+            device=device,
+            sample_index=sample_index,
+            mil_attention=payload.get("mil_attention", {}),
+            output_dir=output_dir,
+        )
+        if overlay_item is not None:
+            manifest_items.append(overlay_item)
 
         modality_attention = payload.get("modality_attention")
         if modality_attention:
@@ -1210,10 +1361,13 @@ def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
         if shap_payload.get("features"):
             metrics["top_global_feature"] = shap_payload["features"][0]["feature"]
 
+    gallery_summary = build_visual_gallery(paths.output_dir)
+
     analysis_summary = {
         "survival": survival_payload,
         "global_feature_importance": shap_payload,
         "attention": attention_summary,
+        "gallery": gallery_summary,
     }
     analysis_path = paths.output_dir / "analysis_summary.json"
     analysis_path.write_text(json.dumps(analysis_summary, ensure_ascii=False, indent=2), encoding="utf-8")
