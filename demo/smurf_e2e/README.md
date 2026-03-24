@@ -7,6 +7,18 @@
 
 ---
 
+## 这个 demo 在 medfusion 开源体系里的位置（类似 OpenCore）
+
+你可以把它理解成“开源基础 + 可扩展业务层”的结构：
+
+- **开源基础层（core）**：训练、评估、报告、基础可解释分析这些通用流程
+- **场景适配层（demo）**：像这个 `smurf_e2e`，是把基础能力接到具体任务上
+- **后续扩展层（private/业务）**：医院或团队自己的数据映射、规则、流程可在此基础上继续加
+
+这份 README 的目标就是把“基础怎么跑通、怎么看结果”讲清楚，方便对外演示和二次开发。
+
+---
+
 ## 这套流程会给你什么结果
 
 主要有两类输出：
@@ -90,11 +102,17 @@ uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_s
 - `analysis_summary.json`：解释分析汇总
 - `reports/smurf_e2e_report.md`：可直接读的报告
 
-可视化图一般在：
+### 看图的统一入口（推荐）
 
-- `visualizations/attention/`
-- `visualizations/shap/`
-- `visualizations/survival/`（仅在开启生存分析时）
+为避免你在多个目录来回找图，所有图都会统一复制到：
+
+- `visualizations/gallery/`
+
+你只需要打开这一个目录就行。里面会包含：
+
+- CT 叠加热力图
+- MIL 权重图
+- SHAP 图
 
 ---
 
