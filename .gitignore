@@ -98,3 +98,4 @@ target/
 Cargo.lock
 data/
 .omc/
+.alma-snapshots

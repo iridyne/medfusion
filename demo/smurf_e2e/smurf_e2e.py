@@ -128,6 +128,10 @@ class MultiRegionSmurfDataset(Dataset):
         ).lower()
         self.hipt_embedding_dim = int(data_cfg.get("hipt_embedding_dim", 192))
 
+        # 单分支模式：只使用 clinical + ct
+        self.single_branch_mode = bool(data_cfg.get("single_branch_mode", False))
+        self.ct_column = str(data_cfg.get("ct_column", "ct_paths"))
+
     def __len__(self) -> int:
         return len(self.df)
 
@@ -259,19 +263,28 @@ class MultiRegionSmurfDataset(Dataset):
 
         inputs = {
             "clinical": torch.from_numpy(self.tab[idx]),
-            "region1_ct": self._load_sequence(
-                row[self.cfg["region1_ct_column"]], "region1_ct"
-            ),
-            "region1_pathology": self._load_sequence(
-                row[self.cfg["region1_pathology_column"]], "region1_pathology"
-            ),
-            "region2_ct": self._load_sequence(
-                row[self.cfg["region2_ct_column"]], "region2_ct"
-            ),
-            "region2_pathology": self._load_sequence(
-                row[self.cfg["region2_pathology_column"]], "region2_pathology"
-            ),
         }
+
+        if self.single_branch_mode:
+            inputs["ct"] = self._load_sequence(row[self.ct_column], "ct")
+        else:
+            inputs.update(
+                {
+                    "region1_ct": self._load_sequence(
+                        row[self.cfg["region1_ct_column"]], "region1_ct"
+                    ),
+                    "region1_pathology": self._load_sequence(
+                        row[self.cfg["region1_pathology_column"]], "region1_pathology"
+                    ),
+                    "region2_ct": self._load_sequence(
+                        row[self.cfg["region2_ct_column"]], "region2_ct"
+                    ),
+                    "region2_pathology": self._load_sequence(
+                        row[self.cfg["region2_pathology_column"]], "region2_pathology"
+                    ),
+                }
+            )
+
         label = torch.tensor(int(row[self.cfg["label_column"]]), dtype=torch.long)
 
         if self.enable_survival:
@@ -439,7 +452,10 @@ def load_split_frames(config: dict[str, Any], project_root: Path):
 
 def build_backbone_model(config: dict[str, Any], tabular_input_dim: int) -> nn.Module:
     mcfg = config["model"]
+    data_cfg = config["data"]
     encoder_cfg = parse_pathology_encoder_config(mcfg)
+
+    single_branch_mode = bool(data_cfg.get("single_branch_mode", False))
 
     builder = MultiModalModelBuilder()
     builder.add_modality(
@@ -452,47 +468,60 @@ def build_backbone_model(config: dict[str, Any], tabular_input_dim: int) -> nn.M
 
     vision_backbone = str(mcfg.get("vision_backbone", "mobilenetv3_small"))
     vision_dim = int(mcfg.get("vision_feature_dim", 96))
-    pathology_feature_dim = int(mcfg.get("pathology_feature_dim", vision_dim))
 
-    ct_modalities = ["region1_ct", "region2_ct"]
-    pathology_modalities = ["region1_pathology", "region2_pathology"]
-
-    for modality_name in ct_modalities:
+    if single_branch_mode:
         builder.add_modality(
-            modality_name,
+            "ct",
             backbone=vision_backbone,
             modality_type="vision",
             feature_dim=vision_dim,
         )
         builder.add_mil_aggregation(
-            modality_name,
+            "ct",
             strategy="attention",
             attention_dim=max(vision_dim // 2, 16),
         )
+    else:
+        pathology_feature_dim = int(mcfg.get("pathology_feature_dim", vision_dim))
+        ct_modalities = ["region1_ct", "region2_ct"]
+        pathology_modalities = ["region1_pathology", "region2_pathology"]
 
-    for modality_name in pathology_modalities:
-        if encoder_cfg["type"] == "hipt":
-            builder.add_modality(
-                modality_name,
-                backbone="hipt",
-                modality_type="embedding",
-                input_dim=int(encoder_cfg["embedding_dim"]),
-                feature_dim=pathology_feature_dim,
-                dropout=0.1,
-            )
-        else:
+        for modality_name in ct_modalities:
             builder.add_modality(
                 modality_name,
                 backbone=vision_backbone,
                 modality_type="vision",
-                feature_dim=pathology_feature_dim,
+                feature_dim=vision_dim,
+            )
+            builder.add_mil_aggregation(
+                modality_name,
+                strategy="attention",
+                attention_dim=max(vision_dim // 2, 16),
             )
 
-        builder.add_mil_aggregation(
-            modality_name,
-            strategy="attention",
-            attention_dim=max(pathology_feature_dim // 2, 16),
-        )
+        for modality_name in pathology_modalities:
+            if encoder_cfg["type"] == "hipt":
+                builder.add_modality(
+                    modality_name,
+                    backbone="hipt",
+                    modality_type="embedding",
+                    input_dim=int(encoder_cfg["embedding_dim"]),
+                    feature_dim=pathology_feature_dim,
+                    dropout=0.1,
+                )
+            else:
+                builder.add_modality(
+                    modality_name,
+                    backbone=vision_backbone,
+                    modality_type="vision",
+                    feature_dim=pathology_feature_dim,
+                )
+
+            builder.add_mil_aggregation(
+                modality_name,
+                strategy="attention",
+                attention_dim=max(pathology_feature_dim // 2, 16),
+            )
 
     builder.set_fusion(
         strategy=str(mcfg.get("fusion_strategy", "fused_attention")),
@@ -520,6 +549,12 @@ def _build_dataset_cfg(config: dict[str, Any]) -> dict[str, Any]:
     encoder_cfg = parse_pathology_encoder_config(config["model"])
     data_cfg["pathology_encoder_type"] = encoder_cfg["type"]
     data_cfg["hipt_embedding_dim"] = int(encoder_cfg["embedding_dim"])
+
+    if bool(data_cfg.get("single_branch_mode", False)):
+        data_cfg["ct_column"] = str(
+            data_cfg.get("ct_column", data_cfg.get("region1_ct_column", "ct_paths"))
+        )
+
     return data_cfg
 
 
@@ -1108,6 +1143,10 @@ def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(metrics, f, ensure_ascii=False, indent=2)
 
+    n_samples = int(len(labels))
+    survival_time_col = time.tolist() if len(time) == n_samples else [None] * n_samples
+    event_col = event.tolist() if len(event) == n_samples else [None] * n_samples
+
     pred_df = pd.DataFrame(
         {
             "label": labels.tolist(),
@@ -1115,8 +1154,8 @@ def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
             "confidence": probs.max(axis=1).tolist() if len(probs) > 0 else [],
             "smurf_score": risk_score.tolist(),
             "risk_logit": risk.tolist(),
-            "survival_time": time.tolist() if len(time) > 0 else [],
-            "event": event.tolist() if len(event) > 0 else [],
+            "survival_time": survival_time_col,
+            "event": event_col,
         }
     )
     pred_path = paths.output_dir / "predictions.csv"
