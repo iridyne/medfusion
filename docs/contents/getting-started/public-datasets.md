@@ -98,6 +98,14 @@
 
 ## 可直接复制的最短命令
 
+统一入口先看：
+
+```bash
+uv run medfusion public-datasets list
+uv run medfusion public-datasets show uci-heart-disease
+```
+
+
 ### PathMNIST
 
 适合先验证图像训练、结果页和报告产物。
@@ -118,7 +126,7 @@ uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yam
 适合先验证 tabular 指标链路和二分类结果展示。
 
 ```bash
-uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
+uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 

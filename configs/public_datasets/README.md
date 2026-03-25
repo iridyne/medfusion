@@ -6,19 +6,19 @@
 
 - `pathmnist_quickstart.yaml`
   - 适合最快验证图像训练、结果页和 artifact 输出
-  - 依赖 `scripts/prepare_public_dataset.py medmnist-pathmnist`
+  - 推荐先跑 `medfusion public-datasets prepare medmnist-pathmnist`
 - `uci_heart_disease_quickstart.yaml`
   - 适合最快验证表格指标链路
-  - 依赖 `scripts/prepare_public_dataset.py uci-heart-disease`
+  - 推荐先跑 `medfusion public-datasets prepare uci-heart-disease`
 
 ## 推荐命令
 
 ```bash
-uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/pathmnist_quickstart.yaml
+uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
+uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
 
-uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
-uv run python -m med_core.cli train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion public-datasets prepare uci-heart-disease --overwrite
+uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 
 ## 重要说明

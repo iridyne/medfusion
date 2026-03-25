@@ -18,6 +18,7 @@ from .doctor import doctor, validate_config
 from .evaluate import evaluate
 from .import_run import import_run
 from .preprocess import preprocess
+from .public_datasets import public_datasets
 from .train import train
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "import_run",
     "main",
     "preprocess",
+    "public_datasets",
     "train",
     "validate_config",
 ]
@@ -47,6 +49,7 @@ def _print_help() -> None:
     print("  doctor      validate-config 的短别名")
     print("  build-results   训练后生成 validation / 图表 / 报告 artifact")
     print("  import-run      生成 artifact 并导入模型库，供 dashboard 直接展示")
+    print("  public-datasets 公开数据集快速验证入口（list/show/prepare）")
     print("  web         Web UI 管理命令")
     print("  data        Web UI 数据管理命令")
     print("")
@@ -67,6 +70,8 @@ def _print_help() -> None:
     print(
         "  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>"
     )
+    print("  medfusion public-datasets list")
+    print("  medfusion public-datasets prepare uci-heart-disease --overwrite")
     print("  medfusion web")
     print("")
     print("Config directories:")
@@ -156,6 +161,10 @@ def main() -> None:
 
     if command == "import-run":
         _run_legacy_command(import_run, args, "medfusion import-run")
+        return
+
+    if command == "public-datasets":
+        _run_legacy_command(public_datasets, args, "medfusion public-datasets")
         return
 
     if command in {"web", "data"}:

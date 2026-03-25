@@ -11,12 +11,13 @@ from test_build_results import _create_checkpoint_and_logs
 
 def test_cli_imports():
     """Test that CLI functions can be imported."""
-    from med_core.cli import evaluate, import_run, preprocess, train
+    from med_core.cli import evaluate, import_run, preprocess, public_datasets, train
 
     assert callable(train)
     assert callable(evaluate)
     assert callable(preprocess)
     assert callable(import_run)
+    assert callable(public_datasets)
 
 
 def test_cli_submodule_imports():
@@ -24,12 +25,14 @@ def test_cli_submodule_imports():
     from med_core.cli.evaluate import evaluate
     from med_core.cli.import_run import import_run
     from med_core.cli.preprocess import preprocess
+    from med_core.cli.public_datasets import public_datasets
     from med_core.cli.train import train
 
     assert callable(train)
     assert callable(evaluate)
     assert callable(preprocess)
     assert callable(import_run)
+    assert callable(public_datasets)
 
 
 def test_cli_backward_compatibility():
@@ -112,6 +115,38 @@ def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
     assert validation["overview"]["split"] == "train"
     assert "## Contract Metadata" in report_text
     assert "## Artifact Index" in report_text
+
+
+def test_public_datasets_cli_lists_available_quick_validation_sets(capsys):
+    from med_core.cli.public_datasets import public_datasets
+
+    public_datasets(["list", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    ids = {item["id"] for item in payload}
+    assert "medmnist-pathmnist" in ids
+    assert "uci-heart-disease" in ids
+
+
+def test_public_datasets_cli_prepare_dry_run(capsys):
+    from med_core.cli.public_datasets import public_datasets
+
+    public_datasets([
+        "prepare",
+        "uci-heart-disease",
+        "--dry-run",
+        "--json",
+    ])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["dataset"]["id"] == "uci-heart-disease"
+    assert payload["recommended_commands"]["prepare"].startswith(
+        "medfusion public-datasets prepare uci-heart-disease"
+    )
+    assert payload["recommended_commands"]["train"] == (
+        "medfusion train --config "
+        "configs/public_datasets/uci_heart_disease_quickstart.yaml"
+    )
 
 
 def test_build_results_cli_supports_survival_and_importance_options(

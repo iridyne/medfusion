@@ -35,7 +35,7 @@ uv run medfusion build-results \
 ### 2. 公开数据集快速验证
 
 ```bash
-uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
+uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 
@@ -46,3 +46,4 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 - `configs/builder/`
 
 但这条线和当前 `medfusion train` 的 dataclass 配置不是同一套 schema。
+chema。
