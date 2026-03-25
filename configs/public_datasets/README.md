@@ -1,12 +1,15 @@
 # 公开数据集 Quickstart Configs
 
-这两份配置的目标不是追求 benchmark，而是让公开数据集先顺利走通 MedFusion 当前的训练主链。
+这三份配置的目标不是追求 benchmark，而是让公开数据集先顺利走通 MedFusion 当前的训练主链。
 
 ## 可用配置
 
 - `pathmnist_quickstart.yaml`
   - 适合最快验证图像训练、结果页和 artifact 输出
   - 推荐先跑 `medfusion public-datasets prepare medmnist-pathmnist`
+- `breastmnist_quickstart.yaml`
+  - 适合最小二分类图像 quick validation
+  - 推荐先跑 `medfusion public-datasets prepare medmnist-breastmnist`
 - `uci_heart_disease_quickstart.yaml`
   - 适合最快验证表格指标链路
   - 推荐先跑 `medfusion public-datasets prepare uci-heart-disease`
@@ -16,6 +19,9 @@
 ```bash
 uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
 uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
+
+uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
+uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
 
 uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml

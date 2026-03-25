@@ -84,11 +84,12 @@
 
 ## 当前建议的第一批接入顺序
 
-1. MedMNIST
-2. UCI Heart Disease
-3. ISIC 2018 / 2019
-4. NIH ChestXray14
-5. ISIC MILK10k
+1. PathMNIST
+2. BreastMNIST
+3. UCI Heart Disease
+4. ISIC 2018 / 2019
+5. NIH ChestXray14
+6. ISIC MILK10k
 
 这个顺序的原因很简单：
 
@@ -112,7 +113,7 @@ uv run medfusion public-datasets show uci-heart-disease
 
 ```bash
 uv pip install medmnist
-uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
+uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
 uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
 ```
 
@@ -120,6 +121,21 @@ uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yam
 
 - `data/public/medmnist/pathmnist-demo/`
 - `outputs/public_datasets/pathmnist_quickstart/`
+
+### BreastMNIST
+
+适合做最小二分类图像 quick validation，也更适合做短视频和首轮市场演示。
+
+```bash
+uv pip install medmnist
+uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
+uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
+```
+
+输出目录固定为：
+
+- `data/public/medmnist/breastmnist-demo/`
+- `outputs/public_datasets/breastmnist_quickstart/`
 
 ### UCI Heart Disease
 
@@ -146,9 +162,13 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 1. `PathMNIST`
    - 不强行伪造临床表格数据
    - 直接走数据加载器的 dummy tabular fallback
-   - 目标是先验证图像训练、artifact 和结果展示链路
+   - 目标是先验证多分类图像训练、artifact 和结果展示链路
 
-2. `UCI Heart Disease`
+2. `BreastMNIST`
+   - 同样走 dummy tabular fallback
+   - 目标是补一个更轻量、二分类、更适合演示的图像 quick validation 路径
+
+3. `UCI Heart Disease`
    - 保留真实表格特征
    - 自动生成一张中性 placeholder 图像
    - 目标是先验证 tabular 指标、validation 和报告链路

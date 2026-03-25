@@ -50,6 +50,7 @@
 **核心指南：**
 - [快速参考](contents/guides/core/quick-reference.md) - 常用命令速查
 - [FAQ 和故障排除](contents/guides/core/faq.md) - 常见问题解答
+- [OSS 对外推广准备清单](contents/guides/core/oss-go-to-market-checklist.md) - 对外定位、demo 路径、卖点与禁语
 
 **高级功能指南**
 - [分布式训练](contents/guides/advanced-features/distributed-training.md) - 多 GPU 和多节点训练

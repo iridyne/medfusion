@@ -3,16 +3,31 @@
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-MedFusion 是一个面向医学 AI 研究验证的核心运行时，强调 **真实训练、真实结果、真实 validation / report 输出**，而不是只停留在模型 demo 或页面展示。
+MedFusion 是一个面向医学 AI 研究验证的核心运行时。
 
-它更适合这几类场景：
+它解决的不是“再做一个模型 demo”，而是把 **训练、结果、validation、报告** 这条链稳定跑通，让研究验证和对外演示都有真正可落的产物。
 
-- 医学 AI 研究原型验证
-- 课题 / 论文复现的训练与结果沉淀
-- 对外演示“训练 → 结果 → 报告”闭环
-- 作为上层工作台 / 产品层的可执行底座
+## 🎯 它最适合谁
 
-## 🚀 最短上手路径
+- 医学 AI 研究生 / 课题组：想快速验证一个方向能不能跑起来
+- 工程团队：想把训练、结果、报告收成统一主链
+- 对外演示场景：想展示一个真实的“训练 → 结果 → 报告”闭环
+- 上层产品层：需要一个可执行、可复现、可沉淀 artifact 的 runtime
+
+## 🧭 你可以怎么理解它
+
+一句话：
+
+> **MedFusion = 面向医学 AI 的可执行研究运行时，不只是模型仓库。**
+
+它当前最稳的价值不是花哨 builder，也不是页面数量，而是：
+
+- 能真实训练
+- 能真实产出结果
+- 能真实生成 validation / report
+- 能被 CLI / Web / 上层产品共同复用
+
+## ⚡ 3 分钟看懂主路径
 
 ### 路径 A：你已经有自己的数据
 
@@ -28,7 +43,7 @@ uv run medfusion build-results \
 
 ### 路径 B：你还没有私有数据，先快速验证
 
-先看公开数据集入口，再准备一套最小 demo 数据：
+先用公开数据集入口跑通最小闭环：
 
 ```bash
 uv run medfusion public-datasets list
@@ -36,22 +51,7 @@ uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
 ```
 
-如果你想先理解当前 CLI / YAML / Web 三条路径的边界，先看：
-
-- [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
-- [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
-- [examples/README.md](examples/README.md)
-
-## ✨ 核心特性
-
-- 多模态建模：影像、表格、时序等输入可组合
-- 模块化组件：backbone / fusion / head / trainer 可替换
-- 真实训练主链：`validate-config → train → build-results → import-run`
-- 结构化结果契约：`metrics.json / validation.json / summary.json / report.md`
-- 公开数据集快速验证入口：`medfusion public-datasets ...`
-- CLI + Web 双入口，适合研究验证和上层产品承接
-
-## 📦 训练后会得到什么
+## 📦 跑完后你会得到什么
 
 一次标准 run 结束后，当前主链会稳定沉淀这些核心产物：
 
@@ -62,7 +62,39 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 - `report.md`
 - ROC / confusion / calibration / attention 等图表 artifact
 
-这也是 MedFusion 现在最适合对外讲的地方：**不是只有训练命令，而是有完整结果闭环。**
+所以它现在最适合对外讲的点是：
+
+> **不是只有训练命令，而是有完整结果闭环。**
+
+## ✨ 当前最值得讲的能力
+
+- 真实训练主链：`validate-config → train → build-results → import-run`
+- 结构化结果契约：`metrics.json / validation.json / summary.json / report.md`
+- 公开数据集快速验证入口：`medfusion public-datasets ...`
+- CLI + Web 双入口，适合研究验证和上层产品承接
+- 多模态建模能力：影像 / 表格 / 时序等输入可组合
+- 模块化组件：backbone / fusion / head / trainer 可替换
+
+## 🚫 当前不该误解成什么
+
+当前主线不是：
+
+- 完整公开 benchmark 平台
+- 已成熟的可视化拖拽建模平台
+- 一个什么都做完了的医疗 AI 产品
+
+它现在最准确的定位仍然是：
+
+> **一个已经把训练与结果闭环做实的医学 AI 核心运行时。**
+
+## 📚 建议先读这些
+
+如果你想先理解当前 CLI / YAML / Web 三条路径的边界，先看：
+
+- [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
+- [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
+- [OSS 对外推广准备清单](docs/contents/guides/core/oss-go-to-market-checklist.md)
+- [examples/README.md](examples/README.md)
 
 ## 📁 目录结构
 

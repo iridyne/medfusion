@@ -125,6 +125,7 @@ def test_public_datasets_cli_lists_available_quick_validation_sets(capsys):
 
     ids = {item["id"] for item in payload}
     assert "medmnist-pathmnist" in ids
+    assert "medmnist-breastmnist" in ids
     assert "uci-heart-disease" in ids
 
 
@@ -133,20 +134,21 @@ def test_public_datasets_cli_prepare_dry_run(capsys):
 
     public_datasets([
         "prepare",
-        "uci-heart-disease",
+        "medmnist-breastmnist",
         "--dry-run",
         "--json",
     ])
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["dataset"]["id"] == "uci-heart-disease"
+    assert payload["dataset"]["id"] == "medmnist-breastmnist"
     assert payload["recommended_commands"]["prepare"].startswith(
-        "medfusion public-datasets prepare uci-heart-disease"
+        "medfusion public-datasets prepare medmnist-breastmnist"
     )
     assert payload["recommended_commands"]["train"] == (
         "medfusion train --config "
-        "configs/public_datasets/uci_heart_disease_quickstart.yaml"
+        "configs/public_datasets/breastmnist_quickstart.yaml"
     )
+    assert payload["split_limits"] == {"train": 270, "val": 45, "test": 45}
 
 
 def test_build_results_cli_supports_survival_and_importance_options(

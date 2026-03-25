@@ -17,6 +17,19 @@ def test_pathmnist_quickstart_config_loads() -> None:
     assert config.training.use_progressive_training is False
 
 
+def test_breastmnist_quickstart_config_loads() -> None:
+    config = load_config("configs/public_datasets/breastmnist_quickstart.yaml")
+
+    assert config.data.csv_path == "data/public/medmnist/breastmnist-demo/metadata.csv"
+    assert config.data.image_dir == "data/public/medmnist/breastmnist-demo"
+    assert config.data.target_column == "label"
+    assert config.data.numerical_features == []
+    assert config.data.categorical_features == []
+    assert config.model.num_classes == 2
+    assert config.training.monitor == "accuracy"
+    assert Path(config.logging.output_dir).name == "breastmnist_quickstart"
+
+
 def test_uci_heart_quickstart_config_loads() -> None:
     config = load_config("configs/public_datasets/uci_heart_disease_quickstart.yaml")
 

@@ -16,6 +16,7 @@ import pandas as pd
 from PIL import Image, ImageDraw
 
 DEFAULT_PATHMNIST_DIR = Path("data/public/medmnist/pathmnist-demo")
+DEFAULT_BREASTMNIST_DIR = Path("data/public/medmnist/breastmnist-demo")
 DEFAULT_HEART_DIR = Path("data/public/uci/heart-disease-demo")
 UCI_HEART_URL = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/"
@@ -31,6 +32,19 @@ PUBLIC_DATASET_SPECS: dict[str, dict[str, Any]] = {
         "task": "classification",
         "default_output_dir": DEFAULT_PATHMNIST_DIR,
         "config_path": "configs/public_datasets/pathmnist_quickstart.yaml",
+        "notes": [
+            "依赖 medmnist 包",
+            "走 dummy tabular fallback 进入统一多模态训练主链",
+        ],
+    },
+    "medmnist-breastmnist": {
+        "id": "medmnist-breastmnist",
+        "label": "BreastMNIST",
+        "description": "最小二分类图像 quick validation，适合快速录屏和演示。",
+        "modality": "image",
+        "task": "binary-classification",
+        "default_output_dir": DEFAULT_BREASTMNIST_DIR,
+        "config_path": "configs/public_datasets/breastmnist_quickstart.yaml",
         "notes": [
             "依赖 medmnist 包",
             "走 dummy tabular fallback 进入统一多模态训练主链",
@@ -98,7 +112,9 @@ def _summarize_labels(labels: list[int]) -> dict[str, int]:
     return {str(label): count for label, count in sorted(Counter(labels).items())}
 
 
-def _prepare_pathmnist(
+def _prepare_medmnist_dataset(
+    dataset_class_name: str,
+    dataset_label: str,
     output_dir: Path,
     train_limit: int,
     val_limit: int,
@@ -106,12 +122,15 @@ def _prepare_pathmnist(
     overwrite: bool,
 ) -> None:
     try:
-        from medmnist import PathMNIST
+        import medmnist
     except ImportError as exc:
         raise SystemExit(
             "Missing dependency: medmnist. "
-            "Run `uv pip install medmnist` before preparing PathMNIST."
+            f"Run `uv pip install medmnist` before preparing {dataset_label}."
         ) from exc
+
+    dataset_class = getattr(medmnist, dataset_class_name)
+    patient_prefix = dataset_label.upper().replace("-", "_")
 
     _reset_output_dir(output_dir, overwrite)
     image_dir = output_dir / "images"
@@ -129,7 +148,7 @@ def _prepare_pathmnist(
     all_labels: list[int] = []
 
     for split, limit in split_limits.items():
-        dataset = PathMNIST(split=split, root=str(download_root), download=True)
+        dataset = dataset_class(split=split, root=str(download_root), download=True)
         actual_limit = min(limit, len(dataset))
 
         for index in range(actual_limit):
@@ -144,7 +163,7 @@ def _prepare_pathmnist(
 
             records.append(
                 {
-                    "patient_id": f"PATHMNIST_{split.upper()}_{index:05d}",
+                    "patient_id": f"{patient_prefix}_{split.upper()}_{index:05d}",
                     "source_split": split,
                     "image_path": relative_image_path.as_posix(),
                     "label": label_value,
@@ -159,13 +178,49 @@ def _prepare_pathmnist(
     _write_json(
         output_dir / "summary.json",
         {
-            "dataset": "PathMNIST",
+            "dataset": dataset_label,
             "output_dir": str(output_dir),
             "num_samples": len(records),
             "split_limits": split_limits,
             "class_distribution": _summarize_labels(all_labels),
             "metadata_path": str(metadata_path),
         },
+    )
+
+
+def _prepare_pathmnist(
+    output_dir: Path,
+    train_limit: int,
+    val_limit: int,
+    test_limit: int,
+    overwrite: bool,
+) -> None:
+    _prepare_medmnist_dataset(
+        dataset_class_name="PathMNIST",
+        dataset_label="PathMNIST",
+        output_dir=output_dir,
+        train_limit=train_limit,
+        val_limit=val_limit,
+        test_limit=test_limit,
+        overwrite=overwrite,
+    )
+
+
+def _prepare_breastmnist(
+    output_dir: Path,
+    train_limit: int,
+    val_limit: int,
+    test_limit: int,
+    overwrite: bool,
+) -> None:
+    _prepare_medmnist_dataset(
+        dataset_class_name="BreastMNIST",
+        dataset_label="BreastMNIST",
+        output_dir=output_dir,
+        train_limit=train_limit,
+        val_limit=val_limit,
+        test_limit=test_limit,
+        overwrite=overwrite,
     )
 
 
@@ -265,6 +320,14 @@ def prepare_public_dataset(
 
     if dataset_id == "medmnist-pathmnist":
         _prepare_pathmnist(
+            output_dir=resolved_output_dir,
+            train_limit=train_limit,
+            val_limit=val_limit,
+            test_limit=test_limit,
+            overwrite=overwrite,
+        )
+    elif dataset_id == "medmnist-breastmnist":
+        _prepare_breastmnist(
             output_dir=resolved_output_dir,
             train_limit=train_limit,
             val_limit=val_limit,
@@ -436,7 +499,7 @@ def main(
             "dry_run": bool(args.dry_run),
             "recommended_commands": _recommended_commands(dataset, resolved_output_dir),
         }
-        if args.dataset == "medmnist-pathmnist":
+        if args.dataset in {"medmnist-pathmnist", "medmnist-breastmnist"}:
             payload["split_limits"] = {
                 "train": int(args.train_limit),
                 "val": int(args.val_limit),
