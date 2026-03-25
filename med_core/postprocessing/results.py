@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-import os
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,6 +31,7 @@ from med_core.datasets import (
     split_dataset,
 )
 from med_core.evaluation.interpretability import GradCAM
+from med_core.evaluation.report_generator import generate_result_artifact_report
 from med_core.fusion import MultiModalFusionModel, create_fusion_module
 from med_core.output_layout import RunOutputLayout, resolve_run_output_dir
 from med_core.postprocessing.analysis import (
@@ -51,6 +52,9 @@ from med_core.visualization.attention_viz import (
 )
 
 logger = logging.getLogger(__name__)
+
+_BUILD_RESULTS_SCHEMA_VERSION = "1.0"
+_BUILD_RESULTS_GENERATED_BY = "medfusion.build_results"
 
 
 @dataclass
@@ -105,6 +109,22 @@ def _round_metric(value: float | None, digits: int = 4) -> float | None:
     if bool(np.isnan(value)):
         return None
     return round(float(value), digits)
+
+
+def _build_artifact_metadata(
+    *,
+    config_path: Path,
+    checkpoint_path: Path,
+    split: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": _BUILD_RESULTS_SCHEMA_VERSION,
+        "generated_by": _BUILD_RESULTS_GENERATED_BY,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "source_config_path": str(config_path),
+        "checkpoint_path": str(checkpoint_path),
+        "split": split,
+    }
 
 
 def _load_history(layout: RunOutputLayout) -> dict[str, Any]:
@@ -507,6 +527,7 @@ def _build_metrics_payload(
     attention_artifacts: dict[str, Any],
     survival_payload: dict[str, Any] | None,
     importance_payload: dict[str, Any] | None,
+    artifact_metadata: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     labels = inference.labels
     num_classes = inference.num_classes
@@ -788,6 +809,7 @@ def _build_metrics_payload(
         ),
     }
     metrics_payload = {
+        "meta": dict(artifact_metadata),
         "accuracy": round(float(accuracy), 4),
         "precision": round(float(precision), 4),
         "recall": round(float(recall), 4),
@@ -852,6 +874,7 @@ def _build_metrics_payload(
         metrics_payload["c_index"] = survival_payload.get("c_index")
 
     validation_payload = {
+        "meta": dict(artifact_metadata),
         "dataset": {
             "name": dataset_name,
             "labels": labels,
@@ -908,6 +931,7 @@ def _build_metrics_payload(
 
     artifact_paths = {
         "prediction_path": str(predictions_path),
+        "predictions_path": str(predictions_path),
         "roc_curve_json_path": str(roc_curve_json_path),
         "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
         "confusion_matrix_json_path": str(confusion_matrix_json_path),
@@ -929,16 +953,6 @@ def _build_metrics_payload(
     return metrics_payload, validation_payload, artifact_paths
 
 
-def _relative_report_asset_path(
-    report_path: Path, target_path: str | Path | None
-) -> str | None:
-    if not target_path:
-        return None
-    return os.path.relpath(Path(target_path), start=report_path.parent).replace(
-        "\\", "/"
-    )
-
-
 def _write_summary_and_report(
     layout: RunOutputLayout,
     config_path: Path,
@@ -949,6 +963,7 @@ def _write_summary_and_report(
     validation_payload: dict[str, Any],
     history_payload: dict[str, Any],
     artifact_paths: dict[str, str],
+    artifact_metadata: dict[str, Any],
 ) -> dict[str, str]:
     config_snapshot_path = layout.config_snapshot_path
     summary_path = layout.summary_path
@@ -961,48 +976,22 @@ def _write_summary_and_report(
         encoding="utf-8",
     )
 
-    history_entries = history_payload.get("entries", [])
+    summary_artifact_paths = {
+        "checkpoint_path": str(checkpoint_path),
+        "config_path": str(config_snapshot_path),
+        "metrics_path": str(metrics_path),
+        "validation_path": str(layout.validation_path),
+        "prediction_path": str(layout.predictions_path),
+        "predictions_path": str(layout.predictions_path),
+        "summary_path": str(summary_path),
+        "report_path": str(report_path),
+        "log_path": str(layout.training_log_path),
+        "history_path": str(history_path),
+        **artifact_paths,
+    }
     validation_overview = validation_payload.get("overview", {})
-    per_class_rows = validation_payload.get("per_class", [])
-    top_misclassifications = validation_payload.get("prediction_summary", {}).get(
-        "top_misclassifications", []
-    )
-    survival_payload = validation_payload.get("survival") or {}
-    importance_payload = validation_payload.get("global_feature_importance") or {}
-    training_curves_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("training_curves_plot_path"),
-    )
-    roc_curve_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("roc_curve_plot_path"),
-    )
-    confusion_matrix_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("confusion_matrix_plot_path"),
-    )
-    attention_statistics_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("attention_statistics_plot_path"),
-    )
-    kaplan_meier_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("kaplan_meier_plot_path"),
-    )
-    risk_distribution_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("risk_score_distribution_plot_path"),
-    )
-    importance_bar_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("feature_importance_bar_plot_path"),
-    )
-    importance_beeswarm_report_path = _relative_report_asset_path(
-        report_path,
-        artifact_paths.get("feature_importance_beeswarm_plot_path"),
-    )
-
     summary_payload = {
+        "meta": dict(artifact_metadata),
         "experiment_name": config.experiment_name,
         "dataset_name": validation_payload.get("dataset", {}).get("name"),
         "backbone": config.model.vision.backbone,
@@ -1010,149 +999,29 @@ def _write_summary_and_report(
         "split": split,
         "checkpoint_path": str(checkpoint_path),
         "source_config_path": str(config_path),
-        "artifacts": {
-            "checkpoint_path": str(checkpoint_path),
-            "config_path": str(config_snapshot_path),
-            "summary_path": str(summary_path),
-            "report_path": str(report_path),
-            "log_path": str(layout.training_log_path),
-            "history_path": str(history_path),
-            **artifact_paths,
-        },
+        "artifacts": summary_artifact_paths,
         "metrics": metrics_payload,
         "validation_overview": validation_overview,
-        "survival": survival_payload or None,
-        "global_feature_importance": importance_payload or None,
+        "survival": validation_payload.get("survival") or None,
+        "global_feature_importance": validation_payload.get(
+            "global_feature_importance"
+        )
+        or None,
     }
     _write_json(summary_path, summary_payload)
 
-    report_lines = [
-        f"# {config.experiment_name} 结果报告",
-        "",
-        "## 运行来源",
-        "",
-        f"- Config: {config_path}",
-        f"- Checkpoint: {checkpoint_path}",
-        f"- Split: {split}",
-        "",
-        "## 实验摘要",
-        "",
-        f"- 数据集: {validation_payload.get('dataset', {}).get('name') or 'unknown'}",
-        f"- Backbone: {config.model.vision.backbone}",
-        f"- Accuracy: {metrics_payload.get('accuracy')}",
-        f"- AUC: {metrics_payload.get('auc')}",
-        f"- F1: {metrics_payload.get('f1_score')}",
-        f"- Balanced Accuracy: {metrics_payload.get('balanced_accuracy', '-')}",
-        f"- C-index: {metrics_payload.get('c_index', '-')}",
-        f"- Best Epoch: {metrics_payload.get('best_epoch', '-')}",
-        f"- Best Accuracy: {metrics_payload.get('best_accuracy', '-')}",
-        f"- Best Loss: {metrics_payload.get('best_loss', '-')}",
-        "",
-        "## Validation 概览",
-        "",
-        f"- 样本数: {validation_overview.get('sample_count', '-')}",
-        f"- 类别数: {validation_overview.get('num_classes', '-')}",
-        f"- 正类标签: {validation_overview.get('positive_class_label', '-')}",
-        f"- 正类占比: {validation_overview.get('positive_prevalence', '-')}",
-        f"- 宏平均 F1: {validation_overview.get('macro_f1', '-')}",
-        f"- 加权 F1: {validation_overview.get('weighted_f1', '-')}",
-        f"- 平均置信度: {validation_overview.get('mean_confidence', '-')}",
-        f"- 错误率: {validation_overview.get('error_rate', '-')}",
-        "",
-        "## Per-class Metrics",
-        "",
-        "| Class | Support | Prevalence | Precision | Recall | F1 | Predicted |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-        *[
-            "| {label} | {support} | {prevalence} | {precision} | {recall} | {f1_score} | {predicted_count} |".format(
-                **row
-            )
-            for row in per_class_rows
-        ],
-        "",
-        "## Visualizations",
-        "",
-        f"![Training Curves]({training_curves_report_path})"
-        if training_curves_report_path
-        else "",
-        "",
-        f"![ROC Curve]({roc_curve_report_path})" if roc_curve_report_path else "",
-        "",
-        f"![Confusion Matrix]({confusion_matrix_report_path})"
-        if confusion_matrix_report_path
-        else "",
-        "",
-        f"![Attention Statistics]({attention_statistics_report_path})"
-        if attention_statistics_report_path
-        else "",
-        "",
-        f"![Kaplan-Meier Curve]({kaplan_meier_report_path})"
-        if kaplan_meier_report_path
-        else "",
-        "",
-        f"![Risk Score Distribution]({risk_distribution_report_path})"
-        if risk_distribution_report_path
-        else "",
-        "",
-        f"![Global Feature Importance Bar]({importance_bar_report_path})"
-        if importance_bar_report_path
-        else "",
-        "",
-        f"![Global Feature Importance Beeswarm]({importance_beeswarm_report_path})"
-        if importance_beeswarm_report_path
-        else "",
-        "",
-        "## Threshold Analysis",
-        "",
-        f"- Optimal Threshold: {metrics_payload.get('optimal_threshold', '-')}",
-        f"- Sensitivity: {metrics_payload.get('sensitivity', '-')}",
-        f"- Specificity: {metrics_payload.get('specificity', '-')}",
-        f"- PPV: {metrics_payload.get('ppv', '-')}",
-        f"- NPV: {metrics_payload.get('npv', '-')}",
-        "",
-        "## 常见误分类",
-        "",
-        *(
-            [
-                f"- {item['actual']} -> {item['predicted']}: {item['count']}"
-                for item in top_misclassifications
-            ]
-            if top_misclassifications
-            else ["- 无明显误分类聚集"]
-        ),
-        "",
-        "## History",
-        "",
-        f"- total_entries: {len(history_entries)}",
-    ]
-    if survival_payload:
-        report_lines.extend(
-            [
-                "",
-                "## Survival Analysis",
-                "",
-                f"- Survival Sample Count: {survival_payload.get('sample_count', '-')}",
-                f"- Event Rate: {survival_payload.get('event_rate', '-')}",
-                f"- C-index: {survival_payload.get('c_index', '-')}",
-                f"- Risk Score Source: {survival_payload.get('risk_score_source', '-')}",
-            ]
-        )
-    if importance_payload:
-        report_lines.extend(
-            [
-                "",
-                "## Global Feature Importance",
-                "",
-                f"- Method: {importance_payload.get('method', '-')}",
-                f"- Score Name: {importance_payload.get('score_name', '-')}",
-                *[
-                    f"- {item['feature']}: {item['mean_abs_contribution']}"
-                    for item in importance_payload.get("top_features", [])[:5]
-                ],
-            ]
-        )
-    report_path.write_text(
-        "\n".join(line for line in report_lines if line is not None), encoding="utf-8"
+    generate_result_artifact_report(
+        report_path=report_path,
+        experiment_name=config.experiment_name,
+        config_path=config_path,
+        checkpoint_path=checkpoint_path,
+        split=split,
+        metrics_payload=metrics_payload,
+        validation_payload=validation_payload,
+        history_payload=history_payload,
+        artifact_paths=summary_artifact_paths,
+        artifact_metadata=artifact_metadata,
+        backbone=config.model.vision.backbone,
     )
 
     return {
@@ -1231,6 +1100,11 @@ def build_results_artifacts(
         inference=inference,
         sample_limit=attention_samples,
     )
+    artifact_metadata = _build_artifact_metadata(
+        config_path=config_path,
+        checkpoint_path=checkpoint_path,
+        split=split,
+    )
     survival_payload, survival_artifact_paths = (None, {})
     if enable_survival:
         survival_payload, survival_artifact_paths = build_survival_artifacts(
@@ -1275,6 +1149,7 @@ def build_results_artifacts(
         attention_artifacts=attention_artifacts,
         survival_payload=survival_payload,
         importance_payload=importance_payload,
+        artifact_metadata=artifact_metadata,
     )
     visualization_paths = {
         **visualization_paths,
@@ -1291,6 +1166,7 @@ def build_results_artifacts(
         validation_payload=validation_payload,
         history_payload=history_payload,
         artifact_paths=visualization_paths,
+        artifact_metadata=artifact_metadata,
     )
     artifact_paths = {
         **summary_paths,

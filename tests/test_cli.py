@@ -71,6 +71,49 @@ def test_console_script_targets_are_explicit_functions():
     assert scripts["med-preprocess"] == "med_core.cli.preprocess:preprocess"
 
 
+def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
+    from med_core.cli.evaluate import evaluate
+
+    config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
+    output_dir = tmp_path / "evaluate-output"
+
+    evaluate(
+        [
+            "--config",
+            str(config_path),
+            "--checkpoint",
+            str(checkpoint_path),
+            "--split",
+            "train",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    metrics_path = output_dir / "metrics" / "metrics.json"
+    validation_path = output_dir / "metrics" / "validation.json"
+    summary_path = output_dir / "reports" / "summary.json"
+    report_path = output_dir / "reports" / "report.md"
+
+    for path in (metrics_path, validation_path, summary_path, report_path):
+        assert path.exists(), f"Missing evaluate artifact: {path}"
+
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    validation = json.loads(validation_path.read_text(encoding="utf-8"))
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    report_text = report_path.read_text(encoding="utf-8")
+
+    assert metrics["meta"]["generated_by"] == "medfusion.build_results"
+    assert validation["meta"] == metrics["meta"]
+    assert summary["meta"] == metrics["meta"]
+    assert summary["artifacts"]["metrics_path"] == str(metrics_path)
+    assert summary["artifacts"]["validation_path"] == str(validation_path)
+    assert summary["artifacts"]["report_path"] == str(report_path)
+    assert validation["overview"]["split"] == "train"
+    assert "## Contract Metadata" in report_text
+    assert "## Artifact Index" in report_text
+
+
 def test_build_results_cli_supports_survival_and_importance_options(
     tmp_path,
     capsys,
