@@ -38,6 +38,96 @@ medfusion/
 └── docs/                        # 文档
 ```
 
+## 🏗️ 从代码解读的架构视图
+
+从代码结构看，`oss` 的职责非常明确：它是**真正执行训练、评估、预处理和结果产出的核心运行时**。
+
+可以把它理解成一台可组合的训练引擎：CLI 和配置层负责把输入收敛成统一 runtime config，随后数据管线、模型装配、训练器、评估器和结果构建器被串成一个完整闭环。
+
+> 一句话：**oss = executable core runtime for config → data → model → train/eval → outputs**
+
+```mermaid
+flowchart TB
+  subgraph OSS["oss / Upstream Core Runtime"]
+    direction TB
+
+    subgraph CLI["CLI / Entrypoints"]
+      C1["medfusion / med_core.cli.main"]
+      C2["med-train"]
+      C3["med-evaluate"]
+      C4["med-preprocess"]
+    end
+
+    subgraph CFG["Config / Runtime Assembly"]
+      R1["YAML / CLI args / defaults"]
+      R2["task config parsing"]
+      R3["runtime config"]
+    end
+
+    subgraph DATA["Data Pipeline"]
+      D1["med_core.datasets"]
+      D2["med_core.preprocessing"]
+      D3["dataloaders / transforms"]
+    end
+
+    subgraph MODEL["Model Graph"]
+      M1["med_core.models"]
+      M2["med_core.backbones"]
+      M3["med_core.fusion"]
+      M4["med_core.heads"]
+    end
+
+    subgraph RUN["Training / Evaluation Runtime"]
+      T1["med_core.trainers"]
+      T2["loss / metrics"]
+      T3["med_core.evaluation"]
+      T4["output layout / result builder"]
+    end
+
+    subgraph WEB["Base Web Capability"]
+      W1["med_core.web"]
+    end
+
+    C1 --> R1
+    C2 --> R1
+    C3 --> R1
+    C4 --> R1
+
+    R1 --> R2 --> R3
+    R3 --> D1
+    R3 --> D2
+    R3 --> M1
+    D1 --> D3
+    D2 --> D3
+    D3 --> T1
+
+    M1 --> M2
+    M1 --> M3
+    M1 --> M4
+
+    M2 --> T1
+    M3 --> T1
+    M4 --> T1
+
+    T1 --> T2
+    T1 --> T3
+    T1 --> T4
+    T3 --> T4
+    R3 --> W1
+  end
+```
+
+这个图对应的代码层含义是：
+
+- **入口层**：`med_core.cli` 及相关命令负责接收研究配置和运行参数。
+- **配置层**：把 YAML、CLI 参数和默认值收敛成统一的 runtime contract。
+- **数据层**：`datasets`、`preprocessing`、dataloader/transforms 负责把原始医学数据变成训练可消费的 batch stream。
+- **模型层**：`models / backbones / fusion / heads` 负责按任务装配网络图。
+- **运行时层**：`trainers` 驱动训练循环，`evaluation` 负责验证和测试，结果统一落到结构化输出目录。
+- **Web 层**：`med_core.web` 提供基础服务能力，供上层产品或本地界面承接。
+
+对 `oss` 来说，最重要的不是 GUI，而是**配置是否可执行、训练链是否闭环、结果是否稳定可落盘**。这也是它作为 upstream core 的架构中心。
+
 ## 🧪 验证工作流
 
 现在仓库的统一验证入口是：
