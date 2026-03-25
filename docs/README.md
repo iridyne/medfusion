@@ -70,6 +70,7 @@
 
 - [Web UI 架构](contents/architecture/WEB_UI_ARCHITECTURE.md) - Web 界面架构设计
 - [工作流设计](contents/architecture/WORKFLOW_DESIGN.md) - 工作流引擎设计
+- [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md) - 从代码结构解释 oss 的配置、数据、模型、训练与输出主链
 
 ### 📋 参考文档
 

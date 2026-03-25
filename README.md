@@ -128,6 +128,8 @@ flowchart TB
 
 对 `oss` 来说，最重要的不是 GUI，而是**配置是否可执行、训练链是否闭环、结果是否稳定可落盘**。这也是它作为 upstream core 的架构中心。
 
+更细的代码级拆解见：[oss/docs/contents/architecture/CORE_RUNTIME_ARCHITECTURE.md](docs/contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)。
+
 ## 🧪 验证工作流
 
 现在仓库的统一验证入口是：
