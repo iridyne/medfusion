@@ -5,6 +5,7 @@
 先看这一页，再继续：
 
 - [CLI 与 Config 使用路径](cli-config-workflow.md)
+- [公开数据集快速验证清单](public-datasets.md)（如果你还没有私有数据）
 
 当前最稳定的训练入口是：
 

@@ -16,10 +16,10 @@
 
 ### 🚀 快速开始
 
-**新手必读：**
-- [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md) - 先分清哪些 YAML 是给 CLI 训练用、哪些是 builder 示例
-- [快速入门指南](contents/getting-started/quickstart.md) - 新手避坑指南，常见问题和解决方案
-- [公开数据集快速验证清单](contents/getting-started/public-datasets.md) - 没有私有数据时的第一批公开验证入口
+**新手建议按这个顺序读：**
+- [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md) - 先分清主链 YAML、公开数据集 YAML 和 builder 示例
+- [快速入门指南](contents/getting-started/quickstart.md) - 有自己数据时，先走稳定训练主链
+- [公开数据集快速验证清单](contents/getting-started/public-datasets.md) - 没有私有数据时，先走 `medfusion public-datasets ...`
 - [Docker 部署指南](contents/tutorials/deployment/docker.md) - 使用 Docker 部署 MedFusion
 - [Web UI 快速入门](contents/getting-started/web-ui.md) - Web 界面使用指南
 

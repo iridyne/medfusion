@@ -3,15 +3,66 @@
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-MedFusion 是一个面向多模态医学研究的可插拔深度学习框架，强调模块化、可复现和工程化训练/评估流程。
+MedFusion 是一个面向医学 AI 研究验证的核心运行时，强调 **真实训练、真实结果、真实 validation / report 输出**，而不是只停留在模型 demo 或页面展示。
+
+它更适合这几类场景：
+
+- 医学 AI 研究原型验证
+- 课题 / 论文复现的训练与结果沉淀
+- 对外演示“训练 → 结果 → 报告”闭环
+- 作为上层工作台 / 产品层的可执行底座
+
+## 🚀 最短上手路径
+
+### 路径 A：你已经有自己的数据
+
+这是当前最稳定、最适合对外演示的主链：
+
+```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
+```
+
+### 路径 B：你还没有私有数据，先快速验证
+
+先看公开数据集入口，再准备一套最小 demo 数据：
+
+```bash
+uv run medfusion public-datasets list
+uv run medfusion public-datasets prepare uci-heart-disease --overwrite
+uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+```
+
+如果你想先理解当前 CLI / YAML / Web 三条路径的边界，先看：
+
+- [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
+- [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
+- [examples/README.md](examples/README.md)
 
 ## ✨ 核心特性
 
 - 多模态建模：影像、表格、时序等输入可组合
 - 模块化组件：backbone / fusion / head / trainer 可替换
-- 训练产物结构化输出：run 目录、manifest、checkpoint、reports、artifacts
-- CLI + Web 双入口
-- 面向研究和原型验证的快速迭代能力
+- 真实训练主链：`validate-config → train → build-results → import-run`
+- 结构化结果契约：`metrics.json / validation.json / summary.json / report.md`
+- 公开数据集快速验证入口：`medfusion public-datasets ...`
+- CLI + Web 双入口，适合研究验证和上层产品承接
+
+## 📦 训练后会得到什么
+
+一次标准 run 结束后，当前主链会稳定沉淀这些核心产物：
+
+- checkpoint / logs / `history.json`
+- `metrics.json`
+- `validation.json`
+- `summary.json`
+- `report.md`
+- ROC / confusion / calibration / attention 等图表 artifact
+
+这也是 MedFusion 现在最适合对外讲的地方：**不是只有训练命令，而是有完整结果闭环。**
 
 ## 📁 目录结构
 

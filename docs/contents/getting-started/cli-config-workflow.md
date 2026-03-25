@@ -4,7 +4,8 @@
 
 ## 一、最稳定的主链
 
-这是当前最适合新用户和对外演示的路径：
+这是当前最适合新用户和对外演示的路径。
+如果你还没有自己的数据，先去 [公开数据集快速验证清单](public-datasets.md)。
 
 ```bash
 uv run medfusion validate-config --config configs/starter/quickstart.yaml
