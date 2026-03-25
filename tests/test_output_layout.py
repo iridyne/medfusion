@@ -31,6 +31,17 @@ def test_run_output_layout_creates_structured_subdirectories(tmp_path: Path) -> 
         assert path.exists()
 
 
+def test_run_output_layout_exposes_stability_paths(tmp_path: Path) -> None:
+    layout = RunOutputLayout(tmp_path / "stability-study")
+
+    assert layout.seed_runs_dir == layout.root_dir / "seeds"
+    assert layout.seed_output_dir(7) == layout.seed_runs_dir / "seed-0007"
+    assert layout.stability_dir == layout.root_dir / "stability"
+    assert layout.stability_summary_json_path == layout.stability_dir / "summary.json"
+    assert layout.stability_summary_csv_path == layout.stability_dir / "summary.csv"
+    assert layout.stability_summary_md_path == layout.stability_dir / "summary.md"
+
+
 def test_resolve_run_output_dir_preserves_explicit_override(tmp_path: Path) -> None:
     configured_run_dir = tmp_path / "configured-run"
     checkpoint_path = configured_run_dir / "checkpoints" / "best.pth"

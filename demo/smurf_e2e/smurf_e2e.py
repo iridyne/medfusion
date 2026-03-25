@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 import random
 import shutil
@@ -22,6 +23,12 @@ from med_core.models import MultiModalModelBuilder
 from med_core.postprocessing.advanced_analysis import (
     build_shap_artifacts,
     build_survival_artifacts as build_posthoc_survival_artifacts,
+)
+from med_core.stability import (
+    SeedRunArtifacts,
+    StabilityStudyResult,
+    parse_seeds,
+    run_stability_study,
 )
 
 
@@ -374,8 +381,25 @@ def resolve_project_root(script_path: Path) -> Path:
     return script_path.resolve().parents[2]
 
 
-def resolve_paths(config: dict[str, Any], project_root: Path) -> RunPaths:
-    output_dir = (project_root / config.get("output_dir", "demo/smurf_e2e/outputs")).resolve()
+def resolve_output_dir(
+    project_root: Path,
+    output_dir: str | Path | None,
+) -> Path:
+    raw_output_dir = Path(output_dir or "demo/smurf_e2e/outputs")
+    if raw_output_dir.is_absolute():
+        return raw_output_dir.resolve()
+    return (project_root / raw_output_dir).resolve()
+
+
+def resolve_paths(
+    config: dict[str, Any],
+    project_root: Path,
+    output_dir: str | Path | None = None,
+) -> RunPaths:
+    output_dir = resolve_output_dir(
+        project_root,
+        output_dir if output_dir is not None else config.get("output_dir"),
+    )
     checkpoints_dir = output_dir / "checkpoints"
     reports_dir = output_dir / "reports"
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
@@ -1180,10 +1204,12 @@ def cmd_prepare_hipt(config_path: Path) -> None:
     print(f"[prepare-hipt] converted_embeddings: {converted}")
 
 
-def cmd_train(config_path: Path) -> None:
-    config = load_yaml(config_path)
-    project_root = resolve_project_root(Path(__file__))
-    paths = resolve_paths(config, project_root)
+def run_train_pipeline(
+    config: dict[str, Any],
+    project_root: Path,
+    output_dir: str | Path | None = None,
+) -> None:
+    paths = resolve_paths(config, project_root, output_dir)
     set_seed(int(config.get("seed", 42)))
 
     enable_survival = bool(config["data"].get("enable_survival", True))
@@ -1293,10 +1319,20 @@ def cmd_train(config_path: Path) -> None:
     print(f"[train] history: {history_path}")
 
 
-def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
+def cmd_train(config_path: Path) -> None:
     config = load_yaml(config_path)
     project_root = resolve_project_root(Path(__file__))
-    paths = resolve_paths(config, project_root)
+    run_train_pipeline(config, project_root)
+
+
+def run_evaluate_pipeline(
+    config: dict[str, Any],
+    project_root: Path,
+    output_dir: str | Path | None = None,
+    checkpoint: Path | None = None,
+) -> None:
+    paths = resolve_paths(config, project_root, output_dir)
+    set_seed(int(config.get("seed", 42)))
 
     enable_survival = bool(config["data"].get("enable_survival", True))
 
@@ -1424,10 +1460,18 @@ def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
     print(f"[evaluate] summary: {metrics}")
 
 
-def cmd_report(config_path: Path) -> None:
+def cmd_evaluate(config_path: Path, checkpoint: Path | None = None) -> None:
     config = load_yaml(config_path)
     project_root = resolve_project_root(Path(__file__))
-    paths = resolve_paths(config, project_root)
+    run_evaluate_pipeline(config, project_root, checkpoint=checkpoint)
+
+
+def run_report_pipeline(
+    config: dict[str, Any],
+    project_root: Path,
+    output_dir: str | Path | None = None,
+) -> None:
+    paths = resolve_paths(config, project_root, output_dir)
 
     metrics_path = paths.output_dir / "metrics.json"
     history_path = paths.output_dir / "history.json"
@@ -1521,6 +1565,75 @@ def cmd_report(config_path: Path) -> None:
     print(f"[report] {report_path}")
 
 
+def cmd_report(config_path: Path) -> None:
+    config = load_yaml(config_path)
+    project_root = resolve_project_root(Path(__file__))
+    run_report_pipeline(config, project_root)
+
+
+def _resolve_stability_seeds(
+    config: dict[str, Any],
+    seeds: str | None = None,
+) -> list[int]:
+    if seeds is not None:
+        return parse_seeds(seeds)
+
+    stability_cfg = config.get("stability") or {}
+    configured_seeds = stability_cfg.get("seeds")
+    if configured_seeds is None:
+        raise ValueError(
+            "stability seeds not configured; pass --seeds or set stability.seeds",
+        )
+    return parse_seeds(configured_seeds)
+
+
+def _resolve_smurf_seed_artifacts(seed: int, output_dir: Path) -> SeedRunArtifacts:
+    return SeedRunArtifacts(
+        seed=seed,
+        output_dir=output_dir,
+        metrics_path=output_dir / "metrics.json",
+        history_path=output_dir / "history.json",
+        report_path=output_dir / "reports" / "smurf_e2e_report.md",
+    )
+
+
+def run_stability_pipeline(
+    config: dict[str, Any],
+    project_root: Path,
+    seeds: str | None = None,
+) -> StabilityStudyResult:
+    seed_values = _resolve_stability_seeds(config, seeds)
+    study_dir = resolve_output_dir(project_root, config.get("output_dir"))
+    stability_cfg = config.get("stability") or {}
+    study_name = str(stability_cfg.get("study_name", "SMuRF E2E Demo"))
+
+    def run_seed(seed: int, seed_dir: Path) -> None:
+        seed_config = deepcopy(config)
+        seed_config["seed"] = seed
+        seed_config["output_dir"] = str(seed_dir)
+        run_train_pipeline(seed_config, project_root, output_dir=seed_dir)
+        run_evaluate_pipeline(seed_config, project_root, output_dir=seed_dir)
+        run_report_pipeline(seed_config, project_root, output_dir=seed_dir)
+
+    return run_stability_study(
+        seeds=seed_values,
+        study_dir=study_dir,
+        run_seed=run_seed,
+        resolve_seed_artifacts=_resolve_smurf_seed_artifacts,
+        study_name=study_name,
+    )
+
+
+def cmd_stability(config_path: Path, seeds: str | None = None) -> None:
+    config = load_yaml(config_path)
+    project_root = resolve_project_root(Path(__file__))
+    result = run_stability_pipeline(config, project_root, seeds)
+    print(f"[stability] study_dir: {result.study_dir}")
+    print(f"[stability] summary_json: {result.summary_json_path}")
+    print(f"[stability] summary_csv: {result.summary_csv_path}")
+    print(f"[stability] summary_md: {result.summary_md_path}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="SMuRF E2E multi-region demo pipeline")
     parser.add_argument(
@@ -1538,6 +1651,15 @@ def build_parser() -> argparse.ArgumentParser:
     eval_p.add_argument("--checkpoint", default=None, help="Checkpoint path")
 
     sub.add_parser("report", help="Generate markdown report")
+    stability_p = sub.add_parser(
+        "stability",
+        help="Run train/evaluate/report for multiple seeds and aggregate summaries",
+    )
+    stability_p.add_argument(
+        "--seeds",
+        default=None,
+        help="Comma-separated seed list; defaults to stability.seeds in config",
+    )
     return parser
 
 
@@ -1557,6 +1679,8 @@ def main() -> None:
         cmd_evaluate(config_path, ckpt)
     elif args.command == "report":
         cmd_report(config_path)
+    elif args.command == "stability":
+        cmd_stability(config_path, args.seeds)
     else:
         parser.error(f"unknown command: {args.command}")
 

@@ -36,6 +36,29 @@ class RunOutputLayout:
         return self.root_dir / "artifacts"
 
     @property
+    def seed_runs_dir(self) -> Path:
+        return self.root_dir / "seeds"
+
+    def seed_output_dir(self, seed: int) -> Path:
+        return self.seed_runs_dir / f"seed-{seed:04d}"
+
+    @property
+    def stability_dir(self) -> Path:
+        return self.root_dir / "stability"
+
+    @property
+    def stability_summary_json_path(self) -> Path:
+        return self.stability_dir / "summary.json"
+
+    @property
+    def stability_summary_csv_path(self) -> Path:
+        return self.stability_dir / "summary.csv"
+
+    @property
+    def stability_summary_md_path(self) -> Path:
+        return self.stability_dir / "summary.md"
+
+    @property
     def history_path(self) -> Path:
         return self.logs_dir / "history.json"
 

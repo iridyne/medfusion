@@ -15,6 +15,8 @@ The core package containing all MedFusion functionality.
 - [preprocessing](/contents/api/preprocessing) - Data preprocessing utilities
 - [trainers](/contents/api/trainers) - Training loops and strategies
 - [utils](/contents/api/utils) - Utility functions
+- `med_core.output_layout` - Shared run / seed / stability output directory helpers
+- `med_core.stability` - Reusable multi-seed stability study runner and summary writers
 
 ## Configuration
 

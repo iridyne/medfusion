@@ -97,6 +97,12 @@ bash demo/smurf_e2e/run_single_ct.sh fast
 # 稳定复现档（含 early stopping）
 bash demo/smurf_e2e/run_single_ct.sh stable
 
+# 多 seed 稳定性评估（默认读取 stable 配置里的 stability.seeds）
+bash demo/smurf_e2e/run_single_ct.sh stable stability
+
+# 覆盖 seed 列表
+SEEDS=13,21,34 bash demo/smurf_e2e/run_single_ct.sh stable stability
+
 # 如已准备好数据可跳过 prepare
 SKIP_PREPARE=1 bash demo/smurf_e2e/run_single_ct.sh stable
 ```
@@ -108,6 +114,11 @@ uv run python demo/smurf_e2e/build_elbow_dryrun.py
 uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml train
 uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml evaluate
 uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_single_ct_fast.yaml report
+
+# 多 seed 稳定性评估
+uv run python demo/smurf_e2e/smurf_e2e.py \
+  --config demo/smurf_e2e/config.elbow_single_ct_stable.yaml \
+  stability --seeds 11,22,42
 ```
 
 ---
@@ -122,6 +133,13 @@ uv run python demo/smurf_e2e/smurf_e2e.py --config demo/smurf_e2e/config.elbow_s
 - `predictions.csv`：每个样本的预测结果（含 `smurf_score`）
 - `analysis_summary.json`：解释分析汇总
 - `reports/smurf_e2e_report.md`：可直接读的报告
+
+多 seed 稳定性评估会额外生成：
+
+- `seeds/seed-XXXX/`：每个 seed 的独立运行目录
+- `stability/summary.json`：完整聚合结果
+- `stability/summary.csv`：便于表格处理的汇总
+- `stability/summary.md`：便于直接查看的稳定性报告
 
 ### 看图的统一入口（推荐）
 

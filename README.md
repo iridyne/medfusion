@@ -95,6 +95,52 @@ bash scripts/full_regression.sh --full
 
 如果你只是日常开发，先跑 `--quick` 就够了。准备提交较大改动时，再跑 `--ci` 或 `--full`。
 
+## 📊 多 seed 稳定性评估
+
+这个能力现在已经进入主线能力层，不是 demo 私有脚本。
+
+适用场景：
+
+- 日常开发完成后，准备做“定版检查”
+- 想确认某个配置不是碰巧被单次 seed 跑出来
+- 需要对外汇报 mean / std 稳定性
+
+当前 `smurf_e2e` 的触发方式是显式进入 `stability` 子命令：
+
+```bash
+# 读取配置中的 stability.seeds
+bash demo/smurf_e2e/run_single_ct.sh stable stability
+
+# 临时覆盖 seed 列表
+SEEDS=13,21,34 bash demo/smurf_e2e/run_single_ct.sh stable stability
+
+# 直接调用 Python 入口
+uv run python demo/smurf_e2e/smurf_e2e.py \
+  --config demo/smurf_e2e/config.elbow_single_ct_stable.yaml \
+  stability --seeds 11,22,42
+```
+
+输出结构：
+
+```text
+<study_root>/
+├── seeds/
+│   ├── seed-0011/
+│   ├── seed-0022/
+│   └── seed-0042/
+└── stability/
+    ├── summary.json
+    ├── summary.csv
+    └── summary.md
+```
+
+其中：
+
+- `seeds/seed-XXXX/`：每个 seed 的独立 train/evaluate/report 结果
+- `stability/summary.json`：完整聚合结果
+- `stability/summary.csv`：方便表格处理
+- `stability/summary.md`：方便直接阅读
+
 ## 🔧 开发
 
 ### 常用测试命令

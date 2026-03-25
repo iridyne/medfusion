@@ -16,6 +16,24 @@ uv run medfusion build-results \
   --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
+如果你已经完成单次训练，准备做“结果稳定性检查”，现在主线也支持多 seed 聚合思路。
+当前仓库里最先接入的是 `demo/smurf_e2e`，用法是：
+
+```bash
+# 读取 config 中的 stability.seeds
+bash demo/smurf_e2e/run_single_ct.sh stable stability
+
+# 临时覆盖 seed 列表
+SEEDS=13,21,34 bash demo/smurf_e2e/run_single_ct.sh stable stability
+```
+
+会生成：
+
+- `seeds/seed-XXXX/`：每个 seed 独立结果
+- `stability/summary.json`：聚合结果
+- `stability/summary.csv`：表格友好汇总
+- `stability/summary.md`：Markdown 摘要
+
 要注意：
 
 - `configs/starter/`、`configs/public_datasets/`、`configs/testing/` 是当前 `medfusion train` 主链配置
