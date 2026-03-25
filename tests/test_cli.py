@@ -3,8 +3,8 @@ Tests for CLI module structure and imports.
 """
 
 import json
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
 from test_build_results import _create_checkpoint_and_logs
 

@@ -18,6 +18,12 @@ from med_core.configs.config_loader import (
     load_config,
     save_config,
 )
+from med_core.configs.doctor import (
+    ConfigDoctor,
+    ConfigDoctorReport,
+    DoctorIssue,
+    analyze_config,
+)
 from med_core.configs.multiview_config import (
     MultiViewDataConfig,
     MultiViewExperimentConfig,
@@ -30,12 +36,6 @@ from med_core.configs.validation import (
     ConfigValidator,
     validate_config,
     validate_config_or_exit,
-)
-from med_core.configs.doctor import (
-    ConfigDoctor,
-    ConfigDoctorReport,
-    DoctorIssue,
-    analyze_config,
 )
 
 __all__ = [

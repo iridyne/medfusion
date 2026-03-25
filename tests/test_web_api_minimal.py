@@ -10,12 +10,15 @@ import pytest
 
 pytest.importorskip("fastapi")
 
-os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-web-test-"))
+os.environ.setdefault(
+    "MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-web-test-")
+)
+
+from test_build_results import _create_checkpoint_and_logs
 
 from med_core.web.app import app
 from med_core.web.config import settings
 from med_core.web.database import init_db
-from test_build_results import _create_checkpoint_and_logs
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -147,7 +150,9 @@ async def test_web_basic_routes(api_client) -> None:
         artifact["key"] == "validation" for artifact in generated_model["result_files"]
     )
 
-    generated_model_detail = await api_client.get(f"/api/models/{generated_model['id']}")
+    generated_model_detail = await api_client.get(
+        f"/api/models/{generated_model['id']}"
+    )
     assert generated_model_detail.status_code == 200
     detail_payload = generated_model_detail.json()
     assert detail_payload["validation"]["prediction_summary"]["error_count"] >= 0
@@ -157,7 +162,9 @@ async def test_web_basic_routes(api_client) -> None:
     deleted_model = await api_client.delete(f"/api/models/{model_id}")
     assert deleted_model.status_code == 200
 
-    deleted_generated_model = await api_client.delete(f"/api/models/{generated_model['id']}")
+    deleted_generated_model = await api_client.delete(
+        f"/api/models/{generated_model['id']}"
+    )
     assert deleted_generated_model.status_code == 200
 
     deleted_dataset = await api_client.delete(f"/api/datasets/{dataset_id}")
@@ -197,7 +204,9 @@ async def test_web_can_import_real_cli_run(api_client, tmp_path) -> None:
     assert payload["visualizations"]["feature_importance_bar"]["image_url"]
     assert payload["visualizations"]["feature_importance_beeswarm"]["image_url"]
     assert any(artifact["key"] == "survival" for artifact in payload["result_files"])
-    assert any(artifact["key"] == "feature_importance" for artifact in payload["result_files"])
+    assert any(
+        artifact["key"] == "feature_importance" for artifact in payload["result_files"]
+    )
     assert any(artifact["key"] == "report" for artifact in payload["result_files"])
 
     listed = await api_client.get("/api/models/")

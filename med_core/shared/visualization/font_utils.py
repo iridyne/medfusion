@@ -29,8 +29,8 @@ def _ensure_mpl_config_dir() -> None:
 
 _ensure_mpl_config_dir()
 
-import matplotlib
-from matplotlib import font_manager
+import matplotlib  # noqa: E402
+from matplotlib import font_manager  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,9 @@ def _discover_cjk_font() -> tuple[str | None, str | None]:
 
             try:
                 font_manager.fontManager.addfont(str(font_path))
-                family_name = font_manager.FontProperties(fname=str(font_path)).get_name()
+                family_name = font_manager.FontProperties(
+                    fname=str(font_path)
+                ).get_name()
                 return str(font_path), family_name
             except Exception as exc:  # pragma: no cover - defensive fallback
                 logger.debug("Failed to register CJK font %s: %s", font_path, exc)

@@ -142,7 +142,7 @@ class TestMultimodalTrainer:
 
             trainer.train()
 
-            history_path = Path(tmpdir) / "history.json"
+            history_path = Path(tmpdir) / "logs" / "history.json"
             assert history_path.exists()
 
             payload = history_path.read_text(encoding="utf-8")

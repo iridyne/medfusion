@@ -134,14 +134,18 @@ def test_build_results_artifacts_from_real_checkpoint(tmp_path: Path) -> None:
     assert "validation_path" in result.artifact_paths
 
     expected_files = [
-        output_dir / "metrics.json",
-        output_dir / "validation.json",
-        output_dir / "summary.json",
-        output_dir / "report.md",
-        output_dir / "history.json",
-        output_dir / "visualizations" / "confusion_matrix.png",
-        output_dir / "visualizations" / "training_curves.png",
-        output_dir / "visualizations" / "attention" / "attention_maps.json",
+        output_dir / "metrics" / "metrics.json",
+        output_dir / "metrics" / "validation.json",
+        output_dir / "reports" / "summary.json",
+        output_dir / "reports" / "report.md",
+        output_dir / "logs" / "history.json",
+        output_dir / "artifacts" / "visualizations" / "confusion_matrix.png",
+        output_dir / "artifacts" / "visualizations" / "training_curves.png",
+        output_dir
+        / "artifacts"
+        / "visualizations"
+        / "attention"
+        / "attention_maps.json",
     ]
     for path in expected_files:
         assert path.exists(), f"Missing artifact: {path}"
@@ -164,7 +168,7 @@ def test_build_results_artifacts_include_survival_and_importance_when_configured
     )
 
     output_dir = Path(result.output_dir)
-    report_path = output_dir / "report.md"
+    report_path = output_dir / "reports" / "report.md"
     report_text = report_path.read_text(encoding="utf-8")
 
     assert result.validation["survival"]["c_index"] is not None
@@ -172,10 +176,18 @@ def test_build_results_artifacts_include_survival_and_importance_when_configured
     assert result.validation["global_feature_importance"]["top_features"]
     assert result.metrics["c_index"] is not None
     assert result.artifact_paths["survival_path"].endswith("survival.json")
-    assert result.artifact_paths["kaplan_meier_plot_path"].endswith("kaplan_meier_curve.png")
-    assert result.artifact_paths["risk_score_distribution_plot_path"].endswith("risk_score_distribution.png")
-    assert result.artifact_paths["feature_importance_path"].endswith("feature_importance.json")
-    assert result.artifact_paths["feature_importance_bar_plot_path"].endswith("feature_importance_bar.png")
+    assert result.artifact_paths["kaplan_meier_plot_path"].endswith(
+        "kaplan_meier_curve.png"
+    )
+    assert result.artifact_paths["risk_score_distribution_plot_path"].endswith(
+        "risk_score_distribution.png"
+    )
+    assert result.artifact_paths["feature_importance_path"].endswith(
+        "feature_importance.json"
+    )
+    assert result.artifact_paths["feature_importance_bar_plot_path"].endswith(
+        "feature_importance_bar.png"
+    )
     assert result.artifact_paths["feature_importance_beeswarm_plot_path"].endswith(
         "feature_importance_beeswarm.png"
     )

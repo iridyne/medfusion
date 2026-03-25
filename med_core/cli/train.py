@@ -23,6 +23,7 @@ from med_core.fusion import (
     MultiModalFusionModel,
     create_fusion_module,
 )
+from med_core.output_layout import RunOutputLayout
 from med_core.trainers import MultimodalTrainer
 
 # Setup logging
@@ -109,7 +110,10 @@ def train(
         description="Train a medical multimodal model",
     )
     parser.add_argument(
-        "--config", type=str, required=True, help="Path to YAML configuration file",
+        "--config",
+        type=str,
+        required=True,
+        help="Path to YAML configuration file",
     )
     parser.add_argument("--output-dir", type=str, help="Override output directory")
     args = parser.parse_args(argv)
@@ -118,9 +122,10 @@ def train(
     config = load_config(args.config)
     if args.output_dir:
         config.logging.output_dir = args.output_dir
+    run_layout = RunOutputLayout(config.logging.output_dir).ensure_exists()
 
     logger.info(f"Starting experiment: {config.experiment_name}")
-    logger.info(f"Output directory: {config.logging.output_dir}")
+    logger.info(f"Output directory: {run_layout.root_dir}")
 
     # 2. Setup Data
     logger.info("Loading data...")

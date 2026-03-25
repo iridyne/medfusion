@@ -17,6 +17,7 @@ from med_core.configs.base_config import (
     TrainingConfig,
     VisionConfig,
 )
+from med_core.output_layout import RunOutputLayout
 
 
 @dataclass
@@ -69,7 +70,11 @@ class MultiViewVisionConfig(VisionConfig):
 
     # View aggregation
     aggregator_type: Literal[
-        "max", "mean", "attention", "cross_view_attention", "learned_weight",
+        "max",
+        "mean",
+        "attention",
+        "cross_view_attention",
+        "learned_weight",
     ] = "attention"
 
     # Aggregator-specific settings
@@ -138,8 +143,6 @@ class MultiViewExperimentConfig(BaseConfig):
 
     def __post_init__(self) -> None:
         """Post-initialization validation and setup."""
-        from pathlib import Path
-
         # Validate multi-view consistency
         if self.data.enable_multiview:
             if not self.data.view_names:
@@ -156,9 +159,8 @@ class MultiViewExperimentConfig(BaseConfig):
             # Enable multi-view in model config
             self.model.vision.enable_multiview = True
 
-        # Create output directories
-        output_path = Path(self.logging.output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
+        # Create the run root and its structured subdirectories.
+        self.output_layout.ensure_exists()
 
         # Set device
         if self.device == "auto":
@@ -183,31 +185,44 @@ class MultiViewExperimentConfig(BaseConfig):
         return torch.device(self.device)
 
     @property
+    def output_layout(self) -> RunOutputLayout:
+        """Get the canonical output layout for this run."""
+        return RunOutputLayout(self.logging.output_dir)
+
+    @property
     def checkpoint_dir(self) -> Path:
         """Get checkpoint directory path."""
-        from pathlib import Path
-
-        path = Path(self.logging.output_dir) / "checkpoints"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        return self.output_layout.ensure_exists().checkpoints_dir
 
     @property
     def log_dir(self) -> Path:
         """Get log directory path."""
-        from pathlib import Path
+        return self.output_layout.ensure_exists().logs_dir
 
-        path = Path(self.logging.output_dir) / "logs"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+    @property
+    def reports_dir(self) -> Path:
+        """Get report directory path."""
+        return self.output_layout.ensure_exists().reports_dir
+
+    @property
+    def metrics_dir(self) -> Path:
+        """Get metrics directory path."""
+        return self.output_layout.ensure_exists().metrics_dir
+
+    @property
+    def artifacts_dir(self) -> Path:
+        """Get artifact directory path."""
+        return self.output_layout.ensure_exists().artifacts_dir
+
+    @property
+    def history_path(self) -> Path:
+        """Get training history artifact path."""
+        return self.output_layout.ensure_exists().history_path
 
     @property
     def results_dir(self) -> Path:
-        """Get results directory path."""
-        from pathlib import Path
-
-        path = Path(self.logging.output_dir) / "results"
-        path.mkdir(parents=True, exist_ok=True)
-        return path
+        """Backward-compatible alias for the report directory."""
+        return self.reports_dir
 
 
 # Example configuration presets

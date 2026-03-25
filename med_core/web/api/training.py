@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from med_core.configs import load_config, save_config
+from med_core.output_layout import RunOutputLayout
 
 from ..config import settings
 from ..database import SessionLocal, get_db_session
@@ -138,12 +139,11 @@ def _estimate_num_parameters(backbone: str | None) -> int | None:
 
 
 def _prepare_job_output(job_id: str) -> tuple[str, str]:
-    output_dir = settings.data_dir / "experiments" / job_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    log_file = output_dir / "training.log"
+    layout = RunOutputLayout(settings.data_dir / "experiments" / job_id).ensure_exists()
+    log_file = layout.training_log_path
     if not log_file.exists():
         log_file.write_text("training started\n", encoding="utf-8")
-    return str(output_dir), str(log_file)
+    return str(layout.root_dir), str(log_file)
 
 
 def _coerce_list(value: Any) -> list[str]:
@@ -454,6 +454,7 @@ def _build_training_config_artifact(
     payload: TrainingConfig,
     output_dir: Path,
 ) -> dict[str, Any]:
+    layout = RunOutputLayout(output_dir).ensure_exists()
     config = load_config(_PROJECT_ROOT / "configs" / "starter" / "quickstart.yaml")
 
     training_model_config = payload.training_model_config or {}
@@ -475,7 +476,7 @@ def _build_training_config_artifact(
     config.project_name = "web-training"
     config.experiment_name = experiment_name
     config.logging.experiment_name = experiment_name
-    config.logging.output_dir = str(output_dir.resolve())
+    config.logging.output_dir = str(layout.root_dir.resolve())
     config.logging.use_tensorboard = bool(training_config.get("use_tensorboard", False))
     config.logging.use_wandb = False
 
@@ -551,7 +552,7 @@ def _build_training_config_artifact(
             config.model.vision.feature_dim + config.model.tabular.output_dim
         )
 
-    config_path = output_dir / "training-config.yaml"
+    config_path = layout.generated_config_path
     save_config(config, config_path)
 
     return {
@@ -612,7 +613,7 @@ def _signal_process(job_id: str, process_signal: signal.Signals) -> bool:
 
 
 def _resolve_checkpoint_path(output_dir: Path) -> Path | None:
-    checkpoint_dir = output_dir / "checkpoints"
+    checkpoint_dir = RunOutputLayout(output_dir).checkpoints_dir
     preferred_candidates = [
         checkpoint_dir / "best.pth",
         checkpoint_dir / "last.pth",
@@ -686,7 +687,7 @@ def _tail_log(log_path: Path | None, max_lines: int = 40) -> str | None:
 
 def _history_path_for_job(job: TrainingJob) -> Path:
     output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
-    return output_dir / "history.json"
+    return RunOutputLayout(output_dir).history_path
 
 def _round_metric(value: float | None, digits: int = 4) -> float | None:
     if value is None:
@@ -712,7 +713,8 @@ async def _run_real_training_job(job_id: str) -> None:
         resolved_run = (job.config or {}).get("resolved_run", {})
         config_path = Path(resolved_run["config_path"])
         output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
-        log_path = Path(job.log_file) if job.log_file else output_dir / "training.log"
+        layout = RunOutputLayout(output_dir).ensure_exists()
+        log_path = Path(job.log_file) if job.log_file else layout.training_log_path
         command = _build_train_command(config_path, output_dir)
 
         job.status = "running"

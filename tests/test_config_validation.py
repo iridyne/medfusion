@@ -1,7 +1,5 @@
 """Tests for configuration validation."""
 
-import pytest
-
 from med_core.configs import (
     DataConfig,
     ExperimentConfig,

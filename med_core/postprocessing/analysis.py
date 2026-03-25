@@ -7,8 +7,9 @@ lighter-weight advanced analysis helpers internally.
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import torch
@@ -17,6 +18,8 @@ from torch.utils.data import DataLoader
 from med_core.datasets import MedicalMultimodalDataset
 from med_core.postprocessing.advanced_analysis import (
     build_shap_artifacts,
+)
+from med_core.postprocessing.advanced_analysis import (
     build_survival_artifacts as _build_survival_artifacts,
 )
 
@@ -27,8 +30,12 @@ def resolve_survival_columns(
     override_time_column: str | None = None,
     override_event_column: str | None = None,
 ) -> tuple[str | None, str | None]:
-    time_column = override_time_column or getattr(config.data, "survival_time_column", None)
-    event_column = override_event_column or getattr(config.data, "survival_event_column", None)
+    time_column = override_time_column or getattr(
+        config.data, "survival_time_column", None
+    )
+    event_column = override_event_column or getattr(
+        config.data, "survival_event_column", None
+    )
     return time_column, event_column
 
 
@@ -73,7 +80,9 @@ def build_survival_artifacts(
     km_target = visualization_dir / "kaplan_meier_curve.png"
     risk_target = visualization_dir / "risk_score_distribution.png"
     copied_km = _copy_if_exists(artifact_paths.get("kaplan_meier_plot_path"), km_target)
-    copied_risk = _copy_if_exists(artifact_paths.get("risk_score_distribution_plot_path"), risk_target)
+    copied_risk = _copy_if_exists(
+        artifact_paths.get("risk_score_distribution_plot_path"), risk_target
+    )
 
     payload["risk_score_source"] = risk_score_source
     payload.setdefault("artifacts", {})
@@ -121,7 +130,9 @@ def build_global_feature_importance_artifacts(
         return None, {}
 
     model_scores = np.concatenate(scores, axis=0)
-    feature_names = dataset.get_feature_names() if hasattr(dataset, "get_feature_names") else []
+    feature_names = (
+        dataset.get_feature_names() if hasattr(dataset, "get_feature_names") else []
+    )
     payload, artifact_paths, _metric_updates = build_shap_artifacts(
         output_dir=output_dir,
         feature_names=feature_names,
@@ -139,7 +150,9 @@ def build_global_feature_importance_artifacts(
     bar_target = visualization_dir / "feature_importance_bar.png"
     beeswarm_target = visualization_dir / "feature_importance_beeswarm.png"
     copied_bar = _copy_if_exists(artifact_paths.get("shap_bar_plot_path"), bar_target)
-    copied_beeswarm = _copy_if_exists(artifact_paths.get("shap_beeswarm_plot_path"), beeswarm_target)
+    copied_beeswarm = _copy_if_exists(
+        artifact_paths.get("shap_beeswarm_plot_path"), beeswarm_target
+    )
 
     payload = {
         "available": True,
@@ -160,4 +173,3 @@ def build_global_feature_importance_artifacts(
     }
     normalized_paths = {key: value for key, value in normalized_paths.items() if value}
     return payload, normalized_paths
-

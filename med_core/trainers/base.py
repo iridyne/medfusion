@@ -79,15 +79,16 @@ class BaseTrainer(ABC):
         # Move model to device
         self.model.to(self.device)
 
-        # Setup logging
-        self.log_dir = config.log_dir
+        # Setup the shared run layout once so trainer outputs stay organized.
+        self.output_layout = config.output_layout.ensure_exists()
+        self.log_dir = self.output_layout.logs_dir
         if config.logging.use_tensorboard:
             self.writer = SummaryWriter(log_dir=str(self.log_dir))
         else:
             self.writer = _NullSummaryWriter()
 
         # Setup checkpointing
-        self.checkpoint_dir = config.checkpoint_dir
+        self.checkpoint_dir = self.output_layout.checkpoints_dir
 
         # Training state
         self.current_epoch = 0
@@ -98,7 +99,7 @@ class BaseTrainer(ABC):
         self.best_epoch: int | None = None
         self.patience_counter = 0
         self._last_monitor_resolution: tuple[str, str] | None = None
-        self._history_path = Path(self.config.logging.output_dir) / "history.json"
+        self._history_path = self.output_layout.history_path
         self._best_history_epochs: set[int] = set()
 
     @abstractmethod

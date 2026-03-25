@@ -1,227 +1,21 @@
 # MedFusion
 
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-高度模块化的医学多模态深度学习研究框架，支持 29 种视觉骨干网络和 5 种融合策略。
+MedFusion 是一个面向多模态医学研究的可插拔深度学习框架，强调模块化、可复现和工程化训练/评估流程。
 
 ## ✨ 核心特性
 
-- 🔧 **高度模块化**: 骨干网络、融合策略、聚合器完全解耦
-- 📊 **多视图支持**: 多角度 CT、时间序列、多模态、多切片等 5 种场景
-- 🎯 **配置驱动**: 通过 YAML 配置文件快速切换组件，无需修改代码
-- 🌐 **Web UI**: 实时训练监控、模型管理、工作流编辑器
-- ⚡ **Rust 加速**: 性能关键模块使用 Rust 实现
-
-## 🚀 快速开始
-
-### 安装
-
-```bash
-# 克隆仓库
-git clone https://github.com/yourusername/medfusion.git
-cd medfusion
-
-# 安装依赖（推荐使用 uv）
-uv sync
-
-# 安装开发依赖
-uv sync --extra dev
-
-# 安装 Web UI 依赖
-uv sync --extra web
-
-# 或使用 pip
-pip install -e ".[dev,web]"
-```
-
-### 基础使用
-
-```bash
-# 1) 训练前先做配置与数据体检
-uv run medfusion validate-config --config configs/starter/quickstart.yaml
-
-# 2) 最快跑通训练主链
-uv run medfusion train --config configs/starter/quickstart.yaml
-
-# 3) 训练后生成结果页需要的 validation / 图表 / 报告 artifact
-uv run medfusion build-results \
-  --config configs/starter/quickstart.yaml \
-  --checkpoint outputs/quickstart/checkpoints/best.pth \
-  --split train
-
-# 4) 评估模型
-uv run medfusion evaluate \
-  --config configs/starter/quickstart.yaml \
-  --checkpoint outputs/quickstart/checkpoints/best.pth
-
-# 数据预处理
-uv run medfusion preprocess --input-dir data/raw --output-dir data/processed
-```
-
-### CLI 与 Config 路径
-
-当前先分清三条使用路径：
-
-1. `medfusion train` 直接可用的配置：
-   - `configs/starter/`
-   - `configs/public_datasets/`
-   - `configs/testing/`
-2. `MultiModalModelBuilder` / `build_model_from_config()` 用的结构示例：
-   - `configs/builder/`
-3. 历史模板：
-   - `configs/legacy/`
-
-入口说明：
-
-- [configs/README.md](configs/README.md)
-- [CLI 与 Config 使用路径](docs/contents/getting-started/cli-config-workflow.md)
-
-推荐主链：
-
-1. `medfusion validate-config --config ...`
-2. `medfusion train --config ...`
-3. `medfusion build-results --config ... --checkpoint ...`
-4. 再进入 `Web UI` 或 `medfusion evaluate`
-
-补充说明：
-
-- `examples/` 主要是 API 演示、专题功能脚本和历史搭建方式说明，不是单一的官方训练入口。
-- 如果你想确认当前稳定路径，请优先看 [examples/README.md](examples/README.md) 和 `configs/starter/`。
-- `configs/builder/` / `MultiModalModelBuilder` 适合结构实验，不等价于当前 CLI / Web 训练主链。
-
-### 启动 Web UI
-
-```bash
-# 推荐：统一入口，直接进入工作台首页
-uv run medfusion start
-
-# 高级用法：指定主机、端口、热重载
-uv run medfusion start --host 0.0.0.0 --port 8080 --reload
-
-# 兼容旧入口
-uv run medfusion web
-
-# 访问 http://localhost:8000
-```
-
-进入工作台后，当前推荐顺序是：
-
-1. 打开“训练配置向导”生成真实训练 YAML
-2. 执行 `medfusion validate-config` / `medfusion train`
-3. 跑完后再用 `medfusion build-results` 或工作台导入结果
-
-## 🧪 公开数据集快速验证
-
-如果你还没有私有医学数据，建议先用公开数据集验证框架和 Web UI 闭环。
-
-推荐顺序：
-
-1. `最快上手`：从 [MedMNIST](https://medmnist.com/v2) 开始，下载成本低，适合快速验证训练、评估和结果展示链路。
-2. `表格任务`：用 [UCI Heart Disease](https://archive.ics.uci.edu/dataset/45/heart+disease) 先验证结构化输入和基础分类流程。
-3. `真实医学影像`：再切到 [ISIC Challenge / HAM10000](https://challenge.isic-archive.com/data/) 或 [NIH ChestXray14](https://nihcc.app.box.com/v/ChestXray-NIHCC) 做更接近公开论文复现的实验。
-
-第一批推荐数据集：
-
-| Dataset | 模态 | 典型任务 | 为什么适合第一轮验证 |
-| --- | --- | --- | --- |
-| MedMNIST（如 PathMNIST / ChestMNIST / BreastMNIST） | 2D / 3D 医学图像 | 分类、多标签分类 | 下载最省事，最适合先验证训练与结果页 |
-| UCI Heart Disease | 表格 | 二分类 | 适合快速验证非图像主链、指标输出和报告 |
-| ISIC 2018 / 2019（含 HAM10000 来源） | 皮肤镜图像 | 分类、分割 | 公共医学图像里很常见，适合做对外演示 |
-| NIH ChestXray14 | X-ray | 多标签分类 | 经典胸片基准，适合后续做更真实的公开验证 |
-| ISIC MILK10k | 双图像 / 多视图 | 病灶分类 | 更接近多视图 / 多模态内容表达，适合后续传播 |
-
-详细清单、下载入口和推荐验证路径见：
-
-- [公开数据集快速验证清单](docs/contents/getting-started/public-datasets.md)
-
-最快复制命令：
-
-```bash
-# 1) 最快验证图像训练主链：PathMNIST
-uv pip install medmnist
-uv run python scripts/prepare_public_dataset.py medmnist-pathmnist --overwrite
-uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
-
-# 2) 最快验证表格指标主链：UCI Heart Disease
-uv run python scripts/prepare_public_dataset.py uci-heart-disease --overwrite
-uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
-```
-
-说明：
-
-- `PathMNIST` 会写到 `data/public/medmnist/pathmnist-demo/`，配置文件可直接使用。
-- `UCI Heart Disease` 会写到 `data/public/uci/heart-disease-demo/`，配置文件可直接使用。
-- 当前 CLI 主链仍按统一多模态输入处理，所以 `PathMNIST` 走 dummy tabular fallback，`UCI Heart Disease` 会自动生成一张中性占位图。
-
-### 代码示例
-
-**使用模型构建器创建多模态模型：**
-
-```python
-from med_core.models import MultiModalModelBuilder
-
-# 构建模型
-builder = MultiModalModelBuilder(num_classes=2)
-builder.add_modality("ct", backbone="swin3d_tiny", input_channels=1)
-builder.add_modality("pathology", backbone="resnet50", pretrained=True)
-builder.set_fusion("attention", hidden_dim=256)
-builder.set_head("classification")
-model = builder.build()
-
-# 训练
-outputs = model({"ct": ct_tensor, "pathology": path_tensor})
-```
-
-**从配置文件构建模型：**
-
-```python
-from med_core.models import build_model_from_config
-import yaml
-
-with open("configs/builder/smurf.yaml") as f:
-    config = yaml.safe_load(f)
-
-model = build_model_from_config(config)
-```
-
-## 📖 文档
-
-- [完整文档](docs/README.md)
-- [API 参考](docs/contents/api/med_core.md)
-- [配置指南](docs/contents/tutorials/fundamentals/configs.md)
-- [开发指南](docs/contents/guides/development/contributing.md)
-
-## 🏗️ 架构
-
-### 核心组件
-
-MedFusion 采用高度模块化的设计，核心公式为：
-
-```
-Model = Backbones + Fusion + Head + (Optional) MIL Aggregators
-```
-
-**组件说明：**
-
-- **Backbones** (`med_core/backbones/`): 特征提取器
-  - 视觉：ResNet, EfficientNet, ViT, Swin Transformer (2D/3D), DenseNet 等 29+ 种
-  - 表格：MLP 网络，支持批归一化和 Dropout
-
-- **Fusion** (`med_core/fusion/`): 多模态融合策略
-  - 8 种融合方式：Concatenate, Gated, Attention, Cross-Attention, Bilinear, Kronecker, Fused-Attention, Self-Attention
-
-- **Heads** (`med_core/heads/`): 任务特定输出层
-  - 分类：ClassificationHead
-  - 生存分析：CoxSurvivalHead, DeepSurvivalHead, DiscreteTimeSurvivalHead
-
-- **MIL Aggregators** (`med_core/aggregators/`): 多实例学习聚合器
-  - Mean, Max, Attention-based, Gated Attention
-
-### 目录结构
-
-```
+- 多模态建模：影像、表格、时序等输入可组合
+- 模块化组件：backbone / fusion / head / trainer 可替换
+- 训练产物结构化输出：run 目录、manifest、checkpoint、reports、artifacts
+- CLI + Web 双入口
+- 面向研究和原型验证的快速迭代能力
+
+## 📁 目录结构
+
+```text
 medfusion/
 ├── med_core/                    # 核心 Python 库
 │   ├── models/                  # 模型架构（Builder, SMuRF）
@@ -244,7 +38,66 @@ medfusion/
 └── docs/                        # 文档
 ```
 
-## 🧪 测试
+## 🧪 验证工作流
+
+现在仓库的统一验证入口是：
+
+```bash
+bash scripts/full_regression.sh --help
+```
+
+日常开发建议按下面顺序来：
+
+### 1) 快速验证（推荐日常使用）
+
+```bash
+bash scripts/full_regression.sh --quick
+```
+
+这个模式是最小闭环，适合改完一小块先自检。当前会做：
+
+- `uv sync --extra dev`
+- `bash -n scripts/full_regression.sh`
+- 对当前验证工作流相关 Python 文件做 `ruff check`
+- 对同一批文件做 `ruff format --check`
+- 运行最小测试集：
+  - `tests/test_output_layout.py`
+  - `tests/test_build_results.py`
+
+### 2) 本地 CI 对齐验证
+
+```bash
+bash scripts/full_regression.sh --ci
+```
+
+这个模式尽量贴近 GitHub CI，当前会运行：
+
+- `uv run pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term`
+- `uv run pytest tests/test_end_to_end.py -v --tb=short`
+- `uv run python scripts/smoke_test.py`
+
+其中 CI 对齐模式当前**有意忽略**：
+
+- `tests/test_config_validation.py`
+- `tests/test_export.py`
+
+这两项现在是显式约定，不再靠口头记忆。
+
+### 3) 更完整的本地回归
+
+```bash
+bash scripts/full_regression.sh --full
+```
+
+这个模式会调用当前更重的本地检查入口：
+
+- `bash scripts/local_ci_test.sh`
+
+如果你只是日常开发，先跑 `--quick` 就够了。准备提交较大改动时，再跑 `--ci` 或 `--full`。
+
+## 🔧 开发
+
+### 常用测试命令
 
 ```bash
 # 运行所有测试
@@ -266,22 +119,20 @@ uv run pytest --cov=med_core --cov-report=html
 uv run pytest -v
 ```
 
-## 🔧 开发
-
 ### 代码质量检查
 
 ```bash
 # 代码检查
-ruff check med_core/
+uv run ruff check med_core/
 
 # 自动修复问题
-ruff check med_core/ --fix
+uv run ruff check med_core/ --fix
 
 # 代码格式化
-ruff format med_core/
+uv run ruff format med_core/
 
 # 类型检查
-mypy med_core/
+uv run mypy med_core/
 ```
 
 ### 项目要求

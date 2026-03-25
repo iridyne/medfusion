@@ -29,17 +29,17 @@ print_step() {
 
 print_success() {
     echo -e "${GREEN}✓ $1${NC}"
-    ((PASSED++))
+    PASSED=$((PASSED + 1))
 }
 
 print_error() {
     echo -e "${RED}✗ $1${NC}"
-    ((FAILED++))
+    FAILED=$((FAILED + 1))
 }
 
 print_warning() {
     echo -e "${YELLOW}⚠ $1${NC}"
-    ((WARNINGS++))
+    WARNINGS=$((WARNINGS + 1))
 }
 
 # 检查依赖
@@ -73,22 +73,19 @@ if [ ! -d ".venv" ]; then
     uv venv
 fi
 
-echo "安装依赖 (dev extras)..."
-if uv pip install -e ".[dev]" > /tmp/uv_install.log 2>&1; then
-    print_success "依赖安装成功"
+echo "同步开发依赖 (dev extras)..."
+if uv sync --extra dev > /tmp/uv_install.log 2>&1; then
+    print_success "依赖同步成功"
 else
-    print_error "依赖安装失败，查看日志: /tmp/uv_install.log"
+    print_error "依赖同步失败，查看日志: /tmp/uv_install.log"
     cat /tmp/uv_install.log
     exit 1
 fi
 
-# 激活虚拟环境
-source .venv/bin/activate
-
 # 步骤 2: 代码质量检查
 print_step "步骤 2: 代码质量检查 (Ruff Linting)"
 
-if ruff check med_core/ tests/ --output-format=text > /tmp/ruff_check.log 2>&1; then
+if uv run ruff check med_core/ tests/ --output-format=text > /tmp/ruff_check.log 2>&1; then
     print_success "Ruff 检查通过"
 else
     print_warning "Ruff 检查发现问题 (continue-on-error)"
@@ -99,7 +96,7 @@ fi
 # 步骤 3: 代码格式检查
 print_step "步骤 3: 代码格式检查 (Ruff Format)"
 
-if ruff format --check med_core/ tests/ > /tmp/ruff_format.log 2>&1; then
+if uv run ruff format --check med_core/ tests/ > /tmp/ruff_format.log 2>&1; then
     print_success "代码格式检查通过"
 else
     print_warning "代码格式检查发现问题 (continue-on-error)"
@@ -110,7 +107,7 @@ fi
 # 步骤 4: 类型检查
 print_step "步骤 4: 类型检查 (mypy)"
 
-if mypy med_core/ --ignore-missing-imports > /tmp/mypy.log 2>&1; then
+if uv run mypy med_core/ --ignore-missing-imports > /tmp/mypy.log 2>&1; then
     print_success "类型检查通过"
 else
     print_warning "类型检查发现问题 (continue-on-error)"
@@ -124,7 +121,7 @@ print_step "步骤 5: 运行单元测试"
 if [ ! -d "tests" ]; then
     print_error "tests/ 目录不存在"
 else
-    if pytest tests/ -v --cov=med_core --cov-report=term --cov-report=xml > /tmp/pytest.log 2>&1; then
+    if uv run pytest tests/ -v --cov=med_core --cov-report=term --cov-report=xml > /tmp/pytest.log 2>&1; then
         print_success "单元测试通过"
         echo ""
         echo "覆盖率报告:"
@@ -173,7 +170,7 @@ if [ -f "Dockerfile" ]; then
         print_warning "Docker 未安装，跳过 Dockerfile 验证"
     fi
 else
-    print_error "Dockerfile 不存在"
+    print_warning "Dockerfile 不存在，跳过 Docker 检查"
 fi
 
 # 步骤 8: 检查示例代码
@@ -187,7 +184,7 @@ if [ -d "examples" ]; then
                 echo "  ✓ $example"
             else
                 echo "  ✗ $example"
-                ((EXAMPLE_ERRORS++))
+                EXAMPLE_ERRORS=$((EXAMPLE_ERRORS + 1))
             fi
         fi
     done
@@ -204,43 +201,35 @@ fi
 # 步骤 9: 检查包构建
 print_step "步骤 9: 测试包构建"
 
-if uv pip install build > /dev/null 2>&1; then
-    if python -m build --outdir /tmp/dist > /tmp/build.log 2>&1; then
-        print_success "包构建成功"
-        ls -lh /tmp/dist/
-    else
-        print_error "包构建失败"
-        cat /tmp/build.log
-    fi
+if uv run --with build python -m build --outdir /tmp/dist > /tmp/build.log 2>&1; then
+    print_success "包构建成功"
+    ls -lh /tmp/dist/
 else
-    print_warning "无法安装 build 工具"
+    print_error "包构建失败"
+    cat /tmp/build.log
 fi
 
 # 步骤 10: 安全检查
 print_step "步骤 10: 安全扫描"
 
-echo "安装安全工具..."
-if uv pip install bandit safety > /dev/null 2>&1; then
+echo "执行安全扫描..."
 
-    # Bandit 扫描
-    if bandit -r med_core/ -f json -o /tmp/bandit-report.json > /dev/null 2>&1; then
-        print_success "Bandit 安全扫描通过"
-    else
-        print_warning "Bandit 发现潜在安全问题"
-        if [ -f /tmp/bandit-report.json ]; then
-            echo "查看报告: /tmp/bandit-report.json"
-        fi
-    fi
-
-    # Safety 检查
-    if safety check --json > /tmp/safety-report.json 2>&1; then
-        print_success "Safety 依赖检查通过"
-    else
-        print_warning "Safety 发现已知漏洞"
-        echo "查看报告: /tmp/safety-report.json"
-    fi
+# Bandit 扫描
+if uv run --with bandit bandit -r med_core/ -f json -o /tmp/bandit-report.json > /tmp/bandit.log 2>&1; then
+    print_success "Bandit 安全扫描通过"
 else
-    print_warning "无法安装安全工具"
+    print_warning "Bandit 发现潜在安全问题"
+    if [ -f /tmp/bandit-report.json ]; then
+        echo "查看报告: /tmp/bandit-report.json"
+    fi
+fi
+
+# Safety 检查
+if uv run --with safety safety check --json > /tmp/safety-report.json 2>&1; then
+    print_success "Safety 依赖检查通过"
+else
+    print_warning "Safety 发现已知漏洞或命令兼容问题"
+    echo "查看报告: /tmp/safety-report.json"
 fi
 
 # 总结

@@ -12,6 +12,7 @@ import sys
 from collections.abc import Callable, Sequence
 
 from med_core.version import __version__
+
 from .build_results import build_results
 from .doctor import doctor, validate_config
 from .evaluate import evaluate
@@ -57,9 +58,15 @@ def _print_help() -> None:
     print("  medfusion start")
     print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
-    print("  medfusion build-results --config configs/starter/quickstart.yaml --checkpoint <path>")
-    print("  medfusion import-run --config configs/starter/quickstart.yaml --checkpoint <path>")
-    print("  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>")
+    print(
+        "  medfusion build-results --config configs/starter/quickstart.yaml --checkpoint <path>"
+    )
+    print(
+        "  medfusion import-run --config configs/starter/quickstart.yaml --checkpoint <path>"
+    )
+    print(
+        "  medfusion evaluate --config configs/starter/quickstart.yaml --checkpoint <path>"
+    )
     print("  medfusion web")
     print("")
     print("Config directories:")
