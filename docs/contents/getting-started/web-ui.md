@@ -1,5 +1,7 @@
 # MedFusion Web UI 快速入门
 
+> 文档状态：**Beta**
+
 本文档介绍如何快速启动和使用 MedFusion Web UI。
 
 ## 📋 目录
