@@ -254,4 +254,4 @@ for img_path in input_dir.glob('*.npy'):
 - Dataset integration: `med_core/datasets/AGENTS.md`
 - DICOM utilities: `med_core/shared/AGENTS.md`
 - Training pipelines: `med_core/trainers/AGENTS.md`
-- CLI preprocessing: `CLAUDE.md` → Development Commands
+- CLI preprocessing: `README.md`（开发与验证章节）

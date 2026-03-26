@@ -7,7 +7,18 @@
 - [CLI 与 Config 使用路径](cli-config-workflow.md)
 - [公开数据集快速验证清单](public-datasets.md)（如果你还没有私有数据）
 
-当前最稳定的训练入口是：
+如果你还没有私有数据，当前首推对外演示路径是：`public-datasets -> train -> build-results`
+
+```bash
+uv run medfusion public-datasets list
+uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
+uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
+uv run medfusion build-results \
+  --config configs/public_datasets/breastmnist_quickstart.yaml \
+  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
+```
+
+如果你已经有自己的数据，当前最稳定的训练入口是：
 
 ```bash
 uv run medfusion validate-config --config configs/starter/quickstart.yaml
@@ -451,7 +462,7 @@ for fusion in ["concatenate", "gated", "attention"]:
 
 1. 检查 GitHub Issues
 2. 先看 `examples/README.md`，确认你需要的是主链、builder 结构示例，还是专题功能 demo
-3. 阅读 `CLAUDE.md` 开发者文档
+3. 阅读 [开发指南](../guides/development/contributing.md) 与 [架构文档](../architecture/CORE_RUNTIME_ARCHITECTURE.md)
 4. 提交新的 Issue 并附上：
    - 完整的错误信息
    - 配置文件

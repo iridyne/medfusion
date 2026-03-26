@@ -306,7 +306,7 @@ Use this template:
 ## Documentation
 - [ ] Docstrings updated
 - [ ] VitePress docs updated (if needed)
-- [ ] CLAUDE.md updated (if needed)
+- [ ] README/docs updated (if needed)
 ```
 
 ### Review Process

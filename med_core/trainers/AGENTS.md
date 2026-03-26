@@ -310,4 +310,4 @@ train_loader = DataLoader(
 - Model building: `med_core/models/AGENTS.md`
 - Dataset loading: `med_core/datasets/AGENTS.md`
 - Configuration: `med_core/configs/AGENTS.md`
-- CLI training: `CLAUDE.md` → Development Commands
+- CLI training: `README.md`（开发与验证章节）

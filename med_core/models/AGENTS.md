@@ -196,7 +196,7 @@ uv run pytest tests/test_models.py::test_smurf_models
 
 ## Related Documentation
 
-- Architecture overview: `CLAUDE.md` → Architecture section
+- Architecture overview: `docs/contents/architecture/CORE_RUNTIME_ARCHITECTURE.md`
 - Backbone registry: `med_core/backbones/AGENTS.md`
 - Fusion strategies: `med_core/fusion/AGENTS.md`
 - Training: `med_core/trainers/AGENTS.md`
