@@ -3,143 +3,158 @@ layout: home
 
 hero:
   name: MedFusion
-  text: 医学多模态深度学习框架
-  tagline: 高度模块化 · 29+ 骨干网络 · 5+ 融合策略 · 配置驱动
+  text: 医学 AI 研究验证核心运行时
+  tagline: 真实训练 · 真实结果 · 结构化 validation / report 输出
   actions:
     - theme: brand
-      text: 📚 开始学习教程
-      link: /contents/tutorials/README
-    - theme: alt
       text: 快速开始
-      link: /contents/user-guides/QUICKSTART_GUIDE
+      link: /contents/getting-started/cli-config-workflow
     - theme: alt
-      text: API 文档
-      link: /contents/api/med_core
+      text: 公开数据集验证
+      link: /contents/getting-started/public-datasets
+    - theme: alt
+      text: 核心架构
+      link: /contents/architecture/CORE_RUNTIME_ARCHITECTURE
 
 features:
-  - icon: 🔧
-    title: 高度模块化
-    details: 骨干网络、融合策略、聚合器完全解耦，可独立替换。14 种 backbone × 5 种融合 × 5 种聚合 = 350+ 种配置组合。
+  - icon: ✅
+    title: 真实训练主链
+    details: 从配置检查、训练、评估到结果构建，围绕同一条可执行主链组织，适合研究验证、课题复现与内部原型推进。
 
-  - icon: 📊
-    title: 多视图支持
-    details: 支持多角度 CT、时间序列、多模态、多切片等 5 种复杂医学数据场景，内置 MIL 聚合器。
+  - icon: 📦
+    title: 结构化结果输出
+    details: 标准化产出 checkpoint、history.json、metrics.json、validation.json、summary.json、report.md，以及 ROC / confusion / attention 等 artifact。
 
-  - icon: 🎯
-    title: 配置驱动
-    details: 通过 YAML 配置文件快速切换组件，无需修改代码。所有模型架构可通过配置定义。
+  - icon: 🚀
+    title: 公开数据集快速验证
+    details: 没有私有数据也能直接上手。当前可通过 public-datasets 入口快速验证 PathMNIST、BreastMNIST、UCI Heart Disease 等示例路径。
 
-  - icon: 🌐
-    title: Web UI
-    details: 实时训练监控、模型管理、工作流编辑器。FastAPI 后端 + React 前端，WebSocket 实时通信。
+  - icon: 🧩
+    title: 可复用 runtime contract
+    details: 同一套配置、训练和结果 contract 可被 CLI、Web、结果页、模型库和上层产品复用，不必为不同入口重复造轮子。
 
-  - icon: ⚡
-    title: 性能优化
-    details: 混合精度训练、梯度累积、数据缓存、分布式训练。支持 TorchScript、ONNX、TensorRT 部署。
+  - icon: 🛠️
+    title: 模块化建模能力
+    details: 支持 backbone、fusion、head、trainer 等组件解耦组合，适合多模态医学 AI 研究中的快速试验与迭代。
 
-  - icon: 🧪
-    title: 生产就绪
-    details: 699+ 测试用例、Docker 支持、CI/CD 流程、完整的错误代码系统（E001-E028）。
+  - icon: 📚
+    title: 以主路径组织文档
+    details: 文档优先服务上手路径。先跑通主链，再看 API、架构和高级能力，而不是一开始就陷进实现细节。
 ---
 
-## 核心架构
+## MedFusion 是什么
 
-```
-Model = Backbones + Fusion + Head + (Optional) MIL Aggregators
-```
+MedFusion 是一个面向 **医学 AI 研究验证** 的开源运行时。
 
-### 支持的组件
+它的重点不是只提供若干模型组件，而是把一条稳定的实验主链组织清楚：
 
-**视觉骨干网络 (29+)**
-- ResNet, EfficientNet, ViT, Swin Transformer (2D/3D)
-- DenseNet, ConvNeXt, MaxViT, RegNet, MobileNet
-
-**融合策略 (5+)**
-- Concatenate, Gated, Attention, Cross-Attention, Bilinear
-
-**任务头**
-- 分类：ClassificationHead, MultiLabel, Ordinal
-- 生存分析：Cox, DeepSurvival, DiscreteTime
-
-**MIL 聚合器**
-- Mean, Max, Attention-based, Gated Attention
-
-## 快速示例
-
-```python
-from med_core.models import MultiModalModelBuilder
-
-# 构建多模态模型
-builder = MultiModalModelBuilder(num_classes=2)
-builder.add_modality("ct", backbone="swin3d_tiny", input_channels=1)
-builder.add_modality("pathology", backbone="resnet50", pretrained=True)
-builder.set_fusion("attention", hidden_dim=256)
-builder.set_head("classification")
-model = builder.build()
-
-# 训练
-outputs = model({"ct": ct_tensor, "pathology": path_tensor})
+```text
+配置检查 → 数据加载 → 模型训练 / 评估 → 结果构建 → validation / report 输出
 ```
 
-## 为什么选择 MedFusion？
+如果你需要的是：
 
-::: tip 研究友好
-配置驱动的设计让你可以快速尝试不同的模型架构组合，无需修改代码。
-:::
+- 快速验证一个医学 AI 任务能不能跑通
+- 在不同 backbone / fusion / head 之间做实验组合
+- 为上层 Web、结果页或产品层沉淀稳定结果结构
+- 把训练、validation 和报告产物规范化
 
-::: tip 工业级质量
-完整的测试覆盖、错误处理、文档和部署支持，可直接用于生产环境。
-:::
+那 MedFusion 的设计就是为这些事服务的。
 
-::: tip 社区驱动
-开源、文档完善、持续维护。欢迎贡献代码和反馈。
-:::
+## 你可以用它做什么
 
-## 开始使用
+### 1. 跑通自己的医学 AI 训练任务
 
-<div class="vp-doc">
+如果你已经有自己的数据和任务定义，可以从配置驱动主链直接开始：
 
-### 安装
+- [CLI 与 Config 使用路径](/contents/getting-started/cli-config-workflow)
+- [快速入门指南](/contents/getting-started/quickstart)
+
+最小命令示例：
 
 ```bash
-# 克隆仓库
-git clone https://github.com/iridyne/medfusion.git
-cd medfusion
-
-# 安装依赖（推荐使用 uv）
-uv sync
-
-# 或使用 pip
-pip install -e ".[dev,web]"
-```
-
-### 训练模型
-
-```bash
-# 最快跑通训练链路
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
 uv run medfusion train --config configs/starter/quickstart.yaml
-
-# 评估模型
-uv run medfusion evaluate \
+uv run medfusion build-results \
   --config configs/starter/quickstart.yaml \
   --checkpoint outputs/quickstart/checkpoints/best.pth
-
-# 启动 Web UI
-uv run medfusion web
 ```
 
-</div>
+### 2. 没有私有数据时先做 quick validation
 
-## 文档导航
+如果你只是想先验证环境、流程和结果结构，可以直接使用公开数据集入口：
 
-- **[教程](/contents/tutorials/README)** - 从入门到精通的完整学习路径
-- **[CLI 与 Config 使用路径](/contents/getting-started/cli-config-workflow)** - 先分清 CLI 配置和 builder 配置
-- **[快速入门](/contents/user-guides/QUICKSTART_GUIDE)** - 新手必读
-- **[API 文档](/contents/api/med_core)** - 完整的 API 参考
-- **[用户指南](/contents/guides/quick_reference)** - 详细的功能指南
-- **[架构设计](/contents/architecture/WEB_UI_ARCHITECTURE)** - 系统架构文档
+- [公开数据集快速验证清单](/contents/getting-started/public-datasets)
 
-## 社区
+最小命令示例：
 
-- [GitHub Issues](https://github.com/iridyne/medfusion/issues) - 问题反馈
-- [GitHub Discussions](https://github.com/iridyne/medfusion/discussions) - 讨论交流
+```bash
+uv run medfusion public-datasets list
+uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
+uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
+```
+
+### 3. 为上层系统提供稳定结果 contract
+
+MedFusion 输出的不只是模型 checkpoint，还包括一组更适合被系统消费的结果文件，例如：
+
+- `metrics.json`
+- `validation.json`
+- `summary.json`
+- `report.md`
+- ROC / confusion / calibration / attention 等图表 artifact
+
+这让它既适合研究验证，也适合作为上层产品或工作台的执行核心。
+
+## 推荐阅读路径
+
+### 新用户
+
+1. [CLI 与 Config 使用路径](/contents/getting-started/cli-config-workflow)
+2. [快速入门指南](/contents/getting-started/quickstart)
+3. [公开数据集快速验证清单](/contents/getting-started/public-datasets)
+4. [Web UI 快速入门](/contents/getting-started/web-ui)
+
+### 研究 / 工程用户
+
+1. [Core Runtime Architecture](/contents/architecture/CORE_RUNTIME_ARCHITECTURE)
+2. [API 文档总览](/contents/api/med_core)
+3. [快速参考](/contents/guides/core/quick-reference)
+
+### 准备做演示或推广
+
+1. [OSS 对外推广准备清单](/contents/guides/core/oss-go-to-market-checklist)
+2. [公开数据集快速验证清单](/contents/getting-started/public-datasets)
+3. [examples/README.md](https://github.com/iridyne/medfusion/blob/main/examples/README.md)
+
+## 核心能力概览
+
+**配置驱动实验组织**
+- 通过 YAML 管理训练任务、数据、模型和输出路径
+- 先做配置检查，再进入训练与结果构建
+
+**模块化模型能力**
+- 支持多种 backbone、fusion、head 和聚合方式
+- 适合多模态、多视图和医学任务原型迭代
+
+**结果与报告闭环**
+- 输出标准化指标、validation 摘要和可读报告
+- 方便结果页、模型库和后续分析流程复用
+
+**面向上层承接**
+- CLI 可直接运行
+- Web 与产品层可围绕统一 contract 对接
+
+## 文档入口
+
+- **[快速开始](/contents/getting-started/cli-config-workflow)** — 先理解当前最稳定的上手主链
+- **[公开数据集验证](/contents/getting-started/public-datasets)** — 没有私有数据时的最快入口
+- **[教程](/contents/tutorials/README)** — 从基础概念到高级能力的系统学习路径
+- **[API 文档](/contents/api/med_core)** — 模块与接口参考
+- **[架构设计](/contents/architecture/CORE_RUNTIME_ARCHITECTURE)** — 理解运行时组织方式与边界
+- **[功能指南](/contents/guides/core/quick-reference)** — 常用命令、FAQ 与高级功能入口
+
+## 社区与反馈
+
+- [GitHub Issues](https://github.com/iridyne/medfusion/issues) — 问题反馈
+- [GitHub Discussions](https://github.com/iridyne/medfusion/discussions) — 使用讨论与经验交流

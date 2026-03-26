@@ -8,19 +8,18 @@
 MedFusion 是一个面向医学 AI 研究验证的核心运行时。
 它不主打“再做一个模型 demo”，而是把 **训练 → 结果 → validation → 报告** 这条链稳定跑通。
 
-一句话理解：
-
 > **MedFusion = 面向医学 AI 的可执行研究运行时，不只是模型仓库。**
 
-## 为什么值得看
+## 为什么团队会继续用它
 
 很多仓库能训练一个模型，但很难把后面的结果链一起做实。
-MedFusion 当前最稳的价值是：
+MedFusion 当前最稳的价值，不在“功能堆得多”，而在这三件事：
 
-- 真实训练，不是静态示意
-- 真实结果，不是 demo 图
-- 真实 validation / report 输出，不是只打印几行日志
-- 结构化 artifact，可继续被 CLI / Web / 上层产品复用
+| 你需要什么 | MedFusion 当前主线给什么 |
+| --- | --- |
+| 开始前先避坑 | `validate-config` 先检查 YAML、数据列、路径和明显配置问题 |
+| 训练过程真的可跑 | `train` 产出 checkpoint、logs、`history.json` |
+| 结果能拿去复盘和展示 | `build-results` 生成 `metrics.json / validation.json / summary.json / report.md` 以及可视化 artifact |
 
 ## 它最适合谁
 
@@ -29,7 +28,23 @@ MedFusion 当前最稳的价值是：
 - 对外演示场景：想展示一个真实的“训练 → 结果 → 报告”闭环
 - 上层产品层：需要一个可执行、可复现、可沉淀 artifact 的 runtime
 
-## 3 分钟看懂主路径
+## 它怎么工作
+
+1. **先检查输入**：确认配置、数据列、路径和 split 没明显坑
+2. **再跑真实训练**：生成 checkpoint、日志和训练历史
+3. **最后补齐结果**：把 run 沉淀成 validation、报告和图表 artifact
+
+```mermaid
+flowchart LR
+  A[validate-config] --> B[train]
+  B --> C[build-results]
+  C --> D[metrics.json]
+  C --> E[validation.json]
+  C --> F[summary.json]
+  C --> G[report.md]
+```
+
+## 现在怎么开始
 
 ### 1) 你已经有自己的数据
 
