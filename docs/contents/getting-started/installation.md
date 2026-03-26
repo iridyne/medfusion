@@ -98,10 +98,10 @@ uv sync --index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 ## 下一步
 
-安装完成后，继续学习 [你的第一个模型](02_first_model.md) 教程，在 30 分钟内完成第一个多模态模型的训练。
+安装完成后，继续学习 [你的第一个模型](first-model.md) 教程，在 30 分钟内完成第一个多模态模型的训练。
 
 ## 更多信息
 
-- [完整安装文档](../../README.md#安装)
-- [开发环境配置](../../development/setup.md)
-- [故障排除指南](../../guides/troubleshooting.md)
+- [文档总入口](../../README.md)
+- [贡献与开发指南](../guides/development/contributing.md)
+- [FAQ 和故障排除](../guides/core/faq.md)

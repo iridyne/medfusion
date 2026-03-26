@@ -95,7 +95,7 @@ python -m med_core.cli --version
 4. 运行测试和检查
 5. 创建 Pull Request
 
-详见 [CONTRIBUTING.md](../CONTRIBUTING.md)
+详见 [CONTRIBUTING.md](../../../../CONTRIBUTING.md)
 
 ### Q7: 在哪里获取帮助？
 

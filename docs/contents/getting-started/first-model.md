@@ -532,8 +532,8 @@ demo_output/
    - 增加数据增强
 
 3. **使用真实数据**
-   - 参考 [数据准备指南](../guides/data_preparation.md)
-   - 学习 [多视图数据处理](03_multiview_data.md)
+   - 参考 [数据准备指南](../tutorials/fundamentals/data-prep.md)
+   - 学习 [多视图支持概览](../guides/multiview/overview.md)
 
 4. **部署模型**
    - 导出为 ONNX 格式
@@ -570,7 +570,7 @@ uv run tensorboard --logdir demo_output/logs/tensorboard
 
 ## 相关资源
 
-- [配置文件详解](../guides/configuration.md)
-- [模型架构指南](../guides/model_architecture.md)
-- [训练技巧](../guides/training_tips.md)
-- [API 文档](../../api/README.md)
+- [配置文件详解](../tutorials/fundamentals/configs.md)
+- [Core Runtime Architecture](../architecture/CORE_RUNTIME_ARCHITECTURE.md)
+- [训练工作流](../tutorials/training/workflow.md)
+- [API 文档总览](../api/med_core.md)

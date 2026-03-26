@@ -122,7 +122,7 @@ Then create a pull request on GitHub.
 - **Line length**: 88 characters (Black-compatible)
 - **Imports**: Sorted with `isort` (handled by ruff)
 - **Type hints**: Required for all functions
-- **Docstrings**: Google-style format (see [Documentation Standards](/contents/guides/documentation_standards))
+- **Docstrings**: Google-style format (see [Documentation Standards](documentation-standards.md))
 
 ### Code Quality Rules
 

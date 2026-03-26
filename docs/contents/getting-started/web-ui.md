@@ -326,10 +326,10 @@ npm install
 
 ## 📚 更多资源
 
-- [完整文档](../README.md)
+- [完整文档](../../README.md)
 - [API 文档](http://127.0.0.1:8000/docs)
-- [CLI 使用指南](../web/CLI_GUIDE.md)
-- [开发者指南](../CONTRIBUTING.md)
+- [CLI 使用指南](../../../web/CLI_GUIDE.md)
+- [开发者指南](../../../CONTRIBUTING.md)
 
 ## 🤝 贡献
 
@@ -340,7 +340,7 @@ npm install
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。详见 [LICENSE](../LICENSE) 文件。
+本项目采用 MIT 许可证。详见 [LICENSE](../../../LICENSE) 文件。
 
 ---
 
