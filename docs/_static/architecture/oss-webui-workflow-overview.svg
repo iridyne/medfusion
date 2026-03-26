@@ -1,0 +1,196 @@
+<svg width="1600" height="1880" viewBox="0 0 1600 1880" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg { fill: #f6f7f4; }
+      .board { fill: #ffffff; stroke: #d7ddd6; stroke-width: 2; }
+      .frame { fill: #fbfbf9; stroke: #cfd7cf; stroke-width: 2; rx: 18; }
+      .panel { fill: #ffffff; stroke: #d9dfd9; stroke-width: 1.5; rx: 14; }
+      .muted { fill: #eef2ec; stroke: #d9dfd9; stroke-width: 1; rx: 10; }
+      .accent { fill: #e6f0ea; stroke: #8eaf9a; stroke-width: 1.5; rx: 12; }
+      .chip { fill: #f1f4ef; stroke: #d9dfd9; stroke-width: 1; rx: 999; }
+      .title { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 34px; font-weight: 700; fill: #1e2b21; }
+      .subtitle { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 16px; font-weight: 400; fill: #536058; }
+      .section { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 22px; font-weight: 700; fill: #243128; }
+      .cardtitle { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 20px; font-weight: 700; fill: #243128; }
+      .label { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 13px; font-weight: 600; fill: #66746b; letter-spacing: 1px; }
+      .body { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 14px; font-weight: 400; fill: #4d5a52; }
+      .small { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 12px; font-weight: 400; fill: #6a776f; }
+      .tab { font-family: "Noto Sans SC", "Source Han Sans SC", sans-serif; font-size: 13px; font-weight: 600; fill: #324038; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1600" height="1880" />
+
+  <text class="title" x="90" y="96">MedFusion OSS WebUI 单页骨架总览</text>
+  <text class="subtitle" x="90" y="128">工作流导向 · 中文单语言界面 · Web 作为研究控制面，CLI 作为执行与复现主链</text>
+
+  <rect class="board" x="70" y="160" width="1460" height="440" rx="28" />
+  <text class="section" x="100" y="205">应用壳层</text>
+  <text class="subtitle" x="100" y="233">所有 tabs 共享同一个“当前研究”上下文，避免再次退化成独立功能页集合。</text>
+
+  <rect class="frame" x="100" y="260" width="1400" height="300" />
+  <rect class="muted" x="126" y="286" width="1348" height="34" />
+  <circle cx="150" cy="303" r="6" fill="#c8d2c9" />
+  <circle cx="170" cy="303" r="6" fill="#c8d2c9" />
+  <circle cx="190" cy="303" r="6" fill="#c8d2c9" />
+  <text class="small" x="220" y="308">研究工作面 / 当前研究 / 研究状态 / 下一步动作</text>
+
+  <rect class="panel" x="126" y="340" width="250" height="192" />
+  <text class="label" x="150" y="372">共享侧栏</text>
+  <text class="body" x="150" y="404">当前研究</text>
+  <text class="body" x="150" y="430">研究目标</text>
+  <text class="body" x="150" y="456">任务类型</text>
+  <text class="body" x="150" y="482">验证档位</text>
+  <text class="body" x="150" y="508">当前步骤</text>
+
+  <rect class="panel" x="398" y="340" width="1076" height="54" />
+  <rect class="chip" x="422" y="354" width="118" height="28" />
+  <text class="tab" x="447" y="373">概览</text>
+  <rect class="chip" x="552" y="354" width="118" height="28" />
+  <text class="tab" x="565" y="373">研究定义</text>
+  <rect class="chip" x="682" y="354" width="118" height="28" />
+  <text class="tab" x="717" y="373">数据</text>
+  <rect class="chip" x="812" y="354" width="118" height="28" />
+  <text class="tab" x="848" y="373">运行</text>
+  <rect class="chip" x="942" y="354" width="118" height="28" />
+  <text class="tab" x="972" y="373">验证</text>
+  <rect class="chip" x="1072" y="354" width="118" height="28" />
+  <text class="tab" x="1102" y="373">产物</text>
+  <rect class="chip" x="1202" y="354" width="118" height="28" />
+  <text class="tab" x="1232" y="373">系统</text>
+
+  <rect class="accent" x="398" y="410" width="520" height="122" />
+  <text class="label" x="422" y="440">当前页工作区</text>
+  <text class="body" x="422" y="472">研究摘要条</text>
+  <text class="body" x="422" y="498">主要操作</text>
+  <text class="body" x="422" y="524">当前阻塞 / 最近产物 / 下一步</text>
+
+  <rect class="panel" x="940" y="410" width="252" height="122" />
+  <text class="label" x="964" y="440">活动运行</text>
+  <text class="body" x="964" y="472">运行中 / 排队中</text>
+  <text class="body" x="964" y="498">最近失败</text>
+  <text class="body" x="964" y="524">继续观察</text>
+
+  <rect class="panel" x="1214" y="410" width="260" height="122" />
+  <text class="label" x="1238" y="440">CLI 对照</text>
+  <text class="body" x="1238" y="472">启动入口</text>
+  <text class="body" x="1238" y="498">训练命令镜像</text>
+  <text class="body" x="1238" y="524">Web 与 CLI 的分工</text>
+
+  <text class="section" x="90" y="666">七个顶层 Tabs</text>
+  <text class="subtitle" x="90" y="694">每个 tab 都回答一个明确问题，并共享同一份研究上下文。</text>
+
+  <!-- Row 1 -->
+  <rect class="board" x="70" y="730" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="96" y="770">1. 概览</text>
+  <text class="body" x="96" y="800">回答：我现在应该从哪里开始？</text>
+  <rect class="muted" x="96" y="826" width="403" height="42" />
+  <text class="small" x="116" y="852">当前研究 + 下一步建议</text>
+  <rect class="muted" x="96" y="882" width="128" height="68" />
+  <rect class="muted" x="236" y="882" width="128" height="68" />
+  <rect class="muted" x="376" y="882" width="123" height="68" />
+  <text class="small" x="110" y="918">研究状态</text>
+  <text class="small" x="258" y="918">验证档位</text>
+  <text class="small" x="398" y="918">导出就绪</text>
+  <rect class="accent" x="96" y="964" width="403" height="52" />
+  <text class="small" x="116" y="996">新建研究 / 恢复研究 / 快速验证 / 导入 CLI 结果</text>
+  <text class="small" x="96" y="1040">定位：研究入口页，不是 KPI 仪表盘</text>
+
+  <rect class="board" x="572" y="730" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="598" y="770">2. 研究定义</text>
+  <text class="body" x="598" y="800">回答：这次研究到底是什么？</text>
+  <rect class="muted" x="598" y="826" width="260" height="88" />
+  <text class="small" x="618" y="854">研究名称 / 标签 / 备注</text>
+  <text class="small" x="618" y="878">任务类型 / 终点 / 核心指标</text>
+  <rect class="muted" x="872" y="826" width="129" height="88" />
+  <text class="small" x="892" y="854">快速验证</text>
+  <text class="small" x="892" y="878">模板</text>
+  <rect class="muted" x="598" y="930" width="190" height="82" />
+  <rect class="muted" x="810" y="930" width="191" height="82" />
+  <text class="small" x="618" y="962">模态要求</text>
+  <text class="small" x="830" y="962">验证合同 / 输出合同</text>
+  <text class="small" x="598" y="1040">定位：先固定研究合同，再进入数据与运行</text>
+
+  <rect class="board" x="1074" y="730" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="1100" y="770">3. 数据</text>
+  <text class="body" x="1100" y="800">回答：数据是否满足当前研究合同？</text>
+  <rect class="muted" x="1100" y="826" width="186" height="88" />
+  <rect class="muted" x="1298" y="826" width="205" height="88" />
+  <text class="small" x="1120" y="854">目录登记</text>
+  <text class="small" x="1120" y="878">manifest 导入</text>
+  <text class="small" x="1318" y="854">schema 检查</text>
+  <text class="small" x="1318" y="878">关键字段缺失</text>
+  <rect class="muted" x="1100" y="930" width="186" height="82" />
+  <rect class="muted" x="1298" y="930" width="205" height="82" />
+  <text class="small" x="1120" y="962">模态覆盖</text>
+  <text class="small" x="1318" y="962">cohort 预览 / readiness</text>
+  <text class="small" x="1100" y="1040">定位：study-aware 数据门禁页</text>
+
+  <!-- Row 2 -->
+  <rect class="board" x="70" y="1094" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="96" y="1134">4. 运行</text>
+  <text class="body" x="96" y="1164">回答：如何把研究合同变成真实任务？</text>
+  <rect class="accent" x="96" y="1190" width="403" height="48" />
+  <text class="small" x="116" y="1220">快速验证 / 标准训练 / 消融实验</text>
+  <rect class="muted" x="96" y="1252" width="218" height="114" />
+  <rect class="muted" x="326" y="1252" width="173" height="114" />
+  <text class="small" x="116" y="1282">RunSpec 组合区</text>
+  <text class="small" x="116" y="1306">高级参数折叠</text>
+  <text class="small" x="346" y="1282">CLI 镜像</text>
+  <text class="small" x="346" y="1306">复制 / 导出</text>
+  <rect class="muted" x="96" y="1380" width="403" height="26" />
+  <text class="small" x="116" y="1398">队列状态 + 实时日志 + 曲线</text>
+  <text class="small" x="96" y="1404">定位：发射台，而不是分裂的两个页面</text>
+
+  <rect class="board" x="572" y="1094" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="598" y="1134">5. 验证</text>
+  <text class="body" x="598" y="1164">回答：这次研究是否达标，差在哪里？</text>
+  <rect class="accent" x="598" y="1190" width="403" height="48" />
+  <text class="small" x="618" y="1220">验证结论：通过 / 部分通过 / 未通过</text>
+  <rect class="muted" x="598" y="1252" width="128" height="86" />
+  <rect class="muted" x="738" y="1252" width="128" height="86" />
+  <rect class="muted" x="878" y="1252" width="123" height="86" />
+  <text class="small" x="618" y="1284">核心指标</text>
+  <text class="small" x="758" y="1284">稳定性</text>
+  <text class="small" x="898" y="1284">可发布性</text>
+  <rect class="muted" x="598" y="1352" width="403" height="54" />
+  <text class="small" x="618" y="1384">ROC / 混淆矩阵 / 生存曲线 / 注意力图 / 误差样本</text>
+  <text class="small" x="598" y="1404">定位：研究评审台</text>
+
+  <rect class="board" x="1074" y="1094" width="455" height="330" rx="24" />
+  <text class="cardtitle" x="1100" y="1134">6. 产物</text>
+  <text class="body" x="1100" y="1164">回答：最终沉淀了哪些成果？</text>
+  <rect class="muted" x="1100" y="1190" width="186" height="96" />
+  <rect class="muted" x="1298" y="1190" width="205" height="96" />
+  <text class="small" x="1120" y="1222">运行记录</text>
+  <text class="small" x="1120" y="1246">导入 CLI 结果</text>
+  <text class="small" x="1318" y="1222">产物卡片</text>
+  <text class="small" x="1318" y="1246">报告摘要</text>
+  <rect class="muted" x="1100" y="1300" width="186" height="106" />
+  <rect class="muted" x="1298" y="1300" width="205" height="106" />
+  <text class="small" x="1120" y="1334">版本对比</text>
+  <text class="small" x="1318" y="1334">导出 bundle + manifest</text>
+  <text class="small" x="1100" y="1404">定位：研究归档页，而不是狭义模型库</text>
+
+  <!-- Row 3 -->
+  <rect class="board" x="70" y="1458" width="1460" height="280" rx="24" />
+  <text class="cardtitle" x="96" y="1498">7. 系统</text>
+  <text class="body" x="96" y="1528">回答：当前工作站和运行环境是否健康，是否适合继续当前研究？</text>
+
+  <rect class="muted" x="96" y="1560" width="318" height="118" />
+  <rect class="muted" x="430" y="1560" width="318" height="118" />
+  <rect class="muted" x="764" y="1560" width="318" height="118" />
+  <rect class="muted" x="1098" y="1560" width="380" height="118" />
+  <text class="small" x="116" y="1594">环境自检</text>
+  <text class="small" x="116" y="1618">依赖 / GPU / 路径 / 权限</text>
+  <text class="small" x="450" y="1594">资源监控</text>
+  <text class="small" x="450" y="1618">CPU / 内存 / GPU / 磁盘</text>
+  <text class="small" x="784" y="1594">工作目录</text>
+  <text class="small" x="784" y="1618">数据 / 输出 / 缓存目录</text>
+  <text class="small" x="1118" y="1594">当前研究建议</text>
+  <text class="small" x="1118" y="1618">资源等级 / 预计时长 / 常见问题</text>
+  <text class="small" x="96" y="1712">定位：工作站健康解释层，避免把环境问题误判为模型问题</text>
+
+  <text class="section" x="90" y="1802">工作流总结</text>
+  <text class="subtitle" x="90" y="1830">概览负责开始，研究定义负责定合同，数据负责过门禁，运行负责发射，验证负责判定，产物负责归档，系统负责保底。</text>
+</svg>

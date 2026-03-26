@@ -72,6 +72,8 @@
 - [Web UI 架构](contents/architecture/WEB_UI_ARCHITECTURE.md) - Web 界面架构设计
 - [工作流设计](contents/architecture/WORKFLOW_DESIGN.md) - 工作流引擎设计
 - [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md) - 从代码结构解释 oss 的配置、数据、模型、训练与输出主链
+- [OSS WebUI 工作流 Spec](contents/architecture/OSS_WEBUI_WORKFLOW_SPEC.md) - 固定 workflow-first 的新顶层结构、页面职责和语言边界
+- [OSS WebUI 单页骨架图](contents/architecture/OSS_WEBUI_WORKFLOW_OVERVIEW.md) - 一张可长期引用的总览式骨架图
 
 ### 📋 参考文档
 
