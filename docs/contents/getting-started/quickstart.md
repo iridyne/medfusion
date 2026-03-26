@@ -36,6 +36,28 @@ uv run medfusion build-results \
 
 ---
 
+## 一图看懂（新手主链 + 常见失败分支）
+
+```mermaid
+flowchart TB
+  A[选择路径 A公开数据 或 B私有数据] --> B[准备配置与数据]
+  B --> C[运行 validate-config 或 public-datasets prepare]
+  C --> D{体检通过?}
+  D -->|否| E[按报错修正 路径 列名 配置]
+  E --> C
+  D -->|是| F[运行 train]
+  F --> G{是否生成 best.pth 和 history.json}
+  G -->|否| H[检查显存/CPU参数 num_workers pin_memory 日志]
+  H --> F
+  G -->|是| I[运行 build-results]
+  I --> J{是否生成 results 目录}
+  J -->|否| K[检查 checkpoint 路径与命令参数]
+  K --> I
+  J -->|是| L[完成 可复盘可汇报]
+```
+
+> 你可以把这张图理解成“先体检、再训练、再产物”的三段式。不要跳过中间任何一步。
+
 ## ✅ 预期输出（跑通标准）
 
 至少应该看到：

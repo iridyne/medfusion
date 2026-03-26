@@ -18,6 +18,38 @@
 - [任务手册（按目标执行）](contents/playbooks/README.md)
 - [FAQ 和故障排除](contents/guides/core/faq.md)
 
+## 新手 60 秒决策
+
+如果你只想知道“我现在该点哪篇文档”，按这个来：
+
+- **没有私有数据** → 先看 [公开数据集快速验证](contents/getting-started/public-datasets.md)
+- **有私有数据，想先跑通** → 先看 [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
+- **想理解架构再上手** → 先看 [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)
+- **要改代码/做贡献** → 先看 [安装](contents/getting-started/installation.md) + [教程总览](contents/tutorials/README.md)
+
+你也可以直接复制这条最短主链（推荐第一步）：
+
+```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results --config configs/starter/quickstart.yaml --checkpoint outputs/quickstart/checkpoints/best.pth
+```
+
+---
+
+## 一图看懂主链
+
+```mermaid
+flowchart LR
+  A[选配置 starter/public_datasets] --> B[validate-config]
+  B --> C[train]
+  C --> D[build-results]
+  D --> E[metrics validation summary report]
+```
+
+> 想看更详细的用户流程图：
+> [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
+
 ---
 
 ## 从这里开始（3 条路径）

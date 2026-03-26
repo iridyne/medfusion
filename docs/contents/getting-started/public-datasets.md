@@ -46,6 +46,23 @@
 | --- | --- | --- | --- | --- | --- |
 | ISIC MILK10k | [ISIC Archive](https://www.isic-archive.com/) / [ISIC Challenge Data](https://challenge.isic-archive.com/data/) | 成对图像 / 多视图 | 病灶分类 | 中等 | 适合讲多视图、节点式建模和“更像多模态”的内容 |
 
+## 用户流程图（无私有数据场景）
+
+```mermaid
+flowchart TB
+  A[没有私有数据] --> B[medfusion public-datasets list]
+  B --> C[选一个数据集 PathMNIST BreastMNIST 或 UCI]
+  C --> D[medfusion public-datasets prepare dataset_name --overwrite]
+  D --> E[medfusion train --config 对应 quickstart.yaml]
+  E --> F[medfusion build-results --config config_path --checkpoint best_ckpt]
+  F --> G[查看 metrics validation summary report]
+  G --> H{需要对外演示?}
+  H -->|是| I[保留 ROC 混淆矩阵 注意力图 报告截图]
+  H -->|否| J[进入下一轮调参或换数据集]
+```
+
+> 先用公开数据把链路跑通，再迁移到私有数据，通常是成本最低、成功率最高的方式。
+
 ## 推荐验证路径
 
 ### 路径 A：10 分钟内跑通
