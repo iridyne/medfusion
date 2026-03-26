@@ -1,6 +1,14 @@
 # 模型导出指南
 
+> 文档状态：**Stable**
+
 本指南介绍如何将 MedFusion 模型导出为 ONNX 和 TorchScript 格式，以便在不同平台和环境中部署。
+
+## 前置条件
+
+- 模型权重可正常加载
+- 能完成一次基础推理（导出前先确认模型本身可用）
+- 已安装 `onnxruntime`（如需验证 ONNX 推理）
 
 ## 概述
 
@@ -36,6 +44,14 @@ export_model(
     format="torchscript",
 )
 ```
+
+## ✅ 预期输出
+
+完成导出后，至少应满足：
+
+- 生成 `model.onnx` / `model.pt` 文件
+- ONNX 模型可被 `onnxruntime` 成功加载并推理
+- TorchScript 模型可被 `torch.jit.load` 成功加载并推理
 
 ## ONNX 导出
 
@@ -209,6 +225,12 @@ outputs = session.run(
 model = torch.jit.load("multimodal_model.pt")
 output = model(image_tensor, tabular_tensor)
 ```
+
+## 常见失败与排查
+
+- 导出报 shape mismatch：检查 `input_shape` 与模型实际输入一致
+- ONNX 验证失败：先用最小 batch（如 1）验证，再加动态轴
+- TorchScript script 失败：先尝试 `trace`，再处理控制流兼容
 
 ## 完整示例
 
