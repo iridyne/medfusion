@@ -133,6 +133,10 @@ flowchart TB
   B --> H[Base Web/API]
 ```
 
+工程接入时建议重点关注两类边界：
+- **可替换点**：`backbone / fusion / head / trainer`
+- **契约点**：config schema + artifact schema（`metrics.json / validation.json / summary.json / report.md`）
+
 代码级架构详解见：
 - [CORE_RUNTIME_ARCHITECTURE.md](docs/contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)
 
