@@ -6,6 +6,12 @@
 
 本教程将带你完成第一个多模态医学模型的端到端训练流程。我们将使用合成数据，因此无需准备真实医学数据即可快速上手。
 
+## 前置条件
+
+- 已完成 [环境安装](installation.md)
+- 能运行 `uv run medfusion train --help`
+- 本地有至少 2GB 可用磁盘空间（用于 demo 产物）
+
 ## 学习目标
 
 完成本教程后，你将学会：
@@ -538,6 +544,15 @@ demo_output/
 4. **部署模型**
    - 导出为 ONNX 格式
    - 使用 Web UI 进行推理
+
+## ✅ 完成标准（你已经学会的信号）
+
+完成本教程后，至少应满足：
+
+- 生成了 `demo_data/dataset.csv` 和 `demo_data/images/`
+- 训练脚本可跑通并生成 checkpoint
+- 能在日志里看到训练/验证指标
+- 能解释本次配置中的 backbone、fusion、head 选择
 
 ## 常见问题
 
