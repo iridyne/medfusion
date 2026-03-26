@@ -653,4 +653,4 @@ plt.savefig("time_dependent_auc.png", dpi=300)
 
 - [查看完整代码](03_survival_prediction.ipynb)
 - [返回教程总览](../README.md)
-- [学习模型导出](../modules/13_model_export.md)
+- [学习模型导出](../deployment/model-export.md)

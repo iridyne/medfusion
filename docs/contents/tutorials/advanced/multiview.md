@@ -497,12 +497,12 @@ A: 推荐顺序：
 
 ## 下一步
 
-- [模型导出](13_model_export.md) - 导出多视图模型
-- [Docker 部署](14_docker_deployment.md) - 容器化部署
-- [生产环境清单](15_production_checklist.md) - 部署前检查
+- [模型导出](../deployment/model-export.md) - 导出多视图模型
+- [Docker 部署](../deployment/docker.md) - 容器化部署
+- [生产环境清单](../deployment/production.md) - 部署前检查
 
 ## 参考资源
 
-- [多视图详细指南](/home/yixian/Projects/med-ml/medfusion/docs/guides/multiview/overview.md)
-- [多视图集成测试](../../tests/test_multiview_integration.py)
-- [API 文档](../../api/multiview.md)
+- [多视图详细指南](../../guides/multiview/overview.md)
+- [多视图 API 入口](../../api/med_core.md)
+- [训练器 API](../../api/trainers.md)

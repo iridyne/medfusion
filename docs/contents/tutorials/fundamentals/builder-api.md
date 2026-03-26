@@ -676,6 +676,6 @@ A: 使用自适应池化或在数据加载时统一尺寸。
 
 ## 下一步
 
-- [训练第一个模型](../01_quickstart.md) - 开始训练
-- [配置文件详解](03_understanding_configs.md) - 深入理解配置
-- [数据准备指南](04_data_preparation.md) - 准备训练数据
+- [训练第一个模型](../../getting-started/first-model.md) - 开始训练
+- [配置文件详解](configs.md) - 深入理解配置
+- [数据准备指南](data-prep.md) - 准备训练数据

@@ -14,7 +14,7 @@ Thank you for your interest in contributing to MedFusion! This guide will help y
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/medfusion.git
+   git clone https://github.com/iridyne/medfusion.git
    cd medfusion
    ```
 
@@ -329,8 +329,8 @@ Use this template:
 ## Getting Help
 
 - **Documentation**: Check the [VitePress docs](https://vitepress.dev/)
-- **Issues**: Search existing [GitHub issues](https://github.com/yourusername/medfusion/issues)
-- **Discussions**: Start a [GitHub discussion](https://github.com/yourusername/medfusion/discussions)
+- **Issues**: Search existing [GitHub issues](https://github.com/iridyne/medfusion/issues)
+- **Discussions**: Start a [GitHub discussion](https://github.com/iridyne/medfusion/discussions)
 
 ## Code of Conduct
 

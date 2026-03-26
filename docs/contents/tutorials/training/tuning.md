@@ -589,12 +589,12 @@ if train_acc > 0.95 and val_acc < 0.80:
 
 ## 下一步
 
-- [注意力监督](11_attention_supervision.md) - 提高模型可解释性
-- [多视图支持](12_multiview_support.md) - 处理多角度数据
-- [模型导出](13_model_export.md) - 部署优化后的模型
+- [注意力监督](../advanced/attention.md) - 提高模型可解释性
+- [多视图支持](../advanced/multiview.md) - 处理多角度数据
+- [模型导出](../deployment/model-export.md) - 部署优化后的模型
 
 ## 参考资源
 
 - [Optuna 文档](https://optuna.readthedocs.io/)
 - [Ray Tune 文档](https://docs.ray.io/en/latest/tune/)
-- [超参数调优最佳实践](../../guides/hyperparameter_tuning.md)
+- [性能基准测试](../../guides/advanced-features/performance-benchmarking.md)

@@ -741,5 +741,5 @@ A: 使用均值/中位数填充，或使用专门的缺失值处理方法。
 
 ## 下一步
 
-- [模型构建器 API](05_builder_api.md) - 学习如何构建模型
-- [配置文件详解](03_understanding_configs.md) - 深入理解配置系统
+- [模型构建器 API](builder-api.md) - 学习如何构建模型
+- [配置文件详解](configs.md) - 深入理解配置系统

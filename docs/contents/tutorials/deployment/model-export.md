@@ -545,9 +545,9 @@ exporter.export_onnx("model.onnx", opset_version=11)
 
 ### 相关指南
 
-- [模型压缩指南](model_compression.md)
-- [模型服务指南](model_serving.md)
-- [性能优化指南](performance_optimization.md)
+- [模型压缩指南](../../guides/advanced-features/model-compression.md)
+- [Docker 部署指南](docker.md)
+- [性能基准测试](../../guides/advanced-features/performance-benchmarking.md)
 
 ## 更新日志
 

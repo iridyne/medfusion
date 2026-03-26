@@ -746,6 +746,6 @@ tar -czf archives/exp_001.tar.gz outputs/exp_001/
 
 ## 下一步
 
-- [模型评估](../guides/evaluation.md) - 详细评估训练好的模型
-- [超参数调优](../guides/hyperparameter_tuning.md) - 系统化调优超参数
-- [部署指南](../guides/deployment.md) - 将模型部署到生产环境
+- [评估 API](../../api/evaluation.md) - 详细评估训练好的模型
+- [超参数调优](tuning.md) - 系统化调优超参数
+- [部署指南](../deployment/production.md) - 将模型部署到生产环境

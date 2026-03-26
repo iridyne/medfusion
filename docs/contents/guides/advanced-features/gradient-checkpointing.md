@@ -403,14 +403,14 @@ print_memory_stats()
 - [Gradient Checkpointing for PyTorch](https://pytorch.org/docs/stable/checkpoint.html)
 
 ### 相关文档
-- [MedFusion 架构设计](../architecture/gradient_checkpointing_design.md)
-- [优化路线图](../architecture/optimization_roadmap.md)
-- [性能基准测试](performance_benchmarking.md)
+- [Core Runtime Architecture](../../architecture/CORE_RUNTIME_ARCHITECTURE.md)
+- [性能基准测试](performance-benchmarking.md)
+- [分布式训练指南](distributed-training.md)
 
 ### 代码示例
-- [基础示例](../../examples/gradient_checkpointing_demo.py)
-- [多视图示例](../../examples/multiview_training_demo.py)
-- [分布式训练示例](../../examples/distributed_training_demo.py)
+- [基础示例](../../../../examples/gradient_checkpointing_demo.py)
+- [训练示例](../../../../examples/train_demo.py)
+- [分布式训练示例](../../../../examples/distributed_training_demo.py)
 
 ---
 

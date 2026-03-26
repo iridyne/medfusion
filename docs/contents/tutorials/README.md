@@ -166,9 +166,9 @@
 ## 🔗 相关资源
 
 - [API 文档](../api/med_core.md) - 完整的 API 参考
-- [用户指南](../user-guides/QUICKSTART_GUIDE.md) - 新手避坑指南
-- [功能指南](../guides/quick_reference.md) - 快速参考
-- [FAQ](../guides/faq_troubleshooting.md) - 常见问题解答
+- [快速上手](../getting-started/quickstart.md) - 新手避坑与主链建议
+- [功能指南](../guides/core/quick-reference.md) - 常用命令速查
+- [FAQ](../guides/core/faq.md) - 常见问题解答
 
 ---
 

@@ -331,12 +331,12 @@ image = image.repeat(1, 3, 1, 1)  # (B,1,H,W) → (B,3,H,W)
 
 ## 下一步
 
-- [融合策略选择](07_fusion_strategies.md) - 学习如何组合多模态
-- [训练工作流](08_training_workflow.md) - 开始训练模型
-- [超参数调优](10_hyperparameter_tuning.md) - 优化模型性能
+- [融合策略选择](fusion.md) - 学习如何组合多模态
+- [训练工作流](../training/workflow.md) - 开始训练模型
+- [超参数调优](../training/tuning.md) - 优化模型性能
 
 ## 参考资源
 
 - [骨干网络 API 文档](../../api/backbones.md)
-- [模型导出指南](../../guides/model_export.md)
-- [性能优化指南](../../guides/performance_optimization.md)
+- [模型导出指南](../deployment/model-export.md)
+- [性能基准测试](../../guides/advanced-features/performance-benchmarking.md)

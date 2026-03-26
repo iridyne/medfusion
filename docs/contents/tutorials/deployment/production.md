@@ -546,12 +546,12 @@ A: 多种策略：
 
 - 查看 [API 文档](../../api/) - 深入了解 API
 - 阅读 [高级指南](../../guides/) - 学习高级特性
-- 参与 [社区讨论](https://github.com/your-repo/discussions) - 与其他用户交流
+- 参与 [社区讨论](https://github.com/iridyne/medfusion/discussions) - 与其他用户交流
 - 贡献代码 - 帮助改进 MedFusion
 
 ## 参考资源
 
-- [Docker 部署指南](14_docker_deployment.md)
-- [模型导出指南](13_model_export.md)
-- [监控和日志](../../guides/monitoring.md)
-- [性能优化](../../guides/performance_optimization.md)
+- [Docker 部署指南](docker.md)
+- [模型导出指南](model-export.md)
+- [快速参考](../../guides/core/quick-reference.md)
+- [性能基准测试](../../guides/advanced-features/performance-benchmarking.md)

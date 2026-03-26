@@ -467,12 +467,12 @@ wandb.init(project="...", save_code=False)
 
 ## 下一步
 
-- [超参数调优](10_hyperparameter_tuning.md) - 优化模型性能
-- [注意力监督](11_attention_supervision.md) - 提高可解释性
-- [模型导出](13_model_export.md) - 部署模型
+- [超参数调优](tuning.md) - 优化模型性能
+- [注意力监督](../advanced/attention.md) - 提高可解释性
+- [模型导出](../deployment/model-export.md) - 部署模型
 
 ## 参考资源
 
 - [TensorBoard 文档](https://www.tensorflow.org/tensorboard)
 - [Weights & Biases 文档](https://docs.wandb.ai/)
-- [日志配置指南](../../guides/logging.md)
+- [功能速查](../../guides/core/quick-reference.md)

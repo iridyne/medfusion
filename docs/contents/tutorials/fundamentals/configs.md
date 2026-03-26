@@ -637,5 +637,5 @@ config = validate_config_or_exit(config_dict)
 
 ## 下一步
 
-- [数据准备指南](04_data_preparation.md) - 学习如何准备训练数据
-- [模型构建器 API](05_builder_api.md) - 使用代码构建模型
+- [数据准备指南](data-prep.md) - 学习如何准备训练数据
+- [模型构建器 API](builder-api.md) - 使用代码构建模型
