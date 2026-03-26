@@ -61,6 +61,10 @@
   - [evaluation](contents/api/evaluation.md)
   - [web_api](contents/api/web_api.md)
 
+- 核心指南：
+  - [Why MedFusion OSS（定位对比）](contents/guides/core/why-medfusion-oss.md)
+  - [文档写作与一致性规范](contents/guides/development/docs-style-guide.md)
+
 - 参考：
   - [错误代码](contents/reference/error_codes.md)
 
