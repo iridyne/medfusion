@@ -21,6 +21,14 @@
 
 适合：新用户、对外 demo、先要结果再深入。
 
+### 任务手册（按目标执行）
+
+- [Playbooks 总入口](contents/playbooks/README.md)
+- [最小可复现实验（MRE）](contents/playbooks/minimum-reproducible-run.md)
+- [对外 Demo 路径](contents/playbooks/external-demo-path.md)
+- [多 seed 稳定性汇报](contents/playbooks/multi-seed-stability-report.md)
+- [结果解读与交付检查](contents/playbooks/result-interpretation-checklist.md)
+
 ### 2) 我想理解系统怎么工作的
 
 - [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)

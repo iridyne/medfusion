@@ -177,6 +177,7 @@ bash scripts/full_regression.sh --full
 - [CLI & Config 工作流](docs/contents/getting-started/cli-config-workflow.md)
 - [公共数据集路径](docs/contents/getting-started/public-datasets.md)
 - [文档站首页](docs/README.md)
+- [任务手册（按目标执行）](docs/contents/playbooks/README.md)
 - [OSS roadmap](../docs/roadmap/oss/README.md)
 
 ---
