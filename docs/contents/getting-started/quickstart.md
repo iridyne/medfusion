@@ -30,6 +30,19 @@ uv run medfusion build-results \
   --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
+## ✅ 预期输出（跑通标准）
+
+至少应该看到：
+
+- `outputs/<run_name>/checkpoints/best.pth`
+- `outputs/<run_name>/history.json`
+- `outputs/<run_name>/results/metrics.json`
+- `outputs/<run_name>/results/validation.json`
+- `outputs/<run_name>/results/summary.json`
+- `outputs/<run_name>/results/report.md`
+
+如果这些文件都在，说明你已经跑通了“训练 + 结果产物”主链。
+
 如果你已经完成单次训练，准备做“结果稳定性检查”，现在主线也支持多 seed 聚合思路。
 当前仓库里最先接入的是 `demo/smurf_e2e`，用法是：
 

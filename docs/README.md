@@ -11,6 +11,15 @@
 
 ---
 
+## 高频入口（90% 场景）
+
+- [快速上手](contents/getting-started/quickstart.md)
+- [公开数据集快速验证](contents/getting-started/public-datasets.md)
+- [任务手册（按目标执行）](contents/playbooks/README.md)
+- [FAQ 和故障排除](contents/guides/core/faq.md)
+
+---
+
 ## 从这里开始（3 条路径）
 
 ### 1) 我想先把主链跑通（推荐）

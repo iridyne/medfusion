@@ -109,6 +109,19 @@ uv run medfusion public-datasets show uci-heart-disease
 ```
 
 
+## ✅ 预期输出（公开数据集路径）
+
+每条 quickstart 路径执行后，都应该至少包含：
+
+- `outputs/public_datasets/<dataset_run>/checkpoints/best.pth`
+- `outputs/public_datasets/<dataset_run>/history.json`
+- `outputs/public_datasets/<dataset_run>/results/metrics.json`
+- `outputs/public_datasets/<dataset_run>/results/validation.json`
+- `outputs/public_datasets/<dataset_run>/results/summary.json`
+- `outputs/public_datasets/<dataset_run>/results/report.md`
+
+如果结果目录只看到 checkpoint 没看到 `results/`，通常是还没执行 `build-results` 或 checkpoint 路径传错。
+
 ### PathMNIST
 
 适合先验证图像训练、结果页和报告产物。

@@ -79,6 +79,21 @@ uv run medfusion train \
 
 像 `--override`、`--resume` 这类参数目前不是这条主链的稳定接口，不建议按旧文档使用。
 
+### 训练完成后的预期输出
+
+至少应该出现：
+
+- `outputs/<exp>/checkpoints/best.pth`
+- `outputs/<exp>/logs/`
+- `outputs/<exp>/history.json`
+
+如果你还要交付评估结果，继续执行 `build-results`，补齐：
+
+- `outputs/<exp>/results/metrics.json`
+- `outputs/<exp>/results/validation.json`
+- `outputs/<exp>/results/summary.json`
+- `outputs/<exp>/results/report.md`
+
 ### 方法 2：使用 Python 脚本
 
 ```python
