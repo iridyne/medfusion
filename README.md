@@ -6,29 +6,29 @@
 **Train medical AI models. Get real validation artifacts. Ship a result people can actually review.**
 
 MedFusion 是一个面向医学 AI 研究验证的核心运行时。
-它不主打“再做一个模型 demo”，而是把 **训练 → 结果 → validation → 报告** 这条链稳定跑通。
+它的核心目标不是“再做一个模型 demo”，而是把 **训练 → 结果 → validation → 报告** 这条链稳定落地。
 
-> **MedFusion = 面向医学 AI 的可执行研究运行时，不只是模型仓库。**
+> **MedFusion = 可执行、可复盘、可对接上层产品的医学 AI runtime。**
 
-## 为什么团队会继续用它
+## 为什么团队会持续使用它
 
-很多仓库能训练一个模型，但很难把后面的结果链一起做实。
-MedFusion 当前最稳的价值，不在“功能堆得多”，而在这三件事：
+很多仓库可以把模型训起来，但训练后的结果组织、验证结构和报告输出往往不稳定。
+MedFusion 当前优先保证的是三件可以长期复用的事情：
 
-| 你需要什么 | MedFusion 当前主线给什么 |
+| 场景需求 | MedFusion 当前主线能力 |
 | --- | --- |
 | 开始前先避坑 | `validate-config` 先检查 YAML、数据列、路径和明显配置问题 |
 | 训练过程真的可跑 | `train` 产出 checkpoint、logs、`history.json` |
 | 结果能拿去复盘和展示 | `build-results` 生成 `metrics.json / validation.json / summary.json / report.md` 以及可视化 artifact |
 
-## 它最适合谁
+## 适用人群与场景
 
 - 医学 AI 研究生 / 课题组：想快速验证一个方向能不能跑起来
 - 工程团队：想把训练、结果、报告收成统一主链
 - 对外演示场景：想展示一个真实的“训练 → 结果 → 报告”闭环
 - 上层产品层：需要一个可执行、可复现、可沉淀 artifact 的 runtime
 
-## 它怎么工作
+## 运行主链（先检查，再训练，再产出结果）
 
 1. **先检查输入**：确认配置、数据列、路径和 split 没明显坑
 2. **再跑真实训练**：生成 checkpoint、日志和训练历史
@@ -44,7 +44,7 @@ flowchart LR
   C --> G[report.md]
 ```
 
-## 现在怎么开始
+## 快速上手（两条路径）
 
 ### 1) 你已经有自己的数据
 
@@ -68,7 +68,7 @@ uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
 uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
 ```
 
-## 跑完后你会拿到什么
+## 标准产物（可复盘、可对接）
 
 一次标准 run 结束后，当前主链会稳定沉淀这些核心产物：
 
@@ -83,7 +83,7 @@ uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.y
 
 > **不是只有训练命令，而是有完整结果闭环。**
 
-## 当前最值得讲的能力
+## 当前稳定能力边界
 
 - 真实训练主链：`validate-config → train → build-results → import-run`
 - 结构化结果契约：`metrics.json / validation.json / summary.json / report.md`
@@ -92,7 +92,7 @@ uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.y
 - 多模态建模能力：影像 / 表格 / 时序等输入可组合
 - 模块化组件：backbone / fusion / head / trainer 可替换
 
-## 当前不要误解成什么
+## 当前不承诺的范围
 
 当前主线不是：
 
@@ -136,7 +136,7 @@ medfusion/
 └── docs/                        # 文档
 ```
 
-## 🏗️ 从代码解读的架构视图
+## 🏗️ 从代码解读的架构视图（代码架构流程图）
 
 从代码结构看，`oss` 的职责非常明确：它是**真正执行训练、评估、预处理和结果产出的核心运行时**。
 
@@ -412,8 +412,8 @@ uv run mypy med_core/
 
 ## 📮 联系方式
 
-- 问题反馈: [GitHub Issues](https://github.com/yourusername/medfusion/issues)
-- 邮件: your.email@example.com
+- 问题反馈: [GitHub Issues](https://github.com/iridyne/medfusion/issues)
+- 使用讨论: [GitHub Discussions](https://github.com/iridyne/medfusion/discussions)
 
 ## 🙏 致谢
 
