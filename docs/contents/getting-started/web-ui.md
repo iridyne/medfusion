@@ -335,8 +335,8 @@ npm install
 
 欢迎贡献代码、报告问题或提出建议！
 
-- 提交 Issue: [GitHub Issues](https://github.com/your-repo/medfusion/issues)
-- 提交 PR: [GitHub Pull Requests](https://github.com/your-repo/medfusion/pulls)
+- 提交 Issue: [GitHub Issues](https://github.com/iridyne/medfusion/issues)
+- 提交 PR: [GitHub Pull Requests](https://github.com/iridyne/medfusion/pulls)
 
 ## 📄 许可证
 

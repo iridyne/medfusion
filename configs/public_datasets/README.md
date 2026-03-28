@@ -19,12 +19,15 @@
 ```bash
 uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
 uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
+uv run medfusion build-results --config configs/public_datasets/pathmnist_quickstart.yaml --checkpoint outputs/public_datasets/pathmnist_quickstart/checkpoints/best.pth
 
 uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
 uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
+uv run medfusion build-results --config configs/public_datasets/breastmnist_quickstart.yaml --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
 
 uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion build-results --config configs/public_datasets/uci_heart_disease_quickstart.yaml --checkpoint outputs/public_datasets/uci_heart_disease_quickstart/checkpoints/best.pth --attention-samples 0
 ```
 
 ## 重要说明

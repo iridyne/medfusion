@@ -30,6 +30,7 @@ Base = declarative_base()
 
 def init_db() -> None:
     """初始化数据库"""
+    settings.initialize_directories()
     # SQLite 优化
     if "sqlite" in (settings.database_url or ""):
         with engine.connect() as conn:

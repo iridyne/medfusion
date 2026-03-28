@@ -131,13 +131,14 @@ uv run medfusion public-datasets show uci-heart-disease
 每条 quickstart 路径执行后，都应该至少包含：
 
 - `outputs/public_datasets/<dataset_run>/checkpoints/best.pth`
-- `outputs/public_datasets/<dataset_run>/history.json`
-- `outputs/public_datasets/<dataset_run>/results/metrics.json`
-- `outputs/public_datasets/<dataset_run>/results/validation.json`
-- `outputs/public_datasets/<dataset_run>/results/summary.json`
-- `outputs/public_datasets/<dataset_run>/results/report.md`
+- `outputs/public_datasets/<dataset_run>/logs/history.json`
+- `outputs/public_datasets/<dataset_run>/metrics/metrics.json`
+- `outputs/public_datasets/<dataset_run>/metrics/validation.json`
+- `outputs/public_datasets/<dataset_run>/reports/summary.json`
+- `outputs/public_datasets/<dataset_run>/reports/report.md`
+- `outputs/public_datasets/<dataset_run>/artifacts/*`（如 ROC / confusion / calibration / attention）
 
-如果结果目录只看到 checkpoint 没看到 `results/`，通常是还没执行 `build-results` 或 checkpoint 路径传错。
+如果结果目录只看到 checkpoint 没看到 `metrics/` 与 `reports/`，通常是还没执行 `build-results` 或 checkpoint 路径传错。
 
 ### PathMNIST
 
@@ -147,6 +148,7 @@ uv run medfusion public-datasets show uci-heart-disease
 uv pip install medmnist
 uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
 uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
+uv run medfusion build-results \n  --config configs/public_datasets/pathmnist_quickstart.yaml \n  --checkpoint outputs/public_datasets/pathmnist_quickstart/checkpoints/best.pth
 ```
 
 输出目录固定为：
@@ -162,6 +164,7 @@ uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yam
 uv pip install medmnist
 uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
 uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
+uv run medfusion build-results \n  --config configs/public_datasets/breastmnist_quickstart.yaml \n  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
 ```
 
 输出目录固定为：
@@ -176,6 +179,7 @@ uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.y
 ```bash
 uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion build-results \n  --config configs/public_datasets/uci_heart_disease_quickstart.yaml \n  --checkpoint outputs/public_datasets/uci_heart_disease_quickstart/checkpoints/best.pth \n  --attention-samples 0
 ```
 
 输出目录固定为：

@@ -1,0 +1,1 @@
+import{a as t}from"./index-CDcEVVFG.js";const n=async s=>(await t.get("/datasets/",{params:s})).data,o=async()=>(await t.get("/datasets/statistics")).data,r=async s=>(await t.post("/datasets/",s)).data,c=async s=>(await t.delete(`/datasets/${s}`)).data,p=async s=>(await t.post(`/datasets/${s}/analyze`)).data;export{p as a,n as b,r as c,c as d,o as g};
