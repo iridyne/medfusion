@@ -39,6 +39,7 @@ import {
 } from "@/api/models";
 import ModelResultPanel from "@/components/model/ModelResultPanel";
 import VirtualList from "@/components/VirtualList";
+import PageScaffold from "@/components/layout/PageScaffold";
 
 const { Paragraph, Text } = Typography;
 
@@ -277,16 +278,17 @@ export default function ModelLibrary() {
   const latestModel = models[0];
 
   return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1 style={{ marginBottom: 0 }}>模型库</h1>
-        <Space>
+    <PageScaffold
+      eyebrow="Result Archive"
+      title="把训练产物沉淀成一座可检索、可演示、可复盘的结果库"
+      description="模型库不只是下载 checkpoint 的地方，它也是研究结果的归档面。这里会集中显示骨干网络、关键指标、生成的可视化以及真实 CLI 运行导回来的 artifact。"
+      chips={[
+        { label: "Artifact archive", tone: "teal" },
+        { label: "Real-run import", tone: "amber" },
+        { label: "Evaluation trace", tone: "blue" },
+      ]}
+      actions={
+        <>
           <Button
             icon={<ReloadOutlined />}
             onClick={() => void loadModels()}
@@ -301,117 +303,83 @@ export default function ModelLibrary() {
           >
             导入训练结果
           </Button>
-        </Space>
-      </div>
-
-      {latestModel && (
-        <Card
-          style={{ marginTop: 16 }}
-          bodyStyle={{ paddingBottom: 8 }}
-        >
-          <Row gutter={24}>
-            <Col span={16}>
-              <Space align="start">
-                <TrophyOutlined style={{ fontSize: 28, color: "#faad14", marginTop: 4 }} />
-                <div>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>
-                    最新结果：{latestModel.name}
-                  </div>
-                  <Paragraph style={{ marginBottom: 12, marginTop: 8 }}>
-                    {latestModel.descriptionText || "这是最近一次训练自动沉淀下来的模型结果，适合直接展示多模态项目的训练产出。"}
-                  </Paragraph>
-                  <Space wrap>
-                    <Tag color="blue">{latestModel.backbone}</Tag>
-                    <Tag color="green">{latestModel.dataset_name || "未命名数据集"}</Tag>
-                    <Tag color="purple">{latestModel.displayFormat.toUpperCase()}</Tag>
-                    {latestModel.tags?.map((tag) => (
-                      <Tag key={tag}>{tag}</Tag>
-                    ))}
-                  </Space>
-                </div>
+        </>
+      }
+      aside={
+        <div className="hero-aside-panel">
+          <span className="hero-aside-panel__label">Latest indexed result</span>
+          <div className="hero-aside-panel__value">
+            {latestModel ? latestModel.name : "尚未导入模型产物"}
+          </div>
+          <div className="hero-aside-panel__copy">
+            {latestModel
+              ? latestModel.descriptionText ||
+                "最近一次训练产物已经被索引，可用于展示多模态研究结果。"
+              : "完成一次训练或导入真实 run 后，这里会出现最新归档的结果摘要。"}
+          </div>
+          {latestModel ? (
+            <>
+              <div className="surface-note">
+                <strong>Accuracy snapshot</strong>
+                <p>
+                  {((latestModel.accuracy ?? 0) * 100).toFixed(2)}% | AUC{" "}
+                  {(latestModel.visualizations?.roc_curve?.auc ?? latestModel.accuracy ?? 0).toFixed(4)}
+                </p>
+              </div>
+              <Space wrap>
+                <Tag color="blue">{latestModel.backbone}</Tag>
+                <Tag color="green">
+                  {latestModel.dataset_name || "未命名数据集"}
+                </Tag>
+                <Tag color="purple">{latestModel.displayFormat.toUpperCase()}</Tag>
               </Space>
-            </Col>
-            <Col span={8}>
-              <Row gutter={[12, 12]}>
-                <Col span={12}>
-                  <Statistic
-                    title="Accuracy"
-                    value={(latestModel.accuracy ?? 0) * 100}
-                    precision={2}
-                    suffix="%"
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="AUC"
-                    value={latestModel.visualizations?.roc_curve?.auc ?? latestModel.accuracy ?? 0}
-                    precision={4}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Epochs"
-                    value={latestModel.trained_epochs ?? 0}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="训练时长"
-                    value={
-                      latestModel.training_time
-                        ? `${Math.round(latestModel.training_time)}s`
-                        : "-"
-                    }
-                  />
-                </Col>
-              </Row>
-            </Col>
-          </Row>
-        </Card>
-      )}
+            </>
+          ) : (
+            <div className="surface-note">先完成训练或导入结果以填充结果库。</div>
+          )}
+        </div>
+      }
+      metrics={[
+        {
+          label: "Models archived",
+          value: models.length.toLocaleString(),
+          hint: "Total indexed results",
+          tone: "blue",
+        },
+        {
+          label: "Parameter volume",
+          value: formatParams(totalParams),
+          hint: "Combined across archived models",
+          tone: "teal",
+        },
+        {
+          label: "Storage",
+          value: formatSize(totalSize),
+          hint: "Artifact footprint",
+          tone: "amber",
+        },
+        {
+          label: "Average accuracy",
+          value: `${(avgAccuracy * 100).toFixed(2)}%`,
+          hint: "Across models with recorded accuracy",
+          tone: "rose",
+        },
+      ]}
+    >
+      <Card className="surface-card" loading={loading}>
+        <div className="section-heading">
+          <div>
+            <div className="section-heading__eyebrow">Archive explorer</div>
+            <h2 className="section-heading__title">过滤、浏览并打开结果详情</h2>
+            <p className="section-heading__description">
+              用名称、骨干网络和导出格式快速缩小范围，然后直接进入多模态结果详情面板。
+            </p>
+          </div>
+        </div>
 
-      <Row gutter={16} style={{ marginTop: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="模型总数"
-              value={models.length}
-              prefix={<ExperimentOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="总参数量"
-              value={formatParams(totalParams)}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="总文件大小"
-              value={formatSize(totalSize)}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="平均准确率"
-              value={avgAccuracy * 100}
-              precision={2}
-              suffix="%"
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card style={{ marginTop: 16 }} loading={loading}>
         <Space style={{ marginBottom: 16, width: "100%" }} direction="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} xl={12}>
               <Input
                 placeholder="搜索模型名称或描述"
                 prefix={<SearchOutlined />}
@@ -420,16 +388,14 @@ export default function ModelLibrary() {
                 allowClear
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} md={12} xl={6}>
               <Select
                 style={{ width: "100%" }}
                 placeholder="按骨干网络筛选"
                 value={filterBackbone}
                 onChange={setFilterBackbone}
               >
-                <Select.Option value="all">
-                  全部骨干网络
-                </Select.Option>
+                <Select.Option value="all">全部骨干网络</Select.Option>
                 {backboneOptions.map((opt) => (
                   <Select.Option key={opt} value={opt}>
                     {opt}
@@ -437,16 +403,14 @@ export default function ModelLibrary() {
                 ))}
               </Select>
             </Col>
-            <Col span={6}>
+            <Col xs={24} md={12} xl={6}>
               <Select
                 style={{ width: "100%" }}
                 placeholder="按格式筛选"
                 value={filterFormat}
                 onChange={setFilterFormat}
               >
-                <Select.Option value="all">
-                  全部格式
-                </Select.Option>
+                <Select.Option value="all">全部格式</Select.Option>
                 <Select.Option value="pytorch">PyTorch</Select.Option>
                 <Select.Option value="onnx">ONNX</Select.Option>
                 <Select.Option value="torchscript">TorchScript</Select.Option>
@@ -455,48 +419,41 @@ export default function ModelLibrary() {
           </Row>
         </Space>
 
-        <div style={{ height: 600 }}>
+        <div className="library-list">
           <VirtualList
             data={filteredModels}
-            itemHeight={120}
+            itemHeight={132}
             renderItem={(model) => (
-              <div
-                style={{
-                  padding: "16px",
-                  borderBottom: "1px solid #f0f0f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <Space style={{ marginBottom: 8 }}>
-                    <span style={{ fontWeight: "bold", fontSize: 16 }}>
-                      {model.name}
-                    </span>
+              <div className="library-row">
+                <div className="library-row__main">
+                  <div className="library-row__title">
+                    <strong>{model.name}</strong>
                     <Tag color="blue">{model.backbone}</Tag>
                     <Tag color="green">{formatParams(model.params)}</Tag>
-                    {model.accuracy && (
+                    {model.accuracy ? (
                       <Tag color="orange">
                         {(model.accuracy * 100).toFixed(2)}%
                       </Tag>
-                    )}
+                    ) : null}
                     <Tag>{model.displayFormat.toUpperCase()}</Tag>
-                  </Space>
-                  <div style={{ color: "#666", marginBottom: 8 }}>
+                  </div>
+                  <p className="library-row__description">
                     {model.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#999" }}>
-                    数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小: {formatSize(model.size)} | 创建时间:{" "}
-                    {model.createdAt ? new Date(model.createdAt).toLocaleString("zh-CN") : "-"}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
+                  </p>
+                  <p className="library-row__meta">
+                    数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小:{" "}
+                    {formatSize(model.size)} | 创建时间:{" "}
+                    {model.createdAt
+                      ? new Date(model.createdAt).toLocaleString("zh-CN")
+                      : "-"}
+                  </p>
+                  <p className="library-row__meta">
                     AUC: {model.visualizations?.roc_curve?.auc?.toFixed(4) || "-"} | Loss:{" "}
                     {model.loss?.toFixed(4) || "-"} | Attention Maps:{" "}
                     {model.visualizations?.attention_maps?.length || 0}
-                  </div>
+                  </p>
                 </div>
-                <Space>
+                <div className="library-row__actions">
                   <Button
                     size="small"
                     icon={<EyeOutlined />}
@@ -519,12 +476,53 @@ export default function ModelLibrary() {
                   >
                     删除
                   </Button>
-                </Space>
+                </div>
               </div>
             )}
           />
         </div>
       </Card>
+
+      <div className="split-grid">
+        <Card className="surface-card">
+          <div className="section-heading">
+            <div>
+              <div className="section-heading__eyebrow">Import chain</div>
+              <h2 className="section-heading__title">真实训练结果如何回流</h2>
+              <p className="section-heading__description">
+                先验证配置、再执行训练、最后导入 artifact，结果库负责把这些产物组织成一套可浏览的研究证据。
+              </p>
+            </div>
+          </div>
+          <pre className="command-block">
+            uv run medfusion validate-config --config &lt;config&gt;
+            {"\n"}uv run medfusion train --config &lt;config&gt;
+            {"\n"}uv run medfusion import-run --config &lt;config&gt; --checkpoint &lt;path&gt;
+          </pre>
+        </Card>
+
+        <Card className="surface-card">
+          <div className="section-heading">
+            <div>
+              <div className="section-heading__eyebrow">Archive intent</div>
+              <h2 className="section-heading__title">为什么结果库很重要</h2>
+              <p className="section-heading__description">
+                这里帮助评估者判断系统输出是否真实可用，也帮助研究者进行复盘和分享。
+              </p>
+            </div>
+          </div>
+          <div className="stack-grid">
+            <div className="surface-note">
+              <strong>Artifact 完整性</strong>
+              <p>不只保留权重，还保留 ROC、混淆矩阵、注意力图、日志和配置。</p>
+            </div>
+            <div className="surface-note">
+              <strong>检索友好</strong>
+              <p>名称、骨干网络、格式和描述可以组合过滤，方便找到适合展示的结果。</p>
+            </div>
+          </div>
+        </Card>
+      </div>
 
       <Modal
         title="导入真实训练结果"
@@ -540,6 +538,7 @@ export default function ModelLibrary() {
         cancelText="取消"
         destroyOnClose
         width={760}
+        rootClassName="surface-modal"
       >
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
           <Alert
@@ -651,6 +650,7 @@ export default function ModelLibrary() {
         open={detailModalOpen}
         onCancel={() => setDetailModalOpen(false)}
         width={1100}
+        rootClassName="surface-modal"
         footer={[
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
             关闭
@@ -722,6 +722,6 @@ export default function ModelLibrary() {
           </Space>
         )}
       </Modal>
-    </div>
+    </PageScaffold>
   );
 }

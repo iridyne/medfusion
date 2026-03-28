@@ -32,6 +32,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import DatasetUploader from "../components/dataset/DatasetUploader";
 import { deleteDataset, getDatasets } from "../api/datasets";
+import PageScaffold from "@/components/layout/PageScaffold";
 
 interface Dataset {
   id: string;
@@ -282,74 +283,84 @@ const DatasetManager: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: "24px" }}>
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="数据集总数"
-              value={statistics.total}
-              prefix={<DatabaseOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="就绪"
-              value={statistics.ready}
-              valueStyle={{ color: "#3f8600" }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="处理中"
-              value={statistics.processing}
-              valueStyle={{ color: "#cf1322" }}
-              prefix={<SyncOutlined spin />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="总大小"
-              value={formatSize(statistics.totalSize)}
-              prefix={<DatabaseOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 主内容卡片 */}
+    <PageScaffold
+      eyebrow="Data Intake Registry"
+      title="把研究数据入口整理成一套可审查的资产台账"
+      description="登记本地目录、观察处理状态，并把实验前置的数据上下文固定下来。这里既是训练前的入口，也是 OSS 评估者理解可用资产的第一屏。"
+      chips={[
+        { label: "Local-first registry", tone: "blue" },
+        { label: "Processing visibility", tone: "teal" },
+        { label: "Research dataset ledger", tone: "amber" },
+      ]}
+      actions={
+        <Button
+          type="primary"
+          size="large"
+          icon={<PlusOutlined />}
+          onClick={() => setRegisterModalVisible(true)}
+        >
+          登记数据集
+        </Button>
+      }
+      aside={
+        <div className="hero-aside-panel">
+          <span className="hero-aside-panel__label">Registry pulse</span>
+          <div className="hero-aside-panel__value">
+            {statistics.ready} 个数据集已准备好进入训练
+          </div>
+          <div className="hero-aside-panel__copy">
+            {statistics.processing > 0
+              ? `${statistics.processing} 个数据集仍在处理链路中，建议先确认目录结构与分析状态。`
+              : "当前没有数据集积压在处理中，适合直接进入训练或结果验证。"}
+          </div>
+          <div className="surface-note">
+            总体积 {formatSize(statistics.totalSize)}，覆盖 {statistics.total} 份登记记录。
+          </div>
+        </div>
+      }
+      metrics={[
+        {
+          label: "Registered datasets",
+          value: statistics.total.toLocaleString(),
+          hint: "All indexed directories",
+          tone: "blue",
+        },
+        {
+          label: "Ready for training",
+          value: statistics.ready.toLocaleString(),
+          hint: "已完成分析或无需预处理",
+          tone: "teal",
+        },
+        {
+          label: "In processing",
+          value: statistics.processing.toLocaleString(),
+          hint: "等待处理完成后再进入训练",
+          tone: "rose",
+        },
+        {
+          label: "Storage footprint",
+          value: formatSize(statistics.totalSize),
+          hint: "Current indexed volume",
+          tone: "amber",
+        },
+      ]}
+    >
       <Card
+        className="surface-card"
         title={
           <Space>
             <DatabaseOutlined />
-            <span>数据集管理</span>
+            <span>数据登记面板</span>
           </Space>
         }
         extra={
-          <Space>
-            <Input.Search
-              placeholder="搜索数据集"
-              allowClear
-              style={{ width: 250 }}
-              onChange={(e) => setSearchText(e.target.value)}
-              prefix={<SearchOutlined />}
-            />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setRegisterModalVisible(true)}
-            >
-              登记数据集
-            </Button>
-          </Space>
+          <Input.Search
+            placeholder="搜索数据集"
+            allowClear
+            style={{ width: 260 }}
+            onChange={(e) => setSearchText(e.target.value)}
+            prefix={<SearchOutlined />}
+          />
         }
       >
         <Table
@@ -366,7 +377,62 @@ const DatasetManager: React.FC = () => {
         />
       </Card>
 
-      {/* 上传模态框 */}
+      <div className="split-grid">
+        <Card className="surface-card">
+          <div className="section-heading">
+            <div>
+              <div className="section-heading__eyebrow">Registry protocol</div>
+              <h2 className="section-heading__title">推荐的数据登记节奏</h2>
+              <p className="section-heading__description">
+                先把目录和字段登记清楚，再进入训练或结果导入，能明显减少路径和 schema 层面的歧义。
+              </p>
+            </div>
+          </div>
+
+          <div className="workbench-flow">
+            <div className="flow-step">
+              <strong>1. 登记本地目录</strong>
+              <p>把路径、类型、标签和描述补齐，便于团队成员快速判断数据用途。</p>
+            </div>
+            <div className="flow-step">
+              <strong>2. 观察处理状态</strong>
+              <p>等待分析链路完成，再根据样本量、类别数和体量决定训练策略。</p>
+            </div>
+            <div className="flow-step">
+              <strong>3. 回到训练或向导</strong>
+              <p>数据资产稳定后，再进入训练监控页或 RunSpec 向导配置真实实验。</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="surface-card">
+          <div className="section-heading">
+            <div>
+              <div className="section-heading__eyebrow">Information scent</div>
+              <h2 className="section-heading__title">当前页面提供什么线索</h2>
+              <p className="section-heading__description">
+                这张表既服务日常操作，也让 OSS 评估者一眼看出系统是否真的管理数据资产。
+              </p>
+            </div>
+          </div>
+
+          <div className="stack-grid">
+            <div className="surface-note">
+              <strong>状态语义</strong>
+              <p>区分 `登记中`、`处理中`、`就绪` 和 `错误`，帮助你判断是否可以进入下一步。</p>
+            </div>
+            <div className="surface-note">
+              <strong>结构线索</strong>
+              <p>样本数、类别数、体积和时间戳被放到同一视图，便于快速评估实验成熟度。</p>
+            </div>
+            <div className="surface-note">
+              <strong>详情抽屉</strong>
+              <p>点击名称即可展开完整路径、标签和分析 JSON，不需要离开主表格。</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <Modal
         title="登记本地数据集"
         open={registerModalVisible}
@@ -374,6 +440,7 @@ const DatasetManager: React.FC = () => {
         footer={null}
         width={720}
         destroyOnClose
+        rootClassName="surface-modal"
       >
         <DatasetUploader
           onSuccess={() => {
@@ -384,7 +451,6 @@ const DatasetManager: React.FC = () => {
         />
       </Modal>
 
-      {/* 详情抽屉 */}
       <Drawer
         title="数据集详情"
         placement="right"
@@ -392,6 +458,7 @@ const DatasetManager: React.FC = () => {
         open={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         destroyOnClose
+        rootClassName="surface-drawer"
       >
         {selectedDataset && (
           <Descriptions column={1} bordered size="small">
@@ -449,7 +516,7 @@ const DatasetManager: React.FC = () => {
                     margin: 0,
                     whiteSpace: "pre-wrap",
                     wordBreak: "break-word",
-                    fontFamily: "monospace",
+                    fontFamily: "var(--font-mono)",
                   }}
                 >
                   {JSON.stringify(selectedDataset.analysis, null, 2)}
@@ -461,7 +528,7 @@ const DatasetManager: React.FC = () => {
           </Descriptions>
         )}
       </Drawer>
-    </div>
+    </PageScaffold>
   );
 };
 

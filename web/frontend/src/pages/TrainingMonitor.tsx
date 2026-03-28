@@ -42,6 +42,7 @@ import trainingApi, {
 } from "../api/training";
 import LazyChart from "../components/LazyChart";
 import WebSocketClient from "../utils/websocket";
+import PageScaffold from "@/components/layout/PageScaffold";
 
 interface DatasetOption {
   id: string;
@@ -600,30 +601,17 @@ export default function TrainingMonitor() {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 4 }}>训练监控</h1>
-          <div style={{ color: "#666" }}>
-            这是演示型 MVP 的主页面，用来发起训练并展示进度。
-          </div>
-        </div>
-        <Space>
-          <Badge
-            status={wsConnected ? "success" : "default"}
-            text={wsConnected ? "实时连接已建立" : "未连接到当前任务"}
-          />
-          {wsConnected ? (
-            <WifiOutlined style={{ color: "#52c41a" }} />
-          ) : (
-            <DisconnectOutlined style={{ color: "#999" }} />
-          )}
+    <PageScaffold
+      eyebrow="Execution Monitor"
+      title="把实验运行状态做成一张可持续阅读的控制面"
+      description="这里承接演示型训练的启动、实时进度观察和最近结果回看。它既是运行中的观察面，也是在评估阶段证明系统确实能跑起来的证据页。"
+      chips={[
+        { label: "Real-time telemetry", tone: "rose" },
+        { label: "Job orchestration", tone: "teal" },
+        { label: "Artifact handoff", tone: "amber" },
+      ]}
+      actions={
+        <>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
           </Button>
@@ -634,41 +622,68 @@ export default function TrainingMonitor() {
           >
             启动训练
           </Button>
-        </Space>
-      </div>
-
-      <Row gutter={16} style={{ marginTop: 16, marginBottom: 16 }}>
-        <Col span={8}>
-          <Card>
-            <Statistic title="训练任务总数" value={jobs.length} />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="运行中"
-              value={jobs.filter((job) => job.status === "running").length}
+        </>
+      }
+      aside={
+        <div className="hero-aside-panel">
+          <span className="hero-aside-panel__label">Live lane</span>
+          <div className="hero-aside-panel__value">
+            {currentJob ? currentJob.name : "等待选择训练任务"}
+          </div>
+          <div className="hero-aside-panel__copy">
+            {currentJob
+              ? `当前任务进度 ${currentJob.progress}% ，状态为 ${currentJob.status}。`
+              : "先在任务列表中选择一个训练任务，或直接启动新的演示训练。"}
+          </div>
+          <Badge
+            status={wsConnected ? "success" : "default"}
+            text={wsConnected ? "实时连接已建立" : "当前未建立实时连接"}
+          />
+          {currentJob ? (
+            <Progress
+              percent={currentJob.progress}
+              status={currentJob.status === "running" ? "active" : "normal"}
             />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="已完成"
-              value={jobs.filter((job) => job.status === "completed").length}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Tabs
-        defaultActiveKey="jobs"
-        items={[
-          {
-            key: "jobs",
-            label: "任务列表",
-            children: (
-              <Card>
+          ) : (
+            <div className="surface-note">训练曲线会在选择任务后出现在监控面板中。</div>
+          )}
+        </div>
+      }
+      metrics={[
+        {
+          label: "Training jobs",
+          value: jobs.length.toLocaleString(),
+          hint: "All tracked runs",
+          tone: "blue",
+        },
+        {
+          label: "Running now",
+          value: jobs.filter((job) => job.status === "running").length.toLocaleString(),
+          hint: wsConnected ? "实时连接在线" : "等待新的 websocket 连接",
+          tone: "rose",
+        },
+        {
+          label: "Completed",
+          value: jobs.filter((job) => job.status === "completed").length.toLocaleString(),
+          hint: "Finished jobs available for result review",
+          tone: "teal",
+        },
+        {
+          label: "Recent outputs",
+          value: latestOutputs.length.toLocaleString(),
+          hint: "Latest artifacts previewed below",
+          tone: "amber",
+        },
+      ]}
+    >
+      <Card className="surface-card">
+        <Tabs
+          defaultActiveKey="jobs"
+          items={[
+            {
+              key: "jobs",
+              label: "任务列表",
+              children: (
                 <Table
                   columns={columns}
                   dataSource={jobs}
@@ -680,168 +695,165 @@ export default function TrainingMonitor() {
                     ),
                   }}
                 />
-              </Card>
-            ),
-          },
-          {
-            key: "monitor",
-            label: "实时监控",
-            children: currentJob ? (
-              <>
-                <Card style={{ marginBottom: 16 }}>
-                  <Space
-                    direction="vertical"
-                    style={{ width: "100%" }}
-                    size={12}
-                  >
-                    <div style={{ fontSize: 18, fontWeight: 600 }}>
-                      {currentJob.name}
-                    </div>
+              ),
+            },
+            {
+              key: "monitor",
+              label: "实时监控",
+              children: currentJob ? (
+                <div className="stack-grid">
+                  <div className="surface-note">
+                    <strong>{currentJob.name}</strong>
+                    <p>当前任务会在训练过程中持续刷新 loss、accuracy 和 learning rate 曲线。</p>
                     <Progress
                       percent={currentJob.progress}
                       status={currentJob.status === "running" ? "active" : "normal"}
                     />
-                  </Space>
-                </Card>
+                  </div>
 
-                <Row gutter={16} style={{ marginBottom: 16 }}>
-                  <Col span={6}>
-                    <Card>
-                      <Statistic
-                        title="当前 Epoch"
-                        value={currentJob.epoch}
-                        suffix={`/ ${currentJob.totalEpochs}`}
-                      />
-                    </Card>
-                  </Col>
-                  <Col span={6}>
-                    <Card>
-                      <Statistic title="训练损失" value={currentJob.loss} precision={4} />
-                    </Card>
-                  </Col>
-                  <Col span={6}>
-                    <Card>
-                      <Statistic
-                        title="训练准确率"
-                        value={currentJob.accuracy * 100}
-                        precision={2}
-                        suffix="%"
-                      />
-                    </Card>
-                  </Col>
-                  <Col span={6}>
-                    <Card>
-                      <Statistic
-                        title="学习率"
-                        value={metricHistory.learningRate[metricHistory.learningRate.length - 1] || 0.001}
-                        precision={6}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
-
-                <Row gutter={16} style={{ marginBottom: 16 }}>
-                  <Col span={12}>
-                    <Card>
-                      <LazyChart option={lossOption} style={{ height: 320 }} />
-                    </Card>
-                  </Col>
-                  <Col span={12}>
-                    <Card>
-                      <LazyChart option={accuracyOption} style={{ height: 320 }} />
-                    </Card>
-                  </Col>
-                </Row>
-
-                <Card>
-                  <LazyChart option={learningRateOption} style={{ height: 240 }} />
-                </Card>
-              </>
-            ) : (
-              <Card>
-                <Empty description="选择一个训练任务后，这里会显示实时指标和曲线。" />
-              </Card>
-            ),
-          },
-          {
-            key: "outputs",
-            label: "结果输出",
-            children:
-              latestOutputs.length > 0 ? (
-                <Row gutter={[16, 16]}>
-                  {latestOutputs.map((output) => (
-                    <Col span={12} key={output.id}>
-                      <Card
-                        title={output.name}
-                        extra={
-                          <Space wrap>
-                            <Tag color="blue">{output.backbone}</Tag>
-                            <Tag color="purple">
-                              {output.format?.toUpperCase() || "PYTORCH"}
-                            </Tag>
-                          </Space>
-                        }
-                      >
-                        <Space
-                          direction="vertical"
-                          size={12}
-                          style={{ width: "100%" }}
-                        >
-                          <div style={{ color: "#666" }}>
-                            数据集：{output.dataset_name || "-"}
-                          </div>
-                          <Row gutter={12}>
-                            <Col span={8}>
-                              <Statistic
-                                title="Accuracy"
-                                value={(output.accuracy ?? 0) * 100}
-                                precision={2}
-                                suffix="%"
-                              />
-                            </Col>
-                            <Col span={8}>
-                              <Statistic
-                                title="AUC"
-                                value={output.visualizations?.roc_curve?.auc ?? 0}
-                                precision={4}
-                              />
-                            </Col>
-                            <Col span={8}>
-                              <Statistic
-                                title="Attention"
-                                value={output.visualizations?.attention_maps?.length || 0}
-                              />
-                            </Col>
-                          </Row>
-                          <Alert
-                            type="success"
-                            showIcon
-                            message="结果文件已生成"
-                            description={`共 ${output.result_files?.length || 0} 个结果产物，包括模型权重、训练配置、结果摘要和日志。`}
-                          />
-                          <div style={{ fontSize: 12, color: "#999" }}>
-                            ROC AUC: {output.visualizations?.roc_curve?.auc?.toFixed(4) || "-"} | Loss:{" "}
-                            {output.loss?.toFixed(4) || "-"} | 创建时间:{" "}
-                            {output.created_at
-                              ? new Date(output.created_at).toLocaleString("zh-CN")
-                              : "-"}
-                          </div>
-                          <Button onClick={() => navigate("/models")}>
-                            查看完整结果页
-                          </Button>
-                        </Space>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={24} md={12} xl={6}>
+                      <Card>
+                        <Statistic
+                          title="当前 Epoch"
+                          value={currentJob.epoch}
+                          suffix={`/ ${currentJob.totalEpochs}`}
+                        />
                       </Card>
                     </Col>
-                  ))}
-                </Row>
+                    <Col xs={24} md={12} xl={6}>
+                      <Card>
+                        <Statistic
+                          title="训练损失"
+                          value={currentJob.loss}
+                          precision={4}
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} md={12} xl={6}>
+                      <Card>
+                        <Statistic
+                          title="训练准确率"
+                          value={currentJob.accuracy * 100}
+                          precision={2}
+                          suffix="%"
+                        />
+                      </Card>
+                    </Col>
+                    <Col xs={24} md={12} xl={6}>
+                      <Card>
+                        <Statistic
+                          title="学习率"
+                          value={
+                            metricHistory.learningRate[
+                              metricHistory.learningRate.length - 1
+                            ] || 0.001
+                          }
+                          precision={6}
+                        />
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  <Row gutter={[16, 16]}>
+                    <Col xs={24} xl={12}>
+                      <Card>
+                        <LazyChart option={lossOption} style={{ height: 320 }} />
+                      </Card>
+                    </Col>
+                    <Col xs={24} xl={12}>
+                      <Card>
+                        <LazyChart option={accuracyOption} style={{ height: 320 }} />
+                      </Card>
+                    </Col>
+                  </Row>
+
+                  <Card>
+                    <LazyChart option={learningRateOption} style={{ height: 240 }} />
+                  </Card>
+                </div>
               ) : (
-                <Card>
-                  <Empty description="训练完成后，这里会集中展示 ROC/AUC、attention 热力图和结果文件概览。" />
-                </Card>
+                <Empty description="选择一个训练任务后，这里会显示实时指标和曲线。" />
               ),
-          },
-        ]}
-      />
+            },
+            {
+              key: "outputs",
+              label: "结果输出",
+              children:
+                latestOutputs.length > 0 ? (
+                  <Row gutter={[16, 16]}>
+                    {latestOutputs.map((output) => (
+                      <Col xs={24} xl={12} key={output.id}>
+                        <Card
+                          title={output.name}
+                          extra={
+                            <Space wrap>
+                              <Tag color="blue">{output.backbone}</Tag>
+                              <Tag color="purple">
+                                {output.format?.toUpperCase() || "PYTORCH"}
+                              </Tag>
+                            </Space>
+                          }
+                        >
+                          <Space
+                            direction="vertical"
+                            size={12}
+                            style={{ width: "100%" }}
+                          >
+                            <div style={{ color: "var(--text-secondary)" }}>
+                              数据集：{output.dataset_name || "-"}
+                            </div>
+                            <Row gutter={12}>
+                              <Col span={8}>
+                                <Statistic
+                                  title="Accuracy"
+                                  value={(output.accuracy ?? 0) * 100}
+                                  precision={2}
+                                  suffix="%"
+                                />
+                              </Col>
+                              <Col span={8}>
+                                <Statistic
+                                  title="AUC"
+                                  value={output.visualizations?.roc_curve?.auc ?? 0}
+                                  precision={4}
+                                />
+                              </Col>
+                              <Col span={8}>
+                                <Statistic
+                                  title="Attention"
+                                  value={output.visualizations?.attention_maps?.length || 0}
+                                />
+                              </Col>
+                            </Row>
+                            <Alert
+                              type="success"
+                              showIcon
+                              message="结果文件已生成"
+                              description={`共 ${output.result_files?.length || 0} 个结果产物，包括模型权重、训练配置、结果摘要和日志。`}
+                            />
+                            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                              ROC AUC: {output.visualizations?.roc_curve?.auc?.toFixed(4) || "-"}{" "}
+                              | Loss: {output.loss?.toFixed(4) || "-"} | 创建时间:{" "}
+                              {output.created_at
+                                ? new Date(output.created_at).toLocaleString("zh-CN")
+                                : "-"}
+                            </div>
+                            <Button onClick={() => navigate("/models")}>
+                              查看完整结果页
+                            </Button>
+                          </Space>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                ) : (
+                  <Empty description="训练完成后，这里会集中展示 ROC/AUC、attention 热力图和结果文件概览。" />
+                ),
+            },
+          ]}
+        />
+      </Card>
 
       <Modal
         title="启动演示训练"
@@ -852,6 +864,7 @@ export default function TrainingMonitor() {
         cancelText="取消"
         confirmLoading={submitting}
         width={720}
+        rootClassName="surface-modal"
       >
         {datasets.length === 0 && (
           <Alert
@@ -960,6 +973,6 @@ export default function TrainingMonitor() {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageScaffold>
   );
 }

@@ -37,12 +37,98 @@
     "updatedAt": "更新时间"
   },
   "nav": {
+    "workbench": "研究工作台",
+    "datasets": "数据登记",
+    "config": "RunSpec 向导",
     "workflow": "工作流编辑器",
     "training": "训练监控",
     "models": "模型库",
     "preprocessing": "数据预处理",
     "system": "系统监控",
     "settings": "设置"
+  },
+  "navShort": {
+    "workbench": "工作台",
+    "datasets": "数据集",
+    "training": "训练",
+    "config": "向导",
+    "models": "模型",
+    "system": "系统"
+  },
+  "navEyebrow": {
+    "workbench": "研究控制台",
+    "datasets": "数据入口",
+    "training": "执行监控",
+    "config": "RunSpec 组合器",
+    "models": "结果归档",
+    "system": "资源观测"
+  },
+  "navDescription": {
+    "workbench": "总览数据、训练状态、RunSpec 入口与最近研究产物。",
+    "datasets": "登记本地目录、检查处理状态，并维护研究数据资产。",
+    "training": "启动演示训练、观察实时曲线，并跟踪运行中的实验。",
+    "config": "从表单生成真实训练配置，让 CLI 和 Web 使用同一语义。",
+    "models": "查看训练产物、导入真实运行结果，并深入检查 artifact。",
+    "system": "观察 CPU、内存和 GPU 负载，评估本地工作站健康度。"
+  },
+  "app": {
+    "routeFallback": {
+      "title": "工作面载入中",
+      "description": "路由已拆成按需加载，首屏会更轻一些。"
+    }
+  },
+  "shell": {
+    "entryCommandLabel": "入口命令",
+    "theme": {
+      "label": "主题",
+      "auto": "自动",
+      "dark": "夜间",
+      "light": "日间"
+    },
+    "themeState": {
+      "dark": "夜间研读",
+      "light": "日间审阅"
+    },
+    "masthead": {
+      "kicker": "MedFusion OSS / 研究控制台",
+      "pathPrefix": "开源工作台"
+    },
+    "header": {
+      "title": "把研究入口、执行状态和结果资产收进同一张桌面工作面",
+      "description": "这层壳不是通用后台模板，它更像一台本地研究控制台：入口稳定、信息密度高，但仍然保持可读和可演示。"
+    },
+    "notes": {
+      "viewCount": "{{count}} 个工作面可切换",
+      "themeDark": "夜间研读模式",
+      "themeLight": "日间审阅模式",
+      "cliBridge": "CLI 与 Web 共用同一条研究主链"
+    }
+  },
+  "sidebar": {
+    "brandCaption": "临床研究工作台",
+    "manifest": {
+      "kicker": "现场说明",
+      "title": "Open-core 不做花哨演示台，做的是能复用的研究控制面。",
+      "description": "Web 负责观察、登记、解释和归档；真正的训练执行、自动化和复现仍然交给 CLI 主链。"
+    },
+    "cluster": {
+      "label": "工作面分区",
+      "count": "{{count}} 个视图"
+    },
+    "support": {
+      "label": "执行姿态",
+      "title": "研究界面负责发现，CLI 负责执行",
+      "description": "这套 OSS 前端被重写成桌面工作台入口，方便讲清工作流，也方便贡献者与评估者快速定位资产和状态。"
+    },
+    "commands": {
+      "entry": "入口",
+      "execution": "执行"
+    },
+    "footer": {
+      "researchGrade": "研究级",
+      "localFirst": "本地优先",
+      "artifactAware": "工件可感知"
+    }
   },
   "workflow": {
     "title": "工作流编辑器",

@@ -37,12 +37,98 @@
     "updatedAt": "Updated At"
   },
   "nav": {
+    "workbench": "Research Workbench",
+    "datasets": "Data Intake",
+    "config": "RunSpec Wizard",
     "workflow": "Workflow Editor",
     "training": "Training Monitor",
     "models": "Model Library",
     "preprocessing": "Data Preprocessing",
     "system": "System Monitor",
     "settings": "Settings"
+  },
+  "navShort": {
+    "workbench": "Workbench",
+    "datasets": "Datasets",
+    "training": "Training",
+    "config": "Wizard",
+    "models": "Models",
+    "system": "System"
+  },
+  "navEyebrow": {
+    "workbench": "Research Console",
+    "datasets": "Data Intake",
+    "training": "Execution Monitor",
+    "config": "RunSpec Composer",
+    "models": "Result Archive",
+    "system": "Resource Telemetry"
+  },
+  "navDescription": {
+    "workbench": "Survey datasets, training state, RunSpec entry points, and recent research artifacts.",
+    "datasets": "Register local directories, inspect processing state, and maintain research data assets.",
+    "training": "Start demo runs, watch live curves, and track active experiments.",
+    "config": "Generate real training configs from forms so CLI and Web share the same semantics.",
+    "models": "Inspect training artifacts, import real runs, and drill into result archives.",
+    "system": "Observe CPU, memory, and GPU load to assess local workstation health."
+  },
+  "app": {
+    "routeFallback": {
+      "title": "Loading workspace",
+      "description": "Routes are split for lazy loading, so the first screen stays lighter."
+    }
+  },
+  "shell": {
+    "entryCommandLabel": "Entry command",
+    "theme": {
+      "label": "Theme",
+      "auto": "Auto",
+      "dark": "Night",
+      "light": "Day"
+    },
+    "themeState": {
+      "dark": "Night study",
+      "light": "Day review"
+    },
+    "masthead": {
+      "kicker": "MedFusion OSS / Research Console",
+      "pathPrefix": "Open-core workbench"
+    },
+    "header": {
+      "title": "Bring research entry points, execution state, and result assets into one desktop surface",
+      "description": "This shell is not a generic admin template. It acts more like a local research console: stable entry points, high information density, and still readable enough for demos."
+    },
+    "notes": {
+      "viewCount": "{{count}} workspaces available",
+      "themeDark": "Night study mode",
+      "themeLight": "Day review mode",
+      "cliBridge": "CLI and Web share one research mainline"
+    }
+  },
+  "sidebar": {
+    "brandCaption": "Clinical research workbench",
+    "manifest": {
+      "kicker": "Field note",
+      "title": "Open-core should not be a flashy demo surface. It should be a reusable research control plane.",
+      "description": "Web is responsible for observation, intake, explanation, and archiving. Actual training execution, automation, and reproducibility still belong to the CLI mainline."
+    },
+    "cluster": {
+      "label": "Workbench lanes",
+      "count": "{{count}} views"
+    },
+    "support": {
+      "label": "Execution posture",
+      "title": "The research UI discovers, the CLI executes",
+      "description": "This OSS frontend was reshaped into a desktop workbench entry so contributors and evaluators can locate assets, state, and workflow context quickly."
+    },
+    "commands": {
+      "entry": "Entry",
+      "execution": "Execution"
+    },
+    "footer": {
+      "researchGrade": "Research-grade",
+      "localFirst": "Local-first",
+      "artifactAware": "Artifact-aware"
+    }
   },
   "workflow": {
     "title": "Workflow Editor",

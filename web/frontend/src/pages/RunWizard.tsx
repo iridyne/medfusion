@@ -44,6 +44,7 @@ import {
   validateRunSpec,
   VISION_BACKBONE_OPTIONS,
 } from "@/utils/runSpec";
+import PageScaffold from "@/components/layout/PageScaffold";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -183,6 +184,8 @@ export default function RunWizard() {
     { title: "训练策略", description: "epoch、optimizer、scheduler" },
     { title: "预览导出", description: "YAML 与 CLI 命令" },
   ];
+  const selectedPresetLabel =
+    RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
 
   const renderBasicsStep = () => (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -951,182 +954,163 @@ export default function RunWizard() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space direction="vertical" size={20} style={{ width: "100%" }}>
-        <Card
-          bordered={false}
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(27, 79, 114, 0.98) 0%, rgba(41, 128, 185, 0.92) 52%, rgba(247, 181, 56, 0.9) 100%)",
-            color: "#fff",
-            overflow: "hidden",
-          }}
-          bodyStyle={{ padding: 28 }}
-        >
-          <Row gutter={[24, 24]} align="middle">
-            <Col xs={24} xl={16}>
-              <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                <Tag
-                  color="gold"
-                  style={{
-                    width: "fit-content",
-                    color: "#4d3b00",
-                    fontWeight: 700,
-                    border: "none",
-                  }}
-                >
-                  Real RunSpec
-                </Tag>
-                <Title level={2} style={{ color: "#fff", margin: 0 }}>
-                  真实训练配置向导
-                </Title>
-                <Paragraph style={{ color: "rgba(255,255,255,0.88)", fontSize: 16, margin: 0 }}>
-                  这里不再生成演示型假配置，而是直接对齐 `ExperimentConfig` 和 `medfusion train` 主链。
-                  用户通过表单完成配置，YAML 退到“导出与复现 artifact”的位置。
-                </Paragraph>
-                <Space wrap>
-                  <Button icon={<DownloadOutlined />} onClick={downloadYaml}>
-                    下载当前 YAML
-                  </Button>
-                  <Button icon={<CopyOutlined />} onClick={() => void copyText(trainCommand, "训练命令已复制")}>
-                    复制训练命令
-                  </Button>
-                </Space>
-              </Space>
-            </Col>
-            <Col xs={24} xl={8}>
-              <Card
-                size="small"
-                style={{
-                  background: "rgba(255,255,255,0.16)",
-                  borderColor: "rgba(255,255,255,0.2)",
-                }}
+    <PageScaffold
+      eyebrow="RunSpec Composer"
+      title="用一张桌面级向导生成真实训练配置"
+      description="这里不再生产演示味很重的假配置，而是直接对齐 `ExperimentConfig` 和 `medfusion train` 主链。Web 负责把复杂 schema 组织成可读表单，YAML 则退回到导出与复现 artifact 的位置。"
+      chips={[
+        { label: "Real schema", tone: "amber" },
+        { label: "CLI-aligned", tone: "teal" },
+        { label: "Reproducible export", tone: "blue" },
+      ]}
+      actions={
+        <>
+          <Button icon={<DownloadOutlined />} onClick={downloadYaml}>
+            下载当前 YAML
+          </Button>
+          <Button
+            icon={<CopyOutlined />}
+            onClick={() => void copyText(trainCommand, "训练命令已复制")}
+          >
+            复制训练命令
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={syncOutputDir}>
+            同步输出目录
+          </Button>
+        </>
+      }
+      aside={
+        <div className="hero-aside-panel">
+          <span className="hero-aside-panel__label">Current configuration</span>
+          <div className="hero-aside-panel__value">{configFileName}</div>
+          <div className="hero-aside-panel__copy">
+            preset 为 <strong>{selectedPresetLabel}</strong>，输出目录位于{" "}
+            <code>{spec.logging.outputDir}</code>。
+          </div>
+          <div className="surface-note">
+            就绪检查: {errorCount} error / {warningCount} warning
+          </div>
+        </div>
+      }
+      metrics={[
+        {
+          label: "Preset",
+          value: selectedPresetLabel,
+          hint: "Current starting point",
+          tone: "amber",
+        },
+        {
+          label: "Workflow step",
+          value: `${currentStep + 1}/${stepItems.length}`,
+          hint: stepItems[currentStep]?.title,
+          tone: "blue",
+        },
+        {
+          label: "Blocking errors",
+          value: errorCount.toLocaleString(),
+          hint: "Must be zero before running",
+          tone: errorCount > 0 ? "rose" : "teal",
+        },
+        {
+          label: "Warnings",
+          value: warningCount.toLocaleString(),
+          hint: readyToRun ? "Ready to export or execute" : "Review before handoff",
+          tone: warningCount > 0 ? "amber" : "teal",
+        },
+      ]}
+    >
+      <Alert
+        type="info"
+        showIcon
+        message="这一步解决的是“配置如何产生”"
+        description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 开始。后续拖拽式模型搭建也会复用这份 RunSpec，而不是另起一套配置系统。"
+      />
+
+      <div className="split-grid">
+        <Card className="surface-card">
+          <Space direction="vertical" size={20} style={{ width: "100%" }}>
+            <Steps current={currentStep} items={stepItems} responsive />
+            {renderStepContent()}
+            <Space>
+              <Button
+                disabled={currentStep === 0}
+                onClick={() => setCurrentStep((prev) => prev - 1)}
               >
-                <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                  <Text style={{ color: "rgba(255,255,255,0.86)" }}>当前配置文件名</Text>
-                  <Text code>{configFileName}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.86)" }}>输出目录</Text>
-                  <Text code>{spec.logging.outputDir}</Text>
-                  <Text style={{ color: "rgba(255,255,255,0.86)" }}>
-                    就绪检查: {errorCount} error / {warningCount} warning
-                  </Text>
-                </Space>
-              </Card>
-            </Col>
-          </Row>
+                上一步
+              </Button>
+              <Button
+                type="primary"
+                disabled={currentStep === stepItems.length - 1}
+                onClick={() => setCurrentStep((prev) => prev + 1)}
+              >
+                下一步
+              </Button>
+              {currentStep === stepItems.length - 1 ? (
+                <Button icon={<DownloadOutlined />} onClick={downloadYaml}>
+                  直接下载
+                </Button>
+              ) : null}
+            </Space>
+          </Space>
         </Card>
 
-        <Alert
-          type="info"
-          showIcon
-          message="这一步解决的是“配置如何产生”"
-          description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 开始。后续拖拽式模型搭建也会复用这份 RunSpec，而不是另起一套配置系统。"
-        />
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={16}>
-            <Card>
-              <Space direction="vertical" size={20} style={{ width: "100%" }}>
-                <Steps current={currentStep} items={stepItems} responsive />
-                {renderStepContent()}
-                <Space>
-                  <Button disabled={currentStep === 0} onClick={() => setCurrentStep((prev) => prev - 1)}>
-                    上一步
-                  </Button>
-                  <Button
-                    type="primary"
-                    disabled={currentStep === stepItems.length - 1}
-                    onClick={() => setCurrentStep((prev) => prev + 1)}
-                  >
-                    下一步
-                  </Button>
-                  {currentStep === stepItems.length - 1 ? (
-                    <Button icon={<DownloadOutlined />} onClick={downloadYaml}>
-                      直接下载
-                    </Button>
-                  ) : null}
-                </Space>
-              </Space>
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={8}>
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
-              <Card
-                title="运行摘要"
-                extra={readyToRun ? <CheckCircleOutlined style={{ color: "#52c41a" }} /> : <WarningOutlined style={{ color: "#faad14" }} />}
-              >
-                <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                  <Text strong>{spec.projectName}</Text>
-                  <Text type="secondary">实验名：{spec.experimentName}</Text>
-                  <Text type="secondary">backbone：{spec.model.vision.backbone}</Text>
-                  <Text type="secondary">fusion：{spec.model.fusion.fusionType}</Text>
-                  <Text type="secondary">epoch：{spec.training.numEpochs}</Text>
-                  <Text type="secondary">batch size：{spec.data.batchSize}</Text>
-                  <Text type="secondary">device：{spec.device}</Text>
-                </Space>
-              </Card>
-
-              <Card title="就绪检查">
-                <Space direction="vertical" size={10} style={{ width: "100%" }}>
-                  {issues.length === 0 ? (
-                    <Alert type="success" showIcon message="没有发现阻塞项" />
-                  ) : (
-                    issues.map((issue, index) => (
-                      <Alert
-                        key={`${issue.level}-${index}`}
-                        type={issue.level === "error" ? "error" : "warning"}
-                        showIcon
-                        message={issue.message}
-                      />
-                    ))
-                  )}
-                </Space>
-              </Card>
-
-              <Card title="CLI 命令">
-                <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                  <div>
-                    <Text strong>训练</Text>
-                    <pre
-                      style={{
-                        marginTop: 8,
-                        padding: 12,
-                        borderRadius: 12,
-                        background: "#f5f7fa",
-                        overflowX: "auto",
-                        whiteSpace: "pre-wrap",
-                        fontSize: 12,
-                      }}
-                    >
-                      {trainCommand}
-                    </pre>
-                  </div>
-                  <div>
-                    <Text strong>结果构建</Text>
-                    <pre
-                      style={{
-                        marginTop: 8,
-                        padding: 12,
-                        borderRadius: 12,
-                        background: "#f5f7fa",
-                        overflowX: "auto",
-                        whiteSpace: "pre-wrap",
-                        fontSize: 12,
-                      }}
-                    >
-                      {resultsCommand}
-                    </pre>
-                  </div>
-                  <Text type="secondary">
-                    当前 Web 训练 API 仍偏演示语义。真实训练建议先下载 YAML，再用 CLI 执行，后续再把向导直连到后端训练入口。
-                  </Text>
-                </Space>
-              </Card>
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Card
+            className="surface-card"
+            title="运行摘要"
+            extra={
+              readyToRun ? (
+                <CheckCircleOutlined style={{ color: "var(--accent-teal)" }} />
+              ) : (
+                <WarningOutlined style={{ color: "var(--accent-amber)" }} />
+              )
+            }
+          >
+            <Space direction="vertical" size={8} style={{ width: "100%" }}>
+              <Text strong>{spec.projectName}</Text>
+              <Text type="secondary">实验名：{spec.experimentName}</Text>
+              <Text type="secondary">backbone：{spec.model.vision.backbone}</Text>
+              <Text type="secondary">fusion：{spec.model.fusion.fusionType}</Text>
+              <Text type="secondary">epoch：{spec.training.numEpochs}</Text>
+              <Text type="secondary">batch size：{spec.data.batchSize}</Text>
+              <Text type="secondary">device：{spec.device}</Text>
             </Space>
-          </Col>
-        </Row>
-      </Space>
-    </div>
+          </Card>
+
+          <Card className="surface-card" title="就绪检查">
+            <Space direction="vertical" size={10} style={{ width: "100%" }}>
+              {issues.length === 0 ? (
+                <Alert type="success" showIcon message="没有发现阻塞项" />
+              ) : (
+                issues.map((issue, index) => (
+                  <Alert
+                    key={`${issue.level}-${index}`}
+                    type={issue.level === "error" ? "error" : "warning"}
+                    showIcon
+                    message={issue.message}
+                  />
+                ))
+              )}
+            </Space>
+          </Card>
+
+          <Card className="surface-card" title="CLI 命令">
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <div>
+                <Text strong>训练</Text>
+                <pre className="command-block">{trainCommand}</pre>
+              </div>
+              <div>
+                <Text strong>结果构建</Text>
+                <pre className="command-block">{resultsCommand}</pre>
+              </div>
+              <Text type="secondary">
+                当前 Web 训练 API 仍偏演示语义。真实训练建议先下载 YAML，再用 CLI 执行，后续再把向导直连到后端训练入口。
+              </Text>
+            </Space>
+          </Card>
+        </Space>
+      </div>
+    </PageScaffold>
   );
 }
