@@ -15,6 +15,7 @@ import { getModels, getModelStatistics } from "@/api/models";
 import trainingApi from "@/api/training";
 import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
+import { consumeWorkbenchFallback } from "@/utils/workbenchFallback";
 
 interface WorkbenchStats {
   totalDatasets: number;
@@ -73,15 +74,13 @@ export default function Workbench() {
   }, []);
 
   useEffect(() => {
-    const from = searchParams.get("from");
-    if (!from) {
+    const { source, nextSearchParams } = consumeWorkbenchFallback(searchParams);
+    if (!source) {
       return;
     }
 
-    setRedirectNotice(from);
-    const next = new URLSearchParams(searchParams);
-    next.delete("from");
-    setSearchParams(next, { replace: true });
+    setRedirectNotice(source);
+    setSearchParams(nextSearchParams, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const runningRatio = useMemo(() => {

@@ -44,6 +44,7 @@ import {
   validateRunSpec,
   VISION_BACKBONE_OPTIONS,
 } from "@/utils/runSpec";
+import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
 import PageScaffold from "@/components/layout/PageScaffold";
 
 const { Paragraph, Text, Title } = Typography;
@@ -187,16 +188,14 @@ export default function RunWizard() {
   const selectedPresetLabel =
     RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
   const trainingPrefillQuery = useMemo(() => {
-    const params = new URLSearchParams({
-      action: "start",
+    return buildTrainingPrefillQuery({
       experimentName: spec.experimentName,
       backbone: spec.model.vision.backbone,
-      numClasses: String(spec.model.numClasses),
-      epochs: String(spec.training.numEpochs),
-      batchSize: String(spec.data.batchSize),
-      learningRate: String(spec.training.optimizer.learningRate),
+      numClasses: spec.model.numClasses,
+      epochs: spec.training.numEpochs,
+      batchSize: spec.data.batchSize,
+      learningRate: spec.training.optimizer.learningRate,
     });
-    return params.toString();
   }, [
     spec.experimentName,
     spec.model.vision.backbone,

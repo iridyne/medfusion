@@ -43,6 +43,7 @@ import trainingApi, {
 import LazyChart from "../components/LazyChart";
 import WebSocketClient from "../utils/websocket";
 import PageScaffold from "@/components/layout/PageScaffold";
+import { parseTrainingPrefillParams } from "@/utils/trainingPrefill";
 
 interface DatasetOption {
   id: string;
@@ -87,17 +88,6 @@ const BACKBONE_OPTIONS = [
   "vit_b16",
   "swin_tiny",
 ];
-
-function parsePositiveNumber(raw: string | null): number | undefined {
-  if (!raw) {
-    return undefined;
-  }
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return undefined;
-  }
-  return parsed;
-}
 
 function toMetricHistory(entries: TrainingHistoryEntry[]): MetricHistory {
   if (!entries.length) {
@@ -201,34 +191,9 @@ export default function TrainingMonitor() {
       return;
     }
 
-    const prefill: Partial<CreateTrainingValues> = {};
-    const experimentName = searchParams.get("experimentName");
-    const backbone = searchParams.get("backbone");
-    const numClasses = parsePositiveNumber(searchParams.get("numClasses"));
-    const epochs = parsePositiveNumber(searchParams.get("epochs"));
-    const batchSize = parsePositiveNumber(searchParams.get("batchSize"));
-    const learningRate = parsePositiveNumber(searchParams.get("learningRate"));
-
-    if (experimentName) {
-      prefill.experimentName = experimentName;
-    }
-    if (backbone && BACKBONE_OPTIONS.includes(backbone)) {
-      prefill.backbone = backbone;
-    }
-    if (numClasses !== undefined) {
-      prefill.numClasses = numClasses;
-    }
-    if (epochs !== undefined) {
-      prefill.epochs = epochs;
-    }
-    if (batchSize !== undefined) {
-      prefill.batchSize = batchSize;
-    }
-    if (learningRate !== undefined) {
-      prefill.learningRate = learningRate;
-    }
+    const prefill = parseTrainingPrefillParams(searchParams, BACKBONE_OPTIONS);
     if (Object.keys(prefill).length > 0) {
-      form.setFieldsValue(prefill);
+      form.setFieldsValue(prefill as Partial<CreateTrainingValues>);
     }
 
     setCreateModalOpen(true);

@@ -15,6 +15,7 @@ import {
   watchSystemTheme,
 } from "./theme/config";
 import { getCurrentNavigation } from "./config/navigation";
+import { buildWorkbenchFallbackSearch } from "./utils/workbenchFallback";
 import "./i18n/config";
 import "./App.css";
 
@@ -105,19 +106,39 @@ function App() {
             <Route path="/system" element={<SystemMonitor />} />
             <Route
               path="/workflow"
-              element={<Navigate to="/workbench?from=workflow" replace />}
+              element={
+                <Navigate
+                  to={`/workbench?${buildWorkbenchFallbackSearch("workflow")}`}
+                  replace
+                />
+              }
             />
             <Route
               path="/experiments"
-              element={<Navigate to="/workbench?from=experiments" replace />}
+              element={
+                <Navigate
+                  to={`/workbench?${buildWorkbenchFallbackSearch("experiments")}`}
+                  replace
+                />
+              }
             />
             <Route
               path="/preprocessing"
-              element={<Navigate to="/workbench?from=preprocessing" replace />}
+              element={
+                <Navigate
+                  to={`/workbench?${buildWorkbenchFallbackSearch("preprocessing")}`}
+                  replace
+                />
+              }
             />
             <Route
               path="/settings"
-              element={<Navigate to="/workbench?from=settings" replace />}
+              element={
+                <Navigate
+                  to={`/workbench?${buildWorkbenchFallbackSearch("settings")}`}
+                  replace
+                />
+              }
             />
             <Route path="*" element={<Navigate to="/workbench" replace />} />
           </Routes>
