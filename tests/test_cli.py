@@ -183,3 +183,65 @@ def test_build_results_cli_supports_survival_and_importance_options(
 
     assert payload["validation"]["survival"]["c_index"] is not None
     assert payload["validation"]["global_feature_importance"]["top_features"]
+
+
+def test_import_run_cli_preserves_result_contract_and_is_idempotent(tmp_path, capsys):
+    from med_core.cli.import_run import import_run
+
+    config_path, checkpoint_path = _create_checkpoint_and_logs(
+        tmp_path,
+        include_survival=True,
+    )
+
+    base_args = [
+        "--config",
+        str(config_path),
+        "--checkpoint",
+        str(checkpoint_path),
+        "--split",
+        "train",
+        "--attention-samples",
+        "2",
+        "--survival-time-column",
+        "survival_time",
+        "--survival-event-column",
+        "event",
+        "--importance-sample-limit",
+        "8",
+        "--name",
+        "ci-import-run-model",
+        "--tag",
+        "ci-import-run",
+        "--json",
+    ]
+
+    import_run(base_args)
+    first_payload = json.loads(capsys.readouterr().out)
+    artifact_paths = first_payload["artifact_paths"]
+
+    for key in (
+        "metrics_path",
+        "validation_path",
+        "summary_path",
+        "report_path",
+        "config_path",
+        "prediction_path",
+    ):
+        assert key in artifact_paths
+        assert Path(artifact_paths[key]).exists(), f"Missing import artifact: {key}"
+
+    summary = json.loads(Path(artifact_paths["summary_path"]).read_text(encoding="utf-8"))
+    validation = json.loads(
+        Path(artifact_paths["validation_path"]).read_text(encoding="utf-8")
+    )
+
+    assert summary["meta"]["generated_by"] == "medfusion.build_results"
+    assert summary["meta"]["split"] == "train"
+    assert summary["meta"] == validation["meta"]
+    assert validation["survival"]["c_index"] is not None
+    assert validation["global_feature_importance"]["top_features"]
+    assert set(first_payload["tags"]) >= {"imported", "split:train", "ci-import-run"}
+
+    import_run(base_args)
+    second_payload = json.loads(capsys.readouterr().out)
+    assert second_payload["model_id"] == first_payload["model_id"]
