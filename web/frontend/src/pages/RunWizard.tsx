@@ -186,6 +186,25 @@ export default function RunWizard() {
   ];
   const selectedPresetLabel =
     RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
+  const trainingPrefillQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      action: "start",
+      experimentName: spec.experimentName,
+      backbone: spec.model.vision.backbone,
+      numClasses: String(spec.model.numClasses),
+      epochs: String(spec.training.numEpochs),
+      batchSize: String(spec.data.batchSize),
+      learningRate: String(spec.training.optimizer.learningRate),
+    });
+    return params.toString();
+  }, [
+    spec.experimentName,
+    spec.model.vision.backbone,
+    spec.model.numClasses,
+    spec.training.numEpochs,
+    spec.data.batchSize,
+    spec.training.optimizer.learningRate,
+  ]);
 
   const renderBasicsStep = () => (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -913,7 +932,12 @@ export default function RunWizard() {
           <Button icon={<CopyOutlined />} onClick={() => void copyText(yamlPreview, "YAML 已复制")}>复制 YAML</Button>
           <Button icon={<DownloadOutlined />} onClick={downloadYaml}>下载 YAML</Button>
           <Button icon={<CopyOutlined />} onClick={() => void copyText(trainCommand, "训练命令已复制")}>复制训练命令</Button>
-          <Button icon={<ExperimentOutlined />} onClick={() => navigate("/training")}>打开训练监控</Button>
+          <Button
+            icon={<ExperimentOutlined />}
+            onClick={() => navigate(`/training?${trainingPrefillQuery}`)}
+          >
+            打开训练监控
+          </Button>
         </Space>
       </Card>
 

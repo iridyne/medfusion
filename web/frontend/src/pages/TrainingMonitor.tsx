@@ -88,6 +88,17 @@ const BACKBONE_OPTIONS = [
   "swin_tiny",
 ];
 
+function parsePositiveNumber(raw: string | null): number | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+  return parsed;
+}
+
 function toMetricHistory(entries: TrainingHistoryEntry[]): MetricHistory {
   if (!entries.length) {
     return EMPTY_HISTORY;
@@ -189,11 +200,48 @@ export default function TrainingMonitor() {
     if (searchParams.get("action") !== "start") {
       return;
     }
+
+    const prefill: Partial<CreateTrainingValues> = {};
+    const experimentName = searchParams.get("experimentName");
+    const backbone = searchParams.get("backbone");
+    const numClasses = parsePositiveNumber(searchParams.get("numClasses"));
+    const epochs = parsePositiveNumber(searchParams.get("epochs"));
+    const batchSize = parsePositiveNumber(searchParams.get("batchSize"));
+    const learningRate = parsePositiveNumber(searchParams.get("learningRate"));
+
+    if (experimentName) {
+      prefill.experimentName = experimentName;
+    }
+    if (backbone && BACKBONE_OPTIONS.includes(backbone)) {
+      prefill.backbone = backbone;
+    }
+    if (numClasses !== undefined) {
+      prefill.numClasses = numClasses;
+    }
+    if (epochs !== undefined) {
+      prefill.epochs = epochs;
+    }
+    if (batchSize !== undefined) {
+      prefill.batchSize = batchSize;
+    }
+    if (learningRate !== undefined) {
+      prefill.learningRate = learningRate;
+    }
+    if (Object.keys(prefill).length > 0) {
+      form.setFieldsValue(prefill);
+    }
+
     setCreateModalOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete("action");
+    next.delete("experimentName");
+    next.delete("backbone");
+    next.delete("numClasses");
+    next.delete("epochs");
+    next.delete("batchSize");
+    next.delete("learningRate");
     setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [form, searchParams, setSearchParams]);
 
   useEffect(() => {
     void loadJobHistory(selectedJob);
