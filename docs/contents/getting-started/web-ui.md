@@ -36,13 +36,14 @@ uv run medfusion start
 uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 ```
 
-`medfusion start` 会把 Web UI 作为默认入口收口起来，更适合新用户和演示场景。
+`medfusion start` 会把 Web UI 作为默认入口收口起来，更适合新用户和回归验证场景。
 
 当前工作台里的推荐路径：
 
-1. 先进入“训练配置向导”，用表单生成真实 `ExperimentConfig`
-2. 再执行 `medfusion validate-config` / `medfusion train`
-3. 训练完成后导入结果到模型库查看 artifact
+1. 先进入“数据管理”确认可用数据目录
+2. 再进入“训练配置向导”生成真实 `ExperimentConfig`
+3. 执行 `medfusion validate-config` / `medfusion train`
+4. 训练完成后导入结果到模型库查看 artifact
 
 ### 方法 2：使用启动脚本
 
@@ -100,6 +101,19 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 
 ## 📱 主要功能
 
+### OSS 主链页面范围（固定）
+
+当前 OSS Web 默认主链固定为 6 个页面：
+
+1. `/workbench`（研究入口）
+2. `/datasets`（数据集管理）
+3. `/config`（RunSpec 向导）
+4. `/training`（训练监控）
+5. `/models`（模型与结果）
+6. `/system`（系统监控）
+
+非主链路径（如 `/workflow`、`/preprocessing`）保持实验或降级状态，不作为 OSS 默认入口叙事。
+
 ### 1. 训练监控
 
 实时监控训练任务的进度和性能指标：
@@ -141,9 +155,11 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 对外推荐路径：
 
 1. `/workbench`
-2. `/config`
-3. `/training`
-4. `/models`
+2. `/datasets`
+3. `/config`
+4. `/training`
+5. `/models`
+6. `/system`
 
 ### 4. 数据预处理（未进入当前 MVP 主链）
 

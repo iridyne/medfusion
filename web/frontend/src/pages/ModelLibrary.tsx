@@ -280,7 +280,7 @@ export default function ModelLibrary() {
   return (
     <PageScaffold
       eyebrow="Result Archive"
-      title="把训练产物沉淀成一座可检索、可演示、可复盘的结果库"
+      title="把训练产物沉淀成一座可检索、可复盘的结果库"
       description="模型库不只是下载 checkpoint 的地方，它也是研究结果的归档面。这里会集中显示骨干网络、关键指标、生成的可视化以及真实 CLI 运行导回来的 artifact。"
       chips={[
         { label: "Artifact archive", tone: "teal" },
@@ -438,7 +438,7 @@ export default function ModelLibrary() {
                     <Tag>{model.displayFormat.toUpperCase()}</Tag>
                   </div>
                   <p className="library-row__description">
-                    {model.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
+                    {model.descriptionText || "训练主链自动沉淀的模型记录"}
                   </p>
                   <p className="library-row__meta">
                     数据集: {model.dataset_name || "-"} | 类别数: {model.numClasses} | 文件大小:{" "}
@@ -623,7 +623,7 @@ export default function ModelLibrary() {
                 <Form.Item label="描述（可选）" name="description">
                   <Input.TextArea
                     rows={3}
-                    placeholder="例如：真实 CLI 训练导入，用于 dashboard 演示和 README 截图"
+                    placeholder="例如：真实 CLI 训练导入，用于结果复盘与回归对照"
                   />
                 </Form.Item>
               </Col>
@@ -713,7 +713,7 @@ export default function ModelLibrary() {
                   : "-"}
               </Descriptions.Item>
               <Descriptions.Item label="描述" span={2}>
-                {selectedModel.descriptionText || "演示型 MVP 自动沉淀的模型记录"}
+                {selectedModel.descriptionText || "训练主链自动沉淀的模型记录"}
               </Descriptions.Item>
             </Descriptions>
 

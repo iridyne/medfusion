@@ -88,15 +88,15 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
       <Alert
         type="info"
         showIcon
-        message="演示型 MVP 采用本地目录登记"
-        description="当前版本不在浏览器里直接上传大文件，而是登记一份本地数据目录，方便快速演示数据集管理和训练闭环。"
+        message="当前版本采用本地目录登记"
+        description="当前版本不在浏览器里直接上传大文件，而是登记一份本地数据目录，保证数据管理、训练与结果链路的可复现性。"
         style={{ marginBottom: 16 }}
       />
 
       <Paragraph type="secondary" style={{ marginBottom: 16 }}>
         推荐填写真实存在的本地路径，例如
         <Text code style={{ marginLeft: 8 }}>
-          /data/chest-xray-demo
+          /data/chest-xray
         </Text>
         或
         <Text code style={{ marginLeft: 8 }}>
@@ -121,7 +121,7 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
         >
           <Input
             prefix={<DatabaseOutlined />}
-            placeholder="例如：Chest X-Ray Demo"
+            placeholder="例如：Chest X-Ray Dataset"
           />
         </Form.Item>
 
@@ -162,7 +162,7 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
         >
           <Input
             prefix={<FolderOpenOutlined />}
-            placeholder="例如：/data/demo-dataset"
+            placeholder="例如：/data/chest-xray"
           />
         </Form.Item>
 
@@ -199,7 +199,7 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
           </Form.Item>
 
           <Form.Item label="创建人" name="createdBy" style={{ flex: 1 }}>
-            <Input placeholder="例如：lab-demo" />
+            <Input placeholder="例如：lab-team" />
           </Form.Item>
         </Space>
 
@@ -210,7 +210,7 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
             options={[
               { value: "医学影像", label: "医学影像" },
               { value: "分类", label: "分类" },
-              { value: "实验室演示", label: "实验室演示" },
+              { value: "快速验证", label: "快速验证" },
               { value: "多模态", label: "多模态" },
             ]}
           />

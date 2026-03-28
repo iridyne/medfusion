@@ -599,7 +599,7 @@ export default function TrainingMonitor() {
     <PageScaffold
       eyebrow="Execution Monitor"
       title="把实验运行状态做成一张可持续阅读的控制面"
-      description="这里承接演示型训练的启动、实时进度观察和最近结果回看。它既是运行中的观察面，也是在评估阶段证明系统确实能跑起来的证据页。"
+      description="这里承接训练任务启动、实时进度观察和最近结果回看。它既是运行中的观察面，也是评估阶段验证主链可执行的证据页。"
       chips={[
         { label: "Real-time telemetry", tone: "rose" },
         { label: "Job orchestration", tone: "teal" },
@@ -628,7 +628,7 @@ export default function TrainingMonitor() {
           <div className="hero-aside-panel__copy">
             {currentJob
               ? `当前任务进度 ${currentJob.progress}% ，状态为 ${currentJob.status}。`
-              : "先在任务列表中选择一个训练任务，或直接启动新的演示训练。"}
+              : "先在任务列表中选择一个训练任务，或直接启动新的训练任务。"}
           </div>
           <Badge
             status={wsConnected ? "success" : "default"}
@@ -683,13 +683,13 @@ export default function TrainingMonitor() {
                   columns={columns}
                   dataSource={jobs}
                   rowKey="id"
-                  pagination={false}
-                  locale={{
-                    emptyText: (
-                      <Empty description="暂无训练任务，先点击右上角“启动训练”创建一个演示任务。" />
-                    ),
-                  }}
-                />
+                    pagination={false}
+                    locale={{
+                      emptyText: (
+                        <Empty description="暂无训练任务，先点击右上角“启动训练”创建一个任务。" />
+                      ),
+                    }}
+                  />
               ),
             },
             {
@@ -851,7 +851,7 @@ export default function TrainingMonitor() {
       </Card>
 
       <Modal
-        title="启动演示训练"
+        title="启动训练任务"
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         onOk={() => void handleCreateJob()}
@@ -875,7 +875,7 @@ export default function TrainingMonitor() {
           form={form}
           layout="vertical"
           initialValues={{
-            experimentName: `demo-${new Date().toISOString().slice(11, 19).replace(/:/g, "")}`,
+            experimentName: `run-${new Date().toISOString().slice(11, 19).replace(/:/g, "")}`,
             backbone: "resnet18",
             numClasses: 2,
             epochs: 12,
@@ -888,7 +888,7 @@ export default function TrainingMonitor() {
             name="experimentName"
             rules={[{ required: true, message: "请输入实验名称" }]}
           >
-            <Input placeholder="例如：chest-xray-demo-run" />
+            <Input placeholder="例如：chest-xray-run" />
           </Form.Item>
 
           <Form.Item
@@ -897,7 +897,7 @@ export default function TrainingMonitor() {
             rules={[{ required: true, message: "请选择一个数据集" }]}
           >
             <Select
-              placeholder="选择要用于演示的数据集"
+              placeholder="选择要用于训练的数据集"
               onChange={handleDatasetChange}
               options={datasets.map((dataset) => ({
                 value: dataset.id,

@@ -79,11 +79,11 @@ export default function Workbench() {
 
   const launchCards = [
     {
-      title: "演示型训练",
+      title: "训练监控",
       description:
-        "快速生成训练曲线、ROC 和 attention heatmap，用于对外演示和 OSS 快速上手。",
-      tag: "Demo lane",
-      actionLabel: "进入演示训练",
+        "创建训练任务、跟踪实时状态，并把结果稳定回流到结果库。",
+      tag: "Mainline",
+      actionLabel: "进入训练监控",
       icon: <ExperimentOutlined />,
       onClick: () => navigate("/training?action=start"),
     },
@@ -120,7 +120,7 @@ export default function Workbench() {
     <PageScaffold
       eyebrow="Open-Core Research Surface"
       title="把 MedFusion OSS 收拢成一张研究控制面"
-      description="这不是一个演示味很重的 SaaS 仪表盘，而是一张面向研究人员和评估者的桌面级工作面。数据、训练、RunSpec 与结果检查在这里汇合，执行和自动化仍然回到 CLI 主链。"
+      description="Workbench 聚焦 OSS 主链页面：数据、配置、训练、结果与系统状态。Web 负责入口与检查，执行与自动化仍然回到 CLI 主链。"
       chips={[
         { label: "Desktop-first cockpit", tone: "teal" },
         { label: "CLI-backed execution", tone: "amber" },
@@ -134,7 +134,7 @@ export default function Workbench() {
             icon={<PlayCircleOutlined />}
             onClick={() => navigate("/training?action=start")}
           >
-            启动演示训练
+            启动训练任务
           </Button>
           <Button
             size="large"
@@ -203,7 +203,7 @@ export default function Workbench() {
             <div className="section-heading__eyebrow">Launch lanes</div>
             <h2 className="section-heading__title">四条高频研究链路</h2>
             <p className="section-heading__description">
-              从首次演示到真实训练导入，工作台把高频入口固定成可以复用的操作路径。
+              从数据准备到结果导入，工作台把高频入口固定成可复用的研究路径。
             </p>
           </div>
           <Tag color="processing">Workbench orchestration</Tag>
@@ -259,7 +259,7 @@ export default function Workbench() {
               <div className="section-heading__eyebrow">Operator notes</div>
               <h2 className="section-heading__title">当前关注点</h2>
               <p className="section-heading__description">
-                这张工作台优先服务评估者、贡献者和研究协作场景，而不是把所有事情塞进单一演示页。
+                这张工作台优先服务评估者、贡献者和研究协作场景，避免脱离主链的页面分叉。
               </p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function Workbench() {
             <div className="editorial-quote">
               <span className="editorial-quote__mark">/</span>
               <p>
-                Web 端现在更像研究桌面的“解释层”，不是替代 CLI，而是把入口、状态和结果做成一套能被理解、能被演示、也能被维护的界面语言。
+                Web 端现在更像研究桌面的“解释层”，不是替代 CLI，而是把入口、状态和结果做成一套能被理解、能被复现、也能被维护的界面语言。
               </p>
             </div>
 
@@ -279,11 +279,11 @@ export default function Workbench() {
               </div>
               <div className="surface-note surface-note--dense">
                 <strong>配置统一</strong>
-                <p>向导与 CLI 共用 RunSpec，避免再维护一套演示型伪配置。</p>
+                <p>向导与 CLI 共用 RunSpec，避免再维护偏展示用途的分叉配置。</p>
               </div>
               <div className="surface-note surface-note--dense">
                 <strong>结果统一</strong>
-                <p>真实 artifact 导回结果库，支撑 README 截图、演示和研究复盘。</p>
+                <p>真实 artifact 导回结果库，支撑验证、分享和研究复盘。</p>
               </div>
               <div className="surface-note surface-note--dense">
                 <strong>信息统一</strong>
@@ -304,7 +304,7 @@ export default function Workbench() {
             <div className="section-heading__eyebrow">Control deck</div>
             <h2 className="section-heading__title">把 OSS 首屏改成真正的研究控制台</h2>
             <p className="section-heading__description">
-              我把最容易被看到的首屏改成三层结构：一层讲入口，一层讲链路，一层讲资产。这样别人第一次打开时，就不会再把它当成普通后台模板。
+              首屏采用三层结构：入口、链路、资产。第一次进入时可以直接理解这套 OSS Web 的主链边界。
             </p>
           </div>
           <Tag color="gold">Frontend redesign</Tag>
@@ -318,8 +318,8 @@ export default function Workbench() {
           </div>
           <div className="insight-panel">
             <span className="insight-panel__kicker">Visual system</span>
-            <strong>用暖临床色系替代通用 AI 看板配色</strong>
-            <p>保留层次感和微光，但避开俗套的青紫霓虹，看起来更像专业工作站。</p>
+            <strong>视觉强调对齐研究工作台语义</strong>
+            <p>保留层次感与信息密度，强化页面分区与状态识别。</p>
           </div>
           <div className="insight-panel">
             <span className="insight-panel__kicker">Information scent</span>

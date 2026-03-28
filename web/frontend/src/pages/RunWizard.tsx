@@ -224,7 +224,7 @@ export default function RunWizard() {
                 <Input
                   value={spec.projectName}
                   onChange={(event) => updateSpec({ projectName: event.target.value })}
-                  placeholder="例如：medfusion-showcase"
+                  placeholder="例如：medfusion-research"
                 />
               </Form.Item>
             </Col>
@@ -233,7 +233,7 @@ export default function RunWizard() {
                 <Input
                   value={spec.experimentName}
                   onChange={(event) => updateSpec({ experimentName: event.target.value })}
-                  placeholder="例如：attention-demo"
+                  placeholder="例如：baseline-run"
                 />
               </Form.Item>
             </Col>
@@ -270,7 +270,7 @@ export default function RunWizard() {
               tokenSeparators={[","]}
               value={spec.tags}
               onChange={(value) => updateSpec({ tags: value })}
-              placeholder="输入标签后回车，例如 showcase, validation"
+              placeholder="输入标签后回车，例如 quickstart, validation"
             />
           </Form.Item>
         </Form>
@@ -957,7 +957,7 @@ export default function RunWizard() {
     <PageScaffold
       eyebrow="RunSpec Composer"
       title="用一张桌面级向导生成真实训练配置"
-      description="这里不再生产演示味很重的假配置，而是直接对齐 `ExperimentConfig` 和 `medfusion train` 主链。Web 负责把复杂 schema 组织成可读表单，YAML 则退回到导出与复现 artifact 的位置。"
+      description="这里直接对齐 `ExperimentConfig` 和 `medfusion train` 主链。Web 负责把复杂 schema 组织成可读表单，YAML 负责导出、执行与复现。"
       chips={[
         { label: "Real schema", tone: "amber" },
         { label: "CLI-aligned", tone: "teal" },
@@ -1000,7 +1000,7 @@ export default function RunWizard() {
           tone: "amber",
         },
         {
-          label: "Workflow step",
+          label: "Wizard step",
           value: `${currentStep + 1}/${stepItems.length}`,
           hint: stepItems[currentStep]?.title,
           tone: "blue",
@@ -1023,7 +1023,7 @@ export default function RunWizard() {
         type="info"
         showIcon
         message="这一步解决的是“配置如何产生”"
-        description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 开始。后续拖拽式模型搭建也会复用这份 RunSpec，而不是另起一套配置系统。"
+        description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 开始。后续能力扩展也应复用这份 RunSpec，而不是另起一套配置系统。"
       />
 
       <div className="split-grid">
@@ -1105,7 +1105,7 @@ export default function RunWizard() {
                 <pre className="command-block">{resultsCommand}</pre>
               </div>
               <Text type="secondary">
-                当前 Web 训练 API 仍偏演示语义。真实训练建议先下载 YAML，再用 CLI 执行，后续再把向导直连到后端训练入口。
+                当前建议优先下载 YAML 并通过 CLI 执行，以保证训练和结果链路可复现。Web 训练入口适合本地快速验证。
               </Text>
             </Space>
           </Card>

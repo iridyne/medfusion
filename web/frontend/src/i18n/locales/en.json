@@ -66,7 +66,7 @@
   "navDescription": {
     "workbench": "Survey datasets, training state, RunSpec entry points, and recent research artifacts.",
     "datasets": "Register local directories, inspect processing state, and maintain research data assets.",
-    "training": "Start demo runs, watch live curves, and track active experiments.",
+    "training": "Start training runs, watch live curves, and track active experiments.",
     "config": "Generate real training configs from forms so CLI and Web share the same semantics.",
     "models": "Inspect training artifacts, import real runs, and drill into result archives.",
     "system": "Observe CPU, memory, and GPU load to assess local workstation health."
@@ -95,7 +95,7 @@
     },
     "header": {
       "title": "Bring research entry points, execution state, and result assets into one desktop surface",
-      "description": "This shell is not a generic admin template. It acts more like a local research console: stable entry points, high information density, and still readable enough for demos."
+      "description": "This shell is not a generic admin template. It acts more like a local research console: stable entry points, high information density, and clear reproducible workflows."
     },
     "notes": {
       "viewCount": "{{count}} workspaces available",

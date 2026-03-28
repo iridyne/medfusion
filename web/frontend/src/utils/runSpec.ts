@@ -114,12 +114,12 @@ export const RUN_PRESET_OPTIONS: Array<{ id: RunPresetId; label: string; descrip
   },
   {
     id: "showcase",
-    label: "展示导向",
-    description: "更强调视觉效果和结果页素材，适合演示型 MVP。",
+    label: "结果增强",
+    description: "强化结果分析与可视化产物，适合做结果回归与审查。",
   },
   {
     id: "clinical",
-    label: "临床基线",
+    label: "稳健基线",
     description: "偏稳健训练配置，适合后续扩展成真实问题求解基线。",
   },
 ];
@@ -156,10 +156,10 @@ export const DEVICE_OPTIONS: DeviceType[] = ["auto", "cuda", "cpu", "mps"];
 export const AUGMENTATION_OPTIONS: AugmentationStrength[] = ["light", "medium", "heavy"];
 
 const PRESET_BASE: RunSpec = {
-  projectName: "medfusion-mvp",
+  projectName: "medfusion-oss",
   experimentName: "quickstart-run",
   description: "",
-  tags: ["mvp", "multimodal"],
+  tags: ["oss", "multimodal"],
   seed: 42,
   device: "auto",
   data: {
@@ -249,10 +249,10 @@ export function createRunSpecPreset(preset: RunPresetId): RunSpec {
   const base = cloneRunSpec(PRESET_BASE);
 
   if (preset === "showcase") {
-    base.projectName = "medfusion-showcase";
-    base.experimentName = "attention-demo";
-    base.description = "用于结果展示和内容传播的演示型多模态实验。";
-    base.tags = ["showcase", "attention", "result-page"];
+    base.projectName = "medfusion-results";
+    base.experimentName = "attention-audit";
+    base.description = "用于结果审查和可视化产物补齐的多模态实验。";
+    base.tags = ["results", "attention", "audit"];
     base.model.vision.backbone = "resnet50";
     base.model.vision.featureDim = 256;
     base.model.fusion.fusionType = "attention";
