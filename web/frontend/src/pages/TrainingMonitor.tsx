@@ -349,11 +349,6 @@ export default function TrainingMonitor() {
         message.success("训练任务已停止");
       }
 
-      wsClient.current?.send({
-        type: "control",
-        job_id: jobId,
-        action,
-      });
       void loadJobs();
     } catch (error) {
       console.error("Failed to control job:", error);

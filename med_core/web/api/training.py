@@ -122,7 +122,8 @@ def _extract_job_metadata(job: TrainingJob) -> dict[str, Any]:
     training_model_config = config.get("training_model_config", {})
     dataset_config = config.get("dataset_config", {})
     return {
-        "experiment_name": config.get("experiment_name") or f"training-{job.job_id[:8]}",
+        "experiment_name": config.get("experiment_name")
+        or f"training-{job.job_id[:8]}",
         "dataset_name": dataset_config.get("dataset")
         or dataset_config.get("dataset_name")
         or dataset_config.get("name"),
@@ -225,14 +226,20 @@ def _infer_csv_path(dataset_path: Path | None, explicit_csv_path: str | None) ->
         resolved = _resolve_path(explicit_csv_path)
         if resolved is not None and resolved.exists():
             return resolved
-        raise HTTPException(status_code=400, detail=f"CSV 文件不存在: {explicit_csv_path}")
+        raise HTTPException(
+            status_code=400, detail=f"CSV 文件不存在: {explicit_csv_path}"
+        )
 
     if dataset_path is None:
-        raise HTTPException(status_code=400, detail="缺少 data_path 或 csv_path，无法生成真实训练配置")
+        raise HTTPException(
+            status_code=400, detail="缺少 data_path 或 csv_path，无法生成真实训练配置"
+        )
 
     if dataset_path.is_file():
         if dataset_path.suffix.lower() != ".csv":
-            raise HTTPException(status_code=400, detail=f"不支持的数据描述文件: {dataset_path}")
+            raise HTTPException(
+                status_code=400, detail=f"不支持的数据描述文件: {dataset_path}"
+            )
         return dataset_path
 
     candidates = [
@@ -285,7 +292,9 @@ def _infer_feature_columns(
         if all(_is_numeric_value(value) for value in values):
             unique_values = {float(value) for value in values}
             all_integer_like = all(float(value).is_integer() for value in values)
-            if all_integer_like and len(unique_values) <= min(10, max(2, len(values) // 2)):
+            if all_integer_like and len(unique_values) <= min(
+                10, max(2, len(values) // 2)
+            ):
                 categorical_features.append(column)
             else:
                 numerical_features.append(column)
@@ -340,7 +349,9 @@ def _infer_image_dir(
         candidate_paths.extend(
             [
                 dataset_path if dataset_path.is_dir() else dataset_path.parent,
-                (dataset_path / "images") if dataset_path.is_dir() else dataset_path.parent / "images",
+                (dataset_path / "images")
+                if dataset_path.is_dir()
+                else dataset_path.parent / "images",
             ]
         )
     candidate_paths.extend([csv_path.parent, csv_path.parent / "images"])
@@ -368,9 +379,7 @@ def _resolve_dataset_spec(
     if dataset_id is not None:
         try:
             dataset_record = (
-                db.query(DatasetInfo)
-                .filter(DatasetInfo.id == int(dataset_id))
-                .first()
+                db.query(DatasetInfo).filter(DatasetInfo.id == int(dataset_id)).first()
             )
         except (TypeError, ValueError):
             dataset_record = None
@@ -445,7 +454,9 @@ def _resolve_dataset_spec(
         "numerical_features": numerical_features,
         "categorical_features": categorical_features,
         "num_classes": num_classes,
-        "data_path": str(dataset_path.resolve()) if dataset_path is not None else str(csv_path.parent.resolve()),
+        "data_path": str(dataset_path.resolve())
+        if dataset_path is not None
+        else str(csv_path.parent.resolve()),
     }
 
 
@@ -462,13 +473,17 @@ def _build_training_config_artifact(
     training_config = payload.training_config or {}
     dataset_spec = _resolve_dataset_spec(db, dataset_config)
 
-    experiment_name = payload.experiment_name.strip() or f"training-{uuid.uuid4().hex[:8]}"
+    experiment_name = (
+        payload.experiment_name.strip() or f"training-{uuid.uuid4().hex[:8]}"
+    )
     backbone = _normalize_backbone_name(
         training_model_config.get("backbone") or config.model.vision.backbone
     )
     if backbone:
         config.model.vision.backbone = backbone
-    config.model.vision.pretrained = bool(training_model_config.get("pretrained", False))
+    config.model.vision.pretrained = bool(
+        training_model_config.get("pretrained", False)
+    )
     config.model.vision.freeze_backbone = bool(
         training_model_config.get("freeze_backbone", False)
     )
@@ -493,9 +508,7 @@ def _build_training_config_artifact(
         or config.data.batch_size
     )
     config.data.num_workers = int(
-        training_config.get("num_workers")
-        or training_config.get("numWorkers")
-        or 0
+        training_config.get("num_workers") or training_config.get("numWorkers") or 0
     )
     config.data.pin_memory = bool(training_config.get("pin_memory", False))
     if training_config.get("image_size") is not None:
@@ -517,15 +530,16 @@ def _build_training_config_artifact(
     config.training.use_progressive_training = bool(
         training_config.get("use_progressive_training", False)
     )
-    config.training.mixed_precision = bool(training_config.get("mixed_precision", False))
+    config.training.mixed_precision = bool(
+        training_config.get("mixed_precision", False)
+    )
     config.training.monitor = str(training_config.get("monitor") or "accuracy")
     config.training.mode = str(
         training_config.get("mode")
         or ("min" if config.training.monitor == "loss" else "max")
     )
     config.training.optimizer.optimizer = str(
-        training_config.get("optimizer")
-        or config.training.optimizer.optimizer
+        training_config.get("optimizer") or config.training.optimizer.optimizer
     )
     config.training.optimizer.learning_rate = float(
         training_config.get("learning_rate")
@@ -546,7 +560,9 @@ def _build_training_config_artifact(
     if training_model_config.get("feature_dim") is not None:
         config.model.vision.feature_dim = int(training_model_config["feature_dim"])
     if training_model_config.get("tabular_output_dim") is not None:
-        config.model.tabular.output_dim = int(training_model_config["tabular_output_dim"])
+        config.model.tabular.output_dim = int(
+            training_model_config["tabular_output_dim"]
+        )
     if config.model.fusion.fusion_type == "concatenate":
         config.model.fusion.hidden_dim = (
             config.model.vision.feature_dim + config.model.tabular.output_dim
@@ -562,6 +578,8 @@ def _build_training_config_artifact(
         "num_classes": resolved_num_classes,
         "total_epochs": config.training.num_epochs,
     }
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -610,6 +628,36 @@ def _signal_process(job_id: str, process_signal: signal.Signals) -> bool:
         return False
 
     return True
+
+
+def _dispatch_ws_control_signal(
+    *,
+    route_job_id: str,
+    action: str | None,
+    payload_job_id: str | None,
+) -> bool:
+    """Apply websocket control messages safely for the bound job only."""
+    if action not in {"pause", "resume", "stop"}:
+        return False
+
+    if payload_job_id and payload_job_id != route_job_id:
+        logger.warning(
+            "Ignoring websocket control action for mismatched job: route=%s payload=%s action=%s",
+            route_job_id,
+            payload_job_id,
+            action,
+        )
+        return False
+
+    if action == "pause":
+        return _signal_process(route_job_id, signal.SIGSTOP)
+
+    if action == "resume":
+        return _signal_process(route_job_id, signal.SIGCONT)
+
+    continued = _signal_process(route_job_id, signal.SIGCONT)
+    terminated = _signal_process(route_job_id, signal.SIGTERM)
+    return continued or terminated
 
 
 def _resolve_checkpoint_path(output_dir: Path) -> Path | None:
@@ -669,7 +717,9 @@ def _sync_job_from_history(job: TrainingJob) -> dict[str, Any] | None:
         if entry.get("val_accuracy") is not None
     ]
     if val_accuracies:
-        best_accuracy_epoch, best_accuracy = max(val_accuracies, key=lambda item: item[1])
+        best_accuracy_epoch, best_accuracy = max(
+            val_accuracies, key=lambda item: item[1]
+        )
         job.best_accuracy = best_accuracy
         job.best_epoch = best_accuracy_epoch
 
@@ -688,6 +738,7 @@ def _tail_log(log_path: Path | None, max_lines: int = 40) -> str | None:
 def _history_path_for_job(job: TrainingJob) -> Path:
     output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
     return RunOutputLayout(output_dir).history_path
+
 
 def _round_metric(value: float | None, digits: int = 4) -> float | None:
     if value is None:
@@ -712,7 +763,9 @@ async def _run_real_training_job(job_id: str) -> None:
         job = _get_job_or_404(db, job_id)
         resolved_run = (job.config or {}).get("resolved_run", {})
         config_path = Path(resolved_run["config_path"])
-        output_dir = Path(job.output_dir or settings.data_dir / "experiments" / job.job_id)
+        output_dir = Path(
+            job.output_dir or settings.data_dir / "experiments" / job.job_id
+        )
         layout = RunOutputLayout(output_dir).ensure_exists()
         log_path = Path(job.log_file) if job.log_file else layout.training_log_path
         command = _build_train_command(config_path, output_dir)
@@ -723,7 +776,9 @@ async def _run_real_training_job(job_id: str) -> None:
         db.commit()
 
         log_handle = log_path.open("a", encoding="utf-8", buffering=1)
-        log_handle.write(f"command: {' '.join(shlex.quote(part) for part in command)}\n")
+        log_handle.write(
+            f"command: {' '.join(shlex.quote(part) for part in command)}\n"
+        )
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
         env.setdefault("UV_CACHE_DIR", str(settings.data_dir / "uv-cache"))
@@ -760,13 +815,17 @@ async def _run_real_training_job(job_id: str) -> None:
             if return_code != 0:
                 job.status = "failed"
                 job.completed_at = utcnow()
-                job.error_message = _tail_log(log_path) or f"训练进程退出码: {return_code}"
+                job.error_message = (
+                    _tail_log(log_path) or f"训练进程退出码: {return_code}"
+                )
                 db.commit()
                 return
 
             checkpoint_path = _resolve_checkpoint_path(output_dir)
             if checkpoint_path is None:
-                raise FileNotFoundError(f"训练完成但未找到 checkpoint: {output_dir / 'checkpoints'}")
+                raise FileNotFoundError(
+                    f"训练完成但未找到 checkpoint: {output_dir / 'checkpoints'}"
+                )
 
             metadata = _extract_job_metadata(job)
             import_model_run(
@@ -830,7 +889,9 @@ async def start_training(
         job_payload.setdefault("training_model_config", {})
         job_payload.setdefault("dataset_config", {})
         job_payload["training_model_config"]["backbone"] = resolved_run["backbone"]
-        job_payload["training_model_config"]["num_classes"] = resolved_run["num_classes"]
+        job_payload["training_model_config"]["num_classes"] = resolved_run[
+            "num_classes"
+        ]
         job_payload["dataset_config"].update(
             {
                 "dataset": resolved_run["dataset_spec"]["dataset_name"],
@@ -840,8 +901,12 @@ async def start_training(
                 "image_path_column": resolved_run["dataset_spec"]["image_path_column"],
                 "target_column": resolved_run["dataset_spec"]["target_column"],
                 "patient_id_column": resolved_run["dataset_spec"]["patient_id_column"],
-                "numerical_features": resolved_run["dataset_spec"]["numerical_features"],
-                "categorical_features": resolved_run["dataset_spec"]["categorical_features"],
+                "numerical_features": resolved_run["dataset_spec"][
+                    "numerical_features"
+                ],
+                "categorical_features": resolved_run["dataset_spec"][
+                    "categorical_features"
+                ],
                 "num_classes": resolved_run["dataset_spec"]["num_classes"],
             }
         )
@@ -1023,13 +1088,11 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                 text = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
                 payload = json.loads(text)
                 action = payload.get("action")
-                if action == "pause":
-                    _signal_process(job_id, signal.SIGSTOP)
-                elif action == "resume":
-                    _signal_process(job_id, signal.SIGCONT)
-                elif action == "stop":
-                    _signal_process(job_id, signal.SIGCONT)
-                    _signal_process(job_id, signal.SIGTERM)
+                _dispatch_ws_control_signal(
+                    route_job_id=job_id,
+                    action=action,
+                    payload_job_id=payload.get("job_id"),
+                )
             except TimeoutError:
                 pass
             except json.JSONDecodeError:
@@ -1065,11 +1128,19 @@ async def training_websocket(websocket: WebSocket, job_id: str) -> None:
                     "total_epochs": job.total_epochs,
                     "loss": job.current_loss,
                     "accuracy": job.current_accuracy,
-                    "train_loss": latest_entry.get("train_loss") if latest_entry else None,
+                    "train_loss": latest_entry.get("train_loss")
+                    if latest_entry
+                    else None,
                     "val_loss": latest_entry.get("val_loss") if latest_entry else None,
-                    "train_accuracy": latest_entry.get("train_accuracy") if latest_entry else None,
-                    "val_accuracy": latest_entry.get("val_accuracy") if latest_entry else None,
-                    "learning_rate": latest_entry.get("learning_rate") if latest_entry else None,
+                    "train_accuracy": latest_entry.get("train_accuracy")
+                    if latest_entry
+                    else None,
+                    "val_accuracy": latest_entry.get("val_accuracy")
+                    if latest_entry
+                    else None,
+                    "learning_rate": latest_entry.get("learning_rate")
+                    if latest_entry
+                    else None,
                 },
             )
 
