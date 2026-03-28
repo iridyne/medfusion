@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, Card, Progress, Tag } from "antd";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Alert, Button, Card, Progress, Tag } from "antd";
 import {
   ArrowRightOutlined,
   ControlOutlined,
@@ -36,9 +36,11 @@ const EMPTY_STATS: WorkbenchStats = {
 
 export default function Workbench() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<WorkbenchStats>(EMPTY_STATS);
   const [latestModelName, setLatestModelName] = useState<string>("-");
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -69,6 +71,18 @@ export default function Workbench() {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    const from = searchParams.get("from");
+    if (!from) {
+      return;
+    }
+
+    setRedirectNotice(from);
+    const next = new URLSearchParams(searchParams);
+    next.delete("from");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const runningRatio = useMemo(() => {
     if (stats.totalJobs <= 0) {
@@ -197,6 +211,18 @@ export default function Workbench() {
         },
       ]}
     >
+      {redirectNotice ? (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={`已回到工作台：${redirectNotice} 当前不作为 OSS 默认主链入口`}
+          description="当前默认入口固定为 workbench / datasets / config / training / models / system。workflow 相关能力保留为实验态。"
+          closable
+          onClose={() => setRedirectNotice(null)}
+        />
+      ) : null}
+
       <Card className="surface-card surface-card--accent">
         <div className="section-heading">
           <div>

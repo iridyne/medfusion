@@ -103,10 +103,22 @@ function App() {
             <Route path="/config" element={<RunWizard />} />
             <Route path="/models" element={<ModelLibrary />} />
             <Route path="/system" element={<SystemMonitor />} />
-            <Route path="/workflow" element={<Navigate to="/workbench" replace />} />
-            <Route path="/experiments" element={<Navigate to="/workbench" replace />} />
-            <Route path="/preprocessing" element={<Navigate to="/workbench" replace />} />
-            <Route path="/settings" element={<Navigate to="/workbench" replace />} />
+            <Route
+              path="/workflow"
+              element={<Navigate to="/workbench?from=workflow" replace />}
+            />
+            <Route
+              path="/experiments"
+              element={<Navigate to="/workbench?from=experiments" replace />}
+            />
+            <Route
+              path="/preprocessing"
+              element={<Navigate to="/workbench?from=preprocessing" replace />}
+            />
+            <Route
+              path="/settings"
+              element={<Navigate to="/workbench?from=settings" replace />}
+            />
             <Route path="*" element={<Navigate to="/workbench" replace />} />
           </Routes>
         </Suspense>
