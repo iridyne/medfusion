@@ -209,6 +209,21 @@ async def test_web_can_import_real_cli_run(api_client, tmp_path) -> None:
     )
     assert any(artifact["key"] == "report" for artifact in payload["result_files"])
 
+    imported_detail = await api_client.get(f"/api/models/{payload['id']}")
+    assert imported_detail.status_code == 200
+    detail_payload = imported_detail.json()
+    assert detail_payload["validation"]["overview"]["split"] == "train"
+    assert any(artifact["key"] == "summary" for artifact in detail_payload["result_files"])
+    assert any(artifact["key"] == "validation" for artifact in detail_payload["result_files"])
+    assert any(artifact["key"] == "report" for artifact in detail_payload["result_files"])
+
+    for artifact_key in ("summary", "validation", "report", "feature_importance"):
+        artifact_response = await api_client.get(
+            f"/api/models/{payload['id']}/artifacts/{artifact_key}"
+        )
+        assert artifact_response.status_code == 200
+        assert artifact_response.content
+
     listed = await api_client.get("/api/models/")
     assert listed.status_code == 200
     assert any(item["id"] == payload["id"] for item in listed.json())
