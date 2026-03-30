@@ -1,11 +1,11 @@
 project_name: "smurf-mainline"
-experiment_name: "smurf_lite_mvi"
+experiment_name: "three_phase_ct_mvi_dr_z"
 seed: 42
 device: "auto"
 
 data:
   dataset_type: "three_phase_ct_tabular"
-  csv_path: "demo/dr_z_mvi_cases.csv"
+  csv_path: ".private/demo/dr_z_mvi_cases.csv"
   target_column: "mvi_binary"
   patient_id_column: "case_id"
   phase_dir_columns:
@@ -16,29 +16,43 @@ data:
     - age
     - sex
     - bmi
+    - tumor_count
+    - max_tumor_diameter
+    - capsule_status
+    - cirrhosis_flag
+    - child_stage
+    - afp
+    - albumin
+    - total_bilirubin
+    - alt
+    - ast
+    - ggt
+    - plt
+    - inr
+    - glucose
   target_shape: [16, 64, 64]
   window_preset: "liver"
   batch_size: 1
   num_workers: 0
   pin_memory: false
-  train_ratio: 0.7
-  val_ratio: 0.15
-  test_ratio: 0.15
+  train_ratio: 0.5
+  val_ratio: 0.25
+  test_ratio: 0.25
 
 model:
   model_type: "three_phase_ct_fusion"
   num_classes: 2
-  phase_feature_dim: 64
+  phase_feature_dim: 32
   share_phase_encoder: false
   phase_fusion_type: "concatenate"
   use_risk_head: true
   tabular:
-    hidden_dims: [32]
-    output_dim: 32
+    hidden_dims: [16]
+    output_dim: 16
     dropout: 0.1
   fusion:
     fusion_type: "gated"
-    hidden_dim: 48
+    hidden_dim: 24
     dropout: 0.1
 
 training:
@@ -53,4 +67,4 @@ training:
     scheduler: "none"
 
 logging:
-  output_dir: "outputs/smurf_lite_mvi"
+  output_dir: "outputs/three_phase_ct_mvi_dr_z"

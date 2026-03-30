@@ -99,14 +99,14 @@ def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
 
 
 def test_demo_smurf_config_uses_mainline_schema() -> None:
-    config = load_config("configs/demo/smurf_lite_mvi.yaml")
+    config = load_config("configs/demo/three_phase_ct_mvi_demo.yaml")
 
     assert config.data.dataset_type == "three_phase_ct_tabular"
     assert config.model.model_type == "three_phase_ct_fusion"
 
 
 def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
-    config = load_config("configs/demo/smurf_lite_mvi_dr_z.yaml")
+    config = load_config("configs/demo/three_phase_ct_mvi_dr_z.yaml")
 
     assert config.data.dataset_type == "three_phase_ct_tabular"
     assert config.model.model_type == "three_phase_ct_fusion"

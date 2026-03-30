@@ -61,6 +61,32 @@ uv run medfusion build-results \
   --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
 ```
 
+### 3) 三相 CT + 临床小样本 demo
+
+`v1` demo 适用于小样本可行性验证，不用于宣称泛化性能。
+
+输入要求：
+
+- `manifest CSV`：每行一个病例，至少包含 `case_id`、三相 DICOM 目录、`mvi_binary`
+- 三相目录：`arterial_series_dir`、`portal_series_dir`、`noncontrast_series_dir`
+- 临床字段：由 demo config 中 `data.clinical_feature_columns` 指定
+
+运行方式：
+
+```bash
+uv run medfusion validate-config --config configs/demo/three_phase_ct_mvi_demo.yaml
+uv run medfusion train --config configs/demo/three_phase_ct_mvi_demo.yaml
+uv run medfusion build-results \
+  --config configs/demo/three_phase_ct_mvi_demo.yaml \
+  --checkpoint outputs/three_phase_ct_mvi_demo/checkpoints/best.pth
+```
+
+说明：
+
+- 主线输出会生成 `metrics.json`、`validation.json`、`summary.json`、`report.md`
+- `risk score` 当前表示 `MVI-related risk score`
+- 它不是生存风险，也不是临床可直接使用的评分
+
 ---
 
 ## 预期输出（3 分钟自检）

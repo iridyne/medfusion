@@ -100,3 +100,5 @@ Cargo.lock
 data/
 .omc/
 .alma-snapshots
+
+.private/
