@@ -1,0 +1,107 @@
+# Docker ignore file for MedFusion
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Data and outputs (mount these as volumes instead)
+data/
+outputs/
+logs/
+evaluation_results/
+notebooks/
+checkpoints/
+backups/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# 前端开发文件（源码保留在 web/frontend/，构建产物在 med_core/web/static/）
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/.vite/
+web/frontend/package-lock.json
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# 环境变量文件（可能包含敏感信息）
+.env
+.env.local
+.env.*.local
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# 临时和备份文件
+continue.md
+*.tar.gz
+*.zip
+
+# Temporary files
+*.log
+*.tmp
+tmp/
+temp/
+*.swp
+*.swo
+*~
+
+# Model checkpoints (too large)
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Docker local overrides
+docker-compose.override.yml

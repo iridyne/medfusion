@@ -33,9 +33,11 @@ RUN uv pip install -e ".[web]"
 # ============================================================================
 FROM python:3.11-slim
 
+ARG MEDFUSION_VERSION=0.2.0
+
 LABEL maintainer="Medical AI Research Team"
 LABEL description="MedFusion - Medical Multimodal Fusion Framework with Web UI"
-LABEL version="0.3.0"
+LABEL version="${MEDFUSION_VERSION}"
 
 WORKDIR /app
 
