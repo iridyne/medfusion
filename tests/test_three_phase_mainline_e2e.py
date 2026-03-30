@@ -67,7 +67,7 @@ def test_three_phase_mainline_e2e(tmp_path: Path) -> None:
     config_path.write_text(
         yaml.safe_dump(
             {
-                "experiment_name": "smurf_e2e_smoke",
+                "experiment_name": "three_phase_mainline_smoke",
                 "device": "cpu",
                 "data": {
                     "dataset_type": "three_phase_ct_tabular",

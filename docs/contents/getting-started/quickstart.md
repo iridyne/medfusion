@@ -77,23 +77,20 @@ flowchart TB
 
 ## 多 seed 稳定性（进阶）
 
-如果单次训练已经稳定，可做多 seed 聚合：
+如果单次训练已经稳定，可进一步做多 seed 聚合。
 
-```bash
-# 读取 config 中的 stability.seeds
-bash demo/smurf_e2e/run_single_ct.sh stable stability
+当前主线 CLI 没有单独的 `stability` 子命令，建议使用共享的
+`med_core.stability.run_stability_study` 来批量调用
+`medfusion train` 和 `medfusion build-results`。
 
-# 临时覆盖 seed 列表
-SEEDS=13,21,34 bash demo/smurf_e2e/run_single_ct.sh stable stability
-```
+完整示例见：
+- `docs/contents/playbooks/multi-seed-stability-report.md`
 
 产物：
 - `seeds/seed-XXXX/`（每个 seed 独立结果）
 - `stability/summary.json`
 - `stability/summary.csv`
 - `stability/summary.md`
-
----
 
 ## 高频问题（先看这 6 条）
 
