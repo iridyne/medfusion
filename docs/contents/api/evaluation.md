@@ -419,7 +419,7 @@ print(f"F1: {report['f1']:.3f}")
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/evaluation/metrics.py` - 指标计算
-- `/home/yixian/Projects/med-ml/medfusion/med_core/evaluation/visualization.py` - 可视化
-- `/home/yixian/Projects/med-ml/medfusion/med_core/evaluation/interpretability.py` - 可解释性
-- `/home/yixian/Projects/med-ml/medfusion/med_core/evaluation/report_generator.py` - 报告生成
+- `med_core/evaluation/metrics.py` - 指标计算
+- `med_core/evaluation/visualization.py` - 可视化
+- `med_core/evaluation/interpretability.py` - 可解释性
+- `med_core/evaluation/report_generator.py` - 报告生成

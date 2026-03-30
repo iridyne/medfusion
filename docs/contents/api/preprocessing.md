@@ -410,5 +410,5 @@ processed = preprocess_xray(xray_image)
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/preprocessing/image.py` - 图像预处理
-- `/home/yixian/Projects/med-ml/medfusion/med_core/preprocessing/quality.py` - 质量评估
+- `med_core/preprocessing/image.py` - 图像预处理
+- `med_core/preprocessing/quality.py` - 质量评估

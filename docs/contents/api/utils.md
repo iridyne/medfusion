@@ -467,8 +467,8 @@ if savings['savings_percent'] > 30:
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/utils/seed.py` - 随机种子
-- `/home/yixian/Projects/med-ml/medfusion/med_core/utils/device.py` - 设备管理
-- `/home/yixian/Projects/med-ml/medfusion/med_core/utils/checkpoint.py` - 检查点管理
-- `/home/yixian/Projects/med-ml/medfusion/med_core/utils/logging.py` - 日志系统
-- `/home/yixian/Projects/med-ml/medfusion/med_core/utils/gradient_checkpointing.py` - 梯度检查点
+- `med_core/utils/seed.py` - 随机种子
+- `med_core/utils/device.py` - 设备管理
+- `med_core/utils/checkpoint.py` - 检查点管理
+- `med_core/utils/logging.py` - 日志系统
+- `med_core/utils/gradient_checkpointing.py` - 梯度检查点

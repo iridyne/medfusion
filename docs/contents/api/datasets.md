@@ -378,8 +378,8 @@ data:
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/datasets/base.py` - 基础数据集类
-- `/home/yixian/Projects/med-ml/medfusion/med_core/datasets/medical.py` - 医学数据集实现
-- `/home/yixian/Projects/med-ml/medfusion/med_core/datasets/medical_multiview.py` - 多视图数据集
-- `/home/yixian/Projects/med-ml/medfusion/med_core/datasets/transforms.py` - 数据变换
-- `/home/yixian/Projects/med-ml/medfusion/med_core/datasets/data_cleaner.py` - 数据清洗
+- `med_core/datasets/base.py` - 基础数据集类
+- `med_core/datasets/medical.py` - 医学数据集实现
+- `med_core/datasets/medical_multiview.py` - 多视图数据集
+- `med_core/datasets/transforms.py` - 数据变换
+- `med_core/datasets/data_cleaner.py` - 数据清洗

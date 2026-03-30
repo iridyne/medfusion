@@ -429,6 +429,6 @@ trainer.train()
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/trainers/base.py` - 基础训练器
-- `/home/yixian/Projects/med-ml/medfusion/med_core/trainers/multimodal.py` - 多模态训练器
-- `/home/yixian/Projects/med-ml/medfusion/med_core/trainers/multiview_trainer.py` - 多视图训练器
+- `med_core/trainers/base.py` - 基础训练器
+- `med_core/trainers/multimodal.py` - 多模态训练器
+- `med_core/trainers/multiview_trainer.py` - 多视图训练器

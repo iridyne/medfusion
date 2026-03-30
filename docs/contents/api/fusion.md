@@ -323,7 +323,7 @@ model:
 ## 参考
 
 完整实现请参考：
-- `/home/yixian/Projects/med-ml/medfusion/med_core/fusion/strategies.py` - 基础融合策略
-- `/home/yixian/Projects/med-ml/medfusion/med_core/fusion/kronecker.py` - Kronecker 融合
-- `/home/yixian/Projects/med-ml/medfusion/med_core/fusion/fused_attention.py` - 融合注意力
-- `/home/yixian/Projects/med-ml/medfusion/med_core/fusion/self_attention.py` - 自注意力变体
+- `med_core/fusion/strategies.py` - 基础融合策略
+- `med_core/fusion/kronecker.py` - Kronecker 融合
+- `med_core/fusion/fused_attention.py` - 融合注意力
+- `med_core/fusion/self_attention.py` - 自注意力变体
