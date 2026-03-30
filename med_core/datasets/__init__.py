@@ -24,6 +24,10 @@ from med_core.datasets.multiview_types import (
     convert_to_multiview_paths,
     create_single_view_dict,
 )
+from med_core.datasets.three_phase_ct import (
+    ThreePhaseCTCaseDataset,
+    ThreePhaseCTCaseRecord,
+)
 from med_core.datasets.transforms import (
     get_medical_augmentation,
     get_train_transforms,
@@ -34,6 +38,8 @@ __all__ = [
     # Single-view (legacy)
     "BaseMultimodalDataset",
     "MedicalMultimodalDataset",
+    "ThreePhaseCTCaseDataset",
+    "ThreePhaseCTCaseRecord",
     # Multi-view
     "BaseMultiViewDataset",
     "MedicalMultiViewDataset",

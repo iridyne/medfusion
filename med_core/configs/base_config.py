@@ -39,6 +39,8 @@ class BaseConfig:
 class DataConfig(BaseConfig):
     """Data-related configuration."""
 
+    dataset_type: Literal["image_tabular", "three_phase_ct_tabular"] = "image_tabular"
+
     # Paths
     data_root: str = "data"
     csv_path: str = "data/dataset.csv"
@@ -63,6 +65,10 @@ class DataConfig(BaseConfig):
     survival_event_column: str | None = None
     patient_id_column: str | None = None
     image_path_column: str = "image_path"
+    clinical_feature_columns: list[str] = field(default_factory=list)
+    phase_dir_columns: dict[str, str] = field(default_factory=dict)
+    target_shape: list[int] | None = None
+    window_preset: str = "soft_tissue"
 
     # Optional offline pathology embeddings (e.g., HIPT exports)
     hipt_embeddings_dir: str | None = None
@@ -161,12 +167,21 @@ class FusionConfig(BaseConfig):
 class ModelConfig(BaseConfig):
     """Complete model configuration."""
 
+    model_type: Literal["multimodal_fusion", "three_phase_ct_fusion"] = (
+        "multimodal_fusion"
+    )
     num_classes: int = 2
 
     # Sub-configs
     vision: VisionConfig = field(default_factory=VisionConfig)
     tabular: TabularConfig = field(default_factory=TabularConfig)
     fusion: FusionConfig = field(default_factory=FusionConfig)
+
+    # Three-phase CT fusion settings
+    phase_feature_dim: int = 64
+    share_phase_encoder: bool = False
+    phase_fusion_type: Literal["concatenate", "mean"] = "concatenate"
+    use_risk_head: bool = False
 
     # Pathology encoder selection
     pathology_encoder: Literal["patch_mil", "hipt"] = "patch_mil"

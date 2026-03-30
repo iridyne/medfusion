@@ -19,6 +19,7 @@ from .smurf import (
     smurf_small,
     smurf_with_mil_small,
 )
+from .three_phase_ct_fusion import ThreePhaseCTFusionModel
 
 __all__ = [
     # Generic model builder
@@ -28,6 +29,7 @@ __all__ = [
     # SMuRF models
     "SMuRFModel",
     "SMuRFWithMIL",
+    "ThreePhaseCTFusionModel",
     "smurf_small",
     "smurf_base",
     "smurf_with_mil_small",

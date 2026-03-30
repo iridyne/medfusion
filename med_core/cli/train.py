@@ -1,11 +1,17 @@
 """Training command implementation."""
 
 import argparse
+import json
 import logging
+import shutil
 import sys
 from collections.abc import Sequence
 
+import pandas as pd
+import torch
+from torch import nn
 from torch import optim
+from torch.utils.data import DataLoader, Subset
 
 from med_core.backbones import (
     create_tabular_backbone,
@@ -14,6 +20,7 @@ from med_core.backbones import (
 from med_core.configs import load_config
 from med_core.datasets import (
     MedicalMultimodalDataset,
+    ThreePhaseCTCaseDataset,
     create_dataloaders,
     get_train_transforms,
     get_val_transforms,
@@ -23,16 +30,35 @@ from med_core.fusion import (
     MultiModalFusionModel,
     create_fusion_module,
 )
+from med_core.models import ThreePhaseCTFusionModel
 from med_core.output_layout import RunOutputLayout
+from med_core.shared.model_utils import ModelCheckpoint
 from med_core.trainers import MultimodalTrainer
+from med_core.utils.seed import set_seed
 
-# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+
+def _read_manifest_dataframe(csv_path: str, patient_id_column: str | None) -> pd.DataFrame:
+    read_csv_kwargs = {}
+    if patient_id_column:
+        read_csv_kwargs["dtype"] = {patient_id_column: "string"}
+    return pd.read_csv(csv_path, **read_csv_kwargs)
+
+
+def _resolve_device(device_name: str) -> torch.device:
+    if device_name == "auto":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return torch.device("mps")
+        return torch.device("cpu")
+    return torch.device(device_name)
 
 
 def _build_optimizer(
@@ -100,6 +126,163 @@ def _build_scheduler(
     )
 
 
+def _split_indices(
+    dataset_size: int,
+    train_ratio: float,
+    val_ratio: float,
+    seed: int,
+) -> tuple[list[int], list[int], list[int]]:
+    generator = torch.Generator().manual_seed(seed)
+    permutation = torch.randperm(dataset_size, generator=generator).tolist()
+
+    train_count = int(round(dataset_size * train_ratio))
+    val_count = int(round(dataset_size * val_ratio))
+    if train_count <= 0 and dataset_size > 0:
+        train_count = 1
+    if train_count + val_count > dataset_size:
+        val_count = max(dataset_size - train_count, 0)
+    test_count = max(dataset_size - train_count - val_count, 0)
+
+    train_indices = permutation[:train_count]
+    val_indices = permutation[train_count : train_count + val_count]
+    test_indices = permutation[
+        train_count + val_count : train_count + val_count + test_count
+    ]
+    return train_indices, val_indices, test_indices
+
+
+def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
+    set_seed(int(config.seed), deterministic=bool(config.deterministic))
+    device = _resolve_device(config.device)
+
+    dataframe = _read_manifest_dataframe(
+        config.data.csv_path,
+        config.data.patient_id_column,
+    )
+    dataset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
+        dataframe,
+        phase_dir_columns=config.data.phase_dir_columns,
+        clinical_feature_columns=config.data.clinical_feature_columns,
+        target_column=config.data.target_column,
+        patient_id_column=config.data.patient_id_column or "case_id",
+        target_shape=tuple(config.data.target_shape or [16, 64, 64]),
+        window_preset=config.data.window_preset,
+    )
+
+    train_indices, val_indices, _ = _split_indices(
+        dataset_size=len(dataset),
+        train_ratio=config.data.train_ratio,
+        val_ratio=config.data.val_ratio,
+        seed=config.data.random_seed,
+    )
+    train_subset = Subset(dataset, train_indices)
+    val_subset = Subset(dataset, val_indices if val_indices else train_indices)
+
+    train_loader = DataLoader(
+        train_subset,
+        batch_size=config.data.batch_size,
+        shuffle=True,
+        num_workers=config.data.num_workers,
+        pin_memory=device.type == "cuda" and config.data.pin_memory,
+    )
+    val_loader = DataLoader(
+        val_subset,
+        batch_size=max(config.data.batch_size, 1),
+        shuffle=False,
+        num_workers=config.data.num_workers,
+        pin_memory=device.type == "cuda" and config.data.pin_memory,
+    )
+
+    model = ThreePhaseCTFusionModel(
+        phase_feature_dim=config.model.phase_feature_dim,
+        clinical_input_dim=len(config.data.clinical_feature_columns),
+        clinical_hidden_dim=config.model.tabular.output_dim,
+        fusion_hidden_dim=config.model.fusion.hidden_dim,
+        phase_fusion_type=config.model.phase_fusion_type,
+        share_phase_encoder=config.model.share_phase_encoder,
+        freeze_phase_encoder=config.model.vision.freeze_backbone,
+        use_risk_head=config.model.use_risk_head,
+    ).to(device)
+    optimizer = _build_optimizer(
+        model=model,
+        optimizer_name=config.training.optimizer.optimizer,
+        learning_rate=config.training.optimizer.learning_rate,
+        weight_decay=config.training.optimizer.weight_decay,
+        momentum=config.training.optimizer.momentum,
+    )
+    criterion = nn.CrossEntropyLoss()
+    checkpoint_manager = ModelCheckpoint(
+        save_dir=run_layout.checkpoints_dir,
+        monitor="val_loss",
+        mode="min",
+        save_top_k=1,
+        save_last=True,
+    )
+
+    history_entries: list[dict[str, float | int | bool]] = []
+    best_val_loss = float("inf")
+
+    for epoch in range(max(config.training.num_epochs, 1)):
+        model.train()
+        train_loss_sum = 0.0
+        for batch in train_loader:
+            optimizer.zero_grad()
+            outputs = model(
+                arterial=batch["arterial"].to(device),
+                portal=batch["portal"].to(device),
+                noncontrast=batch["noncontrast"].to(device),
+                clinical=batch["clinical"].to(device),
+            )
+            loss = criterion(outputs["logits"], batch["label"].to(device))
+            loss.backward()
+            optimizer.step()
+            train_loss_sum += float(loss.item())
+
+        model.eval()
+        val_loss_sum = 0.0
+        with torch.inference_mode():
+            for batch in val_loader:
+                outputs = model(
+                    arterial=batch["arterial"].to(device),
+                    portal=batch["portal"].to(device),
+                    noncontrast=batch["noncontrast"].to(device),
+                    clinical=batch["clinical"].to(device),
+                )
+                loss = criterion(outputs["logits"], batch["label"].to(device))
+                val_loss_sum += float(loss.item())
+
+        train_loss = train_loss_sum / max(len(train_loader), 1)
+        val_loss = val_loss_sum / max(len(val_loader), 1)
+        checkpoint_manager.save(
+            model=model,
+            epoch=epoch + 1,
+            metrics={"val_loss": val_loss},
+            optimizer=optimizer,
+        )
+
+        history_entry = {
+            "epoch": epoch,
+            "train_loss": train_loss,
+            "val_loss": val_loss,
+            "learning_rate": float(optimizer.param_groups[0]["lr"]),
+        }
+        if val_loss <= best_val_loss:
+            best_val_loss = val_loss
+            history_entry["best_so_far"] = True
+        history_entries.append(history_entry)
+
+    run_layout.history_path.write_text(
+        json.dumps({"entries": history_entries}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    best_checkpoint_path = run_layout.checkpoints_dir / "best.pth"
+    if checkpoint_manager.best_model_path is not None:
+        shutil.copy2(checkpoint_manager.best_model_path, best_checkpoint_path)
+    else:
+        shutil.copy2(run_layout.checkpoints_dir / "last.pth", best_checkpoint_path)
+
+
 def train(
     argv: Sequence[str] | None = None,
     prog: str = "med-train",
@@ -118,25 +301,30 @@ def train(
     parser.add_argument("--output-dir", type=str, help="Override output directory")
     args = parser.parse_args(argv)
 
-    # 1. Load Configuration
     config = load_config(args.config)
     if args.output_dir:
         config.logging.output_dir = args.output_dir
     run_layout = RunOutputLayout(config.logging.output_dir).ensure_exists()
 
-    logger.info(f"Starting experiment: {config.experiment_name}")
-    logger.info(f"Output directory: {run_layout.root_dir}")
+    logger.info("Starting experiment: %s", config.experiment_name)
+    logger.info("Output directory: %s", run_layout.root_dir)
 
-    # 2. Setup Data
+    if (
+        config.data.dataset_type == "three_phase_ct_tabular"
+        or config.model.model_type == "three_phase_ct_fusion"
+    ):
+        logger.info("Using native three-phase CT + tabular mainline training path")
+        _train_three_phase_ct(config, run_layout)
+        logger.info("Training completed successfully!")
+        return
+
     logger.info("Loading data...")
-    # Transformations
     train_transform = get_train_transforms(
         image_size=config.data.image_size,
         augmentation_strength=config.data.augmentation_strength,
     )
     val_transform = get_val_transforms(image_size=config.data.image_size)
 
-    # Load full dataset
     full_dataset, _ = MedicalMultimodalDataset.from_csv(
         csv_path=config.data.csv_path,
         image_dir=config.data.image_dir,
@@ -145,10 +333,9 @@ def train(
         numerical_features=config.data.numerical_features,
         categorical_features=config.data.categorical_features,
         patient_id_column=config.data.patient_id_column,
-        transform=None,  # Transforms applied later or handled in split
+        transform=None,
     )
 
-    # Split dataset
     train_ds, val_ds, test_ds = split_dataset(
         full_dataset,
         train_ratio=config.data.train_ratio,
@@ -157,12 +344,10 @@ def train(
         random_seed=config.data.random_seed,
     )
 
-    # Apply transforms to subsets
     train_ds.transform = train_transform
     val_ds.transform = val_transform
     test_ds.transform = val_transform
 
-    # Create dataloaders
     dataloaders = create_dataloaders(
         train_dataset=train_ds,
         val_dataset=val_ds,
@@ -172,9 +357,7 @@ def train(
         pin_memory=config.data.pin_memory,
     )
 
-    # 3. Setup Model
     logger.info("Building model...")
-    # Vision Backbone
     vision_backbone = create_vision_backbone(
         backbone_name=config.model.vision.backbone,
         pretrained=config.model.vision.pretrained,
@@ -185,7 +368,6 @@ def train(
         enable_attention_supervision=config.model.vision.enable_attention_supervision,
     )
 
-    # Tabular Backbone
     tabular_dim = train_ds.get_tabular_dim()
     tabular_backbone = create_tabular_backbone(
         input_dim=tabular_dim,
@@ -194,7 +376,6 @@ def train(
         dropout=config.model.tabular.dropout,
     )
 
-    # Fusion Module
     fusion_kwargs = {
         "dropout": config.model.fusion.dropout,
     }
@@ -209,7 +390,6 @@ def train(
         **fusion_kwargs,
     )
 
-    # Complete Model
     model = MultiModalFusionModel(
         vision_backbone=vision_backbone,
         tabular_backbone=tabular_backbone,
@@ -218,7 +398,6 @@ def train(
         use_auxiliary_heads=config.model.use_auxiliary_heads,
     )
 
-    # 4. Optimizer & Scheduler
     optimizer = _build_optimizer(
         model=model,
         optimizer_name=config.training.optimizer.optimizer,
@@ -244,7 +423,6 @@ def train(
         config.training.scheduler.scheduler,
     )
 
-    # 5. Trainer
     trainer = MultimodalTrainer(
         config=config,
         model=model,
@@ -254,7 +432,6 @@ def train(
         scheduler=scheduler,
     )
 
-    # 6. Train
     logger.info("Starting training loop...")
     trainer.train()
     logger.info("Training completed successfully!")

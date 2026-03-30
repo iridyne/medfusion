@@ -53,6 +53,16 @@ class ConfigDoctor:
     def __init__(self, image_sample_limit: int = 32):
         self.image_sample_limit = image_sample_limit
 
+    @staticmethod
+    def _read_manifest_dataframe(
+        csv_path: Path,
+        patient_id_column: str | None,
+    ) -> pd.DataFrame:
+        read_csv_kwargs = {}
+        if patient_id_column:
+            read_csv_kwargs["dtype"] = {patient_id_column: "string"}
+        return pd.read_csv(csv_path, **read_csv_kwargs)
+
     def analyze(self, config_path: str | Path) -> ConfigDoctorReport:
         config_path = Path(config_path)
         errors: list[DoctorIssue] = []
@@ -180,6 +190,16 @@ class ConfigDoctor:
         info: list[dict[str, Any]],
         summary: dict[str, Any],
     ) -> None:
+        if config.data.dataset_type == "three_phase_ct_tabular":
+            self._collect_three_phase_dataset_checks(
+                config=config,
+                errors=errors,
+                warnings=warnings,
+                info=info,
+                summary=summary,
+            )
+            return
+
         csv_path = Path(config.data.csv_path)
         image_dir = Path(config.data.image_dir)
 
@@ -208,7 +228,10 @@ class ConfigDoctor:
             return
 
         try:
-            dataframe = pd.read_csv(csv_path)
+            dataframe = self._read_manifest_dataframe(
+                csv_path,
+                config.data.patient_id_column,
+            )
         except Exception as exc:
             errors.append(
                 DoctorIssue(
@@ -359,6 +382,143 @@ class ConfigDoctor:
                     message=f"batch_size={config.data.batch_size} 已超过数据总量 {row_count}。",
                     suggestion="通常把 batch_size 调整到不超过训练集规模更合理",
                     code="W104",
+                )
+            )
+
+    def _collect_three_phase_dataset_checks(
+        self,
+        config: ExperimentConfig,
+        errors: list[DoctorIssue],
+        warnings: list[DoctorIssue],
+        info: list[dict[str, Any]],
+        summary: dict[str, Any],
+    ) -> None:
+        csv_path = Path(config.data.csv_path)
+        if not csv_path.exists():
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.csv_path",
+                    message=f"CSV 不存在: {csv_path}",
+                    suggestion="先准备三相 CT manifest CSV，或改成真实存在的路径",
+                    code="D201",
+                )
+            )
+            return
+
+        try:
+            dataframe = self._read_manifest_dataframe(
+                csv_path,
+                config.data.patient_id_column,
+            )
+        except Exception as exc:
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.csv_path",
+                    message=f"CSV 读取失败: {exc}",
+                    suggestion="检查编码、分隔符或文件内容是否损坏",
+                    code="D202",
+                )
+            )
+            return
+
+        row_count = int(len(dataframe))
+        summary["dataset_rows"] = row_count
+        info.append({"section": "dataset", "rows": row_count})
+
+        phase_columns = list(config.data.phase_dir_columns.values())
+        required_columns = (
+            [config.data.target_column]
+            + ([config.data.patient_id_column] if config.data.patient_id_column else [])
+            + phase_columns
+            + list(config.data.clinical_feature_columns)
+        )
+        missing_columns = [
+            column for column in required_columns if column and column not in dataframe.columns
+        ]
+        if missing_columns:
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.columns",
+                    message=f"CSV 缺少三相 CT 配置里引用的列: {', '.join(missing_columns)}",
+                    suggestion="同步修正 manifest 列名和 config 中的 phase/clinical/target 配置",
+                    code="D203",
+                )
+            )
+            return
+
+        if row_count == 0:
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.csv_path",
+                    message="CSV 没有任何样本行。",
+                    suggestion="至少准备两条带标签的病例再启动训练",
+                    code="D204",
+                )
+            )
+            return
+
+        unique_labels = int(dataframe[config.data.target_column].nunique(dropna=True))
+        if unique_labels < 2:
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.target_column",
+                    message=f"目标列只有 {unique_labels} 个有效类别，无法进行分类训练。",
+                    suggestion="确认 target 列中至少存在两个类别",
+                    code="D205",
+                )
+            )
+
+        checked_cases = 0
+        missing_phase_paths = 0
+        sample_rows = dataframe.head(self.image_sample_limit).to_dict(orient="records")
+        for row in sample_rows:
+            checked_cases += 1
+            for phase_name, column_name in config.data.phase_dir_columns.items():
+                phase_dir = Path(str(row[column_name]))
+                if not phase_dir.exists():
+                    missing_phase_paths += 1
+                    warnings.append(
+                        DoctorIssue(
+                            severity="warning",
+                            path=f"data.phase_dir_columns.{phase_name}",
+                            message=(
+                                f"病例 {row.get(config.data.patient_id_column or 'case_id', checked_cases)} "
+                                f"的 {phase_name} 目录缺失: {phase_dir}"
+                            ),
+                            suggestion="确认 manifest 中的三相目录路径是否正确",
+                            code="W201",
+                        )
+                    )
+
+        summary["valid_image_rows"] = max(
+            checked_cases - min(missing_phase_paths, checked_cases),
+            0,
+        )
+        summary["missing_image_rows"] = missing_phase_paths
+        info.append(
+            {
+                "section": "three_phase_probe",
+                "checked_cases": checked_cases,
+                "missing_phase_paths": missing_phase_paths,
+            }
+        )
+
+        if checked_cases > 0 and missing_phase_paths >= checked_cases * max(
+            len(config.data.phase_dir_columns),
+            1,
+        ):
+            errors.append(
+                DoctorIssue(
+                    severity="error",
+                    path="data.phase_dir_columns",
+                    message="抽样检查到的三相目录全部缺失。",
+                    suggestion="检查 manifest 中的三相目录列和真实 DICOM 路径是否一致",
+                    code="D206",
                 )
             )
 

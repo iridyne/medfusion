@@ -1,0 +1,56 @@
+project_name: "smurf-mainline"
+experiment_name: "smurf_lite_mvi"
+seed: 42
+device: "auto"
+
+data:
+  dataset_type: "three_phase_ct_tabular"
+  csv_path: "demo/dr_z_mvi_cases.csv"
+  target_column: "mvi_binary"
+  patient_id_column: "case_id"
+  phase_dir_columns:
+    arterial: "arterial_series_dir"
+    portal: "portal_series_dir"
+    noncontrast: "noncontrast_series_dir"
+  clinical_feature_columns:
+    - age
+    - sex
+    - bmi
+  target_shape: [16, 64, 64]
+  window_preset: "liver"
+  batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+model:
+  model_type: "three_phase_ct_fusion"
+  num_classes: 2
+  phase_feature_dim: 64
+  share_phase_encoder: false
+  phase_fusion_type: "concatenate"
+  use_risk_head: true
+  tabular:
+    hidden_dims: [32]
+    output_dim: 32
+    dropout: 0.1
+  fusion:
+    fusion_type: "gated"
+    hidden_dim: 48
+    dropout: 0.1
+
+training:
+  num_epochs: 1
+  mixed_precision: false
+  use_progressive_training: false
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.0005
+    weight_decay: 0.0001
+  scheduler:
+    scheduler: "none"
+
+logging:
+  output_dir: "outputs/smurf_lite_mvi"

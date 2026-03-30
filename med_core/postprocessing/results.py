@@ -11,6 +11,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 from PIL import Image
 from sklearn.metrics import (
@@ -27,6 +28,7 @@ from med_core.backbones import create_tabular_backbone, create_vision_backbone
 from med_core.configs import load_config
 from med_core.datasets import (
     MedicalMultimodalDataset,
+    ThreePhaseCTCaseDataset,
     get_val_transforms,
     split_dataset,
 )
@@ -39,6 +41,7 @@ from med_core.postprocessing.analysis import (
     build_survival_artifacts,
     resolve_survival_columns,
 )
+from med_core.models import ThreePhaseCTFusionModel
 from med_core.shared.visualization import (
     plot_calibration_curve,
     plot_confusion_matrix,
@@ -80,6 +83,23 @@ class BuildResultsOutput:
     artifact_paths: dict[str, str]
     metrics: dict[str, Any]
     validation: dict[str, Any]
+
+
+def _read_manifest_dataframe(config: Any) -> pd.DataFrame:
+    read_csv_kwargs = {}
+    if config.data.patient_id_column:
+        read_csv_kwargs["dtype"] = {config.data.patient_id_column: "string"}
+    return pd.read_csv(config.data.csv_path, **read_csv_kwargs)
+
+
+def _resolve_device(device_name: str) -> torch.device:
+    if device_name == "auto":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return torch.device("mps")
+        return torch.device("cpu")
+    return torch.device(device_name)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -227,6 +247,187 @@ def _load_split_dataset(config: Any, split: str) -> MedicalMultimodalDataset:
     selected = datasets[split]
     selected.transform = transform
     return selected
+
+
+def _split_three_phase_records(
+    config: Any,
+    dataset: ThreePhaseCTCaseDataset,
+    split: str,
+) -> ThreePhaseCTCaseDataset:
+    dataset_size = len(dataset.records)
+    generator = torch.Generator().manual_seed(config.data.random_seed)
+    indices = torch.randperm(dataset_size, generator=generator).tolist()
+
+    train_count = int(round(dataset_size * config.data.train_ratio))
+    val_count = int(round(dataset_size * config.data.val_ratio))
+    if train_count <= 0 and dataset_size > 0:
+        train_count = 1
+    if train_count + val_count > dataset_size:
+        val_count = max(dataset_size - train_count, 0)
+
+    split_indices = {
+        "train": indices[:train_count],
+        "val": indices[train_count : train_count + val_count],
+        "test": indices[train_count + val_count :],
+    }
+    selected_indices = split_indices[split]
+    if not selected_indices:
+        selected_indices = split_indices["val"] or split_indices["train"]
+
+    selected_records = [dataset.records[index] for index in selected_indices]
+    return ThreePhaseCTCaseDataset(
+        records=selected_records,
+        target_shape=dataset.target_shape,
+        window_preset=dataset.window_preset,
+    )
+
+
+def _build_three_phase_results(
+    *,
+    config: Any,
+    config_path: Path,
+    checkpoint_path: Path,
+    layout: RunOutputLayout,
+    split: str,
+) -> BuildResultsOutput:
+    dataframe = _read_manifest_dataframe(config)
+    full_dataset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
+        dataframe,
+        phase_dir_columns=config.data.phase_dir_columns,
+        clinical_feature_columns=config.data.clinical_feature_columns,
+        target_column=config.data.target_column,
+        patient_id_column=config.data.patient_id_column or "case_id",
+        target_shape=tuple(config.data.target_shape or [16, 64, 64]),
+        window_preset=config.data.window_preset,
+    )
+    dataset = _split_three_phase_records(config, full_dataset, split)
+    device = _resolve_device(config.device)
+    model = ThreePhaseCTFusionModel(
+        phase_feature_dim=config.model.phase_feature_dim,
+        clinical_input_dim=len(config.data.clinical_feature_columns),
+        clinical_hidden_dim=config.model.tabular.output_dim,
+        fusion_hidden_dim=config.model.fusion.hidden_dim,
+        phase_fusion_type=config.model.phase_fusion_type,
+        share_phase_encoder=config.model.share_phase_encoder,
+        freeze_phase_encoder=config.model.vision.freeze_backbone,
+        use_risk_head=config.model.use_risk_head,
+    )
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+
+    loader = DataLoader(
+        dataset,
+        batch_size=max(config.data.batch_size, 1),
+        shuffle=False,
+        num_workers=0,
+        pin_memory=device.type == "cuda",
+    )
+    cases: list[dict[str, Any]] = []
+    y_true: list[int] = []
+    y_pred: list[int] = []
+    y_prob: list[float] = []
+
+    model.eval()
+    with torch.inference_mode():
+        for batch in loader:
+            outputs = model(
+                arterial=batch["arterial"].to(device),
+                portal=batch["portal"].to(device),
+                noncontrast=batch["noncontrast"].to(device),
+                clinical=batch["clinical"].to(device),
+            )
+            probabilities = outputs["probability"].detach().cpu().numpy().tolist()
+            predictions = (outputs["probability"] >= 0.5).long().cpu().numpy().tolist()
+            labels = batch["label"].cpu().numpy().tolist()
+            risk_scores = outputs["risk_score"].detach().cpu().numpy().tolist()
+            case_ids = list(batch["case_id"])
+            for case_id, label, pred, prob, risk in zip(
+                case_ids,
+                labels,
+                predictions,
+                probabilities,
+                risk_scores,
+                strict=True,
+            ):
+                y_true.append(int(label))
+                y_pred.append(int(pred))
+                y_prob.append(float(prob))
+                cases.append(
+                    {
+                        "case_id": case_id,
+                        "true_label": int(label),
+                        "predicted_label": int(pred),
+                        "pred_probability": float(prob),
+                        "risk_score": float(risk),
+                    }
+                )
+
+    accuracy = accuracy_score(y_true, y_pred) if y_true else 0.0
+    auc_value: float | None = None
+    if len(set(y_true)) > 1 and y_prob:
+        fpr, tpr, _ = roc_curve(y_true, y_prob)
+        auc_value = float(auc(fpr, tpr))
+
+    artifact_metadata = _build_artifact_metadata(
+        config_path=config_path,
+        checkpoint_path=checkpoint_path,
+        split=split,
+    )
+    history_payload = _load_history(layout)
+    metrics_payload = {
+        **artifact_metadata,
+        "task": "three_phase_ct_tabular_classification",
+        "accuracy": round(float(accuracy), 4),
+        "auc": _round_metric(auc_value),
+        "sample_count": len(cases),
+    }
+    validation_payload = {
+        **artifact_metadata,
+        "overview": {"split": split, "sample_count": len(cases)},
+        "cases": cases,
+    }
+    summary_payload = {
+        **artifact_metadata,
+        "run_name": config.experiment_name,
+        "task": "classification",
+        "primary_metric": "accuracy" if auc_value is None else "auc",
+        "primary_metric_value": round(float(accuracy), 4)
+        if auc_value is None
+        else _round_metric(auc_value),
+        "checkpoint": str(checkpoint_path),
+        "artifacts": ["metrics.json", "validation.json", "summary.json", "report.md"],
+    }
+    report_lines = [
+        "# MedFusion Result Report",
+        "",
+        f"- Experiment: {config.experiment_name}",
+        f"- Split: {split}",
+        f"- Samples: {len(cases)}",
+        f"- Accuracy: {metrics_payload['accuracy']}",
+        f"- AUC: {metrics_payload['auc']}",
+    ]
+
+    _write_json(layout.metrics_path, metrics_payload)
+    _write_json(layout.validation_path, validation_payload)
+    _write_json(layout.summary_path, summary_payload)
+    if history_payload.get("entries"):
+        _write_json(layout.history_path, history_payload)
+    layout.report_path.write_text("\n".join(report_lines) + "\n", encoding="utf-8")
+
+    artifact_paths = {
+        "metrics_path": str(layout.metrics_path),
+        "validation_path": str(layout.validation_path),
+        "summary_path": str(layout.summary_path),
+        "report_path": str(layout.report_path),
+        "history_path": str(layout.history_path),
+    }
+    return BuildResultsOutput(
+        output_dir=str(layout.root_dir),
+        artifact_paths=artifact_paths,
+        metrics=metrics_payload,
+        validation=validation_payload,
+    )
 
 
 def _run_inference(
@@ -1060,8 +1261,20 @@ def build_results_artifacts(
     )
     layout = RunOutputLayout(actual_output_dir).ensure_exists()
 
+    if (
+        config.data.dataset_type == "three_phase_ct_tabular"
+        or config.model.model_type == "three_phase_ct_fusion"
+    ):
+        return _build_three_phase_results(
+            config=config,
+            config_path=config_path,
+            checkpoint_path=checkpoint_path,
+            layout=layout,
+            split=split,
+        )
+
     dataset = _load_split_dataset(config, split)
-    device = torch.device(config.device)
+    device = _resolve_device(config.device)
     model = _build_model(config, dataset.get_tabular_dim())
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])

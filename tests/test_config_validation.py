@@ -252,6 +252,85 @@ class TestConfigValidation:
         assert any("fusion_type" in e.path for e in errors)
         assert any(e.error_code == "E009" for e in errors)
 
+    def test_three_phase_dataset_requires_phase_columns(self):
+        """Three-phase config should require named phase manifest columns."""
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="three_phase_missing_columns",
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                num_classes=2,
+                vision=VisionConfig(backbone="resnet18", feature_dim=128),
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="concatenate", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                train_ratio=0.7,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                batch_size=1,
+                num_workers=0,
+                patient_id_column="case_id",
+                clinical_feature_columns=["age"],
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                use_progressive_training=False,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+        )
+
+        errors = validate_config(config)
+        assert any(error.error_code == "E031" for error in errors)
+
+    def test_three_phase_dataset_and_model_pairing_must_match(self):
+        """Three-phase dataset should be rejected when paired with the old model type."""
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="three_phase_pairing_mismatch",
+            model=ModelConfig(
+                model_type="multimodal_fusion",
+                num_classes=2,
+                vision=VisionConfig(backbone="resnet18", feature_dim=128),
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="concatenate", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                train_ratio=0.7,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                batch_size=1,
+                num_workers=0,
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                use_progressive_training=False,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+        )
+
+        errors = validate_config(config)
+        assert any(error.error_code == "E036" for error in errors)
+
     def test_progressive_training_epochs_mismatch(self):
         """Test validation catches progressive training epoch mismatch."""
         config = ExperimentConfig(

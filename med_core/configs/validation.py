@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 VALID_BACKBONES = frozenset(list_available_backbones())
 VALID_FUSION_TYPES = frozenset(list_available_fusions())
+VALID_THREE_PHASE_FUSION_TYPES = frozenset({"concatenate", "mean"})
 
 
 @dataclass
@@ -156,6 +157,33 @@ class ConfigValidator:
                 )
             )
 
+        if model.model_type == "three_phase_ct_fusion":
+            if model.phase_feature_dim <= 0:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_feature_dim",
+                        message=(
+                            "phase_feature_dim must be positive for three_phase_ct_fusion, "
+                            f"got {model.phase_feature_dim}"
+                        ),
+                        error_code="E029",
+                        suggestion="Set model.phase_feature_dim to a positive integer",
+                    )
+                )
+
+            if model.phase_fusion_type not in VALID_THREE_PHASE_FUSION_TYPES:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_fusion_type",
+                        message=f"Invalid phase_fusion_type: {model.phase_fusion_type}",
+                        error_code="E030",
+                        suggestion=(
+                            "Choose from: "
+                            + ", ".join(sorted(VALID_THREE_PHASE_FUSION_TYPES))
+                        ),
+                    )
+                )
+
     def _validate_data_config(self, config: ExperimentConfig) -> None:
         """Validate data configuration."""
         data = config.data
@@ -201,6 +229,83 @@ class ConfigValidator:
                     suggestion="Set num_workers to 0 or a positive integer (typically 4-8)",
                 )
             )
+
+        if data.dataset_type == "three_phase_ct_tabular":
+            missing_phase_keys = [
+                phase_name
+                for phase_name in ("arterial", "portal", "noncontrast")
+                if phase_name not in data.phase_dir_columns
+            ]
+            if missing_phase_keys:
+                self.errors.append(
+                    ValidationError(
+                        path="data.phase_dir_columns",
+                        message=(
+                            "three_phase_ct_tabular requires phase_dir_columns to define "
+                            + ", ".join(missing_phase_keys)
+                        ),
+                        error_code="E031",
+                        suggestion=(
+                            "Set data.phase_dir_columns with arterial / portal / "
+                            "noncontrast column names"
+                        ),
+                    )
+                )
+
+            if not data.patient_id_column:
+                self.errors.append(
+                    ValidationError(
+                        path="data.patient_id_column",
+                        message=(
+                            "three_phase_ct_tabular requires patient_id_column to identify cases"
+                        ),
+                        error_code="E032",
+                        suggestion="Set data.patient_id_column to the case identifier column",
+                    )
+                )
+
+            if not data.clinical_feature_columns:
+                self.errors.append(
+                    ValidationError(
+                        path="data.clinical_feature_columns",
+                        message=(
+                            "three_phase_ct_tabular currently requires at least one clinical "
+                            "feature column"
+                        ),
+                        error_code="E033",
+                        suggestion=(
+                            "Provide one or more numeric columns in "
+                            "data.clinical_feature_columns"
+                        ),
+                    )
+                )
+
+            if (
+                data.target_shape is None
+                or len(data.target_shape) != 3
+                or any(int(dimension) <= 0 for dimension in data.target_shape)
+            ):
+                self.errors.append(
+                    ValidationError(
+                        path="data.target_shape",
+                        message=(
+                            "three_phase_ct_tabular requires target_shape as three positive "
+                            f"integers, got {data.target_shape}"
+                        ),
+                        error_code="E034",
+                        suggestion="Set data.target_shape like [16, 64, 64]",
+                    )
+                )
+
+            if not data.window_preset:
+                self.errors.append(
+                    ValidationError(
+                        path="data.window_preset",
+                        message="three_phase_ct_tabular requires a non-empty window_preset",
+                        error_code="E035",
+                        suggestion="Set data.window_preset, for example 'liver'",
+                    )
+                )
 
     def _validate_training_config(self, config: ExperimentConfig) -> None:
         """Validate training configuration."""
@@ -315,6 +420,38 @@ class ConfigValidator:
                     message="use_attention_supervision=True requires model.vision.enable_attention_supervision=True",
                     error_code="E028",
                     suggestion="Set model.vision.enable_attention_supervision=True or disable training.use_attention_supervision",
+                )
+            )
+
+        if (
+            config.data.dataset_type == "three_phase_ct_tabular"
+            and config.model.model_type != "three_phase_ct_fusion"
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="model.model_type",
+                    message=(
+                        "three_phase_ct_tabular must be paired with "
+                        "model.model_type=three_phase_ct_fusion"
+                    ),
+                    error_code="E036",
+                    suggestion="Set model.model_type to three_phase_ct_fusion",
+                )
+            )
+
+        if (
+            config.model.model_type == "three_phase_ct_fusion"
+            and config.data.dataset_type != "three_phase_ct_tabular"
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="data.dataset_type",
+                    message=(
+                        "three_phase_ct_fusion requires "
+                        "data.dataset_type=three_phase_ct_tabular"
+                    ),
+                    error_code="E037",
+                    suggestion="Set data.dataset_type to three_phase_ct_tabular",
                 )
             )
 
