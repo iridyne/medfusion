@@ -3,7 +3,7 @@
 提供基于 FastAPI 的 Web 界面，用于可视化训练、模型管理和实验追踪。
 """
 
-__version__ = "0.3.0"
+from med_core.version import __version__
 
 __all__ = ["__version__", "app", "settings"]
 

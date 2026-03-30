@@ -1,7 +1,10 @@
 """
 节点执行器模块
 
-实现工作流节点的真实执行逻辑，集成 MedFusion 核心功能。
+说明：
+- 工作流编辑器属于实验功能，默认关闭；
+- 当前 OSS 主链为 CLI / Run Wizard / Training API；
+- 本模块保留节点执行器骨架，供实验分支逐步接入真实运行时。
 """
 
 import asyncio
@@ -15,27 +18,11 @@ from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
-_EXECUTOR_RUNTIME_REQUIREMENTS: dict[str, tuple[str, str, str]] = {
-    "dataLoader": (
-        "med_core.data.dataset",
-        "create_dataset",
-        "缺少数据集工厂 med_core.data.dataset.create_dataset",
-    ),
-    "model": (
-        "med_core.models",
-        "ModelFactory",
-        "缺少模型工厂 med_core.models.ModelFactory",
-    ),
-    "training": (
-        "med_core.training.trainer",
-        "Trainer",
-        "缺少训练器 med_core.training.trainer.Trainer",
-    ),
-    "evaluation": (
-        "med_core.evaluation.evaluator",
-        "Evaluator",
-        "缺少评估器 med_core.evaluation.evaluator.Evaluator",
-    ),
+_EXECUTOR_RUNTIME_REQUIREMENTS: dict[str, str] = {
+    "dataLoader": "data loader runtime adapter",
+    "model": "model factory adapter",
+    "training": "training runtime adapter",
+    "evaluation": "evaluation runtime adapter",
 }
 
 
@@ -44,16 +31,15 @@ class NodeExecutionError(Exception):
 
 
 def _resolve_runtime_dependency(node_type: str) -> Any:
-    requirement = _EXECUTOR_RUNTIME_REQUIREMENTS.get(node_type)
-    if requirement is None:
+    requirement_name = _EXECUTOR_RUNTIME_REQUIREMENTS.get(node_type)
+    if requirement_name is None:
         raise ImportError(f"未知节点类型: {node_type}")
 
-    module_name, attribute_name, message = requirement
-    try:
-        module = __import__(module_name, fromlist=[attribute_name])
-        return getattr(module, attribute_name)
-    except Exception as exc:
-        raise ImportError(f"{message}: {exc}") from exc
+    raise ImportError(
+        "workflow execution runtime is not wired into the OSS mainline yet "
+        f"(missing {requirement_name}). "
+        "Use the stable flow: medfusion start -> Run Wizard -> Training API / medfusion train.",
+    )
 
 
 def get_executor_runtime_errors(node_type: str) -> list[str]:

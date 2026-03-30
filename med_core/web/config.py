@@ -6,6 +6,8 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from med_core.version import __version__
+
 
 class Settings(BaseSettings):
     """Web 应用配置"""
@@ -17,7 +19,7 @@ class Settings(BaseSettings):
 
     # 应用信息
     app_name: str = "MedFusion Web UI"
-    version: str = "0.3.0"
+    version: str = __version__
     debug: bool = False
 
     # 服务器配置
