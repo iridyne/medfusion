@@ -494,7 +494,7 @@ logging:
 **参数说明：**
 
 **output_dir**: 输出目录（默认：`"outputs"`）
-- 自动创建子目录：`checkpoints/`, `logs/`, `results/`
+- 自动创建子目录：`checkpoints/`, `logs/`, `metrics/`, `reports/`, `artifacts/`
 
 **experiment_name**: 实验名称（默认：`"experiment"`）
 

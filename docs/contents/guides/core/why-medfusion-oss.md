@@ -10,7 +10,7 @@
 
 MedFusion OSS 的区别：
 - 默认主链是 `validate-config -> train -> build-results`
-- 默认产物是结构化契约（`metrics.json / validation.json / summary.json / report.md`）
+- 默认产物是结构化契约（`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`）
 - 更强调“可复盘和可交付”，不只强调“跑起来”
 
 ## 对比 2：AutoML/拖拽式平台

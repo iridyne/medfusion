@@ -28,9 +28,9 @@ uv run medfusion build-results \
 - `validate-config`
   - 在训练前检查 YAML、CSV 列、图像路径、样本规模和 split 是否明显有坑
 - `train`
-  - 真正产出 checkpoint 和 TensorBoard 日志
+  - 真正产出 checkpoint 和训练历史日志
 - `build-results`
-  - 把 checkpoint 补成结果页可直接消费的 `metrics.json / validation.json / ROC / confusion / attention / report`
+  - 把 checkpoint 补成结果页可直接消费的 `metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md / artifacts/*`
 
 对应配置目录：
 
@@ -55,7 +55,7 @@ flowchart TB
   subgraph S[系统反馈]
     S1[通过或给出配置问题]
     S2[输出 checkpoint 和 history]
-    S3[输出 metrics validation summary report]
+    S3[输出 metrics validation summary report artifacts]
   end
 
   subgraph C[配置选择]

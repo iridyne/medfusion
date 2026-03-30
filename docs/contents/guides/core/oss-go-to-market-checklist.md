@@ -120,7 +120,7 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 - [ ] `validate-config -> train -> build-results` 路径可复现
 - [ ] `public-datasets -> train` 路径可复现
 - [ ] 输出目录结构稳定
-- [ ] `metrics.json / validation.json / summary.json / report.md` contract 稳定
+- [ ] `metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md` contract 稳定
 
 ### 演示层
 

@@ -540,10 +540,14 @@ workflow.medfusion
 │   └── best_model.pth
 ├── logs/                 # 训练日志
 │   └── training.log
-├── results/              # 评估结果
+├── metrics/              # 结构化指标与 validation
 │   ├── metrics.json
-│   ├── confusion_matrix.png
-│   └── report.pdf
+│   └── validation.json
+├── reports/              # 汇总与可读报告
+│   ├── summary.json
+│   └── report.md
+├── artifacts/            # 图表与可视化产物
+│   └── visualizations/
 └── cache/                # 节点缓存
     ├── node_1.pkl
     └── node_2.pkl

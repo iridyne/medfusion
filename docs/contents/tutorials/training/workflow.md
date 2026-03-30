@@ -85,14 +85,14 @@ uv run medfusion train \
 
 - `outputs/<exp>/checkpoints/best.pth`
 - `outputs/<exp>/logs/`
-- `outputs/<exp>/history.json`
+- `outputs/<exp>/logs/history.json`
 
 如果你还要交付评估结果，继续执行 `build-results`，补齐：
 
-- `outputs/<exp>/results/metrics.json`
-- `outputs/<exp>/results/validation.json`
-- `outputs/<exp>/results/summary.json`
-- `outputs/<exp>/results/report.md`
+- `outputs/<exp>/metrics/metrics.json`
+- `outputs/<exp>/metrics/validation.json`
+- `outputs/<exp>/reports/summary.json`
+- `outputs/<exp>/reports/report.md`
 
 ### 方法 2：使用 Python 脚本
 

@@ -18,10 +18,24 @@ export default defineConfig({
         {
           text: '快速入门',
           items: [
+            { text: 'CLI 与 Config 使用路径', link: '/contents/getting-started/cli-config-workflow' },
             { text: '环境安装', link: '/contents/getting-started/installation' },
             { text: '快速开始', link: '/contents/getting-started/quickstart' },
+            { text: '公开数据集快速验证', link: '/contents/getting-started/public-datasets' },
             { text: '第一个模型', link: '/contents/getting-started/first-model' },
             { text: 'Web UI 快速入门', link: '/contents/getting-started/web-ui' }
+          ]
+        }
+      ],
+      '/contents/playbooks/': [
+        {
+          text: '任务手册',
+          items: [
+            { text: '总览', link: '/contents/playbooks/README' },
+            { text: '最小可复现实验', link: '/contents/playbooks/minimum-reproducible-run' },
+            { text: '对外 Demo 路径', link: '/contents/playbooks/external-demo-path' },
+            { text: '多 seed 稳定性汇报', link: '/contents/playbooks/multi-seed-stability-report' },
+            { text: '结果解读与交付检查', link: '/contents/playbooks/result-interpretation-checklist' }
           ]
         }
       ],
@@ -139,6 +153,7 @@ export default defineConfig({
         {
           text: '架构文档',
           items: [
+            { text: 'Core Runtime Architecture', link: '/contents/architecture/CORE_RUNTIME_ARCHITECTURE' },
             { text: 'Web UI 架构', link: '/contents/architecture/WEB_UI_ARCHITECTURE' },
             { text: '工作流设计', link: '/contents/architecture/WORKFLOW_DESIGN' },
             { text: 'OSS WebUI 工作流 Spec', link: '/contents/architecture/OSS_WEBUI_WORKFLOW_SPEC' },
@@ -159,9 +174,9 @@ export default defineConfig({
     // 导航栏
     nav: [
       { text: '首页', link: '/' },
-      { text: '快速入门', link: '/contents/getting-started/installation' },
-      { text: '教程', link: '/contents/tutorials/README' },
-      { text: '指南', link: '/contents/guides/core/quick-reference' },
+      { text: '快速入门', link: '/contents/getting-started/cli-config-workflow' },
+      { text: '任务手册', link: '/contents/playbooks/README' },
+      { text: '架构', link: '/contents/architecture/CORE_RUNTIME_ARCHITECTURE' },
       { text: 'API 文档', link: '/contents/api/med_core' }
     ],
 

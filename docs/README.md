@@ -13,6 +13,7 @@
 
 ## 高频入口（90% 场景）
 
+- [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
 - [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - [任务手册（按目标执行）](contents/playbooks/README.md)
@@ -86,6 +87,26 @@ flowchart LR
 
 适合：准备改代码、补测试、提交 PR。
 
+## 本地预览文档
+
+如果你要在本机预览 VitePress 文档，进入 `docs/` 目录后执行：
+
+```bash
+npm install
+npm run docs:dev
+```
+
+构建静态站点：
+
+```bash
+npm run docs:build
+npm run docs:preview
+```
+
+说明：
+- `docs/node_modules/`、`docs/.vitepress/dist/`、`docs/.vitepress/cache/` 都是本地产物，不属于文档源码
+- 如果这些目录缺失，重新执行 `npm install` 或 `npm run docs:build` 即可恢复
+
 ---
 
 ## 深入文档入口
@@ -114,5 +135,5 @@ flowchart LR
 ## 文档使用建议
 
 - 先走“主链跑通”，再看架构和 API。
-- 如果你要判断是否接入，优先看输出契约：`metrics.json / validation.json / summary.json / report.md`。
+- 如果你要判断是否接入，优先看输出契约：`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`。
 - 如果链接失效或内容过期，欢迎直接提 Issue 或 PR。

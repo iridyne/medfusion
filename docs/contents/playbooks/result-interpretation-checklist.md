@@ -6,10 +6,10 @@
 
 ## 必看文件
 
-- `metrics.json`：核心指标
-- `validation.json`：验证细节与切分信息
-- `summary.json`：最终汇报摘要
-- `report.md`：可读报告
+- `metrics/metrics.json`：核心指标
+- `metrics/validation.json`：验证细节与切分信息
+- `reports/summary.json`：最终汇报摘要
+- `reports/report.md`：可读报告
 
 ## 交付前检查清单
 

@@ -55,7 +55,7 @@ flowchart TB
   C --> D[medfusion public-datasets prepare dataset_name --overwrite]
   D --> E[medfusion train --config 对应 quickstart.yaml]
   E --> F[medfusion build-results --config config_path --checkpoint best_ckpt]
-  F --> G[查看 metrics validation summary report]
+  F --> G[查看 metrics validation summary report artifacts]
   G --> H{需要对外演示?}
   H -->|是| I[保留 ROC 混淆矩阵 注意力图 报告截图]
   H -->|否| J[进入下一轮调参或换数据集]
@@ -148,7 +148,9 @@ uv run medfusion public-datasets show uci-heart-disease
 uv pip install medmnist
 uv run medfusion public-datasets prepare medmnist-pathmnist --overwrite
 uv run medfusion train --config configs/public_datasets/pathmnist_quickstart.yaml
-uv run medfusion build-results \n  --config configs/public_datasets/pathmnist_quickstart.yaml \n  --checkpoint outputs/public_datasets/pathmnist_quickstart/checkpoints/best.pth
+uv run medfusion build-results \
+  --config configs/public_datasets/pathmnist_quickstart.yaml \
+  --checkpoint outputs/public_datasets/pathmnist_quickstart/checkpoints/best.pth
 ```
 
 输出目录固定为：
@@ -164,7 +166,9 @@ uv run medfusion build-results \n  --config configs/public_datasets/pathmnist_qu
 uv pip install medmnist
 uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
 uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
-uv run medfusion build-results \n  --config configs/public_datasets/breastmnist_quickstart.yaml \n  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
+uv run medfusion build-results \
+  --config configs/public_datasets/breastmnist_quickstart.yaml \
+  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
 ```
 
 输出目录固定为：
@@ -179,7 +183,10 @@ uv run medfusion build-results \n  --config configs/public_datasets/breastmnist_
 ```bash
 uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
-uv run medfusion build-results \n  --config configs/public_datasets/uci_heart_disease_quickstart.yaml \n  --checkpoint outputs/public_datasets/uci_heart_disease_quickstart/checkpoints/best.pth \n  --attention-samples 0
+uv run medfusion build-results \
+  --config configs/public_datasets/uci_heart_disease_quickstart.yaml \
+  --checkpoint outputs/public_datasets/uci_heart_disease_quickstart/checkpoints/best.pth \
+  --attention-samples 0
 ```
 
 输出目录固定为：

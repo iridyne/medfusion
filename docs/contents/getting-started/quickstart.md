@@ -50,7 +50,7 @@ flowchart TB
   G -->|否| H[检查显存/CPU参数 num_workers pin_memory 日志]
   H --> F
   G -->|是| I[运行 build-results]
-  I --> J{是否生成 results 目录}
+  I --> J{是否生成 metrics reports artifacts}
   J -->|否| K[检查 checkpoint 路径与命令参数]
   K --> I
   J -->|是| L[完成 可复盘可汇报]
@@ -63,13 +63,14 @@ flowchart TB
 至少应该看到：
 
 - `outputs/<run_name>/checkpoints/best.pth`
-- `outputs/<run_name>/history.json`
-- `outputs/<run_name>/results/metrics.json`
-- `outputs/<run_name>/results/validation.json`
-- `outputs/<run_name>/results/summary.json`
-- `outputs/<run_name>/results/report.md`
+- `outputs/<run_name>/logs/history.json`
+- `outputs/<run_name>/metrics/metrics.json`
+- `outputs/<run_name>/metrics/validation.json`
+- `outputs/<run_name>/reports/summary.json`
+- `outputs/<run_name>/reports/report.md`
+- `outputs/<run_name>/artifacts/`
 
-如果只看到了 checkpoint，但没有 `results/`，通常是：
+如果只看到了 checkpoint，但没有 `metrics/`、`reports/` 或 `artifacts/`，通常是：
 - 还没执行 `build-results`
 - `--checkpoint` 路径传错
 
@@ -84,7 +85,7 @@ flowchart TB
 `medfusion train` 和 `medfusion build-results`。
 
 完整示例见：
-- `docs/contents/playbooks/multi-seed-stability-report.md`
+- [多 seed 稳定性汇报](../playbooks/multi-seed-stability-report.md)
 
 产物：
 - `seeds/seed-XXXX/`（每个 seed 独立结果）

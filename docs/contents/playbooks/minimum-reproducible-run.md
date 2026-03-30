@@ -25,10 +25,12 @@ uv run medfusion build-results \
 至少看到以下产物：
 
 - `outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth`
-- `outputs/public_datasets/breastmnist_quickstart/results/metrics.json`
-- `outputs/public_datasets/breastmnist_quickstart/results/validation.json`
-- `outputs/public_datasets/breastmnist_quickstart/results/summary.json`
-- `outputs/public_datasets/breastmnist_quickstart/results/report.md`
+- `outputs/public_datasets/breastmnist_quickstart/logs/history.json`
+- `outputs/public_datasets/breastmnist_quickstart/metrics/metrics.json`
+- `outputs/public_datasets/breastmnist_quickstart/metrics/validation.json`
+- `outputs/public_datasets/breastmnist_quickstart/reports/summary.json`
+- `outputs/public_datasets/breastmnist_quickstart/reports/report.md`
+- `outputs/public_datasets/breastmnist_quickstart/artifacts/`
 
 ## 常见失败
 

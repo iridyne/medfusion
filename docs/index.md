@@ -23,7 +23,7 @@ features:
 
   - icon: 📦
     title: 结构化结果输出
-    details: 标准化产出 checkpoint、history.json、metrics.json、validation.json、summary.json、report.md，以及 ROC / confusion / attention 等 artifact。
+    details: 标准化产出 checkpoint、logs/history.json、metrics/metrics.json、metrics/validation.json、reports/summary.json、reports/report.md，以及 ROC / confusion / attention 等 artifact。
 
   - icon: 🚀
     title: 公开数据集快速验证
@@ -101,10 +101,10 @@ uv run medfusion build-results \
 
 MedFusion 输出的不只是模型 checkpoint，还包括一组更适合被系统消费的结果文件，例如：
 
-- `metrics.json`
-- `validation.json`
-- `summary.json`
-- `report.md`
+- `metrics/metrics.json`
+- `metrics/validation.json`
+- `reports/summary.json`
+- `reports/report.md`
 - ROC / confusion / calibration / attention 等图表 artifact
 
 这让它既适合研究验证，也适合作为上层产品或工作台的执行核心。
