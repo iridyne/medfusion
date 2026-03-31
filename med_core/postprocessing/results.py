@@ -535,35 +535,35 @@ def _build_three_phase_results(
         "",
         "## Overview",
         "",
-        f"- Experiment: {config.experiment_name}",
-        f"- Split: {split}",
-        f"- Samples: {len(cases)}",
+        f"- 任务名称: {config.experiment_name}",
+        f"- 数据划分: {split}",
+        f"- 评估样本数: {len(cases)}",
         "",
         "## Metrics",
         "",
-        f"- Accuracy: {metrics_payload['accuracy']}",
-        f"- AUC: {metrics_payload['auc']}",
+        f"- 总体准确率: {metrics_payload['accuracy']}",
+        f"- 区分能力（AUC）: {metrics_payload['auc']}",
         "",
         "## Data Summary",
         "",
-        f"- Positive Cases: {sum(y_true)}",
-        f"- Negative Cases: {len(y_true) - sum(y_true)}",
-        f"- Clinical Features: {', '.join(config.data.clinical_feature_columns)}",
+        f"- 阳性病例数: {sum(y_true)}",
+        f"- 阴性病例数: {len(y_true) - sum(y_true)}",
+        f"- 纳入的临床变量: {', '.join(config.data.clinical_feature_columns)}",
     ]
     report_lines.extend(["", "## Visual Artifacts", ""])
     if roc_curve_path is not None:
-        report_lines.append(f"- ROC Curve: {roc_curve_path}")
-    report_lines.append(f"- Confusion Matrix: {confusion_matrix_path}")
+        report_lines.append(f"- ROC 曲线（区分能力）: {roc_curve_path}")
+    report_lines.append(f"- 混淆矩阵（阳性/阴性判别情况）: {confusion_matrix_path}")
     if importance_payload is not None:
         report_lines.extend(["", "## Feature Importance", ""])
         report_lines.append(
-            f"- Method: {_format_importance_method(importance_payload.get('method'))}"
+            f"- 方法说明: {_format_importance_method(importance_payload.get('method'))}"
         )
         top_features = importance_payload.get("top_features", [])[:5]
         if top_features:
             for item in top_features:
                 report_lines.append(
-                    "- "
+                    "- 关键因素: "
                     f"{item.get('feature')}: "
                     f"{item.get('mean_abs_contribution')}"
                 )
@@ -572,18 +572,18 @@ def _build_three_phase_results(
         report_lines.extend(["", "## Artifact Paths", ""])
     if importance_payload is not None:
         report_lines.append(
-            "- Feature Importance Bar: "
+            "- 关键影响因素条形图: "
             f"{importance_artifact_paths.get('feature_importance_bar_plot_path')}"
         )
         report_lines.append(
-            "- Feature Importance Beeswarm: "
+            "- 关键影响因素散点图: "
             f"{importance_artifact_paths.get('feature_importance_beeswarm_plot_path')}"
         )
-    report_lines.append(f"- Config Snapshot: {layout.config_snapshot_path}")
-    report_lines.append(f"- Metrics JSON: {layout.metrics_path}")
-    report_lines.append(f"- Validation JSON: {layout.validation_path}")
-    report_lines.append(f"- Predictions JSON: {layout.predictions_path}")
-    report_lines.append(f"- History JSON: {layout.history_path}")
+    report_lines.append(f"- 训练配置快照: {layout.config_snapshot_path}")
+    report_lines.append(f"- 指标汇总 JSON: {layout.metrics_path}")
+    report_lines.append(f"- 逐例评估 JSON: {layout.validation_path}")
+    report_lines.append(f"- 预测结果 JSON: {layout.predictions_path}")
+    report_lines.append(f"- 训练历史 JSON: {layout.history_path}")
 
     _write_json(layout.metrics_path, metrics_payload)
     _write_json(layout.validation_path, validation_payload)

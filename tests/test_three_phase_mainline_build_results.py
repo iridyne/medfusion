@@ -256,10 +256,15 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
     assert "## Visual Artifacts" in report_text
     assert "## Feature Importance" in report_text
     assert "## Artifact Paths" in report_text
-    assert "- ROC Curve:" in report_text
-    assert "- Confusion Matrix:" in report_text
-    assert "- Method: SHAP-style surrogate" in report_text
-    assert "- Feature Importance Bar:" in report_text
-    assert "- Feature Importance Beeswarm:" in report_text
-    assert "- SHAP Bar:" not in report_text
-    assert "- SHAP Beeswarm:" not in report_text
+    assert "- 区分能力（AUC）:" in report_text
+    assert "- 总体准确率:" in report_text
+    assert "- 阳性病例数:" in report_text
+    assert "- 阴性病例数:" in report_text
+    assert "- 纳入的临床变量:" in report_text
+    assert "- ROC 曲线（区分能力）:" in report_text
+    assert "- 混淆矩阵（阳性/阴性判别情况）:" in report_text
+    assert "- 方法说明: SHAP-style surrogate" in report_text
+    assert "- 关键影响因素条形图:" in report_text
+    assert "- 关键影响因素散点图:" in report_text
+    assert "- Feature Importance Bar:" not in report_text
+    assert "- Feature Importance Beeswarm:" not in report_text
