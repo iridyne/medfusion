@@ -14,8 +14,6 @@
 ## 当前内容
 
 - `generic_multimodal.yaml`
-- `smurf.yaml`
-- `smurf_mil.yaml`
 - `templates/`
 
 ## 典型用法
@@ -24,7 +22,7 @@
 import yaml
 from med_core.models import build_model_from_config
 
-with open("configs/builder/smurf.yaml", encoding="utf-8") as f:
+with open("configs/builder/generic_multimodal.yaml", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 model = build_model_from_config(config)

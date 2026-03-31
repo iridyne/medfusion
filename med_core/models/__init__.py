@@ -3,7 +3,7 @@ Medical imaging models.
 
 This module provides:
 - Generic multi-modal model builder for flexible model construction
-- SMuRF models for radiology-pathology fusion
+- Native three-phase CT fusion model for case-level classification
 - Factory functions for common model configurations
 """
 
@@ -12,13 +12,6 @@ from .builder import (
     MultiModalModelBuilder,
     build_model_from_config,
 )
-from .smurf import (
-    SMuRFModel,
-    SMuRFWithMIL,
-    smurf_base,
-    smurf_small,
-    smurf_with_mil_small,
-)
 from .three_phase_ct_fusion import ThreePhaseCTFusionModel
 
 __all__ = [
@@ -26,11 +19,6 @@ __all__ = [
     "GenericMultiModalModel",
     "MultiModalModelBuilder",
     "build_model_from_config",
-    # SMuRF models
-    "SMuRFModel",
-    "SMuRFWithMIL",
+    # Native task models
     "ThreePhaseCTFusionModel",
-    "smurf_small",
-    "smurf_base",
-    "smurf_with_mil_small",
 ]

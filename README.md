@@ -209,6 +209,7 @@ bash scripts/full_regression.sh --full
 - [快速上手](docs/contents/getting-started/quickstart.md)
 - [CLI & Config 工作流](docs/contents/getting-started/cli-config-workflow.md)
 - [公共数据集路径](docs/contents/getting-started/public-datasets.md)
+- [Examples Guide](examples/README.md)
 - [文档站首页](docs/README.md)
 - [任务手册（按目标执行）](docs/contents/playbooks/README.md)
 - [Why MedFusion OSS（定位对比）](docs/contents/guides/core/why-medfusion-oss.md)

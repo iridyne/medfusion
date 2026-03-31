@@ -14,7 +14,6 @@ import torch
 
 from med_core.models import (
     MultiModalModelBuilder,
-    smurf_small,
 )
 
 
@@ -48,13 +47,13 @@ def example_basic_usage():
     print()
 
 
-def example_smurf_equivalent():
-    """Example 2: Build SMuRF model using generic builder."""
+def example_radiology_pathology_builder():
+    """Example 2: Build a radiology-pathology model using the generic builder."""
     print("=" * 80)
-    print("Example 2: SMuRF Model with Generic Builder")
+    print("Example 2: Radiology-Pathology Model with Generic Builder")
     print("=" * 80)
 
-    # Build SMuRF using generic builder
+    # Build a two-modality radiology-pathology classifier.
     model = (
         MultiModalModelBuilder()
         .add_modality(
@@ -76,9 +75,6 @@ def example_smurf_equivalent():
         .build()
     )
 
-    # Compare with original SMuRF
-    smurf_original = smurf_small(num_classes=4, fusion_strategy="fused_attention")
-
     # Test forward pass
     ct = torch.randn(2, 1, 64, 128, 128)
     pathology = torch.randn(2, 3, 224, 224)
@@ -89,10 +85,7 @@ def example_smurf_equivalent():
     print(f"CT input shape: {ct.shape}")
     print(f"Pathology input shape: {pathology.shape}")
     print(f"Output logits shape: {logits.shape}")
-    print(f"Generic builder params: {sum(p.numel() for p in model.parameters()):,}")
-    print(
-        f"Original SMuRF params: {sum(p.numel() for p in smurf_original.parameters()):,}"
-    )
+    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
     print()
 
 
@@ -451,7 +444,7 @@ if __name__ == "__main__":
     print("=" * 80 + "\n")
 
     example_basic_usage()
-    example_smurf_equivalent()
+    example_radiology_pathology_builder()
     example_mil_aggregation()
     example_different_fusion_strategies()
     example_three_modalities()

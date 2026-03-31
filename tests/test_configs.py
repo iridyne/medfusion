@@ -193,7 +193,7 @@ class TestConfigYAMLLoading(unittest.TestCase):
     def test_load_builder_config_raises_clear_schema_error(self):
         """Builder configs should fail fast with a clear train-schema mismatch error."""
         with self.assertRaises(UnsupportedConfigSchemaError) as exc_info:
-            load_config("configs/builder/smurf.yaml")
+            load_config("configs/builder/generic_multimodal.yaml")
 
         message = str(exc_info.exception)
         self.assertIn("builder 风格配置", message)

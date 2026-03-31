@@ -14,14 +14,12 @@ Provides unified model building infrastructure for multi-modal medical deep lear
 
 - **GenericMultiModalModel**: Main model class supporting 2+ modalities with arbitrary backbones, fusion strategies, and task heads
 - **MultiModalModelBuilder**: Fluent API builder for constructing models from components
-- **SMuRFModel**: Specialized radiology-pathology fusion model
-- **SMuRFWithMIL**: SMuRF variant with Multi-Instance Learning aggregation
+- **ThreePhaseCTFusionModel**: Native three-phase CT + clinical fusion model
 
 ### Factory Functions
 
 - `build_model_from_config()`: Build models from YAML configuration
-- `smurf_small()`, `smurf_base()`: Pre-configured SMuRF model variants
-- `smurf_with_mil_small()`: SMuRF with MIL aggregation
+- `ThreePhaseCTFusionModel(...)`: Case-level CT + tabular fusion classifier
 
 ## Architecture
 
@@ -149,7 +147,7 @@ model = GenericMultiModalModel(backbones, fusion, head)
 models/
 ├── __init__.py          # Public API exports
 ├── builder.py           # GenericMultiModalModel + Builder
-└── smurf.py            # SMuRF specialized models
+└── three_phase_ct_fusion.py  # Native three-phase CT fusion model
 ```
 
 ## Testing
@@ -161,8 +159,8 @@ uv run pytest tests/test_models.py::test_model_builder
 # Test config-driven construction
 uv run pytest tests/test_models.py::test_build_from_config
 
-# Test SMuRF models
-uv run pytest tests/test_models.py::test_smurf_models
+# Test three-phase fusion model
+uv run pytest tests/test_three_phase_ct_fusion_model.py
 ```
 
 ## Common Tasks

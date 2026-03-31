@@ -41,9 +41,8 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 
 ### 3. Builder / 模型结构实验
 
-如果你要验证更灵活的模态拼装或参考 SMuRF 风格结构，看：
+如果你要验证更灵活的模态拼装或查看 builder 结构示例，看：
 
 - `configs/builder/`
 
 但这条线和当前 `medfusion train` 的 dataclass 配置不是同一套 schema。
-chema。

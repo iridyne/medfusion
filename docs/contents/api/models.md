@@ -70,7 +70,7 @@ config = {
 model = build_model_from_config(config)
 
 # 从 YAML 文件构建
-model = build_model_from_config('configs/builder/smurf.yaml')
+model = build_model_from_config('configs/builder/generic_multimodal.yaml')
 ```
 
 注意：
@@ -117,4 +117,4 @@ mil:  # 可选
 
 完整的 API 文档请参考源代码：
 - `med_core/models/builder.py` - 模型构建器
-- `med_core/models/smurf.py` - SMuRF 模型实现
+- `med_core/models/three_phase_ct_fusion.py` - 原生 three-phase CT 融合模型

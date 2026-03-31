@@ -41,7 +41,7 @@ CLI Command → Argument Parser → Config Loader → Main Function → Output
 uv run medfusion train --config configs/starter/default.yaml
 
 # With custom output directory
-uv run medfusion train --config configs/builder/smurf.yaml --output-dir outputs/experiment1
+uv run medfusion train --config configs/starter/quickstart.yaml --output-dir outputs/experiment1
 
 # Resume from checkpoint
 uv run medfusion train --config configs/starter/default.yaml --resume outputs/checkpoints/last.pth

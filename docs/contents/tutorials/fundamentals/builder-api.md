@@ -31,7 +31,7 @@ model = (
 from med_core.models import build_model_from_config
 import yaml
 
-with open("configs/builder/smurf.yaml") as f:
+with open("configs/builder/generic_multimodal.yaml") as f:
     config = yaml.safe_load(f)
 
 model = build_model_from_config(config)
@@ -116,10 +116,10 @@ print(f"Output shape: {logits.shape}")  # [4, 2]
 - `backbone`: 骨干网络名称或自定义模块
 - `input_dim`: 表格数据的输入维度
 
-## 示例 2：SMuRF 模型
+## 示例 2：影像-病理双模态模型
 
 ```python
-# 使用 Builder API 构建 SMuRF
+# 使用 Builder API 构建一个影像-病理双模态分类模型
 model = (
     MultiModalModelBuilder()
     .add_modality(
@@ -150,7 +150,7 @@ logits = model(inputs)
 print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
 ```
 
-**SMuRF 特点：**
+**这个示例的特点：**
 - 3D Swin Transformer 处理 CT
 - 2D Swin Transformer 处理病理图像
 - Fused Attention 融合策略
