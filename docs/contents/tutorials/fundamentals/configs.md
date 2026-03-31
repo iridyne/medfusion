@@ -4,6 +4,89 @@
 
 本教程详细讲解 MedFusion 的配置系统，帮助你理解每个参数的含义和最佳实践。
 
+先讲清楚配置文件的边界：
+
+- 这一页讲的是“如何使用当前主链 YAML”
+- 它默认你在当前 runtime 已经支持的能力范围内工作
+- 也就是说，YAML **只能在当前 runtime 已经支持的组件范围内组合**
+
+如果你要判断自己该复制模板、走 Builder，还是先扩展底层能力，先看
+[如何新建模型与 YAML](../../getting-started/model-creation-paths.md)。
+
+结论只有一句：
+
+**想要框架里还没有的新能力，必须先扩 runtime，再扩 YAML。**
+
+## 最小可运行模板
+
+如果你第一天只是想改一份能跑通的配置，不需要先理解完整 schema。
+
+第一次上手只需要先改这几个地方：
+
+- `csv_path` / `image_dir`
+- `target_column`
+- `numerical_features` / `categorical_features`
+- `num_classes`
+- `logging.output_dir`
+
+直接从 [configs/starter/quickstart.yaml](../../../../configs/starter/quickstart.yaml) 复制最稳：
+
+```yaml
+project_name: "quickstart"
+experiment_name: "first_test"
+seed: 42
+device: "auto"
+
+data:
+  csv_path: "data/mock/metadata.csv"
+  image_dir: "data/mock"
+  image_path_column: "image_path"
+  target_column: "diagnosis"
+  numerical_features: ["age"]
+  categorical_features: ["gender"]
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  image_size: 224
+  batch_size: 4
+  num_workers: 0
+  pin_memory: false
+
+model:
+  num_classes: 2
+  vision:
+    backbone: "resnet18"
+    pretrained: true
+    freeze_backbone: false
+    feature_dim: 128
+    dropout: 0.3
+  tabular:
+    hidden_dims: [32]
+    output_dim: 16
+    dropout: 0.2
+  fusion:
+    fusion_type: "concatenate"
+    hidden_dim: 144
+
+training:
+  num_epochs: 3
+  use_progressive_training: false
+  mixed_precision: false
+  optimizer:
+    optimizer: "adam"
+    learning_rate: 0.001
+  scheduler:
+    scheduler: "step"
+    step_size: 1
+
+logging:
+  output_dir: "outputs/quickstart"
+  use_tensorboard: false
+  use_wandb: false
+```
+
+后面的章节属于扩展字段参考。
+
 ## 配置文件结构
 
 MedFusion 使用 YAML 格式的配置文件，主要包含五个部分：

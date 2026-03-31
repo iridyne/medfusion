@@ -7,7 +7,14 @@
 ## 先看这两页
 
 - [CLI 与 Config 使用路径](cli-config-workflow.md)
+- [如何新建模型与 YAML](model-creation-paths.md)
 - [公开数据集快速验证清单](public-datasets.md)（还没有私有数据时优先看）
+
+如果你现在的目标是“自己新建模型 YAML”，先把判断逻辑记住：
+
+- 普通用户：复制一份主链 config 模板
+- 高级用户：走 Builder / 代码做结构实验
+- 真正新的模型能力：先扩 runtime，再扩 YAML
 
 ---
 

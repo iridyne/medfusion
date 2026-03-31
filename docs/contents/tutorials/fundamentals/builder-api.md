@@ -4,6 +4,15 @@
 
 本教程详细讲解 MedFusion 的模型构建器 API，展示如何通过代码灵活构建各种多模态模型。
 
+先说明这页和 CLI 主链的关系：
+
+- 这页主要服务于**结构实验**
+- Builder 配置更适合研究原型和结构拼装
+- 它**不是当前 `medfusion train` 主链 YAML**
+
+如果你是为了“新建一个能直接进入训练主链的 YAML”，先看
+[如何新建模型与 YAML](../../getting-started/model-creation-paths.md)。
+
 ## 三种模型构建方式
 
 MedFusion 提供三种构建模型的方式：

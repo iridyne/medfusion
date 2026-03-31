@@ -38,6 +38,8 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 `medfusion start` 会把 Web UI 作为默认入口收口起来，更适合新用户和回归验证场景。
 
+大多数新手只需要这一条命令。
+
 当前工作台里的推荐路径：
 
 1. 先进入“数据管理”确认可用数据目录
@@ -45,7 +47,18 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 3. 执行 `medfusion validate-config` / `medfusion train`
 4. 训练完成后导入结果到模型库查看 artifact
 
-### 方法 2：使用启动脚本
+这里需要把边界说清楚：
+
+- 当前向导更准确地说是一个 **RunSpec / ExperimentConfig 生成器**
+- 它帮助你填写当前主链已经支持的配置
+- 它不是一个无代码模型发明器
+
+如果你要新建模型，请先看 [如何新建模型与 YAML](model-creation-paths.md)。
+当前 Web 向导**不会替你发明一个全新的模型能力**，它只是帮你减少现有 schema 的手写成本。
+
+高级或兼容场景再看下面几种方式。
+
+### 方法 2：使用启动脚本（兼容）
 
 最简单的方式是使用提供的启动脚本：
 
@@ -62,7 +75,7 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 2. 构建前端（如果需要）
 3. 启动 Web 服务器
 
-### 方法 3：手动启动
+### 方法 3：手动启动（开发调试）
 
 如果你想手动控制每个步骤：
 
@@ -290,8 +303,8 @@ lsof -i :8000
 # 杀死进程
 kill -9 <PID>
 
-# 或使用其他端口
-./start-webui.sh 8080
+# 新手推荐直接换官方入口的端口
+uv run medfusion start --port 8080
 ```
 
 ### 问题 2: 前端资源未找到

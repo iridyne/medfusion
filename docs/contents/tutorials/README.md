@@ -2,22 +2,41 @@
 
 欢迎来到 MedFusion 教程！本教程体系采用**模块化设计**，每个教程都是独立的学习单元，你可以按需选择学习路径。
 
+在进入教程前，请先把“新建模型”这件事分清楚：
+
+- **普通用户**：复制主链模板，在现有组件里组合
+- **高级用户**：Builder / 代码做结构实验
+- **真正新的模型能力**：先扩 runtime，再扩 YAML
+
+先读：[如何新建模型与 YAML](../getting-started/model-creation-paths.md)
+
 ## 🎯 三种学习路径
 
 ### ⚡ 路径 1：快速入门（30 分钟）
 
-**目标**：最快速度训练出第一个模型
+**目标**：先成功跑通一次主链，再理解配置和模型组织方式
 
 **适合人群**：想要快速体验框架的用户
 
+补充说明：
+
+- 如果你只是想给自己的任务新建 YAML，先不要把教程里的示例脚本当成官方首选入口
+- 更推荐先从主链模板复制开始，再回来补教程
+
 **学习模块**：
 1. [环境安装](../getting-started/installation.md)（5 分钟）
-2. [你的第一个模型](../getting-started/first-model.md)（30 分钟）⭐
+2. [快速上手](../getting-started/quickstart.md)（10 分钟）
+3. [CLI 与 Config 使用路径](../getting-started/cli-config-workflow.md)（10 分钟）
+4. [公开数据集快速验证](../getting-started/public-datasets.md)（10 分钟，可选）
+5. [如何新建模型与 YAML](../getting-started/model-creation-paths.md)（10 分钟）
+
+**教学型补充**：
+- [你的第一个模型](../getting-started/first-model.md)（30 分钟）
 
 **特点**：
-- 使用合成数据，零门槛
-- 端到端完整流程
-- 立即看到结果
+- 先跑通官方主链
+- 先用现成模板成功一次
+- 再决定是否进入教学型脚本教程
 
 ---
 
@@ -76,9 +95,13 @@
 | 模块 | 时长 | 难度 | 描述 |
 |------|------|------|------|
 | [01. 环境安装](../getting-started/installation.md) | 5 分钟 | ⭐ | 安装 MedFusion 和依赖 |
-| [02. 你的第一个模型](../getting-started/first-model.md) | 30 分钟 | ⭐ | 端到端训练第一个模型 |
-| [03. 配置文件详解](fundamentals/configs.md) | 20 分钟 | ⭐⭐ | 理解配置文件结构 |
-| [04. 数据准备指南](fundamentals/data-prep.md) | 30 分钟 | ⭐⭐ | 准备医学影像数据 |
+| [02. 快速上手](../getting-started/quickstart.md) | 10 分钟 | ⭐ | 先把官方主链跑通 |
+| [03. CLI 与 Config 使用路径](../getting-started/cli-config-workflow.md) | 10 分钟 | ⭐ | 搞清楚主链 YAML、Builder 和 Web 的边界 |
+| [04. 公开数据集快速验证](../getting-started/public-datasets.md) | 10 分钟 | ⭐ | 没有私有数据时的最快入口 |
+| [05. 如何新建模型与 YAML](../getting-started/model-creation-paths.md) | 10 分钟 | ⭐ | 判断该复制模板、进 Builder，还是先扩 runtime |
+| [06. 你的第一个模型](../getting-started/first-model.md) | 30 分钟 | ⭐ | 教学型补充：从零写 demo 理解流程 |
+| [07. 配置文件详解](fundamentals/configs.md) | 20 分钟 | ⭐⭐ | 理解配置文件结构 |
+| [08. 数据准备指南](fundamentals/data-prep.md) | 30 分钟 | ⭐⭐ | 准备医学影像数据 |
 
 ### 模型构建模块
 

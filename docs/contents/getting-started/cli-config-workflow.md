@@ -4,6 +4,14 @@
 
 这个项目现在有三条不同层级的使用路径。如果不先讲清楚，很容易出现“看起来有 CLI，但又不知道该喂哪个 YAML”的问题。
 
+如果你是来“新建模型 YAML”的，先做这个判断：
+
+- 想把自己的任务跑在当前主链上：**复制一份最接近的主链 YAML 模板**
+- 想做研究型原型或结构实验：走 **Builder / 代码路径**
+- 想要当前 runtime 里根本没有的新能力：**先扩 runtime，再把它暴露给 YAML**
+
+完整说明见：[如何新建模型与 YAML](model-creation-paths.md)
+
 ## 一、最稳定的主链
 
 这是当前最适合新用户和对外演示的路径。
@@ -100,6 +108,12 @@ medfusion train --config ...
 ```
 
 所以如果你只是想先跑通训练和结果页，不要从 `configs/builder/` 开始。
+
+更直接一点说：
+
+- 主链用户：复制 `configs/starter/` 或 `configs/public_datasets/`
+- 研究用户：Builder / 代码路径
+- 新能力开发：先扩 runtime，再扩 YAML
 
 ## 三、Web UI 链
 

@@ -39,19 +39,20 @@ OSS 不是 demo 壳，而是长期技术主干。
 
 ## 快速开始
 
+如果你的目标是“自己新建一份 YAML 模型配置”，先看
+[如何新建模型与 YAML](docs/contents/getting-started/model-creation-paths.md)。
+当前官方边界是：
+
+- 普通用户复制主链模板
+- 高级用户走 Builder / 代码做结构实验
+- 真正新的能力先扩 runtime，再扩 YAML
+
 > 以下命令默认在 **MedFusion OSS 仓库根目录** 执行。
 
-### 1) 本地数据路径
+如果你完全没有私有数据，推荐先走“公共数据快速验证”。
+先成功跑通一次，再迁移到自己的 YAML，阻力最小。
 
-```bash
-uv run medfusion validate-config --config configs/starter/quickstart.yaml
-uv run medfusion train --config configs/starter/quickstart.yaml
-uv run medfusion build-results \
-  --config configs/starter/quickstart.yaml \
-  --checkpoint outputs/quickstart/checkpoints/best.pth
-```
-
-### 2) 公共数据快速验证
+### 1) 公共数据快速验证（推荐第一步）
 
 ```bash
 uv run medfusion public-datasets list
@@ -62,7 +63,17 @@ uv run medfusion build-results \
   --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
 ```
 
-### 3) 三相 CT + 临床小样本 demo
+### 2) 本地数据路径
+
+```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
+```
+
+### 3) 专项 demo：三相 CT + 临床小样本
 
 `v1` demo 适用于小样本可行性验证，不用于宣称泛化性能。
 
@@ -202,10 +213,16 @@ bash scripts/full_regression.sh --ci
 bash scripts/full_regression.sh --full
 ```
 
+其中最关键的基础回归包括：
+
+- `tests/test_config_validation.py`
+- `tests/test_export.py`
+
 ---
 
 ## 文档入口
 
+- [如何新建模型与 YAML](docs/contents/getting-started/model-creation-paths.md)
 - [快速上手](docs/contents/getting-started/quickstart.md)
 - [CLI & Config 工作流](docs/contents/getting-started/cli-config-workflow.md)
 - [公共数据集路径](docs/contents/getting-started/public-datasets.md)

@@ -19,6 +19,7 @@ export default defineConfig({
           text: '快速入门',
           items: [
             { text: 'CLI 与 Config 使用路径', link: '/contents/getting-started/cli-config-workflow' },
+            { text: '如何新建模型与 YAML', link: '/contents/getting-started/model-creation-paths' },
             { text: '环境安装', link: '/contents/getting-started/installation' },
             { text: '快速开始', link: '/contents/getting-started/quickstart' },
             { text: '公开数据集快速验证', link: '/contents/getting-started/public-datasets' },

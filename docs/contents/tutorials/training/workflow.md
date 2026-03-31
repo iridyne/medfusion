@@ -4,6 +4,14 @@
 
 本教程详细介绍 MedFusion 的完整训练工作流，从训练前准备到模型保存和问题排查。
 
+先说明适用范围：
+
+- 这页默认你已经决定走官方 CLI 主链
+- 如果你现在的问题是“如何新建模型 YAML”，先看 [如何新建模型与 YAML](../../getting-started/model-creation-paths.md)
+- 对大多数新用户来说，正确起点是**复制主链模板**，而不是直接从零写一套新结构
+
+只有当当前 runtime 没有你要的能力时，才进入“先扩 runtime，再扩 YAML”的路径。
+
 ## 训练前检查清单
 
 在启动训练前，确保以下项目已完成：
@@ -175,14 +183,13 @@ history = trainer.train()
 ### 方法 3：使用 Web UI
 
 ```bash
-# 启动 Web 服务
-./start-webui.sh
-
-# 或手动启动
-uv run python -m med_core.web.cli web
+# 新手默认入口
+uv run medfusion start
 ```
 
 访问 http://localhost:8000，通过图形界面配置和启动训练。
+
+兼容或开发调试时再看旧入口，例如 `./start-webui.sh`、`uv run medfusion web` 或手动 `uvicorn`。
 
 ## 监控训练进度
 

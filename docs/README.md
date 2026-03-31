@@ -13,6 +13,7 @@
 
 ## 高频入口（90% 场景）
 
+- [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
 - [公开数据集快速验证](contents/getting-started/public-datasets.md)
@@ -25,6 +26,7 @@
 
 - **没有私有数据** → 先看 [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - **有私有数据，想先跑通** → 先看 [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
+- **想自己新建 YAML / 模型** → 先看 [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - **想理解架构再上手** → 先看 [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)
 - **要改代码/做贡献** → 先看 [安装](contents/getting-started/installation.md) + [教程总览](contents/tutorials/README.md)
 
@@ -57,11 +59,18 @@ flowchart LR
 
 ### 1) 我想先把主链跑通（推荐）
 
+- [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
 - [公开数据集快速验证](contents/getting-started/public-datasets.md)
 
 适合：新用户、对外 demo、先要结果再深入。
+
+补一句关键边界：
+
+- 普通用户：复制主链模板
+- 高级用户：Builder / 代码做结构实验
+- 真正新的模型能力：先扩 runtime，再扩 YAML
 
 ### 任务手册（按目标执行）
 
