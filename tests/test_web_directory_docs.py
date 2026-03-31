@@ -26,6 +26,8 @@ def test_legacy_web_guides_are_removed() -> None:
         "web/CLI_GUIDE.md",
         "web/docs/README.md",
         "web/docs/CLI_VS_SHELL.md",
+        "web/test_backend.py",
+        "web/test_optimizations.py",
     ]
 
     for path in legacy_paths:
@@ -44,3 +46,12 @@ def test_beginner_web_guide_points_to_curated_web_readme() -> None:
     text = _read_text("docs/contents/getting-started/web-ui.md")
 
     assert "../../../web/README.md" in text
+
+
+def test_web_readme_points_to_real_test_entrypoints() -> None:
+    text = _read_text("web/README.md")
+
+    assert "当前真实的 Web 测试入口" in text
+    assert "tests/test_web_api_minimal.py" in text
+    assert "tests/test_web_training_controls.py" in text
+    assert "tests/test_workflow_api.py" in text

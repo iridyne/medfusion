@@ -83,6 +83,16 @@ uv run uvicorn med_core.web.app:app --reload --host 127.0.0.1 --port 8000
 
 这些文件或目录可以存在于本机，但不应该被当成 Web 工作区的核心结构来理解。
 
+## 当前真实的 Web 测试入口
+
+不要再从 `web/` 目录下找独立测试脚本。
+
+当前真实的 Web 测试入口在仓库根目录 `tests/` 下，例如：
+
+- `tests/test_web_api_minimal.py`
+- `tests/test_web_training_controls.py`
+- `tests/test_workflow_api.py`
+
 ## 生产静态资源链路
 
 当前链路是：
