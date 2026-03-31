@@ -142,6 +142,61 @@ outputs/experiments/lung_fusion_baseline_v2/
 
 ---
 
+## Why Not Organize By Artifact Type First
+
+一个常见直觉是把 `outputs/` 直接设计成：
+
+```text
+outputs/
+├── checkpoints/
+├── logs/
+├── metrics/
+├── reports/
+└── artifacts/
+```
+
+这种结构看上去更“整齐”，但它不适合作为运行归档根目录。
+
+原因是 `outputs/` 的核心对象不是“单个产物文件”，而是“一次 run”。
+
+如果先按产物类型分类，同一次 run 的文件会被拆散到多个顶层目录：
+
+- 某次训练的 checkpoint 在 `checkpoints/`
+- 同一次训练的历史在 `logs/`
+- 同一次训练的指标在 `metrics/`
+- 同一次训练的汇总在 `reports/`
+- 同一次训练的图表在 `artifacts/`
+
+这样会带来几个问题：
+
+- 很难一眼判断哪些文件属于同一次 run
+- 删除、移动、归档某次 run 时，需要跨多个目录操作
+- 很难回答 “这个 report 对应哪个 checkpoint” 这类问题
+- 不利于结果页导入、复盘和审计
+
+因此，运行归档的第一维应该是 **run**，而不是 **artifact type**。
+
+更合适的结构是：
+
+```text
+outputs/<source>/<run_name>/
+├── checkpoints/
+├── logs/
+├── metrics/
+├── reports/
+└── artifacts/
+```
+
+这里的分层逻辑是：
+
+1. 第一层按运行来源或实验类别分类
+2. 第二层按具体 run 分类
+3. 第三层才按该 run 内的产物类型分类
+
+这不是在放弃“按产物类型组织”，而是在把它放到正确的层级上。
+
+---
+
 ## Classification Of Current Remaining Directories
 
 基于当前仓库状态，`outputs/` 中剩余目录可以分为两类。
