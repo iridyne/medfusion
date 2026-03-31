@@ -265,6 +265,22 @@ def _report_value(value: Any) -> str:
     return str(value)
 
 
+def _format_importance_method(method: Any) -> str:
+    if method in {"logistic_surrogate_shap", "ridge_surrogate_shap"}:
+        return "SHAP-style surrogate"
+    return _report_value(method)
+
+
+def _format_score_name(score_name: Any) -> str:
+    mapping = {
+        "positive_class_probability": "阳性预测概率",
+        "max_predicted_probability": "最高预测概率",
+        "risk_head": "模型风险概率",
+        "probability": "预测概率",
+    }
+    return mapping.get(str(score_name), _report_value(score_name))
+
+
 def _append_markdown_image(
     lines: list[str], title: str, report_path: str | Path, target_path: str | Path | None
 ) -> None:
@@ -323,14 +339,14 @@ def generate_result_artifact_report(
         "",
         f"- 数据集: {_report_value(validation_payload.get('dataset', {}).get('name'))}",
         f"- Backbone: {_report_value(backbone)}",
-        f"- Accuracy: {_report_value(metrics_payload.get('accuracy'))}",
-        f"- AUC: {_report_value(metrics_payload.get('auc'))}",
+        f"- 总体准确率: {_report_value(metrics_payload.get('accuracy'))}",
+        f"- 区分能力（AUC）: {_report_value(metrics_payload.get('auc'))}",
         f"- F1: {_report_value(metrics_payload.get('f1_score'))}",
-        f"- Balanced Accuracy: {_report_value(metrics_payload.get('balanced_accuracy'))}",
+        f"- 平衡准确率: {_report_value(metrics_payload.get('balanced_accuracy'))}",
         f"- C-index: {_report_value(metrics_payload.get('c_index'))}",
-        f"- Best Epoch: {_report_value(metrics_payload.get('best_epoch'))}",
-        f"- Best Accuracy: {_report_value(metrics_payload.get('best_accuracy'))}",
-        f"- Best Loss: {_report_value(metrics_payload.get('best_loss'))}",
+        f"- 最佳轮次: {_report_value(metrics_payload.get('best_epoch'))}",
+        f"- 最佳准确率: {_report_value(metrics_payload.get('best_accuracy'))}",
+        f"- 最佳损失: {_report_value(metrics_payload.get('best_loss'))}",
         "",
         "## Validation 概览",
         "",
@@ -369,14 +385,14 @@ def generate_result_artifact_report(
     ]
 
     for title, path in [
-        ("Training Curves", artifact_paths.get("training_curves_plot_path")),
-        ("ROC Curve", artifact_paths.get("roc_curve_plot_path")),
-        ("Confusion Matrix", artifact_paths.get("confusion_matrix_plot_path")),
-        ("Attention Statistics", artifact_paths.get("attention_statistics_plot_path")),
-        ("Kaplan-Meier Curve", artifact_paths.get("kaplan_meier_plot_path")),
-        ("Risk Score Distribution", artifact_paths.get("risk_score_distribution_plot_path")),
-        ("Global Feature Importance Bar", artifact_paths.get("feature_importance_bar_plot_path")),
-        ("Global Feature Importance Beeswarm", artifact_paths.get("feature_importance_beeswarm_plot_path")),
+        ("训练曲线", artifact_paths.get("training_curves_plot_path")),
+        ("ROC 曲线（区分能力）", artifact_paths.get("roc_curve_plot_path")),
+        ("混淆矩阵（阳性/阴性判别情况）", artifact_paths.get("confusion_matrix_plot_path")),
+        ("注意力统计图", artifact_paths.get("attention_statistics_plot_path")),
+        ("Kaplan-Meier 生存曲线", artifact_paths.get("kaplan_meier_plot_path")),
+        ("风险分层分布图", artifact_paths.get("risk_score_distribution_plot_path")),
+        ("关键影响因素条形图", artifact_paths.get("feature_importance_bar_plot_path")),
+        ("关键影响因素散点图", artifact_paths.get("feature_importance_beeswarm_plot_path")),
     ]:
         _append_markdown_image(report_lines, title, resolved_report_path, path)
 
@@ -384,9 +400,9 @@ def generate_result_artifact_report(
         [
             "## Threshold Analysis",
             "",
-            f"- Optimal Threshold: {_report_value(metrics_payload.get('optimal_threshold'))}",
-            f"- Sensitivity: {_report_value(metrics_payload.get('sensitivity'))}",
-            f"- Specificity: {_report_value(metrics_payload.get('specificity'))}",
+            f"- 最优阈值: {_report_value(metrics_payload.get('optimal_threshold'))}",
+            f"- 敏感度: {_report_value(metrics_payload.get('sensitivity'))}",
+            f"- 特异度: {_report_value(metrics_payload.get('specificity'))}",
             f"- PPV: {_report_value(metrics_payload.get('ppv'))}",
             f"- NPV: {_report_value(metrics_payload.get('npv'))}",
             "",
@@ -411,12 +427,12 @@ def generate_result_artifact_report(
         report_lines.extend(
             [
                 "",
-                "## Survival Analysis",
+                "## 生存分析",
                 "",
-                f"- Survival Sample Count: {_report_value(survival_payload.get('sample_count'))}",
-                f"- Event Rate: {_report_value(survival_payload.get('event_rate'))}",
+                f"- 生存分析样本数: {_report_value(survival_payload.get('sample_count'))}",
+                f"- 事件发生率: {_report_value(survival_payload.get('event_rate'))}",
                 f"- C-index: {_report_value(survival_payload.get('c_index'))}",
-                f"- Risk Score Source: {_report_value(survival_payload.get('risk_score_source'))}",
+                f"- 风险分层依据: {_format_score_name(survival_payload.get('risk_score_source'))}",
             ]
         )
 
@@ -424,12 +440,12 @@ def generate_result_artifact_report(
         report_lines.extend(
             [
                 "",
-                "## Global Feature Importance",
+                "## 关键影响因素",
                 "",
-                f"- Method: {_report_value(importance_payload.get('method'))}",
-                f"- Score Name: {_report_value(importance_payload.get('score_name'))}",
+                f"- 方法说明: {_format_importance_method(importance_payload.get('method'))}",
+                f"- 关键影响因素评分来源: {_format_score_name(importance_payload.get('score_name'))}",
                 *[
-                    f"- {item['feature']}: {item['mean_abs_contribution']}"
+                    f"- 关键因素: {item['feature']}: {item['mean_abs_contribution']}"
                     for item in importance_payload.get("top_features", [])[:5]
                 ],
             ]

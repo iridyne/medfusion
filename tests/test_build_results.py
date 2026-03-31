@@ -150,8 +150,14 @@ def _assert_report_contract(
     assert "## Per-class Metrics" in report_text
     assert "## Threshold Analysis" in report_text
     assert "## History" in report_text
-    assert "![Training Curves](../artifacts/visualizations/training_curves.png)" in report_text
-    assert "![Confusion Matrix](../artifacts/visualizations/confusion_matrix.png)" in report_text
+    assert "- 总体准确率:" in report_text
+    assert "- 区分能力（AUC）:" in report_text
+    assert "- 最优阈值:" in report_text
+    assert "- 敏感度:" in report_text
+    assert "- 特异度:" in report_text
+    assert "![ROC 曲线（区分能力）](../artifacts/visualizations/roc_curve.png)" in report_text
+    assert "![训练曲线](../artifacts/visualizations/training_curves.png)" in report_text
+    assert "![混淆矩阵（阳性/阴性判别情况）](../artifacts/visualizations/confusion_matrix.png)" in report_text
 
 
 def test_build_results_artifacts_from_real_checkpoint(tmp_path: Path) -> None:
@@ -280,13 +286,16 @@ def test_build_results_artifacts_include_survival_and_importance_when_configured
     assert result.artifact_paths["feature_importance_beeswarm_plot_path"].endswith(
         "feature_importance_beeswarm.png"
     )
-    assert "## Survival Analysis" in report_text
-    assert "## Global Feature Importance" in report_text
+    assert "## 生存分析" in report_text
+    assert "## 关键影响因素" in report_text
+    assert "- 风险分层依据:" in report_text
+    assert "- 方法说明:" in report_text
+    assert "- 关键影响因素评分来源:" in report_text
     assert (
-        "![Kaplan-Meier Curve](../artifacts/visualizations/kaplan_meier_curve.png)"
+        "![Kaplan-Meier 生存曲线](../artifacts/visualizations/kaplan_meier_curve.png)"
         in report_text
     )
     assert (
-        "![Global Feature Importance Bar](../artifacts/visualizations/feature_importance_bar.png)"
+        "![关键影响因素条形图](../artifacts/visualizations/feature_importance_bar.png)"
         in report_text
     )
