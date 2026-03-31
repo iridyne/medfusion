@@ -132,6 +132,14 @@ def _round_metric(value: float | None, digits: int = 4) -> float | None:
     return round(float(value), digits)
 
 
+def _format_importance_method(method: str | None) -> str:
+    if not method:
+        return "-"
+    if method in {"logistic_surrogate_shap", "ridge_surrogate_shap"}:
+        return "SHAP-style surrogate"
+    return method.replace("_", " ")
+
+
 def _build_artifact_metadata(
     *,
     config_path: Path,
@@ -549,7 +557,7 @@ def _build_three_phase_results(
     if importance_payload is not None:
         report_lines.extend(["", "## Feature Importance", ""])
         report_lines.append(
-            f"- Method: {importance_payload.get('method') or '-'}"
+            f"- Method: {_format_importance_method(importance_payload.get('method'))}"
         )
         top_features = importance_payload.get("top_features", [])[:5]
         if top_features:
@@ -564,10 +572,12 @@ def _build_three_phase_results(
         report_lines.extend(["", "## Artifact Paths", ""])
     if importance_payload is not None:
         report_lines.append(
-            f"- SHAP Bar: {importance_artifact_paths.get('shap_bar_plot_path')}"
+            "- Feature Importance Bar: "
+            f"{importance_artifact_paths.get('feature_importance_bar_plot_path')}"
         )
         report_lines.append(
-            f"- SHAP Beeswarm: {importance_artifact_paths.get('shap_beeswarm_plot_path')}"
+            "- Feature Importance Beeswarm: "
+            f"{importance_artifact_paths.get('feature_importance_beeswarm_plot_path')}"
         )
     report_lines.append(f"- Config Snapshot: {layout.config_snapshot_path}")
     report_lines.append(f"- Metrics JSON: {layout.metrics_path}")

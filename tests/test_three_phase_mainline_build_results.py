@@ -258,5 +258,8 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
     assert "## Artifact Paths" in report_text
     assert "- ROC Curve:" in report_text
     assert "- Confusion Matrix:" in report_text
-    assert "- SHAP Bar:" in report_text
-    assert "- SHAP Beeswarm:" in report_text
+    assert "- Method: SHAP-style surrogate" in report_text
+    assert "- Feature Importance Bar:" in report_text
+    assert "- Feature Importance Beeswarm:" in report_text
+    assert "- SHAP Bar:" not in report_text
+    assert "- SHAP Beeswarm:" not in report_text
