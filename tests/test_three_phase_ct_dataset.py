@@ -7,6 +7,7 @@ from pydicom.uid import ExplicitVRLittleEndian
 
 from med_core.configs.doctor import ConfigDoctor
 from med_core.datasets.three_phase_ct import ThreePhaseCTCaseDataset
+from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 
 
 def _write_slice(path: Path, instance_number: int, pixel_array: np.ndarray) -> None:
@@ -68,6 +69,40 @@ def test_three_phase_dataset_returns_case_tensors(tmp_path: Path) -> None:
     assert sample["portal"].shape == (1, 4, 8, 8)
     assert sample["noncontrast"].shape == (1, 4, 8, 8)
     assert sample["clinical"].shape == (3,)
+    assert sample["clinical_missing_mask"].shape == (3,)
+    assert sample["clinical_missing_mask"].tolist() == [0.0, 0.0, 0.0]
+
+
+def test_three_phase_dataset_uses_clinical_preprocessor_and_missing_mask(
+    tmp_path: Path,
+) -> None:
+    phase_dirs = _write_three_phase_case(tmp_path, "001")
+    preprocessor = ClinicalFeaturePreprocessor(
+        strategy="zero_with_mask",
+        normalize=True,
+    )
+    preprocessor.fit([[60.0, None, 20.0], [68.0, 1.0, 28.0]])
+
+    dataset = ThreePhaseCTCaseDataset.from_records(
+        [
+            {
+                "case_id": "001",
+                "arterial_series_dir": phase_dirs["arterial"],
+                "portal_series_dir": phase_dirs["portal"],
+                "noncontrast_series_dir": phase_dirs["noncontrast"],
+                "mvi_binary": 1,
+                "clinical_features": [64.0, None, 24.0],
+            }
+        ],
+        target_shape=(4, 8, 8),
+        clinical_preprocessor=preprocessor,
+    )
+
+    sample = dataset[0]
+    assert sample["clinical"].shape == (3,)
+    assert sample["clinical_missing_mask"].tolist() == [0.0, 1.0, 0.0]
+    assert np.isclose(sample["clinical"][0].item(), 0.0)
+    assert sample["clinical"][1].item() == 0.0
 
 
 def test_three_phase_doctor_validates_manifest_columns_and_phase_dirs(

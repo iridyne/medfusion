@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 from med_core.shared.data_utils import load_dicom_series
+from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 
 
 @dataclass(slots=True)
@@ -21,7 +22,7 @@ class ThreePhaseCTCaseRecord:
     portal_series_dir: str
     noncontrast_series_dir: str
     mvi_binary: int
-    clinical_features: list[float]
+    clinical_features: list[float | None]
 
 
 class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
@@ -32,10 +33,16 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
         records: list[ThreePhaseCTCaseRecord],
         target_shape: tuple[int, int, int],
         window_preset: str = "liver",
+        clinical_preprocessor: ClinicalFeaturePreprocessor | None = None,
     ) -> None:
         self.records = records
         self.target_shape = target_shape
         self.window_preset = window_preset
+        self.clinical_preprocessor = clinical_preprocessor
+        (
+            self._clinical_values,
+            self._clinical_missing_masks,
+        ) = self._prepare_clinical_features()
 
     @classmethod
     def from_records(
@@ -43,6 +50,7 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
         records: list[dict[str, object]],
         target_shape: tuple[int, int, int],
         window_preset: str = "liver",
+        clinical_preprocessor: ClinicalFeaturePreprocessor | None = None,
     ) -> "ThreePhaseCTCaseDataset":
         def _resolve_series_dir(record: dict[str, object], *keys: str) -> str:
             for key in keys:
@@ -64,7 +72,8 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
                 ),
                 mvi_binary=int(record["mvi_binary"]),
                 clinical_features=[
-                    float(value) for value in list(record["clinical_features"])
+                    None if value is None else float(value)
+                    for value in list(record["clinical_features"])
                 ],
             )
             for record in records
@@ -73,6 +82,7 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
             records=normalized,
             target_shape=target_shape,
             window_preset=window_preset,
+            clinical_preprocessor=clinical_preprocessor,
         )
 
     @classmethod
@@ -86,6 +96,7 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
         patient_id_column: str,
         target_shape: tuple[int, int, int],
         window_preset: str = "liver",
+        clinical_preprocessor: ClinicalFeaturePreprocessor | None = None,
     ) -> "ThreePhaseCTCaseDataset":
         records: list[dict[str, object]] = []
         for row in dataframe.to_dict(orient="records"):
@@ -97,7 +108,7 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
                     "noncontrast_series_dir": row[phase_dir_columns["noncontrast"]],
                     "mvi_binary": row[target_column],
                     "clinical_features": [
-                        0.0 if pd.isna(row[column]) else float(row[column])
+                        None if pd.isna(row[column]) else float(row[column])
                         for column in clinical_feature_columns
                     ],
                 }
@@ -106,6 +117,7 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
             records=records,
             target_shape=target_shape,
             window_preset=window_preset,
+            clinical_preprocessor=clinical_preprocessor,
         )
 
     def __len__(self) -> int:
@@ -118,9 +130,22 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
             "arterial": self._load_phase(record.arterial_series_dir),
             "portal": self._load_phase(record.portal_series_dir),
             "noncontrast": self._load_phase(record.noncontrast_series_dir),
-            "clinical": torch.tensor(record.clinical_features, dtype=torch.float32),
+            "clinical": torch.tensor(self._clinical_values[index], dtype=torch.float32),
+            "clinical_missing_mask": torch.tensor(
+                self._clinical_missing_masks[index],
+                dtype=torch.float32,
+            ),
             "label": torch.tensor(record.mvi_binary, dtype=torch.long),
         }
+
+    def _prepare_clinical_features(self) -> tuple[list[list[float]], list[list[float]]]:
+        raw_rows = [record.clinical_features for record in self.records]
+        preprocessor = self.clinical_preprocessor or ClinicalFeaturePreprocessor(
+            strategy="zero_with_mask",
+            normalize=False,
+        )
+        transformed = preprocessor.transform(raw_rows)
+        return transformed.values.tolist(), transformed.missing_mask.tolist()
 
     def _load_phase(self, series_dir: str) -> torch.Tensor:
         if not Path(series_dir).exists():
