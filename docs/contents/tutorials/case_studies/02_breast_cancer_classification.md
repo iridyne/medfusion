@@ -353,7 +353,7 @@ class BreastCancerMultiModalDataset(Dataset):
 ### 6.1 使用 MedFusion 构建
 
 ```python
-# examples/train_breast_cancer.py
+# train_breast_cancer.py（自定义训练脚本示意）
 from med_core.models import MultiModalModelBuilder
 
 # 构建多模态模型
@@ -492,7 +492,7 @@ logging:
 ## 7. 训练模型
 
 ```python
-# examples/train_breast_cancer.py (完整版)
+# train_breast_cancer.py（完整版示意）
 import torch
 from torch.utils.data import DataLoader
 from med_core.models import build_model_from_config
@@ -554,7 +554,7 @@ if __name__ == "__main__":
 运行训练：
 
 ```bash
-uv run python examples/train_breast_cancer.py
+uv run python train_breast_cancer.py
 ```
 
 ## 8. 融合策略对比
@@ -562,7 +562,7 @@ uv run python examples/train_breast_cancer.py
 ### 8.1 对比不同融合方法
 
 ```python
-# examples/compare_fusion_strategies.py
+# compare_fusion_strategies.py（自定义实验脚本示意）
 fusion_strategies = [
     "concatenate",  # 简单拼接
     "gated",        # 门控融合
@@ -608,7 +608,7 @@ plt.savefig('outputs/breast_cancer/fusion_comparison.png', dpi=300)
 ### 9.1 MIL 注意力权重
 
 ```python
-# examples/visualize_mil_attention.py
+# visualize_mil_attention.py（自定义可视化脚本示意）
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -662,7 +662,7 @@ for i in range(5):
 ### 9.2 模态融合注意力
 
 ```python
-# examples/visualize_fusion_attention.py
+# visualize_fusion_attention.py（自定义可视化脚本示意）
 def visualize_fusion_attention(model, sample, device='cuda'):
     """可视化模态间注意力"""
     model.eval()
@@ -725,7 +725,7 @@ def visualize_fusion_attention(model, sample, device='cuda'):
 ## 11. 消融实验
 
 ```python
-# examples/ablation_study.py
+# ablation_study.py（自定义实验脚本示意）
 ablation_configs = [
     {"pathology": True, "mri": False, "clinical": False},
     {"pathology": False, "mri": True, "clinical": False},

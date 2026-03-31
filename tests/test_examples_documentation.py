@@ -29,12 +29,32 @@ def test_key_examples_explain_their_scope() -> None:
         "examples/model_builder_demo.py": (
             "Not equivalent to the current `medfusion train` config schema"
         ),
-        "examples/smurf_usage.py": (
-            "Not the current official end-to-end training entrypoint"
-        ),
         "examples/attention_quick_start.py": "不属于当前官方 CLI / Web 训练主链",
         "examples/attention_supervision_example.py": "不属于当前官方 CLI / Web 训练主链",
     }
 
     for path, marker in expectations.items():
         assert marker in _read_text(path), path
+
+
+def test_examples_directory_is_curated_for_developer_reference() -> None:
+    text = _read_text("examples/README.md")
+
+    assert "开发者参考集合" in text
+    assert "scripts/dev/" in text
+
+    moved_examples = [
+        "benchmark_demo.py",
+        "cache_demo_simple.py",
+        "cache_demo.py",
+        "config_validation_demo.py",
+        "distributed_training_demo.py",
+        "exception_handling_demo.py",
+        "gradient_checkpointing_demo.py",
+        "hyperparameter_tuning_demo.py",
+        "logging_demo.py",
+    ]
+
+    for name in moved_examples:
+        assert not Path("examples", name).exists(), name
+        assert Path("scripts/dev", name).exists(), name

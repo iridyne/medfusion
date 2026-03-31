@@ -436,7 +436,7 @@ create_cached_dataset(
 
 - **实现代码**: `med_core/datasets/cache.py`
 - **测试用例**: `tests/test_cache.py`
-- **演示脚本**: `examples/cache_demo_simple.py`
+- **演示脚本**: `scripts/dev/cache_demo_simple.py`
 - **性能基准**: `docs/guides/performance_optimization.md`
 
 ## 更新日志

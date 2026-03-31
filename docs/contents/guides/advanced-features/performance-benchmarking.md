@@ -594,7 +594,7 @@ BenchmarkSuite(
 - **实现代码**: `med_core/utils/benchmark.py`
 - **运行脚本**: `scripts/run_benchmarks.py`
 - **比较脚本**: `scripts/compare_benchmarks.py`
-- **演示脚本**: `examples/benchmark_demo.py`
+- **演示脚本**: `scripts/dev/benchmark_demo.py`
 - **基线数据**: `benchmarks/baseline.json`
 
 ## 更新日志

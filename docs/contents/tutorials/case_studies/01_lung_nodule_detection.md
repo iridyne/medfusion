@@ -167,7 +167,7 @@ class LungNoduleDataset(Dataset):
 ### 5.1 使用 MedFusion 构建 3D CNN
 
 ```python
-# examples/train_lung_nodule.py
+# train_lung_nodule.py（自定义训练脚本示意）
 import torch
 import torch.nn as nn
 from med_core.models import MultiModalModelBuilder
@@ -255,7 +255,7 @@ logging:
 ### 6.1 完整训练脚本
 
 ```python
-# examples/train_lung_nodule.py (完整版)
+# train_lung_nodule.py（完整版示意）
 import torch
 from pathlib import Path
 from torch.utils.data import DataLoader
@@ -321,7 +321,7 @@ if __name__ == "__main__":
 运行训练：
 
 ```bash
-uv run python examples/train_lung_nodule.py
+uv run python train_lung_nodule.py
 ```
 
 ### 6.2 使用命令行工具
@@ -336,7 +336,7 @@ uv run medfusion train --config configs/lung_nodule_config.yaml
 ### 7.1 评估脚本
 
 ```python
-# examples/evaluate_lung_nodule.py
+# evaluate_lung_nodule.py（自定义评估脚本示意）
 import torch
 import numpy as np
 from sklearn.metrics import roc_auc_score, confusion_matrix, classification_report

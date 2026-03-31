@@ -122,6 +122,7 @@ flowchart TB
 - `configs/builder/`：Builder 结构示例（不等价 CLI 训练配置）
 - `configs/legacy/`：历史模板，不建议新项目起步
 - `examples/`：API/专题演示，不是首选训练入口
+- 示例边界说明见：`examples/README.md`
 
 ---
 
@@ -131,6 +132,7 @@ flowchart TB
 - [FAQ 和故障排除](../guides/core/faq.md)
 - [开发与贡献指南](../guides/development/contributing.md)
 - [Core Runtime Architecture](../architecture/CORE_RUNTIME_ARCHITECTURE.md)
+- [Developer Examples Guide](../../../../examples/README.md)
 
 ## 获取帮助
 

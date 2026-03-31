@@ -1,6 +1,8 @@
-# Examples Guide
+# Developer Examples Guide
 
-`examples/` 里的脚本主要用于演示 API、能力模块和历史搭建方式，不是单一的“官方训练入口”。
+`examples/` 里的脚本主要用于演示 API、能力模块和历史搭建方式。
+
+它的定位是 **开发者参考集合**，不是面向普通用户的模型搭建主入口。
 
 如果你的目标是稳定地跑通当前 MedFusion，请先走下面这条主链：
 
@@ -18,9 +20,22 @@ uv run medfusion import-run \
 说明：
 
 - 这是当前官方推荐先走的 CLI / Web 训练主链。
+- 如果你的目标是“尽量少写代码、尽量快地完成模型搭建”，请优先停留在这条主链，不要从 `examples/` 起步。
 - `configs/starter/`、`configs/public_datasets/`、`configs/testing/` 属于这条主链的配置。
 - `configs/builder/` 属于 `MultiModalModelBuilder` / `build_model_from_config()` 的结构表达，不是当前 CLI/Web 训练主链的 schema。
 - `examples/` 适合读代码、理解模块关系、做局部功能验证；不要默认把任意示例都当成 `medfusion train` 的等价替代。
+
+## 谁应该看这个目录
+
+- 想做二次开发，想看底层 Python API 如何拼装
+- 想理解某个专题能力的大致调用方式
+- 想验证某个模块级功能，而不是走完整主链
+
+如果你只是想把模型搭起来、拿到标准结果目录、接到 Web 结果页，这个目录可以先忽略。
+
+## 已迁出的工程演示
+
+低用户价值、偏工程内部能力的 demo 会逐步迁到 `scripts/dev/`，避免继续占用 `examples/` 这个对外可见目录。
 
 ## 示例分类
 
@@ -32,15 +47,6 @@ uv run medfusion import-run \
 | `attention_quick_start.py` | 功能速览 | 快速了解注意力监督配置思路 | 偏概念说明，不是完整训练闭环 |
 | `attention_supervision_example.py` | 专题功能演示 | 深入演示 mask / CAM 注意力监督 | 偏研究特性演示，不是主入口 |
 | `advanced_attention_demo.py` | 专题功能演示 | 展示 SE / ECA / CBAM / Transformer attention | 模块能力演示，不是主入口 |
-| `config_validation_demo.py` | 工具演示 | 演示配置校验与报错信息 | 与当前 dataclass 配置更接近，但仍不是推荐起步方式 |
-| `exception_handling_demo.py` | 工具演示 | 演示错误类型与异常处理 | 辅助理解错误模型，不是训练主链 |
-| `logging_demo.py` | 工具演示 | 演示结构化日志能力 | 辅助功能示例，不是训练主链 |
-| `cache_demo.py` | 工程特性演示 | 演示数据缓存接口 | 性能配套能力，不是训练主链 |
-| `cache_demo_simple.py` | 概念演示 | 用简化 LRU 解释缓存收益 | 教学脚本，不直接接入主链 |
-| `gradient_checkpointing_demo.py` | 工程特性演示 | 演示梯度检查点 | 内存优化专题，不是训练主链 |
-| `distributed_training_demo.py` | 工程特性演示 | 演示 DDP / FSDP | 高级训练专题，不是训练主链 |
-| `hyperparameter_tuning_demo.py` | 工程特性演示 | 演示超参数搜索 | 优化专题，不是训练主链 |
-| `benchmark_demo.py` | 工程特性演示 | 演示性能基准测试工具 | 工程配套，不是训练主链 |
 | `model_export_demo.py` | 部署演示 | 演示 ONNX / TorchScript 导出 | 部署专题，不是训练主链 |
 
 ## 建议阅读顺序

@@ -174,4 +174,4 @@ checkpoint = load_checkpoint(model, optimizer, "checkpoint.pt")
 ## 参考资源
 
 - `med_core/utils/distributed.py`
-- `examples/distributed_training_demo.py`
+- `scripts/dev/distributed_training_demo.py`

@@ -31,4 +31,4 @@ compressed_model = compress_model(model, quantize=True, prune=True)
 
 ## 参考
 - `med_core/utils/compression.py`
-- `examples/model_compression_demo.py`
+- 本页代码片段可直接作为起点；当前仓库未单独提供 `examples/model_compression_demo.py`

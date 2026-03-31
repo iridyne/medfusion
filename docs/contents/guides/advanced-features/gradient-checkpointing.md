@@ -408,9 +408,9 @@ print_memory_stats()
 - [分布式训练指南](distributed-training.md)
 
 ### 代码示例
-- [基础示例](../../../../examples/gradient_checkpointing_demo.py)
+- [基础示例](../../../../scripts/dev/gradient_checkpointing_demo.py)
 - [训练示例](../../../../examples/train_demo.py)
-- [分布式训练示例](../../../../examples/distributed_training_demo.py)
+- [分布式训练示例](../../../../scripts/dev/distributed_training_demo.py)
 
 ---
 
