@@ -45,13 +45,16 @@ from med_core.postprocessing.advanced_analysis import build_shap_artifacts
 from med_core.models import ThreePhaseCTFusionModel
 from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 from med_core.shared.visualization import (
+    build_rendering_metadata,
     compute_gradcam_volume,
+    map_slice_index_between_depths,
     plot_calibration_curve,
     plot_confusion_matrix,
     plot_probability_distribution,
     plot_roc_curve,
     plot_training_curves,
     prepare_overlay_image,
+    render_overlay_artifact,
     select_representative_slice,
 )
 from med_core.visualization.attention_viz import (
@@ -368,28 +371,78 @@ def _generate_three_phase_heatmap_artifacts(
                 output_shape=input_volume.shape,
             )
             slice_index = select_representative_slice(heatmap_volume)
-            image_slice = prepare_overlay_image(input_volume[slice_index].numpy())
             heatmap_slice = heatmap_volume[slice_index]
-            image_path = case_dir / f"{phase_name}_heatmap.png"
+            model_overlay_path = case_dir / f"{phase_name}_heatmap.png"
+            original_overlay_path = case_dir / f"{phase_name}_original_overlay.png"
+            original_slice_path = case_dir / f"{phase_name}_original_slice.png"
             phase_importance = case.get("phase_importance", {}).get(phase_name)
-            figure = visualize_attention_overlay(
-                image=image_slice,
-                attention=heatmap_slice,
-                alpha=0.45,
+
+            model_rendering = render_overlay_artifact(
+                image_slice=input_volume[slice_index].numpy(),
+                attention_slice=heatmap_slice,
+                save_path=model_overlay_path,
+                space="model_input",
+                kind="overlay",
+                slice_index=int(slice_index),
                 title=(
                     f"Case {case_id} | {phase_name} | "
                     f"pred={case['predicted_label']} | "
                     f"phase_weight={phase_importance}"
                 ),
-                save_path=image_path,
             )
-            plt.close(figure)
+
+            render_context = dataset.get_phase_render_context(index=index, phase_name=phase_name)
+            original_volume = np.asarray(render_context["original_volume"], dtype=np.float32)
+            original_slice_index = map_slice_index_between_depths(
+                source_index=int(slice_index),
+                source_depth=int(input_volume.shape[0]),
+                target_depth=int(original_volume.shape[0]),
+            )
+            original_slice = original_volume[original_slice_index]
+            original_rendering = render_overlay_artifact(
+                image_slice=original_slice,
+                attention_slice=heatmap_slice,
+                save_path=original_overlay_path,
+                space="original_image",
+                kind="overlay",
+                slice_index=int(original_slice_index),
+                title=(
+                    f"Case {case_id} | {phase_name} | "
+                    f"pred={case['predicted_label']} | "
+                    "original_slice_overlay"
+                ),
+            )
+            original_rgb = (prepare_overlay_image(original_slice) * 255.0).round().astype(
+                np.uint8
+            )
+            Image.fromarray(original_rgb).save(original_slice_path)
+            original_slice_rendering = build_rendering_metadata(
+                space="original_image",
+                kind="base_slice",
+                image_path=original_slice_path,
+                slice_index=int(original_slice_index),
+                image_shape=original_slice.shape,
+            )
+            renderings = [
+                model_rendering,
+                original_rendering,
+                original_slice_rendering,
+            ]
             case_heatmaps.append(
                 {
                     "phase": phase_name,
                     "method": "gradcam_3d_slice_overlay",
-                    "image_path": str(image_path),
+                    "image_path": str(model_overlay_path),
                     "slice_index": int(slice_index),
+                    "render_space": "model_input",
+                    "renderings": renderings,
+                    "mapping": {
+                        "strategy": "proportional_depth",
+                        "source_depth": int(input_volume.shape[0]),
+                        "target_depth": int(original_volume.shape[0]),
+                        "source_slice_index": int(slice_index),
+                        "target_slice_index": int(original_slice_index),
+                    },
                     "mean_heatmap": round(float(np.mean(heatmap_slice)), 6),
                     "peak_heatmap": round(float(np.max(heatmap_slice)), 6),
                     "phase_importance": phase_importance,
@@ -798,6 +851,8 @@ def _build_three_phase_results(
             f"{heatmap_artifact_paths['heatmap_manifest_path']}"
         )
         report_lines.append("- 生成方式: 三期 CT 逐期 Grad-CAM 代表层面叠加图")
+        report_lines.append("- 原始切片叠加图: 每一期同时导出原始切片与关注热区叠加图")
+        report_lines.append("- 映射策略: 按重采样前后层面比例回映，仅用于关注区域展示")
     report_lines.extend(["", "## Visual Artifacts", ""])
     if roc_curve_path is not None:
         report_lines.append(f"- ROC 曲线（区分能力）: {roc_curve_path}")

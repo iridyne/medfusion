@@ -30,16 +30,26 @@ def _write_slice(path: Path, instance_number: int, pixel_array: np.ndarray) -> N
     dataset.save_as(path)
 
 
-def _write_three_phase_case(root: Path, case_id: str) -> dict[str, str]:
+def _write_three_phase_case(
+    root: Path,
+    case_id: str,
+    *,
+    depth: int = 4,
+    image_shape: tuple[int, int] = (8, 8),
+) -> dict[str, str]:
     phase_dirs: dict[str, str] = {}
     for phase in ("arterial", "portal", "noncontrast"):
         phase_dir = root / case_id / phase
         phase_dir.mkdir(parents=True, exist_ok=True)
-        for index in range(4):
+        for index in range(depth):
             _write_slice(
                 phase_dir / f"{index:03d}.dcm",
                 instance_number=index + 1,
-                pixel_array=np.full((8, 8), fill_value=index + 10, dtype=np.int16),
+                pixel_array=np.full(
+                    image_shape,
+                    fill_value=index + 10,
+                    dtype=np.int16,
+                ),
             )
         phase_dirs[phase] = str(phase_dir)
     return phase_dirs
@@ -103,6 +113,39 @@ def test_three_phase_dataset_uses_clinical_preprocessor_and_missing_mask(
     assert sample["clinical_missing_mask"].tolist() == [0.0, 1.0, 0.0]
     assert np.isclose(sample["clinical"][0].item(), 0.0)
     assert sample["clinical"][1].item() == 0.0
+
+
+def test_three_phase_dataset_can_return_native_phase_render_context(
+    tmp_path: Path,
+) -> None:
+    phase_dirs = _write_three_phase_case(
+        tmp_path,
+        "001",
+        depth=6,
+        image_shape=(16, 16),
+    )
+
+    dataset = ThreePhaseCTCaseDataset.from_records(
+        [
+            {
+                "case_id": "001",
+                "arterial_series_dir": phase_dirs["arterial"],
+                "portal_series_dir": phase_dirs["portal"],
+                "noncontrast_series_dir": phase_dirs["noncontrast"],
+                "mvi_binary": 1,
+                "clinical_features": [64.0, 0.0, 24.4],
+            }
+        ],
+        target_shape=(4, 8, 8),
+    )
+
+    context = dataset.get_phase_render_context(index=0, phase_name="arterial")
+
+    assert context["case_id"] == "001"
+    assert context["phase"] == "arterial"
+    assert context["original_shape"] == (6, 16, 16)
+    assert context["model_shape"] == (4, 8, 8)
+    assert context["original_volume"].shape == (6, 16, 16)
 
 
 def test_three_phase_doctor_validates_manifest_columns_and_phase_dirs(

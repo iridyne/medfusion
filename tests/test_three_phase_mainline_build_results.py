@@ -394,6 +394,35 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
     for item in first_case["heatmaps"]:
         assert Path(item["image_path"]).exists()
         assert item["slice_index"] >= 0
+        assert item["render_space"] == "model_input"
+        assert item["mapping"]["strategy"] == "proportional_depth"
+        assert item["mapping"]["source_slice_index"] == item["slice_index"]
+        renderings = item["renderings"]
+        assert len(renderings) == 3
+        assert {render["space"] for render in renderings} == {
+            "model_input",
+            "original_image",
+        }
+        assert {render["kind"] for render in renderings} == {
+            "overlay",
+            "base_slice",
+        }
+        for render in renderings:
+            assert Path(render["image_path"]).exists()
+            assert render["slice_index"] >= 0
+
+        original_overlay = next(
+            render
+            for render in renderings
+            if render["space"] == "original_image" and render["kind"] == "overlay"
+        )
+        original_slice = next(
+            render
+            for render in renderings
+            if render["space"] == "original_image" and render["kind"] == "base_slice"
+        )
+        assert original_overlay["image_shape"] == [8, 8]
+        assert original_slice["image_shape"] == [8, 8]
 
     summary = json.loads((output_dir / "reports" / "summary.json").read_text())
     assert summary["artifacts"]["heatmap_manifest_path"].endswith(
@@ -409,6 +438,8 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
     report_text = (output_dir / "reports" / "report.md").read_text(encoding="utf-8")
     assert "## Imaging Heatmaps" in report_text
     assert "- 影像重点区域热图清单:" in report_text
+    assert "- 原始切片叠加图:" in report_text
+    assert "- 映射策略:" in report_text
 
 
 def test_three_phase_build_results_uses_demo_small_sample_explainability_settings(

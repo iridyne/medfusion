@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
@@ -138,6 +139,19 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
             "label": torch.tensor(record.mvi_binary, dtype=torch.long),
         }
 
+    def get_phase_render_context(self, index: int, phase_name: str) -> dict[str, Any]:
+        """Return native and model-space context for postprocessing visualizations."""
+        record = self.records[index]
+        series_dir = self._get_phase_series_dir(record, phase_name)
+        original_volume = self._load_phase_volume(series_dir)
+        return {
+            "case_id": record.case_id,
+            "phase": phase_name,
+            "original_volume": original_volume,
+            "original_shape": tuple(int(value) for value in original_volume.shape),
+            "model_shape": tuple(int(value) for value in self.target_shape),
+        }
+
     def _prepare_clinical_features(self) -> tuple[list[list[float]], list[list[float]]]:
         raw_rows = [record.clinical_features for record in self.records]
         preprocessor = self.clinical_preprocessor or ClinicalFeaturePreprocessor(
@@ -147,15 +161,28 @@ class ThreePhaseCTCaseDataset(Dataset[dict[str, Any]]):
         transformed = preprocessor.transform(raw_rows)
         return transformed.values.tolist(), transformed.missing_mask.tolist()
 
-    def _load_phase(self, series_dir: str) -> torch.Tensor:
+    def _get_phase_series_dir(self, record: ThreePhaseCTCaseRecord, phase_name: str) -> str:
+        phase_mapping = {
+            "arterial": record.arterial_series_dir,
+            "portal": record.portal_series_dir,
+            "noncontrast": record.noncontrast_series_dir,
+        }
+        try:
+            return phase_mapping[phase_name]
+        except KeyError as error:
+            raise ValueError(f"Unsupported phase name: {phase_name}") from error
+
+    def _load_phase_volume(self, series_dir: str) -> np.ndarray:
         if not Path(series_dir).exists():
             raise FileNotFoundError(f"DICOM series directory does not exist: {series_dir}")
-
-        volume = load_dicom_series(
+        return load_dicom_series(
             directory=series_dir,
             window_preset=self.window_preset,
             sort_by="instance",
         )
+
+    def _load_phase(self, series_dir: str) -> torch.Tensor:
+        volume = self._load_phase_volume(series_dir)
         tensor = torch.tensor(volume, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
 
         if list(volume.shape) != list(self.target_shape):
