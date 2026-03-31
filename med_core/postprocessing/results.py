@@ -41,6 +41,7 @@ from med_core.postprocessing.analysis import (
     build_survival_artifacts,
     resolve_survival_columns,
 )
+from med_core.postprocessing.advanced_analysis import build_shap_artifacts
 from med_core.models import ThreePhaseCTFusionModel
 from med_core.shared.visualization import (
     plot_calibration_curve,
@@ -289,6 +290,8 @@ def _build_three_phase_results(
     checkpoint_path: Path,
     layout: RunOutputLayout,
     split: str,
+    enable_importance: bool,
+    importance_sample_limit: int,
 ) -> BuildResultsOutput:
     dataframe = _read_manifest_dataframe(config)
     full_dataset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
@@ -327,6 +330,8 @@ def _build_three_phase_results(
     y_true: list[int] = []
     y_pred: list[int] = []
     y_prob: list[float] = []
+    risk_scores: list[float] = []
+    tabular_rows: list[list[float]] = []
 
     model.eval()
     with torch.inference_mode():
@@ -340,19 +345,21 @@ def _build_three_phase_results(
             probabilities = outputs["probability"].detach().cpu().numpy().tolist()
             predictions = (outputs["probability"] >= 0.5).long().cpu().numpy().tolist()
             labels = batch["label"].cpu().numpy().tolist()
-            risk_scores = outputs["risk_score"].detach().cpu().numpy().tolist()
+            batch_risk_scores = outputs["risk_score"].detach().cpu().numpy().tolist()
             case_ids = list(batch["case_id"])
+            batch_clinical = batch["clinical"].cpu().numpy().tolist()
             for case_id, label, pred, prob, risk in zip(
                 case_ids,
                 labels,
                 predictions,
                 probabilities,
-                risk_scores,
+                batch_risk_scores,
                 strict=True,
             ):
                 y_true.append(int(label))
                 y_pred.append(int(pred))
                 y_prob.append(float(prob))
+                risk_scores.append(float(risk))
                 cases.append(
                     {
                         "case_id": case_id,
@@ -362,12 +369,112 @@ def _build_three_phase_results(
                         "risk_score": float(risk),
                     }
                 )
+            tabular_rows.extend(
+                [list(map(float, row)) for row in batch_clinical]
+            )
 
     accuracy = accuracy_score(y_true, y_pred) if y_true else 0.0
     auc_value: float | None = None
+    visualization_dir = layout.visualizations_dir
+    visualization_dir.mkdir(parents=True, exist_ok=True)
+    roc_curve_path: Path | None = None
     if len(set(y_true)) > 1 and y_prob:
         fpr, tpr, _ = roc_curve(y_true, y_prob)
         auc_value = float(auc(fpr, tpr))
+        roc_curve_path = visualization_dir / "roc_curve.png"
+        roc_figure, _ = plot_roc_curve(
+            np.asarray(y_true, dtype=int),
+            np.asarray(y_prob, dtype=float),
+            title="ROC Curve (Three-Phase CT MVI)",
+            save_path=roc_curve_path,
+        )
+        plt.close(roc_figure)
+
+    confusion_matrix_path = visualization_dir / "confusion_matrix.png"
+    confusion_figure, _ = plot_confusion_matrix(
+        np.asarray(y_true, dtype=int),
+        np.asarray(y_pred, dtype=int),
+        class_names=["Negative", "Positive"],
+        title="Confusion Matrix",
+        save_path=confusion_matrix_path,
+    )
+    plt.close(confusion_figure)
+
+    roc_payload = {
+        "artifact_key": "roc_curve_plot",
+        "auc": _round_metric(auc_value),
+        "plot_path": str(roc_curve_path) if roc_curve_path else None,
+    }
+    confusion_payload = {
+        "artifact_key": "confusion_matrix_plot",
+        "labels": ["Negative", "Positive"],
+        "matrix": confusion_matrix(
+            np.asarray(y_true, dtype=int),
+            np.asarray(y_pred, dtype=int),
+            labels=[0, 1],
+        ).astype(int).tolist(),
+        "plot_path": str(confusion_matrix_path),
+    }
+
+    _write_json(layout.roc_curve_json_path, roc_payload)
+    _write_json(layout.confusion_matrix_json_path, confusion_payload)
+
+    predictions_payload = {
+        "labels": ["Negative", "Positive"],
+        "positive_class_index": 1,
+        "y_true": y_true,
+        "y_pred": y_pred,
+        "probabilities": [[round(1.0 - prob, 6), round(prob, 6)] for prob in y_prob],
+        "risk_scores": [round(float(score), 6) for score in risk_scores],
+        "risk_score_source": "risk_head" if config.model.use_risk_head else "probability",
+        "samples": cases,
+    }
+    _write_json(layout.predictions_path, predictions_payload)
+    layout.config_snapshot_path.write_text(
+        json.dumps(config.to_dict(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    importance_payload: dict[str, Any] | None = None
+    importance_artifact_paths: dict[str, str] = {}
+    if enable_importance and importance_sample_limit > 0:
+        importance_payload_raw, importance_artifact_paths, _metric_updates = (
+            build_shap_artifacts(
+                output_dir=layout.artifacts_dir,
+                feature_names=list(config.data.clinical_feature_columns),
+                tabular_data=np.asarray(tabular_rows, dtype=float),
+                model_scores=np.asarray(risk_scores, dtype=float),
+                y_true=np.asarray(y_true, dtype=int),
+                positive_class_label="Positive",
+                max_display=min(10, 1 + len(config.data.clinical_feature_columns)),
+                max_samples=max(importance_sample_limit, 1),
+            )
+        )
+        if importance_payload_raw.get("available"):
+            importance_artifact_paths = {
+                **importance_artifact_paths,
+                "feature_importance_path": importance_artifact_paths.get(
+                    "shap_summary_json_path"
+                ),
+                "feature_importance_bar_plot_path": importance_artifact_paths.get(
+                    "shap_bar_plot_path"
+                ),
+                "feature_importance_beeswarm_plot_path": importance_artifact_paths.get(
+                    "shap_beeswarm_plot_path"
+                ),
+            }
+            importance_artifact_paths = {
+                key: value for key, value in importance_artifact_paths.items() if value
+            }
+            importance_payload = {
+                "available": True,
+                "method": importance_payload_raw.get("method"),
+                "score_name": predictions_payload["risk_score_source"],
+                "top_features": importance_payload_raw.get("features", []),
+                "artifacts": importance_payload_raw.get("artifacts", {}),
+            }
+        else:
+            importance_artifact_paths = {}
 
     artifact_metadata = _build_artifact_metadata(
         config_path=config_path,
@@ -381,11 +488,13 @@ def _build_three_phase_results(
         "accuracy": round(float(accuracy), 4),
         "auc": _round_metric(auc_value),
         "sample_count": len(cases),
+        "global_feature_importance": importance_payload,
     }
     validation_payload = {
         **artifact_metadata,
         "overview": {"split": split, "sample_count": len(cases)},
         "cases": cases,
+        "global_feature_importance": importance_payload,
     }
     summary_payload = {
         **artifact_metadata,
@@ -396,17 +505,75 @@ def _build_three_phase_results(
         if auc_value is None
         else _round_metric(auc_value),
         "checkpoint": str(checkpoint_path),
-        "artifacts": ["metrics.json", "validation.json", "summary.json", "report.md"],
+        "artifacts": {
+            "config_path": str(layout.config_snapshot_path),
+            "metrics_path": str(layout.metrics_path),
+            "validation_path": str(layout.validation_path),
+            "predictions_path": str(layout.predictions_path),
+            "prediction_path": str(layout.predictions_path),
+            "summary_path": str(layout.summary_path),
+            "report_path": str(layout.report_path),
+            "history_path": str(layout.history_path),
+            "roc_curve_json_path": str(layout.roc_curve_json_path),
+            "confusion_matrix_json_path": str(layout.confusion_matrix_json_path),
+            "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
+            "confusion_matrix_plot_path": str(confusion_matrix_path),
+            **importance_artifact_paths,
+        },
+        "global_feature_importance": importance_payload,
     }
     report_lines = [
         "# MedFusion Result Report",
         "",
+        "## Overview",
+        "",
         f"- Experiment: {config.experiment_name}",
         f"- Split: {split}",
         f"- Samples: {len(cases)}",
+        "",
+        "## Metrics",
+        "",
         f"- Accuracy: {metrics_payload['accuracy']}",
         f"- AUC: {metrics_payload['auc']}",
+        "",
+        "## Data Summary",
+        "",
+        f"- Positive Cases: {sum(y_true)}",
+        f"- Negative Cases: {len(y_true) - sum(y_true)}",
+        f"- Clinical Features: {', '.join(config.data.clinical_feature_columns)}",
     ]
+    report_lines.extend(["", "## Visual Artifacts", ""])
+    if roc_curve_path is not None:
+        report_lines.append(f"- ROC Curve: {roc_curve_path}")
+    report_lines.append(f"- Confusion Matrix: {confusion_matrix_path}")
+    if importance_payload is not None:
+        report_lines.extend(["", "## Feature Importance", ""])
+        report_lines.append(
+            f"- Method: {importance_payload.get('method') or '-'}"
+        )
+        top_features = importance_payload.get("top_features", [])[:5]
+        if top_features:
+            for item in top_features:
+                report_lines.append(
+                    "- "
+                    f"{item.get('feature')}: "
+                    f"{item.get('mean_abs_contribution')}"
+                )
+        report_lines.extend(["", "## Artifact Paths", ""])
+    else:
+        report_lines.extend(["", "## Artifact Paths", ""])
+    if importance_payload is not None:
+        report_lines.append(
+            f"- SHAP Bar: {importance_artifact_paths.get('shap_bar_plot_path')}"
+        )
+        report_lines.append(
+            f"- SHAP Beeswarm: {importance_artifact_paths.get('shap_beeswarm_plot_path')}"
+        )
+    report_lines.append(f"- Config Snapshot: {layout.config_snapshot_path}")
+    report_lines.append(f"- Metrics JSON: {layout.metrics_path}")
+    report_lines.append(f"- Validation JSON: {layout.validation_path}")
+    report_lines.append(f"- Predictions JSON: {layout.predictions_path}")
+    report_lines.append(f"- History JSON: {layout.history_path}")
 
     _write_json(layout.metrics_path, metrics_payload)
     _write_json(layout.validation_path, validation_payload)
@@ -416,12 +583,21 @@ def _build_three_phase_results(
     layout.report_path.write_text("\n".join(report_lines) + "\n", encoding="utf-8")
 
     artifact_paths = {
+        "config_path": str(layout.config_snapshot_path),
         "metrics_path": str(layout.metrics_path),
         "validation_path": str(layout.validation_path),
+        "predictions_path": str(layout.predictions_path),
+        "prediction_path": str(layout.predictions_path),
         "summary_path": str(layout.summary_path),
         "report_path": str(layout.report_path),
         "history_path": str(layout.history_path),
+        "roc_curve_json_path": str(layout.roc_curve_json_path),
+        "confusion_matrix_json_path": str(layout.confusion_matrix_json_path),
+        "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
+        "confusion_matrix_plot_path": str(confusion_matrix_path),
+        **importance_artifact_paths,
     }
+    artifact_paths = {key: value for key, value in artifact_paths.items() if value}
     return BuildResultsOutput(
         output_dir=str(layout.root_dir),
         artifact_paths=artifact_paths,
@@ -1271,6 +1447,8 @@ def build_results_artifacts(
             checkpoint_path=checkpoint_path,
             layout=layout,
             split=split,
+            enable_importance=enable_importance,
+            importance_sample_limit=importance_sample_limit,
         )
 
     dataset = _load_split_dataset(config, split)
