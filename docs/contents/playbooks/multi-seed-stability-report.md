@@ -26,8 +26,8 @@ import yaml
 
 from med_core.stability import run_stability_study
 
-base_config_path = Path("configs/demo/three_phase_ct_mvi_demo.yaml")
-study_dir = Path("outputs/three_phase_ct_mvi_demo_stability")
+base_config_path = Path("configs/demo/three_phase_ct_mvi_dr_z.yaml")
+study_dir = Path("outputs/three_phase_ct_mvi_dr_z_stability")
 
 with base_config_path.open("r", encoding="utf-8") as f:
     base_config = yaml.safe_load(f)

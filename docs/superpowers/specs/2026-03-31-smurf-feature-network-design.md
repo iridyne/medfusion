@@ -336,7 +336,6 @@
 
 仍然使用：
 
-- `configs/demo/three_phase_ct_mvi_demo.yaml`
 - `configs/demo/three_phase_ct_mvi_dr_z.yaml`
 
 ### 9.2 建议新增配置段

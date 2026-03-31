@@ -132,14 +132,10 @@ def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
     assert payload["explainability"]["min_global_importance_samples"] == 5
 
 
-def test_demo_smurf_config_uses_mainline_schema() -> None:
-    config = load_config("configs/demo/three_phase_ct_mvi_demo.yaml")
+def test_only_one_canonical_three_phase_demo_config_exists() -> None:
+    config_paths = sorted(Path("configs/demo").glob("three_phase_ct_mvi*.yaml"))
 
-    assert config.data.dataset_type == "three_phase_ct_tabular"
-    assert config.model.model_type == "three_phase_ct_fusion"
-    assert config.model.phase_fusion.mode == "gated"
-    assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
-    assert config.explainability.build_results_split == "train"
+    assert config_paths == [Path("configs/demo/three_phase_ct_mvi_dr_z.yaml")]
 
 
 def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
@@ -151,3 +147,4 @@ def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
     assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
     assert config.explainability.build_results_split == "train"
     assert config.explainability.min_global_importance_samples == 5
+    assert config.logging.output_dir == "outputs/three_phase_ct_mvi_dr_z"

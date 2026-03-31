@@ -86,11 +86,11 @@ uv run medfusion build-results \
 运行方式：
 
 ```bash
-uv run medfusion validate-config --config configs/demo/three_phase_ct_mvi_demo.yaml
-uv run medfusion train --config configs/demo/three_phase_ct_mvi_demo.yaml
+uv run medfusion validate-config --config configs/demo/three_phase_ct_mvi_dr_z.yaml
+uv run medfusion train --config configs/demo/three_phase_ct_mvi_dr_z.yaml
 uv run medfusion build-results \
-  --config configs/demo/three_phase_ct_mvi_demo.yaml \
-  --checkpoint outputs/three_phase_ct_mvi_demo/checkpoints/best.pth
+  --config configs/demo/three_phase_ct_mvi_dr_z.yaml \
+  --checkpoint outputs/three_phase_ct_mvi_dr_z/checkpoints/best.pth
 ```
 
 说明：
