@@ -304,9 +304,9 @@ medfusion/
 │   └── backend/                 # 旧的独立后端（待清理）⚠️
 │       └── app/
 │
-├── docs/                        # 文档
-│   ├── WEB_UI_QUICKSTART.md     # 快速入门
-│   ├── WEB_UI_ARCHITECTURE.md   # 架构设计（本文档）
+├── docs/                        # 文档站与架构文档
+│   ├── contents/getting-started/web-ui.md
+│   ├── contents/architecture/WEB_UI_ARCHITECTURE.md
 │   └── ...
 │
 ├── start-webui.sh               # 启动脚本 ✅

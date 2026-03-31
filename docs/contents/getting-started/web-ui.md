@@ -357,7 +357,7 @@ npm install
 
 - [完整文档](../../README.md)
 - [API 文档](http://127.0.0.1:8000/docs)
-- [CLI 使用指南](../../../web/CLI_GUIDE.md)
+- [Web 工作区说明](../../../web/README.md)
 - [开发者指南](../../../CONTRIBUTING.md)
 
 ## 🤝 贡献

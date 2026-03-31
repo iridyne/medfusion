@@ -1,147 +1,21 @@
-# ⚠️ 此目录已废弃
+# 历史占位目录
 
-**状态**: 已迁移到 `med_core/web/`  
-**日期**: 2026-02-20  
-**版本**: v0.3.0
+这个目录只用于说明一件事：
 
----
+**当前 Web 后端已经不在这里实现。**
 
-## 📋 迁移说明
+现在请看：
 
-此目录的所有功能已完全迁移到 **`med_core/web/`**，采用集成架构（方案 A）。
+- [web/README.md](../README.md)
+- [docs/contents/getting-started/web-ui.md](../../docs/contents/getting-started/web-ui.md)
 
-### 为什么迁移？
+当前真实位置：
 
-1. **简化用户体验**：从两个进程（前端 + 后端）简化为单进程
-2. **类似 TensorBoard**：一个命令启动，开箱即用
-3. **避免重复维护**：统一的代码库，减少维护成本
-4. **更好的集成**：Web UI 作为核心库的可选组件
+- 后端实现：`med_core/web/`
+- 前端源码：`web/frontend/`
 
----
-
-## 🚀 新的使用方式
-
-### 用户使用（推荐）
+如果你只是想启动 Web，请使用：
 
 ```bash
-# 安装（包含 Web UI）
-pip install medfusion[web]
-
-# 启动（单进程，集成架构）
-medfusion web start
-
-# 或使用启动脚本
-./start-webui.sh  # 项目根目录
+uv run medfusion start
 ```
-
-访问：http://localhost:8000
-
-### 开发者使用
-
-```bash
-# 后端开发（开发模式）
-uv run uvicorn med_core.web.app:app --reload --host 127.0.0.1 --port 8000
-
-# 前端开发（开发模式）
-cd web/frontend
-npm run dev  # 访问 http://localhost:5173
-```
-
----
-
-## 📂 新的目录结构
-
-```
-medfusion/
-├── med_core/web/              # 集成 Web 模块（后端）✅
-│   ├── app.py                 # FastAPI 应用
-│   ├── cli.py                 # CLI 命令
-│   ├── api/                   # API 路由
-│   ├── models/                # 数据库模型
-│   ├── services/              # 业务逻辑
-│   └── static/                # 前端构建产物
-│       ├── index.html
-│       └── assets/
-│
-├── web/frontend/              # 前端源码（开发）✅
-│   ├── src/
-│   ├── package.json
-│   └── dist/                  # 构建产物
-│
-└── start-webui.sh             # 启动脚本 ✅
-```
-
----
-
-## 🔄 迁移对照表
-
-| 旧位置（已废弃） | 新位置 | 说明 |
-|-----------------|--------|------|
-| `web/backend/app/main.py` | `med_core/web/app.py` | FastAPI 应用 |
-| `web/backend/app/api/` | `med_core/web/api/` | API 路由 |
-| `web/backend/app/models/` | `med_core/web/models/` | 数据库模型 |
-| `web/backend/app/services/` | `med_core/web/services/` | 业务逻辑 |
-| `web/backend/app/core/` | `med_core/web/config.py` | 配置管理 |
-| `web/start-webui.sh` | `./start-webui.sh` | 启动脚本（根目录） |
-| `web/backend/medfusion.db` | `~/.medfusion/medfusion.db` | 数据库位置 |
-
----
-
-## 📚 相关文档
-
-- [架构设计文档](../../docs/WEB_UI_ARCHITECTURE.md) - 详细的架构说明
-- [快速入门指南](../../docs/WEB_UI_QUICKSTART.md) - 使用教程
-- [项目状态报告](../../docs/PROJECT_STATUS.md) - 当前进度
-- [整理计划](../../docs/PROJECT_CLEANUP_PLAN.md) - 清理详情
-
----
-
-## 💾 如果需要恢复
-
-如果你需要访问旧代码，备份文件位于：
-
-```bash
-backups/web-backend-20260220.tar.gz
-```
-
-恢复方法：
-
-```bash
-cd medfusion
-tar -xzf backups/web-backend-20260220.tar.gz
-```
-
----
-
-## ❓ 常见问题
-
-### Q: 我的数据会丢失吗？
-
-A: 不会。数据库已迁移到 `~/.medfusion/medfusion.db`，所有数据都保留。
-
-### Q: 旧的 API 还能用吗？
-
-A: 可以。新的 API 完全兼容旧版本，端点路径保持不变。
-
-### Q: 我需要重新安装吗？
-
-A: 如果已安装 `medfusion[web]`，只需运行新的启动命令即可。
-
-### Q: 开发模式有变化吗？
-
-A: 前端开发方式不变（`npm run dev`），后端改为 `uvicorn med_core.web.app:app --reload`。
-
----
-
-## 📞 获取帮助
-
-如果遇到问题，请：
-
-1. 查看 [快速入门指南](../../docs/WEB_UI_QUICKSTART.md)
-2. 查看 [架构设计文档](../../docs/WEB_UI_ARCHITECTURE.md)
-3. 提交 [GitHub Issue](https://github.com/your-org/medfusion/issues)
-
----
-
-**最后更新**: 2026-02-20  
-**维护者**: Medical AI Research Team
