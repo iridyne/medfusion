@@ -21,7 +21,8 @@ MedFusion OSS 优先保证主链闭环：
 - 结果可复盘：`build-results`
 
 标准输出包括：
-`metrics.json` / `validation.json` / `summary.json` / `report.md` + 可视化 artifacts。
+`logs/history.json` / `metrics/metrics.json` / `metrics/validation.json` /
+`reports/summary.json` / `reports/report.md` + 可视化 artifacts。
 
 ---
 
@@ -83,7 +84,8 @@ uv run medfusion build-results \
 
 说明：
 
-- 主线输出会生成 `metrics.json`、`validation.json`、`summary.json`、`report.md`
+- 主线输出会生成 `logs/history.json`、`metrics/metrics.json`、
+  `metrics/validation.json`、`reports/summary.json`、`reports/report.md`
 - `risk score` 当前表示 `MVI-related risk score`
 - 它不是生存风险，也不是临床可直接使用的评分
 
@@ -98,12 +100,14 @@ outputs/<run_name>/
 ├── checkpoints/
 │   └── best.pth
 ├── logs/
-├── history.json
-└── results/
-    ├── metrics.json
-    ├── validation.json
-    ├── summary.json
-    └── report.md
+│   └── history.json
+├── metrics/
+│   ├── metrics.json
+│   └── validation.json
+├── reports/
+│   ├── summary.json
+│   └── report.md
+└── artifacts/
 ```
 
 `summary.json` 会包含可直接复盘/汇报的结构化信息（示例）：
@@ -139,10 +143,10 @@ MedFusion OSS 当前不是：
 flowchart LR
   A[validate-config] --> B[train]
   B --> C[build-results]
-  C --> D[metrics.json]
-  C --> E[validation.json]
-  C --> F[summary.json]
-  C --> G[report.md]
+  C --> D[metrics/metrics.json]
+  C --> E[metrics/validation.json]
+  C --> F[reports/summary.json]
+  C --> G[reports/report.md]
 ```
 
 ---
@@ -163,10 +167,11 @@ flowchart TB
 
 工程接入时建议重点关注两类边界：
 - **可替换点**：`backbone / fusion / head / trainer`
-- **契约点**：config schema + artifact schema（`metrics.json / validation.json / summary.json / report.md`）
+- **契约点**：config schema + artifact schema（`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`）
 
 代码级架构详解见：
 - [CORE_RUNTIME_ARCHITECTURE.md](docs/contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)
+- [OUTPUTS_DIRECTORY_GOVERNANCE.md](docs/contents/architecture/OUTPUTS_DIRECTORY_GOVERNANCE.md)
 
 ---
 

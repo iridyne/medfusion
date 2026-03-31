@@ -43,6 +43,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+FULL_WORKFLOW_OUTPUT_DIR = "artifacts/dev/workflow-tests/full_workflow_test"
+
 
 def generate_synthetic_data(output_dir: Path, num_samples: int = 200):
     """生成合成测试数据"""
@@ -112,7 +114,7 @@ def main():
     # 更新配置中的路径
     config.data.csv_path = str(csv_path)
     config.data.image_dir = str(data_dir / "images")
-    config.logging.output_dir = "outputs/full_workflow_test"
+    config.logging.output_dir = FULL_WORKFLOW_OUTPUT_DIR
 
     logger.info("✅ 配置加载成功")
     logger.info(f"  - 实验名称: {config.experiment_name}")

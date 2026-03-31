@@ -31,6 +31,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+ENHANCED_REPORT_OUTPUT_DIR = Path("artifacts/dev/report-tests/enhanced")
+STATISTICAL_REPORT_OUTPUT_DIR = Path("artifacts/dev/report-tests/statistical")
+LATEX_REPORT_OUTPUT_DIR = Path("artifacts/dev/report-tests/latex")
+
 
 def create_sample_metrics(accuracy: float = 0.95, n_samples: int = 100):
     """Create sample metrics for testing."""
@@ -132,7 +136,7 @@ def test_enhanced_report_basic():
     logger.info("=" * 60)
 
     # Create output directory
-    output_dir = Path("outputs/enhanced_report_test")
+    output_dir = ENHANCED_REPORT_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate sample metrics
@@ -182,7 +186,7 @@ def test_statistical_comparison():
     logger.info("=" * 60)
 
     # Create output directory
-    output_dir = Path("outputs/statistical_test")
+    output_dir = STATISTICAL_REPORT_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate baseline and improved metrics
@@ -244,7 +248,7 @@ def test_latex_output():
     logger.info("=" * 60)
 
     # Create output directory
-    output_dir = Path("outputs/latex_test")
+    output_dir = LATEX_REPORT_OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate sample metrics
@@ -312,9 +316,9 @@ def main():
         logger.info("🎉 所有测试完成！")
         logger.info("=" * 60)
         logger.info("\n生成的报告位置:")
-        logger.info("  1. outputs/enhanced_report_test/")
-        logger.info("  2. outputs/statistical_test/")
-        logger.info("  3. outputs/latex_test/")
+        logger.info(f"  1. {ENHANCED_REPORT_OUTPUT_DIR}/")
+        logger.info(f"  2. {STATISTICAL_REPORT_OUTPUT_DIR}/")
+        logger.info(f"  3. {LATEX_REPORT_OUTPUT_DIR}/")
         logger.info("\n功能验证:")
         logger.info("  ✅ 高分辨率图表生成 (300 DPI)")
         logger.info("  ✅ 统计显著性检验")

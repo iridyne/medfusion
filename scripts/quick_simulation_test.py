@@ -28,6 +28,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+SIMULATION_OUTPUT_DIR = "artifacts/dev/simulation_test/run"
+SIMULATION_RESULTS_PATH = Path("artifacts/dev/simulation_test/simulation_test_results.json")
+
 # 记录测试结果
 test_results = {
     "stage_times": {},
@@ -216,7 +219,7 @@ training:
 
 # 日志配置
 logging:
-  output_dir: "outputs/simulation_test"
+  output_dir: "artifacts/dev/simulation_test/run"
   use_tensorboard: false
   use_wandb: false
   log_every_n_steps: 5
@@ -353,7 +356,7 @@ def main():
         # 保存测试结果
         import json
 
-        results_path = Path("outputs/simulation_test_results.json")
+        results_path = SIMULATION_RESULTS_PATH
         results_path.parent.mkdir(parents=True, exist_ok=True)
         with open(results_path, "w") as f:
             json.dump(test_results, f, indent=2)
