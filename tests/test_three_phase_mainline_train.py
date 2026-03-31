@@ -118,3 +118,4 @@ def test_three_phase_train_runs_from_mainline_config(tmp_path: Path) -> None:
 
     assert (output_dir / "checkpoints" / "best.pth").exists()
     assert (output_dir / "logs" / "history.json").exists()
+    assert (output_dir / "artifacts" / "clinical_preprocessing.json").exists()

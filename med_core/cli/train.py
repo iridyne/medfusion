@@ -32,6 +32,7 @@ from med_core.fusion import (
 )
 from med_core.models import ThreePhaseCTFusionModel
 from med_core.output_layout import RunOutputLayout
+from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 from med_core.shared.model_utils import ModelCheckpoint
 from med_core.trainers import MultimodalTrainer
 from med_core.utils.seed import set_seed
@@ -49,6 +50,19 @@ def _read_manifest_dataframe(csv_path: str, patient_id_column: str | None) -> pd
     if patient_id_column:
         read_csv_kwargs["dtype"] = {patient_id_column: "string"}
     return pd.read_csv(csv_path, **read_csv_kwargs)
+
+
+def _extract_clinical_rows(
+    dataframe: pd.DataFrame,
+    clinical_feature_columns: Sequence[str],
+) -> list[list[float | None]]:
+    return [
+        [
+            None if pd.isna(row[column]) else float(row[column])
+            for column in clinical_feature_columns
+        ]
+        for row in dataframe.to_dict(orient="records")
+    ]
 
 
 def _resolve_device(device_name: str) -> torch.device:
@@ -159,24 +173,62 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
         config.data.csv_path,
         config.data.patient_id_column,
     )
-    dataset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
-        dataframe,
+    train_indices, val_indices, _ = _split_indices(
+        dataset_size=len(dataframe),
+        train_ratio=config.data.train_ratio,
+        val_ratio=config.data.val_ratio,
+        seed=config.data.random_seed,
+    )
+    train_dataframe = dataframe.iloc[train_indices].reset_index(drop=True)
+    val_dataframe = dataframe.iloc[
+        val_indices if val_indices else train_indices
+    ].reset_index(drop=True)
+
+    preprocessor = ClinicalFeaturePreprocessor(
+        strategy=config.data.clinical_preprocessing.strategy,
+        normalize=config.data.clinical_preprocessing.normalize,
+    )
+    if preprocessor.normalize:
+        preprocessor.fit(
+            _extract_clinical_rows(
+                train_dataframe,
+                config.data.clinical_feature_columns,
+            )
+        )
+    clinical_preprocessing_path = (
+        run_layout.artifacts_dir / "clinical_preprocessing.json"
+    )
+    clinical_preprocessing_path.write_text(
+        json.dumps(preprocessor.to_dict(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    train_subset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
+        train_dataframe,
         phase_dir_columns=config.data.phase_dir_columns,
         clinical_feature_columns=config.data.clinical_feature_columns,
         target_column=config.data.target_column,
         patient_id_column=config.data.patient_id_column or "case_id",
         target_shape=tuple(config.data.target_shape or [16, 64, 64]),
         window_preset=config.data.window_preset,
+        clinical_preprocessor=preprocessor,
+    )
+    val_subset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
+        val_dataframe,
+        phase_dir_columns=config.data.phase_dir_columns,
+        clinical_feature_columns=config.data.clinical_feature_columns,
+        target_column=config.data.target_column,
+        patient_id_column=config.data.patient_id_column or "case_id",
+        target_shape=tuple(config.data.target_shape or [16, 64, 64]),
+        window_preset=config.data.window_preset,
+        clinical_preprocessor=preprocessor,
     )
 
-    train_indices, val_indices, _ = _split_indices(
-        dataset_size=len(dataset),
-        train_ratio=config.data.train_ratio,
-        val_ratio=config.data.val_ratio,
-        seed=config.data.random_seed,
+    clinical_mask_dim = (
+        len(config.data.clinical_feature_columns)
+        if config.data.clinical_preprocessing.strategy == "zero_with_mask"
+        else 0
     )
-    train_subset = Subset(dataset, train_indices)
-    val_subset = Subset(dataset, val_indices if val_indices else train_indices)
 
     train_loader = DataLoader(
         train_subset,
@@ -196,12 +248,18 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
     model = ThreePhaseCTFusionModel(
         phase_feature_dim=config.model.phase_feature_dim,
         clinical_input_dim=len(config.data.clinical_feature_columns),
+        clinical_mask_dim=clinical_mask_dim,
         clinical_hidden_dim=config.model.tabular.output_dim,
         fusion_hidden_dim=config.model.fusion.hidden_dim,
-        phase_fusion_type=config.model.phase_fusion_type,
+        num_classes=config.model.num_classes,
+        phase_fusion_type=config.model.phase_fusion.mode,
         share_phase_encoder=config.model.share_phase_encoder,
         freeze_phase_encoder=config.model.vision.freeze_backbone,
         use_risk_head=config.model.use_risk_head,
+        phase_encoder_base_channels=config.model.phase_encoder.base_channels,
+        phase_encoder_num_blocks=config.model.phase_encoder.num_blocks,
+        phase_encoder_dropout=config.model.phase_encoder.dropout,
+        phase_encoder_norm_type=config.model.phase_encoder.norm,
     ).to(device)
     optimizer = _build_optimizer(
         model=model,
@@ -232,6 +290,11 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
                 portal=batch["portal"].to(device),
                 noncontrast=batch["noncontrast"].to(device),
                 clinical=batch["clinical"].to(device),
+                clinical_missing_mask=(
+                    batch["clinical_missing_mask"].to(device)
+                    if clinical_mask_dim > 0
+                    else None
+                ),
             )
             loss = criterion(outputs["logits"], batch["label"].to(device))
             loss.backward()
@@ -247,6 +310,11 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
                     portal=batch["portal"].to(device),
                     noncontrast=batch["noncontrast"].to(device),
                     clinical=batch["clinical"].to(device),
+                    clinical_missing_mask=(
+                        batch["clinical_missing_mask"].to(device)
+                        if clinical_mask_dim > 0
+                        else None
+                    ),
                 )
                 loss = criterion(outputs["logits"], batch["label"].to(device))
                 val_loss_sum += float(loss.item())
