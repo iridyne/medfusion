@@ -36,6 +36,14 @@ class BaseConfig:
 
 
 @dataclass
+class ClinicalPreprocessingConfig(BaseConfig):
+    """Clinical preprocessing options for tabular case features."""
+
+    normalize: bool = False
+    strategy: Literal["none", "zero_with_mask"] = "none"
+
+
+@dataclass
 class DataConfig(BaseConfig):
     """Data-related configuration."""
 
@@ -66,6 +74,9 @@ class DataConfig(BaseConfig):
     patient_id_column: str | None = None
     image_path_column: str = "image_path"
     clinical_feature_columns: list[str] = field(default_factory=list)
+    clinical_preprocessing: ClinicalPreprocessingConfig = field(
+        default_factory=ClinicalPreprocessingConfig
+    )
     phase_dir_columns: dict[str, str] = field(default_factory=dict)
     target_shape: list[int] | None = None
     window_preset: str = "soft_tissue"
@@ -81,6 +92,12 @@ class DataConfig(BaseConfig):
     # Augmentation
     use_augmentation: bool = True
     augmentation_strength: Literal["light", "medium", "heavy"] = "medium"
+
+    def __post_init__(self) -> None:
+        if isinstance(self.clinical_preprocessing, dict):
+            self.clinical_preprocessing = ClinicalPreprocessingConfig(
+                **self.clinical_preprocessing
+            )
 
 
 @dataclass
@@ -164,6 +181,24 @@ class FusionConfig(BaseConfig):
 
 
 @dataclass
+class PhaseEncoderConfig(BaseConfig):
+    """Three-phase CT encoder structure config."""
+
+    base_channels: int = 16
+    num_blocks: int = 3
+    dropout: float = 0.1
+    norm: Literal["batch", "instance", "group"] = "batch"
+
+
+@dataclass
+class PhaseFusionConfig(BaseConfig):
+    """Three-phase feature fusion config."""
+
+    mode: Literal["concatenate", "mean", "gated"] = "concatenate"
+    hidden_dim: int = 64
+
+
+@dataclass
 class ModelConfig(BaseConfig):
     """Complete model configuration."""
 
@@ -180,7 +215,9 @@ class ModelConfig(BaseConfig):
     # Three-phase CT fusion settings
     phase_feature_dim: int = 64
     share_phase_encoder: bool = False
-    phase_fusion_type: Literal["concatenate", "mean"] = "concatenate"
+    phase_fusion_type: Literal["concatenate", "mean", "gated"] = "concatenate"
+    phase_encoder: PhaseEncoderConfig = field(default_factory=PhaseEncoderConfig)
+    phase_fusion: PhaseFusionConfig = field(default_factory=PhaseFusionConfig)
     use_risk_head: bool = False
 
     # Pathology encoder selection
@@ -189,6 +226,33 @@ class ModelConfig(BaseConfig):
 
     # Multi-task auxiliary heads
     use_auxiliary_heads: bool = True
+
+    def __post_init__(self) -> None:
+        if isinstance(self.vision, dict):
+            self.vision = VisionConfig(**self.vision)
+        if isinstance(self.tabular, dict):
+            self.tabular = TabularConfig(**self.tabular)
+        if isinstance(self.fusion, dict):
+            self.fusion = FusionConfig(**self.fusion)
+        if isinstance(self.phase_encoder, dict):
+            self.phase_encoder = PhaseEncoderConfig(**self.phase_encoder)
+        if isinstance(self.phase_fusion, dict):
+            self.phase_fusion = PhaseFusionConfig(**self.phase_fusion)
+
+        default_phase_fusion_mode = PhaseFusionConfig().mode
+        default_phase_fusion_type = "concatenate"
+        if (
+            self.phase_fusion.mode == default_phase_fusion_mode
+            and self.phase_fusion_type != default_phase_fusion_type
+        ):
+            self.phase_fusion.mode = self.phase_fusion_type
+        elif (
+            self.phase_fusion.mode != default_phase_fusion_mode
+            and self.phase_fusion_type == default_phase_fusion_type
+        ):
+            self.phase_fusion_type = self.phase_fusion.mode
+        elif self.phase_fusion.mode != self.phase_fusion_type:
+            self.phase_fusion_type = self.phase_fusion.mode
 
 
 @dataclass
@@ -291,6 +355,15 @@ class LoggingConfig(BaseConfig):
 
 
 @dataclass
+class ExplainabilityConfig(BaseConfig):
+    """Structured result artifact export toggles."""
+
+    export_phase_importance: bool = False
+    export_case_explanations: bool = False
+    heatmap_ready: bool = False
+
+
+@dataclass
 class ExperimentConfig(BaseConfig):
     """Complete experiment configuration combining all sub-configs."""
 
@@ -312,9 +385,21 @@ class ExperimentConfig(BaseConfig):
     model: ModelConfig = field(default_factory=ModelConfig)
     training: TrainingConfig = field(default_factory=TrainingConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    explainability: ExplainabilityConfig = field(default_factory=ExplainabilityConfig)
 
     def __post_init__(self) -> None:
         """Post-initialization setup."""
+        if isinstance(self.data, dict):
+            self.data = DataConfig(**self.data)
+        if isinstance(self.model, dict):
+            self.model = ModelConfig(**self.model)
+        if isinstance(self.training, dict):
+            self.training = TrainingConfig(**self.training)
+        if isinstance(self.logging, dict):
+            self.logging = LoggingConfig(**self.logging)
+        if isinstance(self.explainability, dict):
+            self.explainability = ExplainabilityConfig(**self.explainability)
+
         # Create the run root and its structured subdirectories.
         self.output_layout.ensure_exists()
 

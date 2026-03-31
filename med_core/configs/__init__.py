@@ -2,12 +2,16 @@
 
 from med_core.configs.base_config import (
     BaseConfig,
+    ClinicalPreprocessingConfig,
     DataConfig,
     ExperimentConfig,
+    ExplainabilityConfig,
     FusionConfig,
     LoggingConfig,
     ModelConfig,
     OptimizerConfig,
+    PhaseEncoderConfig,
+    PhaseFusionConfig,
     SchedulerConfig,
     TabularConfig,
     TrainingConfig,
@@ -41,12 +45,16 @@ from med_core.configs.validation import (
 __all__ = [
     # Base configs
     "BaseConfig",
+    "ClinicalPreprocessingConfig",
     "DataConfig",
     "ExperimentConfig",
+    "ExplainabilityConfig",
     "FusionConfig",
     "LoggingConfig",
     "ModelConfig",
     "OptimizerConfig",
+    "PhaseEncoderConfig",
+    "PhaseFusionConfig",
     "SchedulerConfig",
     "TabularConfig",
     "TrainingConfig",

@@ -32,6 +32,10 @@ def _write_config(path: Path) -> None:
                     "train_ratio": 0.7,
                     "val_ratio": 0.15,
                     "test_ratio": 0.15,
+                    "clinical_preprocessing": {
+                        "normalize": True,
+                        "strategy": "zero_with_mask",
+                    },
                 },
                 "model": {
                     "model_type": "three_phase_ct_fusion",
@@ -39,6 +43,15 @@ def _write_config(path: Path) -> None:
                     "phase_feature_dim": 16,
                     "share_phase_encoder": False,
                     "phase_fusion_type": "concatenate",
+                    "phase_encoder": {
+                        "base_channels": 12,
+                        "num_blocks": 3,
+                        "dropout": 0.1,
+                    },
+                    "phase_fusion": {
+                        "mode": "gated",
+                        "hidden_dim": 20,
+                    },
                     "use_risk_head": True,
                     "tabular": {
                         "hidden_dims": [16],
@@ -63,6 +76,11 @@ def _write_config(path: Path) -> None:
                     "scheduler": {"scheduler": "none"},
                 },
                 "logging": {"output_dir": "outputs/smurf_mainline_test"},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                },
             },
             sort_keys=False,
         ),
@@ -83,8 +101,14 @@ def test_three_phase_mainline_config_loads_new_schema(tmp_path: Path) -> None:
     assert config.model.model_type == "three_phase_ct_fusion"
     assert config.model.phase_feature_dim == 16
     assert config.model.share_phase_encoder is False
-    assert config.model.phase_fusion_type == "concatenate"
+    assert config.model.phase_fusion_type == "gated"
+    assert config.model.phase_encoder.base_channels == 12
+    assert config.model.phase_fusion.mode == "gated"
+    assert config.data.clinical_preprocessing.normalize is True
+    assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
     assert config.model.use_risk_head is True
+    assert config.explainability.export_phase_importance is True
+    assert config.explainability.heatmap_ready is True
 
 
 def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
@@ -96,6 +120,10 @@ def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
     assert payload["data"]["dataset_type"] == "three_phase_ct_tabular"
     assert payload["model"]["model_type"] == "three_phase_ct_fusion"
     assert payload["model"]["phase_feature_dim"] == 16
+    assert payload["model"]["phase_encoder"]["base_channels"] == 12
+    assert payload["model"]["phase_fusion"]["mode"] == "gated"
+    assert payload["data"]["clinical_preprocessing"]["strategy"] == "zero_with_mask"
+    assert payload["explainability"]["export_case_explanations"] is True
 
 
 def test_demo_smurf_config_uses_mainline_schema() -> None:

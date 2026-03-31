@@ -11,12 +11,16 @@ import yaml
 
 from med_core.configs.base_config import (
     BaseConfig,
+    ClinicalPreprocessingConfig,
     DataConfig,
     ExperimentConfig,
+    ExplainabilityConfig,
     FusionConfig,
     LoggingConfig,
     ModelConfig,
     OptimizerConfig,
+    PhaseEncoderConfig,
+    PhaseFusionConfig,
     SchedulerConfig,
     TabularConfig,
     TrainingConfig,
@@ -90,6 +94,16 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
                 raise TypeError(
                     f"Expected dict for 'data', got {type(data['data']).__name__}",
                 )
+            data_config = data["data"]
+            if "clinical_preprocessing" in data_config:
+                if not isinstance(data_config["clinical_preprocessing"], dict):
+                    raise TypeError(
+                        "Expected dict for 'data.clinical_preprocessing', "
+                        f"got {type(data_config['clinical_preprocessing']).__name__}",
+                    )
+                data_config["clinical_preprocessing"] = ClinicalPreprocessingConfig(
+                    **data_config["clinical_preprocessing"]
+                )
             data["data"] = DataConfig(**data["data"])
 
         if "model" in data:
@@ -119,6 +133,26 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
                         f"Expected dict for 'model.fusion', got {type(model_data['fusion']).__name__}",
                     )
                 model_data["fusion"] = FusionConfig(**model_data["fusion"])
+
+            if "phase_encoder" in model_data:
+                if not isinstance(model_data["phase_encoder"], dict):
+                    raise TypeError(
+                        "Expected dict for 'model.phase_encoder', got "
+                        f"{type(model_data['phase_encoder']).__name__}",
+                    )
+                model_data["phase_encoder"] = PhaseEncoderConfig(
+                    **model_data["phase_encoder"]
+                )
+
+            if "phase_fusion" in model_data:
+                if not isinstance(model_data["phase_fusion"], dict):
+                    raise TypeError(
+                        "Expected dict for 'model.phase_fusion', got "
+                        f"{type(model_data['phase_fusion']).__name__}",
+                    )
+                model_data["phase_fusion"] = PhaseFusionConfig(
+                    **model_data["phase_fusion"]
+                )
 
             data["model"] = ModelConfig(**model_data)
 
@@ -155,6 +189,14 @@ def _dict_to_config(data: dict, config_class: type[T]) -> T:
                     f"Expected dict for 'logging', got {type(data['logging']).__name__}",
                 )
             data["logging"] = LoggingConfig(**data["logging"])
+
+        if "explainability" in data:
+            if not isinstance(data["explainability"], dict):
+                raise TypeError(
+                    "Expected dict for 'explainability', "
+                    f"got {type(data['explainability']).__name__}",
+                )
+            data["explainability"] = ExplainabilityConfig(**data["explainability"])
 
     return config_class(**data)
 

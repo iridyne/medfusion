@@ -331,6 +331,98 @@ class TestConfigValidation:
         errors = validate_config(config)
         assert any(error.error_code == "E036" for error in errors)
 
+    def test_three_phase_invalid_phase_fusion_mode(self):
+        """Three-phase config should reject unsupported phase fusion modes."""
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="three_phase_invalid_phase_fusion",
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                num_classes=2,
+                phase_fusion={
+                    "mode": "invalid_mode",
+                    "hidden_dim": 32,
+                },
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="gated", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                train_ratio=0.7,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                batch_size=1,
+                num_workers=0,
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                use_progressive_training=False,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+        )
+
+        errors = validate_config(config)
+        assert any(error.path == "model.phase_fusion.mode" for error in errors)
+
+    def test_three_phase_invalid_clinical_preprocessing_strategy(self):
+        """Three-phase config should reject unsupported clinical preprocessing strategy."""
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="three_phase_invalid_clinical_preprocessing",
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                num_classes=2,
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="gated", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                train_ratio=0.7,
+                val_ratio=0.15,
+                test_ratio=0.15,
+                batch_size=1,
+                num_workers=0,
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+                clinical_preprocessing={
+                    "normalize": True,
+                    "strategy": "unsupported",
+                },
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                use_progressive_training=False,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+        )
+
+        errors = validate_config(config)
+        assert any(
+            error.path == "data.clinical_preprocessing.strategy" for error in errors
+        )
+
     def test_progressive_training_epochs_mismatch(self):
         """Test validation catches progressive training epoch mismatch."""
         config = ExperimentConfig(

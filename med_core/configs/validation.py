@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 VALID_BACKBONES = frozenset(list_available_backbones())
 VALID_FUSION_TYPES = frozenset(list_available_fusions())
-VALID_THREE_PHASE_FUSION_TYPES = frozenset({"concatenate", "mean"})
+VALID_THREE_PHASE_FUSION_TYPES = frozenset({"concatenate", "mean", "gated"})
+VALID_CLINICAL_PREPROCESSING_STRATEGIES = frozenset({"none", "zero_with_mask"})
 
 
 @dataclass
@@ -184,6 +185,71 @@ class ConfigValidator:
                     )
                 )
 
+            if model.phase_encoder.base_channels <= 0:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_encoder.base_channels",
+                        message=(
+                            "phase encoder base_channels must be positive, got "
+                            f"{model.phase_encoder.base_channels}"
+                        ),
+                        error_code="E038",
+                        suggestion="Set model.phase_encoder.base_channels to a positive integer",
+                    )
+                )
+
+            if model.phase_encoder.num_blocks <= 0:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_encoder.num_blocks",
+                        message=(
+                            "phase encoder num_blocks must be positive, got "
+                            f"{model.phase_encoder.num_blocks}"
+                        ),
+                        error_code="E039",
+                        suggestion="Set model.phase_encoder.num_blocks to a positive integer",
+                    )
+                )
+
+            if not 0 <= model.phase_encoder.dropout < 1:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_encoder.dropout",
+                        message=(
+                            "phase encoder dropout must be in [0, 1), got "
+                            f"{model.phase_encoder.dropout}"
+                        ),
+                        error_code="E040",
+                        suggestion="Set model.phase_encoder.dropout to a value between 0 and 1",
+                    )
+                )
+
+            if model.phase_fusion.mode not in VALID_THREE_PHASE_FUSION_TYPES:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_fusion.mode",
+                        message=f"Invalid phase_fusion.mode: {model.phase_fusion.mode}",
+                        error_code="E041",
+                        suggestion=(
+                            "Choose from: "
+                            + ", ".join(sorted(VALID_THREE_PHASE_FUSION_TYPES))
+                        ),
+                    )
+                )
+
+            if model.phase_fusion.hidden_dim <= 0:
+                self.errors.append(
+                    ValidationError(
+                        path="model.phase_fusion.hidden_dim",
+                        message=(
+                            "phase_fusion.hidden_dim must be positive, got "
+                            f"{model.phase_fusion.hidden_dim}"
+                        ),
+                        error_code="E042",
+                        suggestion="Set model.phase_fusion.hidden_dim to a positive integer",
+                    )
+                )
+
     def _validate_data_config(self, config: ExperimentConfig) -> None:
         """Validate data configuration."""
         data = config.data
@@ -231,6 +297,25 @@ class ConfigValidator:
             )
 
         if data.dataset_type == "three_phase_ct_tabular":
+            if (
+                data.clinical_preprocessing.strategy
+                not in VALID_CLINICAL_PREPROCESSING_STRATEGIES
+            ):
+                self.errors.append(
+                    ValidationError(
+                        path="data.clinical_preprocessing.strategy",
+                        message=(
+                            "Invalid clinical_preprocessing.strategy: "
+                            f"{data.clinical_preprocessing.strategy}"
+                        ),
+                        error_code="E043",
+                        suggestion=(
+                            "Choose from: "
+                            + ", ".join(sorted(VALID_CLINICAL_PREPROCESSING_STRATEGIES))
+                        ),
+                    )
+                )
+
             missing_phase_keys = [
                 phase_name
                 for phase_name in ("arterial", "portal", "noncontrast")
