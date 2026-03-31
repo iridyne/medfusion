@@ -57,7 +57,7 @@ flowchart TB
   E --> F[medfusion build-results --config config_path --checkpoint best_ckpt]
   F --> G[查看 metrics validation summary report artifacts]
   G --> H{需要对外演示?}
-  H -->|是| I[保留 ROC 混淆矩阵 注意力图 报告截图]
+  H -->|是| I[保留区分能力曲线 混淆矩阵 注意力图 报告截图]
   H -->|否| J[进入下一轮调参或换数据集]
 ```
 
@@ -73,10 +73,10 @@ flowchart TB
 2. 跑一次基础训练
 3. 检查是否能稳定产出：
    - 训练历史
-   - ROC / AUC
-   - 混淆矩阵
-   - validation 摘要
-   - 报告文件
+   - 区分能力曲线（ROC / AUC）
+   - 混淆矩阵（阳性/阴性判别情况）
+   - 逐例评估摘要
+   - 结果报告
 
 ### 路径 B：先验证表格能力
 
@@ -96,7 +96,7 @@ flowchart TB
 1. 使用 ISIC 2018 / 2019 或 HAM10000
 2. 跑图像分类任务
 3. 优先保留：
-   - ROC 曲线
+   - 区分能力曲线
    - 归一化混淆矩阵
    - 注意力图
    - 结果摘要页截图
@@ -136,7 +136,7 @@ uv run medfusion public-datasets show uci-heart-disease
 - `outputs/public_datasets/<dataset_run>/metrics/validation.json`
 - `outputs/public_datasets/<dataset_run>/reports/summary.json`
 - `outputs/public_datasets/<dataset_run>/reports/report.md`
-- `outputs/public_datasets/<dataset_run>/artifacts/*`（如 ROC / confusion / calibration / attention）
+- `outputs/public_datasets/<dataset_run>/artifacts/*`（如区分能力曲线 / 混淆矩阵 / 校准曲线 / 注意力图）
 
 如果结果目录只看到 checkpoint 没看到 `metrics/` 与 `reports/`，通常是还没执行 `build-results` 或 checkpoint 路径传错。
 

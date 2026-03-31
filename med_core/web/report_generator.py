@@ -80,38 +80,38 @@ class ReportGenerator:
         artifact_paths = self._resolve_artifact_paths(experiment)
         experiment_name = experiment.get("name", "Experiment")
         candidates: list[tuple[str, str | None]] = [
-            (f"{experiment_name} - Training Curves", artifact_paths.get("training_curves_plot_path")),
-            (f"{experiment_name} - ROC Curve", artifact_paths.get("roc_curve_plot_path")),
+            (f"{experiment_name} - 训练曲线", artifact_paths.get("training_curves_plot_path")),
+            (f"{experiment_name} - ROC 曲线（区分能力）", artifact_paths.get("roc_curve_plot_path")),
             (
-                f"{experiment_name} - Confusion Matrix",
+                f"{experiment_name} - 混淆矩阵（阳性/阴性判别情况）",
                 artifact_paths.get("confusion_matrix_plot_path"),
             ),
             (
-                f"{experiment_name} - Normalized Confusion Matrix",
+                f"{experiment_name} - 归一化混淆矩阵",
                 artifact_paths.get("confusion_matrix_normalized_plot_path"),
             ),
             (
-                f"{experiment_name} - Calibration Curve",
+                f"{experiment_name} - 校准曲线",
                 artifact_paths.get("calibration_curve_plot_path"),
             ),
             (
-                f"{experiment_name} - Probability Distribution",
+                f"{experiment_name} - 预测概率分布图",
                 artifact_paths.get("probability_distribution_plot_path"),
             ),
             (
-                f"{experiment_name} - Kaplan-Meier Curve",
+                f"{experiment_name} - Kaplan-Meier 生存曲线",
                 artifact_paths.get("kaplan_meier_plot_path"),
             ),
             (
-                f"{experiment_name} - Risk Score Distribution",
+                f"{experiment_name} - 风险分层分布图",
                 artifact_paths.get("risk_score_distribution_plot_path"),
             ),
             (
-                f"{experiment_name} - Global Feature Importance",
+                f"{experiment_name} - 关键影响因素条形图",
                 artifact_paths.get("feature_importance_bar_plot_path"),
             ),
             (
-                f"{experiment_name} - Feature Importance Beeswarm",
+                f"{experiment_name} - 关键影响因素散点图",
                 artifact_paths.get("feature_importance_beeswarm_plot_path"),
             ),
         ]
@@ -127,14 +127,14 @@ class ReportGenerator:
             if image_path and Path(image_path).exists():
                 assets.append(
                     (
-                        f"{experiment_name} - {item.get('title', 'Attention Overlay')}",
+                        f"{experiment_name} - {item.get('title', '注意力叠加图')}",
                         Path(image_path),
                     )
                 )
 
         statistics_path = attention_manifest.get("statistics_plot_path")
         if statistics_path and Path(statistics_path).exists():
-            assets.append((f"{experiment_name} - Attention Statistics", Path(statistics_path)))
+            assets.append((f"{experiment_name} - 注意力统计图", Path(statistics_path)))
 
         return assets
 
