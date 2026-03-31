@@ -45,11 +45,14 @@ from med_core.postprocessing.advanced_analysis import build_shap_artifacts
 from med_core.models import ThreePhaseCTFusionModel
 from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 from med_core.shared.visualization import (
+    compute_gradcam_volume,
     plot_calibration_curve,
     plot_confusion_matrix,
     plot_probability_distribution,
     plot_roc_curve,
     plot_training_curves,
+    prepare_overlay_image,
+    select_representative_slice,
 )
 from med_core.visualization.attention_viz import (
     plot_attention_statistics,
@@ -293,6 +296,126 @@ def _split_three_phase_records(
     )
 
 
+def _generate_three_phase_heatmap_artifacts(
+    *,
+    model: ThreePhaseCTFusionModel,
+    dataset: ThreePhaseCTCaseDataset,
+    device: torch.device,
+    layout: RunOutputLayout,
+    cases: list[dict[str, Any]],
+    enabled: bool,
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, str]]:
+    if not enabled or not cases:
+        return {}, {}
+
+    heatmap_dir = layout.visualizations_dir / "heatmaps"
+    heatmap_dir.mkdir(parents=True, exist_ok=True)
+    phase_names = ("arterial", "portal", "noncontrast")
+    manifest_cases: list[dict[str, Any]] = []
+    heatmap_cases: dict[str, list[dict[str, Any]]] = {}
+
+    for index, case in enumerate(cases):
+        sample = dataset[index]
+        case_id = str(case["case_id"])
+        arterial = sample["arterial"].unsqueeze(0).to(device).requires_grad_(True)
+        portal = sample["portal"].unsqueeze(0).to(device).requires_grad_(True)
+        noncontrast = sample["noncontrast"].unsqueeze(0).to(device).requires_grad_(True)
+        clinical = sample["clinical"].unsqueeze(0).to(device)
+        clinical_missing_mask = sample["clinical_missing_mask"].unsqueeze(0).to(device)
+
+        model.zero_grad(set_to_none=True)
+        outputs = model(
+            arterial=arterial,
+            portal=portal,
+            noncontrast=noncontrast,
+            clinical=clinical,
+            clinical_missing_mask=clinical_missing_mask,
+        )
+        feature_maps = outputs.get("feature_maps")
+        if not isinstance(feature_maps, dict):
+            raise RuntimeError(
+                "Heatmap export requires the model to provide per-phase feature maps."
+            )
+        missing_phases = [phase for phase in phase_names if phase not in feature_maps]
+        if missing_phases:
+            raise RuntimeError(
+                f"Heatmap export missing feature maps for phases: {missing_phases}"
+            )
+
+        target_class = int(case["predicted_label"])
+        target_score = outputs["logits"][:, target_class].sum()
+        gradients = torch.autograd.grad(
+            target_score,
+            [feature_maps[phase] for phase in phase_names],
+            retain_graph=False,
+            allow_unused=False,
+        )
+
+        phase_inputs = {
+            "arterial": arterial,
+            "portal": portal,
+            "noncontrast": noncontrast,
+        }
+        case_dir = heatmap_dir / case_id
+        case_dir.mkdir(parents=True, exist_ok=True)
+        case_heatmaps: list[dict[str, Any]] = []
+
+        for phase_name, gradient in zip(phase_names, gradients, strict=True):
+            input_volume = phase_inputs[phase_name].squeeze(0).squeeze(0).detach().cpu()
+            heatmap_volume = compute_gradcam_volume(
+                feature_maps[phase_name],
+                gradient,
+                output_shape=input_volume.shape,
+            )
+            slice_index = select_representative_slice(heatmap_volume)
+            image_slice = prepare_overlay_image(input_volume[slice_index].numpy())
+            heatmap_slice = heatmap_volume[slice_index]
+            image_path = case_dir / f"{phase_name}_heatmap.png"
+            phase_importance = case.get("phase_importance", {}).get(phase_name)
+            figure = visualize_attention_overlay(
+                image=image_slice,
+                attention=heatmap_slice,
+                alpha=0.45,
+                title=(
+                    f"Case {case_id} | {phase_name} | "
+                    f"pred={case['predicted_label']} | "
+                    f"phase_weight={phase_importance}"
+                ),
+                save_path=image_path,
+            )
+            plt.close(figure)
+            case_heatmaps.append(
+                {
+                    "phase": phase_name,
+                    "method": "gradcam_3d_slice_overlay",
+                    "image_path": str(image_path),
+                    "slice_index": int(slice_index),
+                    "mean_heatmap": round(float(np.mean(heatmap_slice)), 6),
+                    "peak_heatmap": round(float(np.max(heatmap_slice)), 6),
+                    "phase_importance": phase_importance,
+                }
+            )
+
+        heatmap_cases[case_id] = case_heatmaps
+        manifest_cases.append(
+            {
+                "case_id": case_id,
+                "predicted_label": case["predicted_label"],
+                "pred_probability": case["pred_probability"],
+                "heatmaps": case_heatmaps,
+            }
+        )
+
+    manifest_payload = {
+        "method": "gradcam_3d_slice_overlay",
+        "phase_labels": list(phase_names),
+        "cases": manifest_cases,
+    }
+    manifest_path = heatmap_dir / "manifest.json"
+    _write_json(manifest_path, manifest_payload)
+    return heatmap_cases, {"heatmap_manifest_path": str(manifest_path)}
+
+
 def _build_three_phase_results(
     *,
     config: Any,
@@ -335,7 +458,8 @@ def _build_three_phase_results(
         num_classes=config.model.num_classes,
         phase_fusion_type=config.model.phase_fusion.mode,
         share_phase_encoder=config.model.share_phase_encoder,
-        freeze_phase_encoder=config.model.vision.freeze_backbone,
+        # Result-building may need gradients for heatmaps even if training froze encoders.
+        freeze_phase_encoder=False,
         use_risk_head=config.model.use_risk_head,
         phase_encoder_base_channels=config.model.phase_encoder.base_channels,
         phase_encoder_num_blocks=config.model.phase_encoder.num_blocks,
@@ -523,6 +647,10 @@ def _build_three_phase_results(
                 positive_class_label="Positive",
                 max_display=min(10, 1 + len(config.data.clinical_feature_columns)),
                 max_samples=max(importance_sample_limit, 1),
+                min_samples=max(
+                    int(config.explainability.min_global_importance_samples),
+                    1,
+                ),
             )
         )
         if importance_payload_raw.get("available"):
@@ -558,6 +686,14 @@ def _build_three_phase_results(
             for item in importance_payload.get("top_features", [])[:3]
             if item.get("feature")
         ]
+    heatmap_cases, heatmap_artifact_paths = _generate_three_phase_heatmap_artifacts(
+        model=model,
+        dataset=dataset,
+        device=device,
+        layout=layout,
+        cases=cases,
+        enabled=bool(config.explainability.heatmap_ready),
+    )
     case_explanations_payload = {
         "phase_labels": phase_labels,
         "cases": [
@@ -568,6 +704,7 @@ def _build_three_phase_results(
                 "risk_score": case["risk_score"],
                 "phase_importance": case["phase_importance"],
                 "top_clinical_factors": top_clinical_factors,
+                "heatmap_artifacts": heatmap_cases.get(case["case_id"], []),
             }
             for case in cases
         ],
@@ -620,6 +757,7 @@ def _build_three_phase_results(
             "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
             "confusion_matrix_plot_path": str(confusion_matrix_path),
             **importance_artifact_paths,
+            **heatmap_artifact_paths,
         },
         "global_feature_importance": importance_payload,
     }
@@ -653,6 +791,13 @@ def _build_three_phase_results(
             ]
         )
     )
+    if heatmap_artifact_paths:
+        report_lines.extend(["", "## Imaging Heatmaps", ""])
+        report_lines.append(
+            "- 影像重点区域热图清单: "
+            f"{heatmap_artifact_paths['heatmap_manifest_path']}"
+        )
+        report_lines.append("- 生成方式: 三期 CT 逐期 Grad-CAM 代表层面叠加图")
     report_lines.extend(["", "## Visual Artifacts", ""])
     if roc_curve_path is not None:
         report_lines.append(f"- ROC 曲线（区分能力）: {roc_curve_path}")
@@ -715,6 +860,7 @@ def _build_three_phase_results(
         "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
         "confusion_matrix_plot_path": str(confusion_matrix_path),
         **importance_artifact_paths,
+        **heatmap_artifact_paths,
     }
     artifact_paths = {key: value for key, value in artifact_paths.items() if value}
     return BuildResultsOutput(

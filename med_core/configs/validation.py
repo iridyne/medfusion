@@ -19,6 +19,7 @@ VALID_BACKBONES = frozenset(list_available_backbones())
 VALID_FUSION_TYPES = frozenset(list_available_fusions())
 VALID_THREE_PHASE_FUSION_TYPES = frozenset({"concatenate", "mean", "gated"})
 VALID_CLINICAL_PREPROCESSING_STRATEGIES = frozenset({"none", "zero_with_mask"})
+VALID_BUILD_RESULTS_SPLITS = frozenset({"train", "val", "test"})
 
 
 @dataclass
@@ -54,6 +55,7 @@ class ConfigValidator:
         self._validate_data_config(config)
         self._validate_training_config(config)
         self._validate_logging_config(config)
+        self._validate_explainability_config(config)
         self._validate_cross_dependencies(config)
 
         return self.errors
@@ -391,6 +393,42 @@ class ConfigValidator:
                         suggestion="Set data.window_preset, for example 'liver'",
                     )
                 )
+
+    def _validate_explainability_config(self, config: ExperimentConfig) -> None:
+        explainability = config.explainability
+
+        if explainability.build_results_split not in VALID_BUILD_RESULTS_SPLITS:
+            self.errors.append(
+                ValidationError(
+                    path="explainability.build_results_split",
+                    message=(
+                        "Invalid explainability.build_results_split: "
+                        f"{explainability.build_results_split}"
+                    ),
+                    error_code="E044",
+                    suggestion=(
+                        "Choose from: "
+                        + ", ".join(sorted(VALID_BUILD_RESULTS_SPLITS))
+                    ),
+                )
+            )
+
+        if explainability.min_global_importance_samples <= 0:
+            self.errors.append(
+                ValidationError(
+                    path="explainability.min_global_importance_samples",
+                    message=(
+                        "explainability.min_global_importance_samples must be "
+                        "positive, got "
+                        f"{explainability.min_global_importance_samples}"
+                    ),
+                    error_code="E045",
+                    suggestion=(
+                        "Set explainability.min_global_importance_samples to a "
+                        "positive integer"
+                    ),
+                )
+            )
 
     def _validate_training_config(self, config: ExperimentConfig) -> None:
         """Validate training configuration."""

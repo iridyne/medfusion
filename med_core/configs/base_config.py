@@ -361,6 +361,8 @@ class ExplainabilityConfig(BaseConfig):
     export_phase_importance: bool = False
     export_case_explanations: bool = False
     heatmap_ready: bool = False
+    build_results_split: Literal["train", "val", "test"] = "test"
+    min_global_importance_samples: int = 8
 
 
 @dataclass

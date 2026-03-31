@@ -3,6 +3,7 @@
 from med_core.configs import (
     DataConfig,
     ExperimentConfig,
+    ExplainabilityConfig,
     FusionConfig,
     LoggingConfig,
     ModelConfig,
@@ -217,6 +218,82 @@ class TestConfigValidation:
         assert len(errors) > 0
         assert any("ratio" in e.path for e in errors)
         assert any(e.error_code == "E011" for e in errors)
+
+    def test_invalid_explainability_build_results_split(self):
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="test_exp",
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                num_classes=2,
+                vision=VisionConfig(backbone="resnet18", feature_dim=128),
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="concatenate", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                patient_id_column="case_id",
+                target_column="label",
+                phase_dir_columns={
+                    "arterial": "a",
+                    "portal": "p",
+                    "noncontrast": "n",
+                },
+                clinical_feature_columns=["age"],
+                target_shape=[4, 8, 8],
+                batch_size=1,
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+            explainability=ExplainabilityConfig(build_results_split="demo"),  # type: ignore[arg-type]
+        )
+
+        errors = validate_config(config)
+        assert any(e.path == "explainability.build_results_split" for e in errors)
+
+    def test_invalid_min_global_importance_samples(self):
+        config = ExperimentConfig(
+            project_name="test",
+            experiment_name="test_exp",
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                num_classes=2,
+                vision=VisionConfig(backbone="resnet18", feature_dim=128),
+                tabular=TabularConfig(hidden_dims=[64], output_dim=32),
+                fusion=FusionConfig(fusion_type="concatenate", hidden_dim=96),
+            ),
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                csv_path="data.csv",
+                patient_id_column="case_id",
+                target_column="label",
+                phase_dir_columns={
+                    "arterial": "a",
+                    "portal": "p",
+                    "noncontrast": "n",
+                },
+                clinical_feature_columns=["age"],
+                target_shape=[4, 8, 8],
+                batch_size=1,
+            ),
+            training=TrainingConfig(
+                num_epochs=1,
+                optimizer=OptimizerConfig(optimizer="adam", learning_rate=1e-3),
+                scheduler=SchedulerConfig(scheduler="none"),
+            ),
+            logging=LoggingConfig(output_dir="outputs/"),
+            explainability=ExplainabilityConfig(min_global_importance_samples=0),
+        )
+
+        errors = validate_config(config)
+        assert any(
+            e.path == "explainability.min_global_importance_samples" for e in errors
+        )
 
     def test_invalid_fusion_type(self):
         """Test validation catches invalid fusion type."""

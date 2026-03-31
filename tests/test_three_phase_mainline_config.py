@@ -80,6 +80,8 @@ def _write_config(path: Path) -> None:
                     "export_phase_importance": True,
                     "export_case_explanations": True,
                     "heatmap_ready": True,
+                    "build_results_split": "train",
+                    "min_global_importance_samples": 5,
                 },
             },
             sort_keys=False,
@@ -109,6 +111,8 @@ def test_three_phase_mainline_config_loads_new_schema(tmp_path: Path) -> None:
     assert config.model.use_risk_head is True
     assert config.explainability.export_phase_importance is True
     assert config.explainability.heatmap_ready is True
+    assert config.explainability.build_results_split == "train"
+    assert config.explainability.min_global_importance_samples == 5
 
 
 def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
@@ -124,6 +128,8 @@ def test_three_phase_mainline_config_roundtrips_to_dict(tmp_path: Path) -> None:
     assert payload["model"]["phase_fusion"]["mode"] == "gated"
     assert payload["data"]["clinical_preprocessing"]["strategy"] == "zero_with_mask"
     assert payload["explainability"]["export_case_explanations"] is True
+    assert payload["explainability"]["build_results_split"] == "train"
+    assert payload["explainability"]["min_global_importance_samples"] == 5
 
 
 def test_demo_smurf_config_uses_mainline_schema() -> None:
@@ -131,6 +137,9 @@ def test_demo_smurf_config_uses_mainline_schema() -> None:
 
     assert config.data.dataset_type == "three_phase_ct_tabular"
     assert config.model.model_type == "three_phase_ct_fusion"
+    assert config.model.phase_fusion.mode == "gated"
+    assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
+    assert config.explainability.build_results_split == "train"
 
 
 def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
@@ -138,3 +147,7 @@ def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
 
     assert config.data.dataset_type == "three_phase_ct_tabular"
     assert config.model.model_type == "three_phase_ct_fusion"
+    assert config.model.phase_fusion.mode == "gated"
+    assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
+    assert config.explainability.build_results_split == "train"
+    assert config.explainability.min_global_importance_samples == 5

@@ -413,6 +413,7 @@ def build_shap_artifacts(
     positive_class_label: str | None,
     max_display: int = 10,
     max_samples: int = 200,
+    min_samples: int = 8,
 ) -> tuple[dict[str, Any], dict[str, str], dict[str, Any]]:
     payload: dict[str, Any] = {
         "enabled": True,
@@ -426,7 +427,7 @@ def build_shap_artifacts(
     if len(tabular_data) != len(model_scores) or len(y_true) != len(model_scores):
         payload["reason"] = "shape_mismatch"
         return payload, {}, {}
-    if len(model_scores) < 8:
+    if len(model_scores) < min_samples:
         payload["reason"] = "not_enough_samples"
         return payload, {}, {}
 

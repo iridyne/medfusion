@@ -6,6 +6,7 @@ import argparse
 import json
 from collections.abc import Sequence
 
+from med_core.configs import load_config
 from med_core.postprocessing import build_results_artifacts
 
 
@@ -24,7 +25,7 @@ def build_results(
     parser.add_argument(
         "--split",
         choices=["train", "val", "test"],
-        default="test",
+        default=None,
         help="Dataset split used for post-training validation",
     )
     parser.add_argument(
@@ -58,12 +59,14 @@ def build_results(
         help="Print the generated artifact payload as JSON",
     )
     args = parser.parse_args(argv)
+    config = load_config(args.config)
+    split = args.split or config.explainability.build_results_split
 
     result = build_results_artifacts(
         config_path=args.config,
         checkpoint_path=args.checkpoint,
         output_dir=args.output_dir,
-        split=args.split,
+        split=split,
         attention_samples=max(args.attention_samples, 0),
         enable_survival=not getattr(args, "disable_survival", False),
         survival_time_column=args.survival_time_column,
