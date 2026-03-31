@@ -43,6 +43,7 @@ from med_core.postprocessing.analysis import (
 )
 from med_core.postprocessing.advanced_analysis import build_shap_artifacts
 from med_core.models import ThreePhaseCTFusionModel
+from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 from med_core.shared.visualization import (
     plot_calibration_curve,
     plot_confusion_matrix,
@@ -288,6 +289,7 @@ def _split_three_phase_records(
         records=selected_records,
         target_shape=dataset.target_shape,
         window_preset=dataset.window_preset,
+        clinical_preprocessor=dataset.clinical_preprocessor,
     )
 
 
@@ -302,6 +304,11 @@ def _build_three_phase_results(
     importance_sample_limit: int,
 ) -> BuildResultsOutput:
     dataframe = _read_manifest_dataframe(config)
+    clinical_preprocessing_path = layout.artifacts_dir / "clinical_preprocessing.json"
+    clinical_preprocessing_payload = _read_json(clinical_preprocessing_path)
+    clinical_preprocessor = ClinicalFeaturePreprocessor.from_dict(
+        clinical_preprocessing_payload
+    )
     full_dataset = ThreePhaseCTCaseDataset.from_manifest_dataframe(
         dataframe,
         phase_dir_columns=config.data.phase_dir_columns,
@@ -310,18 +317,30 @@ def _build_three_phase_results(
         patient_id_column=config.data.patient_id_column or "case_id",
         target_shape=tuple(config.data.target_shape or [16, 64, 64]),
         window_preset=config.data.window_preset,
+        clinical_preprocessor=clinical_preprocessor,
     )
     dataset = _split_three_phase_records(config, full_dataset, split)
     device = _resolve_device(config.device)
+    clinical_mask_dim = (
+        len(config.data.clinical_feature_columns)
+        if config.data.clinical_preprocessing.strategy == "zero_with_mask"
+        else 0
+    )
     model = ThreePhaseCTFusionModel(
         phase_feature_dim=config.model.phase_feature_dim,
         clinical_input_dim=len(config.data.clinical_feature_columns),
+        clinical_mask_dim=clinical_mask_dim,
         clinical_hidden_dim=config.model.tabular.output_dim,
         fusion_hidden_dim=config.model.fusion.hidden_dim,
-        phase_fusion_type=config.model.phase_fusion_type,
+        num_classes=config.model.num_classes,
+        phase_fusion_type=config.model.phase_fusion.mode,
         share_phase_encoder=config.model.share_phase_encoder,
         freeze_phase_encoder=config.model.vision.freeze_backbone,
         use_risk_head=config.model.use_risk_head,
+        phase_encoder_base_channels=config.model.phase_encoder.base_channels,
+        phase_encoder_num_blocks=config.model.phase_encoder.num_blocks,
+        phase_encoder_dropout=config.model.phase_encoder.dropout,
+        phase_encoder_norm_type=config.model.phase_encoder.norm,
     )
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -340,6 +359,8 @@ def _build_three_phase_results(
     y_prob: list[float] = []
     risk_scores: list[float] = []
     tabular_rows: list[list[float]] = []
+    phase_labels = ["arterial", "portal", "noncontrast"]
+    phase_importance_rows: list[list[float]] = []
 
     model.eval()
     with torch.inference_mode():
@@ -349,25 +370,35 @@ def _build_three_phase_results(
                 portal=batch["portal"].to(device),
                 noncontrast=batch["noncontrast"].to(device),
                 clinical=batch["clinical"].to(device),
+                clinical_missing_mask=(
+                    batch["clinical_missing_mask"].to(device)
+                    if clinical_mask_dim > 0
+                    else None
+                ),
             )
             probabilities = outputs["probability"].detach().cpu().numpy().tolist()
             predictions = (outputs["probability"] >= 0.5).long().cpu().numpy().tolist()
             labels = batch["label"].cpu().numpy().tolist()
             batch_risk_scores = outputs["risk_score"].detach().cpu().numpy().tolist()
+            batch_phase_importance = (
+                outputs["phase_importance"].detach().cpu().numpy().tolist()
+            )
             case_ids = list(batch["case_id"])
             batch_clinical = batch["clinical"].cpu().numpy().tolist()
-            for case_id, label, pred, prob, risk in zip(
+            for case_id, label, pred, prob, risk, phase_importance in zip(
                 case_ids,
                 labels,
                 predictions,
                 probabilities,
                 batch_risk_scores,
+                batch_phase_importance,
                 strict=True,
             ):
                 y_true.append(int(label))
                 y_pred.append(int(pred))
                 y_prob.append(float(prob))
                 risk_scores.append(float(risk))
+                phase_importance_rows.append([float(value) for value in phase_importance])
                 cases.append(
                     {
                         "case_id": case_id,
@@ -375,6 +406,14 @@ def _build_three_phase_results(
                         "predicted_label": int(pred),
                         "pred_probability": float(prob),
                         "risk_score": float(risk),
+                        "phase_importance": {
+                            phase_name: round(float(value), 6)
+                            for phase_name, value in zip(
+                                phase_labels,
+                                phase_importance,
+                                strict=True,
+                            )
+                        },
                     }
                 )
             tabular_rows.extend(
@@ -443,6 +482,34 @@ def _build_three_phase_results(
         encoding="utf-8",
     )
 
+    phase_importance_path = layout.metrics_dir / "phase_importance.json"
+    case_explanations_path = layout.metrics_dir / "case_explanations.json"
+    if phase_importance_rows:
+        mean_phase_importance = np.asarray(phase_importance_rows, dtype=float).mean(
+            axis=0
+        )
+    else:
+        mean_phase_importance = np.zeros(len(phase_labels), dtype=float)
+    phase_importance_payload = {
+        "phase_labels": phase_labels,
+        "split": split,
+        "mean_importance": {
+            phase_name: round(float(value), 6)
+            for phase_name, value in zip(
+                phase_labels,
+                mean_phase_importance,
+                strict=True,
+            )
+        },
+        "cases": [
+            {
+                "case_id": case["case_id"],
+                "phase_importance": case["phase_importance"],
+            }
+            for case in cases
+        ],
+    }
+
     importance_payload: dict[str, Any] | None = None
     importance_artifact_paths: dict[str, str] = {}
     if enable_importance and importance_sample_limit > 0:
@@ -484,6 +551,28 @@ def _build_three_phase_results(
         else:
             importance_artifact_paths = {}
 
+    top_clinical_factors = []
+    if importance_payload is not None:
+        top_clinical_factors = [
+            item.get("feature")
+            for item in importance_payload.get("top_features", [])[:3]
+            if item.get("feature")
+        ]
+    case_explanations_payload = {
+        "phase_labels": phase_labels,
+        "cases": [
+            {
+                "case_id": case["case_id"],
+                "predicted_label": case["predicted_label"],
+                "pred_probability": case["pred_probability"],
+                "risk_score": case["risk_score"],
+                "phase_importance": case["phase_importance"],
+                "top_clinical_factors": top_clinical_factors,
+            }
+            for case in cases
+        ],
+    }
+
     artifact_metadata = _build_artifact_metadata(
         config_path=config_path,
         checkpoint_path=checkpoint_path,
@@ -497,12 +586,14 @@ def _build_three_phase_results(
         "auc": _round_metric(auc_value),
         "sample_count": len(cases),
         "global_feature_importance": importance_payload,
+        "phase_importance": phase_importance_payload["mean_importance"],
     }
     validation_payload = {
         **artifact_metadata,
         "overview": {"split": split, "sample_count": len(cases)},
         "cases": cases,
         "global_feature_importance": importance_payload,
+        "phase_importance": phase_importance_payload,
     }
     summary_payload = {
         **artifact_metadata,
@@ -519,6 +610,8 @@ def _build_three_phase_results(
             "validation_path": str(layout.validation_path),
             "predictions_path": str(layout.predictions_path),
             "prediction_path": str(layout.predictions_path),
+            "case_explanations_path": str(case_explanations_path),
+            "phase_importance_path": str(phase_importance_path),
             "summary_path": str(layout.summary_path),
             "report_path": str(layout.report_path),
             "history_path": str(layout.history_path),
@@ -550,6 +643,16 @@ def _build_three_phase_results(
         f"- 阴性病例数: {len(y_true) - sum(y_true)}",
         f"- 纳入的临床变量: {', '.join(config.data.clinical_feature_columns)}",
     ]
+    report_lines.extend(["", "## Phase Contribution", ""])
+    report_lines.append(
+        "- 三期贡献概览: "
+        + ", ".join(
+            [
+                f"{phase_name}={phase_importance_payload['mean_importance'][phase_name]}"
+                for phase_name in phase_labels
+            ]
+        )
+    )
     report_lines.extend(["", "## Visual Artifacts", ""])
     if roc_curve_path is not None:
         report_lines.append(f"- ROC 曲线（区分能力）: {roc_curve_path}")
@@ -583,10 +686,14 @@ def _build_three_phase_results(
     report_lines.append(f"- 指标汇总 JSON: {layout.metrics_path}")
     report_lines.append(f"- 逐例评估 JSON: {layout.validation_path}")
     report_lines.append(f"- 预测结果 JSON: {layout.predictions_path}")
+    report_lines.append(f"- 三期贡献 JSON: {phase_importance_path}")
+    report_lines.append(f"- 病例解释 JSON: {case_explanations_path}")
     report_lines.append(f"- 训练历史 JSON: {layout.history_path}")
 
     _write_json(layout.metrics_path, metrics_payload)
     _write_json(layout.validation_path, validation_payload)
+    _write_json(phase_importance_path, phase_importance_payload)
+    _write_json(case_explanations_path, case_explanations_payload)
     _write_json(layout.summary_path, summary_payload)
     if history_payload.get("entries"):
         _write_json(layout.history_path, history_payload)
@@ -598,6 +705,8 @@ def _build_three_phase_results(
         "validation_path": str(layout.validation_path),
         "predictions_path": str(layout.predictions_path),
         "prediction_path": str(layout.predictions_path),
+        "case_explanations_path": str(case_explanations_path),
+        "phase_importance_path": str(phase_importance_path),
         "summary_path": str(layout.summary_path),
         "report_path": str(layout.report_path),
         "history_path": str(layout.history_path),

@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 from torch import nn
 from torch import optim
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 
 from med_core.backbones import (
     create_tabular_backbone,

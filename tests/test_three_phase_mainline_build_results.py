@@ -123,6 +123,7 @@ def test_three_phase_build_results_runs_from_mainline_config(tmp_path: Path) -> 
 
     assert (output_dir / "metrics" / "metrics.json").exists()
     assert (output_dir / "metrics" / "validation.json").exists()
+    assert (output_dir / "metrics" / "case_explanations.json").exists()
     assert (output_dir / "reports" / "summary.json").exists()
     assert (output_dir / "reports" / "report.md").exists()
 
@@ -230,6 +231,12 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
     assert artifacts["metrics_path"].endswith("metrics/metrics.json")
     assert artifacts["validation_path"].endswith("metrics/validation.json")
     assert artifacts["predictions_path"].endswith("metrics/predictions.json")
+    assert artifacts["case_explanations_path"].endswith(
+        "metrics/case_explanations.json"
+    )
+    assert artifacts["phase_importance_path"].endswith(
+        "metrics/phase_importance.json"
+    )
     assert artifacts["history_path"].endswith("logs/history.json")
     assert artifacts["roc_curve_plot_path"].endswith("artifacts/visualizations/roc_curve.png")
     assert artifacts["confusion_matrix_plot_path"].endswith(
@@ -255,6 +262,7 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
     assert "## Data Summary" in report_text
     assert "## Visual Artifacts" in report_text
     assert "## Feature Importance" in report_text
+    assert "## Phase Contribution" in report_text
     assert "## Artifact Paths" in report_text
     assert "- 区分能力（AUC）:" in report_text
     assert "- 总体准确率:" in report_text
@@ -263,8 +271,15 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
     assert "- 纳入的临床变量:" in report_text
     assert "- ROC 曲线（区分能力）:" in report_text
     assert "- 混淆矩阵（阳性/阴性判别情况）:" in report_text
+    assert "- 三期贡献概览:" in report_text
     assert "- 方法说明: SHAP-style surrogate" in report_text
     assert "- 关键影响因素条形图:" in report_text
     assert "- 关键影响因素散点图:" in report_text
     assert "- Feature Importance Bar:" not in report_text
     assert "- Feature Importance Beeswarm:" not in report_text
+
+    case_explanations = json.loads(
+        (output_dir / "metrics" / "case_explanations.json").read_text()
+    )
+    assert case_explanations["cases"]
+    assert "phase_importance" in case_explanations["cases"][0]
