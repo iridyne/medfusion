@@ -397,6 +397,17 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
         assert item["render_space"] == "model_input"
         assert item["mapping"]["strategy"] == "proportional_depth"
         assert item["mapping"]["source_slice_index"] == item["slice_index"]
+        assert item["default_explanation_target"] == "predicted_class"
+        assert item["target_class"] in {0, 1}
+        targets = item["targets"]
+        assert set(targets) == {"predicted_class", "positive_class"}
+        assert targets["predicted_class"]["target_class"] in {0, 1}
+        assert targets["positive_class"]["target_class"] == 1
+        assert Path(targets["positive_class"]["image_path"]).exists()
+        assert targets["positive_class"]["slice_index"] >= 0
+        for render in targets["positive_class"]["renderings"]:
+            assert Path(render["image_path"]).exists()
+            assert render["slice_index"] >= 0
         renderings = item["renderings"]
         assert len(renderings) == 3
         assert {render["space"] for render in renderings} == {

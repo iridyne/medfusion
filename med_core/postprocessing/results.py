@@ -339,6 +339,7 @@ def _generate_three_phase_heatmap_artifacts(
     heatmap_dir.mkdir(parents=True, exist_ok=True)
     _reset_directory_children(heatmap_dir)
     phase_names = ("arterial", "portal", "noncontrast")
+    positive_class_index = 1
     manifest_cases: list[dict[str, Any]] = []
     heatmap_cases: dict[str, list[dict[str, Any]]] = {}
 
@@ -370,14 +371,28 @@ def _generate_three_phase_heatmap_artifacts(
                 f"Heatmap export missing feature maps for phases: {missing_phases}"
             )
 
-        target_class = int(case["predicted_label"])
-        target_score = outputs["logits"][:, target_class].sum()
-        gradients = torch.autograd.grad(
-            target_score,
-            [feature_maps[phase] for phase in phase_names],
-            retain_graph=False,
-            allow_unused=False,
-        )
+        target_specs = [("predicted_class", int(case["predicted_label"]))]
+        if outputs["logits"].shape[1] > positive_class_index:
+            target_specs.append(("positive_class", positive_class_index))
+        else:
+            target_specs.append(("positive_class", int(case["predicted_label"])))
+
+        target_gradients: dict[str, tuple[int, tuple[torch.Tensor, ...]]] = {}
+        for target_position, (target_name, target_class) in enumerate(target_specs):
+            if target_name == "positive_class" and target_class == target_specs[0][1]:
+                target_gradients[target_name] = (
+                    target_class,
+                    target_gradients["predicted_class"][1],
+                )
+                continue
+            target_score = outputs["logits"][:, target_class].sum()
+            gradients = torch.autograd.grad(
+                target_score,
+                [feature_maps[phase] for phase in phase_names],
+                retain_graph=target_position < len(target_specs) - 1,
+                allow_unused=False,
+            )
+            target_gradients[target_name] = (target_class, gradients)
 
         phase_inputs = {
             "arterial": arterial,
@@ -388,75 +403,84 @@ def _generate_three_phase_heatmap_artifacts(
         case_dir.mkdir(parents=True, exist_ok=True)
         case_heatmaps: list[dict[str, Any]] = []
 
-        for phase_name, gradient in zip(phase_names, gradients, strict=True):
+        for phase_index, phase_name in enumerate(phase_names):
             input_volume = phase_inputs[phase_name].squeeze(0).squeeze(0).detach().cpu()
-            heatmap_volume = compute_gradcam_volume(
-                feature_maps[phase_name],
-                gradient,
-                output_shape=input_volume.shape,
-            )
-            slice_index = select_representative_slice(heatmap_volume)
-            heatmap_slice = heatmap_volume[slice_index]
-            model_overlay_path = case_dir / f"{phase_name}_heatmap.png"
-            original_overlay_path = case_dir / f"{phase_name}_original_overlay.png"
-            original_slice_path = case_dir / f"{phase_name}_original_slice.png"
             phase_importance = case.get("phase_importance", {}).get(phase_name)
-
-            model_rendering = render_overlay_artifact(
-                image_slice=input_volume[slice_index].numpy(),
-                attention_slice=heatmap_slice,
-                save_path=model_overlay_path,
-                space="model_input",
-                kind="overlay",
-                slice_index=int(slice_index),
-                title=(
-                    f"Case {case_id} | {phase_name} | "
-                    f"pred={case['predicted_label']} | "
-                    f"phase_weight={phase_importance}"
-                ),
-            )
-
             render_context = dataset.get_phase_render_context(index=index, phase_name=phase_name)
             original_volume = np.asarray(render_context["original_volume"], dtype=np.float32)
-            original_slice_index = map_slice_index_between_depths(
-                source_index=int(slice_index),
-                source_depth=int(input_volume.shape[0]),
-                target_depth=int(original_volume.shape[0]),
-            )
-            original_slice = original_volume[original_slice_index]
-            original_rendering = render_overlay_artifact(
-                image_slice=original_slice,
-                attention_slice=heatmap_slice,
-                save_path=original_overlay_path,
-                space="original_image",
-                kind="overlay",
-                slice_index=int(original_slice_index),
-                title=(
-                    f"Case {case_id} | {phase_name} | "
-                    f"pred={case['predicted_label']} | "
-                    "original_slice_overlay"
-                ),
-            )
-            original_rgb = (prepare_overlay_image(original_slice) * 255.0).round().astype(
-                np.uint8
-            )
-            Image.fromarray(original_rgb).save(original_slice_path)
-            original_slice_rendering = build_rendering_metadata(
-                space="original_image",
-                kind="base_slice",
-                image_path=original_slice_path,
-                slice_index=int(original_slice_index),
-                image_shape=original_slice.shape,
-            )
-            renderings = [
-                model_rendering,
-                original_rendering,
-                original_slice_rendering,
-            ]
-            case_heatmaps.append(
-                {
-                    "phase": phase_name,
-                    "method": "gradcam_3d_slice_overlay",
+
+            target_artifacts: dict[str, dict[str, Any]] = {}
+            for target_name, target_class in target_specs:
+                if target_name == "positive_class" and target_class == target_specs[0][1]:
+                    target_artifacts[target_name] = dict(target_artifacts["predicted_class"])
+                    continue
+
+                gradients = target_gradients[target_name][1]
+                heatmap_volume = compute_gradcam_volume(
+                    feature_maps[phase_name],
+                    gradients[phase_index],
+                    output_shape=input_volume.shape,
+                )
+                slice_index = select_representative_slice(heatmap_volume)
+                heatmap_slice = heatmap_volume[slice_index]
+                file_prefix = (
+                    phase_name if target_name == "predicted_class" else f"{phase_name}_positive"
+                )
+                model_overlay_path = case_dir / f"{file_prefix}_heatmap.png"
+                original_overlay_path = case_dir / f"{file_prefix}_original_overlay.png"
+                original_slice_path = case_dir / f"{file_prefix}_original_slice.png"
+
+                model_rendering = render_overlay_artifact(
+                    image_slice=input_volume[slice_index].numpy(),
+                    attention_slice=heatmap_slice,
+                    save_path=model_overlay_path,
+                    space="model_input",
+                    kind="overlay",
+                    slice_index=int(slice_index),
+                    title=(
+                        f"Case {case_id} | {phase_name} | "
+                        f"target={target_name}:{target_class} | "
+                        f"phase_weight={phase_importance}"
+                    ),
+                )
+
+                original_slice_index = map_slice_index_between_depths(
+                    source_index=int(slice_index),
+                    source_depth=int(input_volume.shape[0]),
+                    target_depth=int(original_volume.shape[0]),
+                )
+                original_slice = original_volume[original_slice_index]
+                original_rendering = render_overlay_artifact(
+                    image_slice=original_slice,
+                    attention_slice=heatmap_slice,
+                    save_path=original_overlay_path,
+                    space="original_image",
+                    kind="overlay",
+                    slice_index=int(original_slice_index),
+                    title=(
+                        f"Case {case_id} | {phase_name} | "
+                        f"target={target_name}:{target_class} | "
+                        "original_slice_overlay"
+                    ),
+                )
+                original_rgb = (
+                    prepare_overlay_image(original_slice) * 255.0
+                ).round().astype(np.uint8)
+                Image.fromarray(original_rgb).save(original_slice_path)
+                original_slice_rendering = build_rendering_metadata(
+                    space="original_image",
+                    kind="base_slice",
+                    image_path=original_slice_path,
+                    slice_index=int(original_slice_index),
+                    image_shape=original_slice.shape,
+                )
+                renderings = [
+                    model_rendering,
+                    original_rendering,
+                    original_slice_rendering,
+                ]
+                target_artifacts[target_name] = {
+                    "target_class": int(target_class),
                     "image_path": str(model_overlay_path),
                     "slice_index": int(slice_index),
                     "render_space": "model_input",
@@ -470,6 +494,23 @@ def _generate_three_phase_heatmap_artifacts(
                     },
                     "mean_heatmap": round(float(np.mean(heatmap_slice)), 6),
                     "peak_heatmap": round(float(np.max(heatmap_slice)), 6),
+                }
+
+            predicted_artifact = target_artifacts["predicted_class"]
+            case_heatmaps.append(
+                {
+                    "phase": phase_name,
+                    "method": "gradcam_3d_slice_overlay",
+                    "default_explanation_target": "predicted_class",
+                    "target_class": int(target_specs[0][1]),
+                    "targets": target_artifacts,
+                    "image_path": predicted_artifact["image_path"],
+                    "slice_index": predicted_artifact["slice_index"],
+                    "render_space": predicted_artifact["render_space"],
+                    "renderings": predicted_artifact["renderings"],
+                    "mapping": predicted_artifact["mapping"],
+                    "mean_heatmap": predicted_artifact["mean_heatmap"],
+                    "peak_heatmap": predicted_artifact["peak_heatmap"],
                     "phase_importance": phase_importance,
                 }
             )
