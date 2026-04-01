@@ -81,6 +81,16 @@ uv run medfusion build-results \
   --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
+这里的 `validate-config` 不只是“看有没有报错”。
+它现在会先把这份 YAML 对应的主线 contract 打印出来，包括：
+
+- 当前会调用的训练 schema / `model_type`
+- 关键模块组合，例如 `vision_backbone`、`fusion_type`
+- 结果输出目录与 `best.pth`、`summary.json`、`validation.json`
+- 下一步建议命令：`train`、`build-results`、`import-run`
+
+也就是说，新手先看 `validate-config` 的输出，就能知道“这份 YAML 到底会跑什么、结果会写到哪里”，不需要先翻源码。
+
 ### 3) 专项 demo：三相 CT + 临床小样本
 
 `v1` demo 适用于小样本可行性验证，不用于宣称泛化性能。

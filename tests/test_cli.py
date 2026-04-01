@@ -97,6 +97,42 @@ def test_start_help_matches_mvp_contract(capsys):
     assert "YAML" in output
 
 
+def test_validate_config_cli_surfaces_yaml_mainline_contract(capsys):
+    from med_core.cli.doctor import validate_config
+
+    validate_config(["--config", "configs/starter/quickstart.yaml"])
+    output = capsys.readouterr().out
+
+    assert "Mainline contract" in output
+    assert "multimodal_fusion" in output
+    assert "resnet18" in output
+    assert "concatenate" in output
+    assert "outputs/quickstart" in output
+    assert "medfusion train --config configs/starter/quickstart.yaml" in output
+    assert "medfusion build-results --config configs/starter/quickstart.yaml" in output
+
+
+def test_validate_config_json_includes_model_and_artifact_contract(capsys):
+    from med_core.cli.doctor import validate_config
+
+    validate_config(["--config", "configs/starter/quickstart.yaml", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    contract = payload["summary"]["mainline_contract"]
+    model = contract["model"]
+    artifacts = contract["artifacts"]
+
+    assert contract["output_dir"] == "outputs/quickstart"
+    assert model["model_type"] == "multimodal_fusion"
+    assert model["vision_backbone"] == "resnet18"
+    assert model["fusion_type"] == "concatenate"
+    assert artifacts["checkpoint"] == "outputs/quickstart/checkpoints/best.pth"
+    assert artifacts["summary"] == "outputs/quickstart/reports/summary.json"
+    assert contract["recommended_commands"]["validate"] == (
+        "medfusion validate-config --config configs/starter/quickstart.yaml"
+    )
+
+
 def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
     from med_core.cli.evaluate import evaluate
 

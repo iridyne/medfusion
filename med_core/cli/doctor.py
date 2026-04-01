@@ -21,6 +21,44 @@ def _print_issue_block(title: str, items: list[dict]) -> None:
             print(f"     -> {suggestion}")
 
 
+def _print_mainline_contract(summary: dict) -> None:
+    contract = summary.get("mainline_contract")
+    if not isinstance(contract, dict):
+        return
+
+    model = contract.get("model", {})
+    artifacts = contract.get("artifacts", {})
+    commands = contract.get("recommended_commands", {})
+
+    print("\nMainline contract:")
+    print(
+        "  "
+        f"schema={contract.get('schema_family', '-')}, "
+        f"dataset_type={contract.get('dataset_type', '-')}, "
+        f"model_type={model.get('model_type', '-')}"
+    )
+    print(
+        "  "
+        f"vision_backbone={model.get('vision_backbone', '-')}, "
+        f"fusion_type={model.get('fusion_type', '-')}, "
+        f"num_classes={model.get('num_classes', '-')}"
+    )
+    print(f"  output_dir={contract.get('output_dir', '-')}")
+    if artifacts:
+        print(
+            "  artifacts: "
+            f"checkpoint={artifacts.get('checkpoint', '-')}, "
+            f"summary={artifacts.get('summary', '-')}, "
+            f"validation={artifacts.get('validation', '-')}"
+        )
+    if commands:
+        print("  next:")
+        print(f"    validate: {commands.get('validate', '-')}")
+        print(f"    train: {commands.get('train', '-')}")
+        print(f"    build-results: {commands.get('build_results', '-')}")
+        print(f"    import-run: {commands.get('import_run', '-')}")
+
+
 def validate_config(
     argv: Sequence[str] | None = None,
     prog: str = "medfusion validate-config",
@@ -65,6 +103,7 @@ def validate_config(
             f"dataset_rows={payload['summary'].get('dataset_rows', 0)}, "
             f"splits={payload['summary'].get('estimated_split_counts', {})}"
         )
+        _print_mainline_contract(payload["summary"])
         _print_issue_block("Errors", payload["errors"])
         _print_issue_block("Warnings", payload["warnings"])
         if payload["info"]:

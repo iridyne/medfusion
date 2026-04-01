@@ -11,6 +11,10 @@ def test_quickstart_config_doctor_passes() -> None:
     assert report.ok is True
     assert report.summary["dataset_rows"] > 0
     assert report.summary["estimated_split_counts"]["train"] > 0
+    contract = report.summary["mainline_contract"]
+    assert contract["output_dir"] == "outputs/quickstart"
+    assert contract["model"]["vision_backbone"] == "resnet18"
+    assert contract["artifacts"]["summary"] == "outputs/quickstart/reports/summary.json"
 
 
 def test_config_doctor_reports_missing_column(tmp_path: Path) -> None:

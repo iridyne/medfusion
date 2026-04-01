@@ -41,6 +41,17 @@ uv run medfusion build-results \
   --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
+先把 `validate-config` 当成 YAML 主线的入口体检，而不只是一个报错器。
+当前它会直接告诉你：
+
+- 这份 YAML 属于哪条主线 schema
+- 会调用哪些现成模块，例如 `model_type`、`vision_backbone`、`fusion_type`
+- 结果会写到哪个 `output_dir`
+- 训练后应该期待哪些关键产物路径
+- 你下一步应该执行的 `train` / `build-results` / `import-run` 命令
+
+如果这里的 contract 看起来就不对，不要继续训练，先改 YAML。
+
 ---
 
 ## 一图看懂（新手主链 + 常见失败分支）
@@ -64,6 +75,9 @@ flowchart TB
 ```
 
 > 你可以把这张图理解成“先体检、再训练、再产物”的三段式。不要跳过中间任何一步。
+
+补一句更实用的话：
+`validate-config` 通过以后，优先确认它打印出来的 `output_dir`、`checkpoint`、`summary.json` 和下一步命令是否符合你的预期；这一步能减少很多“训练完了却不知道文件去哪了”的低级损耗。
 
 ## ✅ 预期输出（跑通标准）
 

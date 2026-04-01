@@ -11,6 +11,7 @@ import pandas as pd
 from med_core.configs.base_config import ExperimentConfig
 from med_core.configs.config_loader import load_config
 from med_core.configs.validation import validate_config
+from med_core.output_layout import RunOutputLayout
 
 
 @dataclass
@@ -115,6 +116,7 @@ class ConfigDoctor:
                 summary=summary,
             )
 
+        summary["mainline_contract"] = self._build_mainline_contract(config, config_path)
         self._collect_structural_issues(config, errors)
         self._collect_runtime_warnings(config, warnings)
         self._collect_dataset_checks(config, errors, warnings, info, summary)
@@ -127,6 +129,47 @@ class ConfigDoctor:
             info=info,
             summary=summary,
         )
+
+    @staticmethod
+    def _build_mainline_contract(
+        config: ExperimentConfig,
+        config_path: Path,
+    ) -> dict[str, Any]:
+        layout = RunOutputLayout(config.logging.output_dir)
+        checkpoint_path = layout.checkpoints_dir / "best.pth"
+        config_path_str = str(config_path)
+
+        return {
+            "schema_family": "experiment",
+            "config_path": config_path_str,
+            "dataset_type": config.data.dataset_type,
+            "output_dir": str(layout.root_dir),
+            "model": {
+                "model_type": config.model.model_type,
+                "vision_backbone": config.model.vision.backbone,
+                "fusion_type": config.model.fusion.fusion_type,
+                "num_classes": config.model.num_classes,
+            },
+            "artifacts": {
+                "checkpoint": str(checkpoint_path),
+                "metrics": str(layout.metrics_path),
+                "validation": str(layout.validation_path),
+                "summary": str(layout.summary_path),
+                "report": str(layout.report_path),
+            },
+            "recommended_commands": {
+                "validate": f"medfusion validate-config --config {config_path_str}",
+                "train": f"medfusion train --config {config_path_str}",
+                "build_results": (
+                    "medfusion build-results "
+                    f"--config {config_path_str} --checkpoint {checkpoint_path}"
+                ),
+                "import_run": (
+                    "medfusion import-run "
+                    f"--config {config_path_str} --checkpoint {checkpoint_path}"
+                ),
+            },
+        }
 
     def _collect_structural_issues(
         self,
