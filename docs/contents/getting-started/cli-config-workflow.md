@@ -4,6 +4,14 @@
 
 这个项目现在有三条不同层级的使用路径。如果不先讲清楚，很容易出现“看起来有 CLI，但又不知道该喂哪个 YAML”的问题。
 
+如果你是第一次进入仓库，推荐先跑：
+
+```bash
+uv run medfusion start
+```
+
+它会先把你带到 `Getting Started` 和 `Quickstart Run`，把第一条推荐 quickstart、主线阶段和预期产物讲清楚；真正长期跑实验时，再回到下面这条 YAML + CLI 主线。
+
 如果你是来“新建模型 YAML”的，先做这个判断：
 
 - 想把自己的任务跑在当前主链上：**复制一份最接近的主链 YAML 模板**
@@ -35,6 +43,12 @@ uv run medfusion build-results \
 
 - `validate-config`
   - 在训练前检查 YAML、CSV 列、图像路径、样本规模和 split 是否明显有坑
+  - 现在还会直接打印当前 YAML 的 mainline contract，包括：
+    - `model_type`
+    - `vision_backbone`
+    - `fusion_type`
+    - `output_dir`
+    - 关键 artifact 路径与下一步推荐命令
 - `train`
   - 真正产出 checkpoint 和训练历史日志
 - `build-results`
@@ -117,12 +131,12 @@ medfusion train --config ...
 
 ## 三、Web UI 链
 
-Web UI 面向演示型 MVP，主打：
+Web UI 现在的职责更准确地说是：
 
-1. 数据集登记
-2. 发起训练
-3. 看训练过程
-4. 看结果 artifact / validation / 报告
+1. onboarding
+2. 推荐首跑链路解释
+3. 训练 handoff
+4. 结果 artifact / validation / 报告理解
 
 启动方式：
 
@@ -132,19 +146,23 @@ uv run medfusion start
 
 这里的 `start` 是现在推荐的新入口：
 
-- 直接进入工作台首页
-- 首页会把“快速演示训练 / 导入真实训练结果 / 数据准备”三条常用路径收口到一起
+- 先进入 `Getting Started`
+- 再进入 `Quickstart Run`
+- 然后 handoff 到训练监控和结果入口
+- `Workbench` 现在更像运行后的 overview，而不是第一次进入时的首页
 - `medfusion web` 仍然保留，但更适合作为兼容入口或高级入口理解
 
 ## 当前推荐顺序
 
 ### 新用户
 
-1. `configs/starter/quickstart.yaml`
-2. 先跑 `medfusion validate-config`
-3. 再跑 `medfusion train`
-4. 训练完再跑 `medfusion build-results`
-5. 最后用 `medfusion start` 进入工作台或结果页
+1. 先跑 `uv run medfusion start` 看推荐路径
+2. 再回到 `configs/starter/quickstart.yaml` 或 `configs/public_datasets/*`
+3. 先跑 `medfusion validate-config`
+4. 确认它打印出来的 contract 和输出目录符合预期
+5. 再跑 `medfusion train`
+6. 训练完再跑 `medfusion build-results`
+7. 最后回到 Web 看结果页或 workbench overview
 
 ### 做研究原型的人
 

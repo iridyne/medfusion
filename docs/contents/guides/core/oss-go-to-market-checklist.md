@@ -68,6 +68,7 @@ uv run medfusion build-results \
 适合讲：
 
 - 配置体检
+- YAML 主线 contract 可解释
 - 真实训练
 - 真实结果沉淀
 - 结果 artifact 可被结果页 / 模型库 / 上层产品消费
@@ -78,6 +79,10 @@ uv run medfusion build-results \
 uv run medfusion public-datasets list
 uv run medfusion public-datasets prepare uci-heart-disease --overwrite
 uv run medfusion train --config configs/public_datasets/uci_heart_disease_quickstart.yaml
+uv run medfusion build-results \
+  --config configs/public_datasets/uci_heart_disease_quickstart.yaml \
+  --checkpoint outputs/public_datasets/uci_heart_disease_quickstart/checkpoints/best.pth \
+  --attention-samples 0
 ```
 
 适合讲：
@@ -85,6 +90,7 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 - 没有私有数据也能先试
 - 新用户可以先跑通最小闭环
 - 公开数据集入口不是散落脚本，而是正式 CLI
+- 训练结果能继续落成 report / summary / validation
 
 ---
 
@@ -110,6 +116,7 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 
 ### 信息层
 
+- [ ] `medfusion start` 仍然是默认推荐入口
 - [ ] README 首屏只讲当前主线，不混入 builder 叙事
 - [ ] 文档首页给出新用户阅读顺序
 - [ ] public-datasets 入口有明确文档
@@ -118,7 +125,8 @@ uv run medfusion train --config configs/public_datasets/uci_heart_disease_quicks
 ### 运行层
 
 - [ ] `validate-config -> train -> build-results` 路径可复现
-- [ ] `public-datasets -> train` 路径可复现
+- [ ] `validate-config` 能清楚输出 YAML 主线 contract
+- [ ] `public-datasets -> train -> build-results` 路径可复现
 - [ ] 输出目录结构稳定
 - [ ] `metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md` contract 稳定
 
