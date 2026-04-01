@@ -117,6 +117,23 @@ uv run medfusion build-results \
   `metrics/validation.json`、`reports/summary.json`、`reports/report.md`
 - `risk score` 当前表示 `MVI-related risk score`
 - 它不是生存风险，也不是临床可直接使用的评分
+- 热图默认会导出两种解释视角：
+  `predicted_class` 用于解释“模型为什么给出当前最终判断”，
+  `positive_class` 用于解释“如果专门寻找 MVI 阳性证据，模型会关注哪里”
+
+热图视角说明：
+
+- `predicted_class`
+  更接近“为什么这次报告写成这样”
+- `positive_class`
+  更接近“如果从 MVI 风险角度补充观察，哪里更可疑”
+- 两者不是重复图片，而是在回答两个不同问题
+- 对医生展示时，建议把 `predicted_class` 作为主图，
+  把 `positive_class` 作为“阳性风险补充解释图”
+- 对当前 demo 而言，只要某个病例被纳入热图导出，
+  每一期默认都会生成这两个视角；
+  但如果该病例的 `predicted_class` 本身就是阳性，
+  那么两种视角在语义和图像上可能接近甚至重合
 
 ---
 
