@@ -4,7 +4,15 @@
 
 它的定位是 **开发者参考集合**，不是面向普通用户的模型搭建主入口。
 
-如果你的目标是稳定地跑通当前 MedFusion，请先走下面这条主链：
+如果你是第一次进仓库，建议先跑：
+
+```bash
+uv run medfusion start
+```
+
+先把 `Getting Started` 和 `Quickstart Run` 看完，理解推荐 quickstart、主链阶段和预期产物。
+
+如果你的目标是稳定地跑通当前 MedFusion，再回到下面这条主链：
 
 ```bash
 uv run medfusion validate-config --config configs/starter/quickstart.yaml

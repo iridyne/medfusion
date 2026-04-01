@@ -6,9 +6,12 @@
 
 ## 推荐路径
 
-1. 先说明输入：使用公开数据集 quickstart 配置
-2. 再展示执行：`validate-config -> train -> build-results`
-3. 最后展示产物：`reports/summary.json + reports/report.md + artifacts/visualizations`
+1. 先说明入口：默认从 `uv run medfusion start` 进入 `Getting Started`
+2. 再说明输入：使用公开数据集 quickstart 配置
+3. 再展示执行：`validate-config -> train -> build-results`
+4. 最后展示产物：`reports/summary.json + reports/report.md + artifacts/visualizations`
+
+如果现场时间很短，可以把 `start` 只作为“解释路径”的第一步，真正执行仍回到下面这组 CLI 命令。
 
 ## 演示命令
 

@@ -156,7 +156,7 @@ docker run -it \
 
 # 在容器内运行命令
 medfusion --help
-medfusion web start --host 0.0.0.0 --port 8000
+medfusion start --host 0.0.0.0 --port 8000
 ```
 
 ## 🎼 Docker Compose
@@ -195,7 +195,7 @@ docker exec -it medfusion-dev bash
 
 # 在容器内开发
 cd /app
-medfusion web start --reload
+medfusion start --reload
 ```
 
 ### 多服务编排

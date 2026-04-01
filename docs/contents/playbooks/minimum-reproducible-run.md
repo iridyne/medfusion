@@ -9,6 +9,14 @@
 - 已安装依赖（见 `getting-started/installation.md`）
 - 可访问公开数据集下载源
 
+如果你是第一次进入项目，建议先跑一次：
+
+```bash
+uv run medfusion start
+```
+
+先看 `Getting Started` 和 `Quickstart Run`，确认这次 MRE 的推荐数据集、阶段顺序和预期产物，再执行下面的 CLI 命令。
+
 ## 步骤
 
 ```bash
