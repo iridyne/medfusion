@@ -9,6 +9,7 @@
 通用训练仓库通常强在“可训练”，但训练后结果组织和验证产物不一定稳定。
 
 MedFusion OSS 的区别：
+- 默认入口先是 `medfusion start`，会把推荐首跑链路和成功标准讲清楚
 - 默认主链是 `validate-config -> train -> build-results`
 - 默认产物是结构化契约（`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`）
 - 更强调“可复盘和可交付”，不只强调“跑起来”
@@ -18,6 +19,7 @@ MedFusion OSS 的区别：
 AutoML 平台强在交互易用和低门槛，但在可控性、可替换性和工程接入边界上，往往需要平台约束。
 
 MedFusion OSS 的区别：
+- Web 负责 onboarding 和结果理解，CLI / YAML 仍然负责真实执行
 - 明确的可替换点：`backbone / fusion / head / trainer`
 - 面向工程接入而不是只面向页面操作
 - 输出契约适合接到上层系统或报告流程
@@ -33,4 +35,4 @@ MedFusion OSS 的区别：
 
 ## 一句话结论
 
-MedFusion OSS 不是“功能最多”的那个，而是“训练-验证-结果闭环最稳”的那个。
+MedFusion OSS 不是“功能最多”的那个，而是“先把路径讲清楚，再把训练-验证-结果闭环做稳”的那个。

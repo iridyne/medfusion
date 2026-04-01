@@ -13,6 +13,7 @@
 
 ## 高频入口（90% 场景）
 
+- [Web UI 快速入门](contents/getting-started/web-ui.md)
 - [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
@@ -24,13 +25,22 @@
 
 如果你只想知道“我现在该点哪篇文档”，按这个来：
 
+- **第一次进入仓库** → 先看 [Web UI 快速入门](contents/getting-started/web-ui.md)
 - **没有私有数据** → 先看 [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - **有私有数据，想先跑通** → 先看 [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - **想自己新建 YAML / 模型** → 先看 [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - **想理解架构再上手** → 先看 [Core Runtime Architecture](contents/architecture/CORE_RUNTIME_ARCHITECTURE.md)
 - **要改代码/做贡献** → 先看 [安装](contents/getting-started/installation.md) + [教程总览](contents/tutorials/README.md)
 
-你也可以直接复制这条最短主链（推荐第一步）：
+第一次使用更推荐先跑：
+
+```bash
+uv run medfusion start
+```
+
+它会先把你带到 `Getting Started` 和 `Quickstart Run`，帮助你理解推荐 quickstart、主链阶段和预期产物。
+
+然后再回到这条最短 YAML 主链：
 
 ```bash
 uv run medfusion validate-config --config configs/starter/quickstart.yaml
@@ -59,6 +69,7 @@ flowchart LR
 
 ### 1) 我想先把主链跑通（推荐）
 
+- [Web UI 快速入门](contents/getting-started/web-ui.md)
 - [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
@@ -143,6 +154,7 @@ npm run docs:preview
 
 ## 文档使用建议
 
+- 第一次使用先 `medfusion start`，再回到 YAML 主线真正执行。
 - 先走“主链跑通”，再看架构和 API。
 - 如果你要判断是否接入，优先看输出契约：`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`。
 - 如果链接失效或内容过期，欢迎直接提 Issue 或 PR。
