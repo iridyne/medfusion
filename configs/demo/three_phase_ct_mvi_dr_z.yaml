@@ -79,5 +79,5 @@ explainability:
   export_phase_importance: true
   export_case_explanations: true
   heatmap_ready: true
-  build_results_split: "train"
+  build_results_split: "test"
   min_global_importance_samples: 5

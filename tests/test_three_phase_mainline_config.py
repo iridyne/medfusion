@@ -145,6 +145,6 @@ def test_dr_z_demo_smurf_config_uses_mainline_schema() -> None:
     assert config.model.model_type == "three_phase_ct_fusion"
     assert config.model.phase_fusion.mode == "gated"
     assert config.data.clinical_preprocessing.strategy == "zero_with_mask"
-    assert config.explainability.build_results_split == "train"
+    assert config.explainability.build_results_split == "test"
     assert config.explainability.min_global_importance_samples == 5
     assert config.logging.output_dir == "outputs/three_phase_ct_mvi_dr_z"

@@ -545,3 +545,210 @@ def test_three_phase_build_results_uses_demo_small_sample_explainability_setting
     metrics = json.loads((output_dir / "metrics" / "metrics.json").read_text())
     assert metrics["global_feature_importance"] is not None
     assert metrics["global_feature_importance"]["available"] is True
+
+
+def test_three_phase_build_results_cleans_stale_heatmap_case_dirs(
+    tmp_path: Path,
+) -> None:
+    rows: list[str] = [
+        "case_id,arterial_series_dir,portal_series_dir,noncontrast_series_dir,mvi_binary,age,sex,bmi"
+    ]
+    for index in range(4):
+        case_id = f"{index + 1:03d}"
+        phase_dirs = _write_case(tmp_path, case_id, 70 + index * 3)
+        label = index % 2
+        age = 60 + index
+        sex = index % 2
+        bmi = 23.0 + index * 0.5
+        rows.append(
+            f"{case_id},{phase_dirs['arterial']},{phase_dirs['portal']},{phase_dirs['noncontrast']},{label},{age},{sex},{bmi}"
+        )
+
+    manifest_path = tmp_path / "cases.csv"
+    manifest_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    output_dir = tmp_path / "outputs"
+    config_path = tmp_path / "smurf_mainline_heatmap_cleanup.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment_name": "smurf_heatmap_cleanup",
+                "device": "cpu",
+                "data": {
+                    "dataset_type": "three_phase_ct_tabular",
+                    "csv_path": str(manifest_path),
+                    "target_column": "mvi_binary",
+                    "patient_id_column": "case_id",
+                    "phase_dir_columns": {
+                        "arterial": "arterial_series_dir",
+                        "portal": "portal_series_dir",
+                        "noncontrast": "noncontrast_series_dir",
+                    },
+                    "clinical_feature_columns": ["age", "sex", "bmi"],
+                    "target_shape": [4, 8, 8],
+                    "window_preset": "liver",
+                    "batch_size": 2,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    "train_ratio": 0.5,
+                    "val_ratio": 0.5,
+                    "test_ratio": 0.0,
+                },
+                "model": {
+                    "model_type": "three_phase_ct_fusion",
+                    "num_classes": 2,
+                    "phase_feature_dim": 16,
+                    "share_phase_encoder": False,
+                    "use_risk_head": True,
+                    "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
+                    "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
+                },
+                "training": {
+                    "num_epochs": 1,
+                    "mixed_precision": False,
+                    "use_progressive_training": False,
+                    "optimizer": {
+                        "optimizer": "adam",
+                        "learning_rate": 0.0005,
+                        "weight_decay": 0.0,
+                    },
+                    "scheduler": {"scheduler": "none"},
+                },
+                "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                    "build_results_split": "train",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    train(["--config", str(config_path)])
+    checkpoint_path = output_dir / "checkpoints" / "best.pth"
+
+    stale_dir = output_dir / "artifacts" / "visualizations" / "heatmaps" / "stale-case"
+    stale_dir.mkdir(parents=True, exist_ok=True)
+    stale_file = stale_dir / "arterial_heatmap.png"
+    stale_file.write_text("stale", encoding="utf-8")
+
+    stale_manifest = output_dir / "artifacts" / "visualizations" / "heatmaps" / "manifest.json"
+    stale_manifest.write_text('{"cases":[{"case_id":"stale-case"}]}', encoding="utf-8")
+
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
+
+    assert not stale_dir.exists()
+    manifest = json.loads(stale_manifest.read_text(encoding="utf-8"))
+    manifest_case_ids = {case["case_id"] for case in manifest["cases"]}
+    assert "stale-case" not in manifest_case_ids
+    assert manifest_case_ids
+
+
+def test_three_phase_build_results_supports_all_split_for_full_heatmap_export(
+    tmp_path: Path,
+) -> None:
+    rows: list[str] = [
+        "case_id,arterial_series_dir,portal_series_dir,noncontrast_series_dir,mvi_binary,age,sex,bmi"
+    ]
+    for index in range(4):
+        case_id = f"{index + 1:03d}"
+        phase_dirs = _write_case(tmp_path, case_id, 90 + index * 2)
+        label = index % 2
+        age = 50 + index
+        sex = index % 2
+        bmi = 21.5 + index * 0.2
+        rows.append(
+            f"{case_id},{phase_dirs['arterial']},{phase_dirs['portal']},{phase_dirs['noncontrast']},{label},{age},{sex},{bmi}"
+        )
+
+    manifest_path = tmp_path / "cases.csv"
+    manifest_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    output_dir = tmp_path / "outputs"
+    config_path = tmp_path / "smurf_mainline_all_split.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment_name": "smurf_all_split_heatmaps",
+                "device": "cpu",
+                "data": {
+                    "dataset_type": "three_phase_ct_tabular",
+                    "csv_path": str(manifest_path),
+                    "target_column": "mvi_binary",
+                    "patient_id_column": "case_id",
+                    "phase_dir_columns": {
+                        "arterial": "arterial_series_dir",
+                        "portal": "portal_series_dir",
+                        "noncontrast": "noncontrast_series_dir",
+                    },
+                    "clinical_feature_columns": ["age", "sex", "bmi"],
+                    "target_shape": [4, 8, 8],
+                    "window_preset": "liver",
+                    "batch_size": 2,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    "train_ratio": 0.5,
+                    "val_ratio": 0.25,
+                    "test_ratio": 0.25,
+                },
+                "model": {
+                    "model_type": "three_phase_ct_fusion",
+                    "num_classes": 2,
+                    "phase_feature_dim": 16,
+                    "share_phase_encoder": False,
+                    "use_risk_head": True,
+                    "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
+                    "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
+                },
+                "training": {
+                    "num_epochs": 1,
+                    "mixed_precision": False,
+                    "use_progressive_training": False,
+                    "optimizer": {
+                        "optimizer": "adam",
+                        "learning_rate": 0.0005,
+                        "weight_decay": 0.0,
+                    },
+                    "scheduler": {"scheduler": "none"},
+                },
+                "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                    "build_results_split": "all",
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    train(["--config", str(config_path)])
+    checkpoint_path = output_dir / "checkpoints" / "best.pth"
+
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
+
+    predictions = json.loads(
+        (output_dir / "metrics" / "predictions.json").read_text(encoding="utf-8")
+    )
+    assert len(predictions["samples"]) == 4
+
+    heatmap_manifest = json.loads(
+        (
+            output_dir / "artifacts" / "visualizations" / "heatmaps" / "manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert len(heatmap_manifest["cases"]) == 4
+    assert {case["case_id"] for case in heatmap_manifest["cases"]} == {
+        "001",
+        "002",
+        "003",
+        "004",
+    }
+
+    summary = json.loads((output_dir / "reports" / "summary.json").read_text())
+    assert summary["split"] == "all"

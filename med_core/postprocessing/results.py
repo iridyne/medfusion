@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -252,6 +253,10 @@ def _load_split_dataset(config: Any, split: str) -> MedicalMultimodalDataset:
         patient_id_column=config.data.patient_id_column,
         transform=None,
     )
+    if split == "all":
+        full_dataset.transform = transform
+        return full_dataset
+
     train_ds, val_ds, test_ds = split_dataset(
         full_dataset,
         train_ratio=config.data.train_ratio,
@@ -270,6 +275,14 @@ def _split_three_phase_records(
     dataset: ThreePhaseCTCaseDataset,
     split: str,
 ) -> ThreePhaseCTCaseDataset:
+    if split == "all":
+        return ThreePhaseCTCaseDataset(
+            records=list(dataset.records),
+            target_shape=dataset.target_shape,
+            window_preset=dataset.window_preset,
+            clinical_preprocessor=dataset.clinical_preprocessor,
+        )
+
     dataset_size = len(dataset.records)
     generator = torch.Generator().manual_seed(config.data.random_seed)
     indices = torch.randperm(dataset_size, generator=generator).tolist()
@@ -299,6 +312,17 @@ def _split_three_phase_records(
     )
 
 
+def _reset_directory_children(path: Path) -> None:
+    if not path.exists():
+        return
+
+    for child in path.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def _generate_three_phase_heatmap_artifacts(
     *,
     model: ThreePhaseCTFusionModel,
@@ -313,6 +337,7 @@ def _generate_three_phase_heatmap_artifacts(
 
     heatmap_dir = layout.visualizations_dir / "heatmaps"
     heatmap_dir.mkdir(parents=True, exist_ok=True)
+    _reset_directory_children(heatmap_dir)
     phase_names = ("arterial", "portal", "noncontrast")
     manifest_cases: list[dict[str, Any]] = []
     heatmap_cases: dict[str, list[dict[str, Any]]] = {}
@@ -1744,7 +1769,7 @@ def build_results_artifacts(
     importance_sample_limit: int = 128,
 ) -> BuildResultsOutput:
     """Generate validation artifacts from a real config and checkpoint."""
-    if split not in {"train", "val", "test"}:
+    if split not in {"train", "val", "test", "all"}:
         raise ValueError(f"Unsupported split: {split}")
 
     config_path = Path(config_path)

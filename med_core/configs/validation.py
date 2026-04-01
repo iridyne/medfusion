@@ -19,7 +19,7 @@ VALID_BACKBONES = frozenset(list_available_backbones())
 VALID_FUSION_TYPES = frozenset(list_available_fusions())
 VALID_THREE_PHASE_FUSION_TYPES = frozenset({"concatenate", "mean", "gated"})
 VALID_CLINICAL_PREPROCESSING_STRATEGIES = frozenset({"none", "zero_with_mask"})
-VALID_BUILD_RESULTS_SPLITS = frozenset({"train", "val", "test"})
+VALID_BUILD_RESULTS_SPLITS = frozenset({"train", "val", "test", "all"})
 
 
 @dataclass

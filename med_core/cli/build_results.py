@@ -24,7 +24,7 @@ def build_results(
     parser.add_argument("--output-dir", help="Override artifact output directory")
     parser.add_argument(
         "--split",
-        choices=["train", "val", "test"],
+        choices=["train", "val", "test", "all"],
         default=None,
         help="Dataset split used for post-training validation",
     )
