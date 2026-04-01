@@ -59,6 +59,7 @@ def _print_help() -> None:
     print("")
     print("Recommended entrypoints:")
     print("  medfusion start")
+    print("    Guided first-run entry for onboarding, quick validation, and result handoff")
     print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
     print(
@@ -73,6 +74,9 @@ def _print_help() -> None:
     print("  medfusion public-datasets list")
     print("  medfusion public-datasets prepare uci-heart-disease --overwrite")
     print("  medfusion web")
+    print("")
+    print("YAML mainline:")
+    print("  Use one training YAML to validate, train, and build structured results")
     print("")
     print("Config directories:")
     print("  configs/starter/          CLI 训练主链入门配置")

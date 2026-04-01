@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildTrainingPrefillQuery,
+  consumeTrainingLaunchParams,
   parseTrainingPrefillParams,
 } from "@/utils/trainingPrefill";
 
@@ -53,5 +54,20 @@ describe("training prefill helpers", () => {
     expect(parsed).toEqual({
       experimentName: "run-b",
     });
+  });
+
+  it("consumes guided start source and strips launch params from query", () => {
+    const params = new URLSearchParams(
+      "action=start&source=guided-start&experimentName=run-c&backbone=resnet18&keep=1",
+    );
+
+    const consumed = consumeTrainingLaunchParams(params, backboneOptions);
+
+    expect(consumed.source).toBe("guided-start");
+    expect(consumed.prefill).toEqual({
+      experimentName: "run-c",
+      backbone: "resnet18",
+    });
+    expect(consumed.nextSearchParams.toString()).toBe("keep=1");
   });
 });

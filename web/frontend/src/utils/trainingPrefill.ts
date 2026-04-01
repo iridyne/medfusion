@@ -7,6 +7,8 @@ export interface TrainingLaunchPrefill {
   learningRate: number;
 }
 
+export type TrainingLaunchSource = "guided-start" | null;
+
 function parsePositiveNumber(raw: string | null): number | undefined {
   if (!raw) {
     return undefined;
@@ -68,4 +70,31 @@ export function parseTrainingPrefillParams(
   }
 
   return prefill;
+}
+
+export function consumeTrainingLaunchParams(
+  searchParams: URLSearchParams,
+  backboneOptions: readonly string[],
+): {
+  source: TrainingLaunchSource;
+  prefill: Partial<TrainingLaunchPrefill>;
+  nextSearchParams: URLSearchParams;
+} {
+  const source = searchParams.get("source") === "guided-start" ? "guided-start" : null;
+  const nextSearchParams = new URLSearchParams(searchParams);
+
+  nextSearchParams.delete("action");
+  nextSearchParams.delete("source");
+  nextSearchParams.delete("experimentName");
+  nextSearchParams.delete("backbone");
+  nextSearchParams.delete("numClasses");
+  nextSearchParams.delete("epochs");
+  nextSearchParams.delete("batchSize");
+  nextSearchParams.delete("learningRate");
+
+  return {
+    source,
+    prefill: parseTrainingPrefillParams(searchParams, backboneOptions),
+    nextSearchParams,
+  };
 }

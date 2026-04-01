@@ -20,11 +20,22 @@ import "./i18n/config";
 import "./App.css";
 
 const Workbench = lazy(() => import("./pages/Workbench"));
+const GettingStarted = lazy(() => import("./pages/GettingStarted"));
+const QuickstartRun = lazy(() => import("./pages/QuickstartRun"));
 const DatasetManager = lazy(() => import("./pages/DatasetManager"));
 const TrainingMonitor = lazy(() => import("./pages/TrainingMonitor"));
 const ModelLibrary = lazy(() => import("./pages/ModelLibrary"));
 const SystemMonitor = lazy(() => import("./pages/SystemMonitor"));
 const RunWizard = lazy(() => import("./pages/RunWizard"));
+
+function getDocumentTitle(pathname: string, translate: (key: string) => string) {
+  if (pathname === "/quickstart-run") {
+    return `Quickstart Run · MedFusion OSS`;
+  }
+
+  const currentPage = getCurrentNavigation(pathname, translate);
+  return `${currentPage.label} · MedFusion OSS`;
+}
 
 function RouteFallback() {
   const { t } = useTranslation();
@@ -74,8 +85,7 @@ function App() {
   }, [resolvedTheme]);
 
   useEffect(() => {
-    const currentPage = getCurrentNavigation(location.pathname, t);
-    document.title = `${currentPage.label} · MedFusion OSS`;
+    document.title = getDocumentTitle(location.pathname, t);
   }, [location.pathname, i18n.language, t]);
 
   const getAntdLocale = () => {
@@ -97,7 +107,9 @@ function App() {
       >
         <Suspense fallback={<RouteFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/workbench" replace />} />
+            <Route path="/" element={<Navigate to="/start" replace />} />
+            <Route path="/start" element={<GettingStarted />} />
+            <Route path="/quickstart-run" element={<QuickstartRun />} />
             <Route path="/workbench" element={<Workbench />} />
             <Route path="/datasets" element={<DatasetManager />} />
             <Route path="/training" element={<TrainingMonitor />} />
@@ -140,7 +152,7 @@ function App() {
                 />
               }
             />
-            <Route path="*" element={<Navigate to="/workbench" replace />} />
+            <Route path="*" element={<Navigate to="/start" replace />} />
           </Routes>
         </Suspense>
       </AppShell>

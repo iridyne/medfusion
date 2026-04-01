@@ -43,7 +43,7 @@ import trainingApi, {
 import LazyChart from "../components/LazyChart";
 import WebSocketClient from "../utils/websocket";
 import PageScaffold from "@/components/layout/PageScaffold";
-import { parseTrainingPrefillParams } from "@/utils/trainingPrefill";
+import { consumeTrainingLaunchParams } from "@/utils/trainingPrefill";
 
 interface DatasetOption {
   id: string;
@@ -118,6 +118,7 @@ export default function TrainingMonitor() {
   const [wsConnected, setWsConnected] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [guidedStartNotice, setGuidedStartNotice] = useState(false);
   const wsClient = useRef<WebSocketClient | null>(null);
 
   const currentJob = jobs.find((job) => job.id === selectedJob);
@@ -191,21 +192,17 @@ export default function TrainingMonitor() {
       return;
     }
 
-    const prefill = parseTrainingPrefillParams(searchParams, BACKBONE_OPTIONS);
+    const { source, prefill, nextSearchParams } = consumeTrainingLaunchParams(
+      searchParams,
+      BACKBONE_OPTIONS,
+    );
     if (Object.keys(prefill).length > 0) {
       form.setFieldsValue(prefill as Partial<CreateTrainingValues>);
     }
 
+    setGuidedStartNotice(source === "guided-start");
     setCreateModalOpen(true);
-    const next = new URLSearchParams(searchParams);
-    next.delete("action");
-    next.delete("experimentName");
-    next.delete("backbone");
-    next.delete("numClasses");
-    next.delete("epochs");
-    next.delete("batchSize");
-    next.delete("learningRate");
-    setSearchParams(next, { replace: true });
+    setSearchParams(nextSearchParams, { replace: true });
   }, [form, searchParams, setSearchParams]);
 
   useEffect(() => {
@@ -684,6 +681,18 @@ export default function TrainingMonitor() {
         },
       ]}
     >
+      {guidedStartNotice ? (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="从 Getting Started 进入的推荐训练链路"
+          description="当前推荐路径仍然是同一条 YAML + CLI 主链：先准备公开数据或确认已有数据集，再启动训练，最后用 build-results 生成结构化结果。这里的弹窗只是把第一次运行解释清楚，不会引入另一套执行语义。"
+          closable
+          onClose={() => setGuidedStartNotice(false)}
+        />
+      ) : null}
+
       <Card className="surface-card">
         <Tabs
           defaultActiveKey="jobs"

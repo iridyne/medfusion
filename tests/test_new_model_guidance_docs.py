@@ -103,6 +103,16 @@ def test_web_docs_name_one_default_entry_and_demote_legacy_paths() -> None:
     assert "兼容或开发调试时再看旧入口" in workflow_text
 
 
+def test_onboarding_docs_describe_start_as_guided_entry_and_yaml_as_mainline() -> None:
+    readme_text = _read_text("README.md")
+    web_text = _read_text("docs/contents/getting-started/web-ui.md")
+
+    assert "Getting Started" in web_text
+    assert "YAML 主链" in web_text
+    assert "medfusion start" in readme_text
+    assert "先成功跑通一次，再迁移到自己的 YAML" in readme_text
+
+
 def test_configs_tutorial_starts_from_minimal_mainline_template() -> None:
     text = _read_text("docs/contents/tutorials/fundamentals/configs.md")
 

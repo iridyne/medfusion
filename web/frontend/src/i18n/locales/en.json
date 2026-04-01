@@ -37,6 +37,7 @@
     "updatedAt": "Updated At"
   },
   "nav": {
+    "start": "Getting Started",
     "workbench": "Research Workbench",
     "datasets": "Data Intake",
     "config": "RunSpec Wizard",
@@ -48,6 +49,7 @@
     "settings": "Settings"
   },
   "navShort": {
+    "start": "Start",
     "workbench": "Workbench",
     "datasets": "Datasets",
     "training": "Training",
@@ -56,6 +58,7 @@
     "system": "System"
   },
   "navEyebrow": {
+    "start": "First Run",
     "workbench": "Research Console",
     "datasets": "Data Intake",
     "training": "Execution Monitor",
@@ -64,6 +67,7 @@
     "system": "Resource Telemetry"
   },
   "navDescription": {
+    "start": "Check readiness, confirm the quickstart path, and complete the first successful run.",
     "workbench": "Survey datasets, training state, RunSpec entry points, and recent research artifacts.",
     "datasets": "Register local directories, inspect processing state, and maintain research data assets.",
     "training": "Start training runs, watch live curves, and track active experiments.",

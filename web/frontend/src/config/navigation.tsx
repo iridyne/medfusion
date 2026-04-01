@@ -5,6 +5,7 @@ import {
   ExperimentOutlined,
   HomeOutlined,
   MonitorOutlined,
+  PlayCircleOutlined,
   RadarChartOutlined,
 } from "@ant-design/icons";
 
@@ -34,6 +35,15 @@ export const PRIMARY_ENTRY_COMMAND = "uv run medfusion start";
 export const CLI_EXECUTION_COMMAND = "uv run medfusion train --config <yaml>";
 
 export const NAVIGATION_ITEMS: NavigationMetaItem[] = [
+  {
+    path: "/start",
+    labelKey: "nav.start",
+    shortLabelKey: "navShort.start",
+    eyebrowKey: "navEyebrow.start",
+    descriptionKey: "navDescription.start",
+    accent: "var(--accent-amber)",
+    icon: <PlayCircleOutlined />,
+  },
   {
     path: "/workbench",
     labelKey: "nav.workbench",

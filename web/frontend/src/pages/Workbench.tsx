@@ -15,6 +15,10 @@ import { getModels, getModelStatistics } from "@/api/models";
 import trainingApi from "@/api/training";
 import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
+import {
+  WORKBENCH_MODE,
+  WORKBENCH_PRIMARY_CARDS,
+} from "@/config/workbenchExperience";
 import { consumeWorkbenchFallback } from "@/utils/workbenchFallback";
 
 interface WorkbenchStats {
@@ -131,13 +135,13 @@ export default function Workbench() {
 
   return (
     <PageScaffold
-      eyebrow="Open-Core Research Surface"
-      title="把 MedFusion OSS 收拢成一张研究控制面"
-      description="Workbench 聚焦 OSS 主链页面：数据、配置、训练、结果与系统状态。Web 负责入口与检查，执行与自动化仍然回到 CLI 主链。"
+      eyebrow="Post-run overview"
+      title="查看最近一次运行、关键结果和下一步"
+      description="Workbench 现在更像运行后的中等概览页：先看最近状态、结果和下一步，再决定是否继续训练、导入产物或切换到自己的 YAML。"
       chips={[
-        { label: "Desktop-first cockpit", tone: "teal" },
-        { label: "CLI-backed execution", tone: "amber" },
-        { label: "Research-grade artifact trail", tone: "blue" },
+        { label: WORKBENCH_MODE, tone: "teal" },
+        { label: WORKBENCH_PRIMARY_CARDS[0], tone: "amber" },
+        { label: WORKBENCH_PRIMARY_CARDS[2], tone: "blue" },
       ]}
       actions={
         <>
@@ -168,9 +172,9 @@ export default function Workbench() {
       aside={
         <div className="hero-aside-panel">
           <span className="hero-aside-panel__label">Recommended entry</span>
-          <div className="hero-aside-panel__value">从统一入口启动桌面工作台</div>
+          <div className="hero-aside-panel__value">首次进入先走 Getting Started</div>
           <div className="hero-aside-panel__copy">
-            Web 负责浏览、配置和检查，CLI 继续承担远程 GPU、自动化和可复现执行。
+            `medfusion start` 先把第一次成功讲清楚；回到这里时，重点已经变成最近运行、结果资产和下一步。
           </div>
           <pre className="command-block">{PRIMARY_ENTRY_COMMAND}</pre>
           <div className="surface-note">
@@ -225,10 +229,10 @@ export default function Workbench() {
       <Card className="surface-card surface-card--accent">
         <div className="section-heading">
           <div>
-            <div className="section-heading__eyebrow">Launch lanes</div>
-            <h2 className="section-heading__title">四条高频研究链路</h2>
+            <div className="section-heading__eyebrow">Next actions</div>
+            <h2 className="section-heading__title">从最近运行继续往前走</h2>
             <p className="section-heading__description">
-              从数据准备到结果导入，工作台把高频入口固定成可复用的研究路径。
+              这里保留高频入口，但不再承担“第一次教你怎么开始”的职责。
             </p>
           </div>
           <Tag color="processing">Workbench orchestration</Tag>
@@ -293,14 +297,14 @@ export default function Workbench() {
             <div className="editorial-quote">
               <span className="editorial-quote__mark">/</span>
               <p>
-                Web 端现在更像研究桌面的“解释层”，不是替代 CLI，而是把入口、状态和结果做成一套能被理解、能被复现、也能被维护的界面语言。
+                进入 Workbench 说明第一次引导已经结束。这里更像运行后的回看台：你可以继续训练、读结果、整理资产，但主链执行语义仍然和 CLI 保持一致。
               </p>
             </div>
 
             <div className="editorial-grid">
               <div className="surface-note surface-note--dense">
                 <strong>入口统一</strong>
-                <p>对外推荐 `medfusion start`，对内保留 CLI 执行层。</p>
+                <p>第一次进入走 `medfusion start`，之后再回到这张总览页看最近运行。</p>
               </div>
               <div className="surface-note surface-note--dense">
                 <strong>配置统一</strong>
@@ -326,10 +330,10 @@ export default function Workbench() {
       <Card className="surface-card surface-card--accent">
         <div className="section-heading">
           <div>
-            <div className="section-heading__eyebrow">Control deck</div>
-            <h2 className="section-heading__title">把 OSS 首屏改成真正的研究控制台</h2>
+            <div className="section-heading__eyebrow">Overview posture</div>
+            <h2 className="section-heading__title">保持中等概览，而不是重型 dashboard</h2>
             <p className="section-heading__description">
-              首屏采用三层结构：入口、链路、资产。第一次进入时可以直接理解这套 OSS Web 的主链边界。
+              当前页只收口最近状态、关键指标和下一步入口，避免重新长成复杂产品壳。
             </p>
           </div>
           <Tag color="gold">Frontend redesign</Tag>
@@ -338,21 +342,21 @@ export default function Workbench() {
         <div className="insight-grid">
           <div className="insight-panel">
             <span className="insight-panel__kicker">Shell rewrite</span>
-            <strong>导航改成 lane-based 研究视图</strong>
-            <p>每个工作面都绑定自己的 eyebrow、说明和强调色，壳层不再只是一个空头部。</p>
+              <strong>保持最近运行可见</strong>
+              <p>先看最新状态和结果，再决定是继续 quickstart、导入结果，还是换自己的 YAML。</p>
+            </div>
+            <div className="insight-panel">
+              <span className="insight-panel__kicker">Visual system</span>
+              <strong>保留必要信息密度</strong>
+              <p>关键指标、命令和结果入口同屏，但不把每个工作面都挤成重控制台。</p>
+            </div>
+            <div className="insight-panel">
+              <span className="insight-panel__kicker">Information scent</span>
+              <strong>下一步动作保持很少</strong>
+              <p>把“去训练、看结果、导入产物”保留作高频入口，不继续扩展页面职责。</p>
+            </div>
           </div>
-          <div className="insight-panel">
-            <span className="insight-panel__kicker">Visual system</span>
-            <strong>视觉强调对齐研究工作台语义</strong>
-            <p>保留层次感与信息密度，强化页面分区与状态识别。</p>
-          </div>
-          <div className="insight-panel">
-            <span className="insight-panel__kicker">Information scent</span>
-            <strong>命令、状态、资产、工作流同屏出现</strong>
-            <p>这样无论是研究者、贡献者还是 OSS 评估者，都能一眼理解这个界面是干嘛的。</p>
-          </div>
-        </div>
-      </Card>
+        </Card>
     </PageScaffold>
   );
 }

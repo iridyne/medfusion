@@ -2,6 +2,20 @@
 
 这三份配置的目标不是追求 benchmark，而是让公开数据集先顺利走通 MedFusion 当前的训练主链。
 
+## 官方支持矩阵
+
+当前 public-datasets 目录进入第一版 MVP 官方支持矩阵的配置是：
+
+- `pathmnist_quickstart.yaml`
+- `breastmnist_quickstart.yaml`
+- `uci_heart_disease_quickstart.yaml`
+
+它们承担的角色不是“炫 demo”，而是：
+
+- 帮新用户完成第一次成功
+- 给研究者提供可复现的公开数据起点
+- 为后续切换到自己的 YAML 和本地数据做参照
+
 ## 可用配置
 
 - `pathmnist_quickstart.yaml`

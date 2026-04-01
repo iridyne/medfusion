@@ -37,6 +37,7 @@
     "updatedAt": "更新时间"
   },
   "nav": {
+    "start": "开始引导",
     "workbench": "研究工作台",
     "datasets": "数据登记",
     "config": "RunSpec 向导",
@@ -48,6 +49,7 @@
     "settings": "设置"
   },
   "navShort": {
+    "start": "开始",
     "workbench": "工作台",
     "datasets": "数据集",
     "training": "训练",
@@ -56,6 +58,7 @@
     "system": "系统"
   },
   "navEyebrow": {
+    "start": "首次运行",
     "workbench": "研究控制台",
     "datasets": "数据入口",
     "training": "执行监控",
@@ -64,6 +67,7 @@
     "system": "资源观测"
   },
   "navDescription": {
+    "start": "先检查环境、确认 quickstart 路径，再完成第一次成功闭环。",
     "workbench": "总览数据、训练状态、RunSpec 入口与最近研究产物。",
     "datasets": "登记本地目录、检查处理状态，并维护研究数据资产。",
     "training": "启动训练任务、观察实时曲线，并跟踪运行中的实验。",

@@ -4,6 +4,7 @@ Tests for CLI module structure and imports.
 
 import json
 import os
+import sys
 import tempfile
 import tomllib
 from pathlib import Path
@@ -76,6 +77,24 @@ def test_console_script_targets_are_explicit_functions():
     assert scripts["med-train"] == "med_core.cli.train:train"
     assert scripts["med-evaluate"] == "med_core.cli.evaluate:evaluate"
     assert scripts["med-preprocess"] == "med_core.cli.preprocess:preprocess"
+
+
+def test_start_help_matches_mvp_contract(capsys):
+    from med_core.cli import main
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["medfusion", "--help"]
+        main()
+    finally:
+        sys.argv = original_argv
+
+    output = capsys.readouterr().out
+
+    assert "medfusion start" in output
+    assert "validate-config" in output
+    assert "build-results" in output
+    assert "YAML" in output
 
 
 def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
