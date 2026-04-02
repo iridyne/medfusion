@@ -60,6 +60,15 @@ def check_ci_workflow():
     else:
         issues.append("Docker 平台配置不正确")
 
+    # 检查 smoke 入口统一
+    if "bash test/smoke.sh" in content:
+        print("  ✓ CI smoke 入口已统一到 test/smoke.sh")
+    else:
+        issues.append("CI smoke 入口未统一到 test/smoke.sh")
+
+    if "python scripts/smoke_test.py" in content:
+        issues.append("CI workflow 仍在使用历史 scripts/smoke_test.py 入口")
+
     return len(issues) == 0, issues
 
 

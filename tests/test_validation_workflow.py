@@ -46,6 +46,25 @@ def test_full_regression_ci_mode_uses_shell_smoke_entrypoint() -> None:
     assert "uv run python scripts/smoke_test.py" not in content
 
 
+def test_github_ci_workflow_uses_shell_smoke_entrypoint() -> None:
+    content = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "bash test/smoke.sh" in content
+    assert "python scripts/smoke_test.py" not in content
+
+
+def test_verify_ci_fixes_checks_shell_smoke_entrypoint_in_workflow() -> None:
+    content = (REPO_ROOT / "scripts" / "verify_ci_fixes.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "bash test/smoke.sh" in content
+    assert "CI smoke 入口已统一到 test/smoke.sh" in content
+    assert "历史 scripts/smoke_test.py 入口" in content
+
+
 @pytest.mark.parametrize(
     ("relative_path", "expected_reference"),
     [
@@ -53,7 +72,6 @@ def test_full_regression_ci_mode_uses_shell_smoke_entrypoint() -> None:
         ("scripts/test_ci_locally.sh", "test/smoke.sh"),
         ("scripts/quick_ci_test.py", "test/smoke.sh"),
         ("scripts/ci_diagnostic.py", "test/smoke.sh"),
-        ("scripts/verify_ci_fixes.py", "test/smoke.sh"),
     ],
 )
 def test_auxiliary_validation_scripts_reference_shell_smoke_entrypoint(

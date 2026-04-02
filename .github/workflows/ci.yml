@@ -63,7 +63,7 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          python scripts/smoke_test.py
+          bash test/smoke.sh
 
   # Job 3: Build Summary
   summary:
