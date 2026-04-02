@@ -98,7 +98,7 @@ def _read_manifest_dataframe(config: Any) -> pd.DataFrame:
     read_csv_kwargs = {}
     if config.data.patient_id_column:
         read_csv_kwargs["dtype"] = {config.data.patient_id_column: "string"}
-    return pd.read_csv(config.data.csv_path, **read_csv_kwargs)
+    return pd.read_csv(config.data.resolved_csv_path, **read_csv_kwargs)
 
 
 def _resolve_device(device_name: str) -> torch.device:
@@ -244,8 +244,8 @@ def _build_model(config: Any, tabular_dim: int) -> MultiModalFusionModel:
 def _load_split_dataset(config: Any, split: str) -> MedicalMultimodalDataset:
     transform = get_val_transforms(image_size=config.data.image_size)
     full_dataset, _ = MedicalMultimodalDataset.from_csv(
-        csv_path=config.data.csv_path,
-        image_dir=config.data.image_dir,
+        csv_path=config.data.resolved_csv_path,
+        image_dir=config.data.resolved_image_dir,
         image_column=config.data.image_path_column,
         target_column=config.data.target_column,
         numerical_features=config.data.numerical_features,
@@ -1921,7 +1921,7 @@ def build_results_artifacts(
         layout=layout,
         inference=inference,
         history_entries=history_payload.get("entries", []),
-        dataset_name=Path(config.data.csv_path).stem,
+        dataset_name=config.data.resolved_csv_path.stem,
         split=split,
         attention_artifacts=attention_artifacts,
         survival_payload=survival_payload,

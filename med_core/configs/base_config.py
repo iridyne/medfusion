@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 import torch
 
-from med_core.output_layout import RunOutputLayout
+from med_core.output_layout import RunOutputLayout, resolve_oss_path
 
 
 @dataclass
@@ -98,6 +98,28 @@ class DataConfig(BaseConfig):
             self.clinical_preprocessing = ClinicalPreprocessingConfig(
                 **self.clinical_preprocessing
             )
+
+    @property
+    def resolved_data_root(self) -> Path:
+        """Resolve data_root against the OSS repository root."""
+        return resolve_oss_path(self.data_root)
+
+    @property
+    def resolved_csv_path(self) -> Path:
+        """Resolve csv_path against the OSS repository root."""
+        return resolve_oss_path(self.csv_path)
+
+    @property
+    def resolved_image_dir(self) -> Path:
+        """Resolve image_dir against the OSS repository root."""
+        return resolve_oss_path(self.image_dir)
+
+    @property
+    def resolved_hipt_embeddings_dir(self) -> Path | None:
+        """Resolve optional HIPT embeddings directory against the OSS repository root."""
+        if self.hipt_embeddings_dir is None:
+            return None
+        return resolve_oss_path(self.hipt_embeddings_dir)
 
 
 @dataclass

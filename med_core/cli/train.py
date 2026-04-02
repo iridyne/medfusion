@@ -170,7 +170,7 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
     device = _resolve_device(config.device)
 
     dataframe = _read_manifest_dataframe(
-        config.data.csv_path,
+        config.data.resolved_csv_path,
         config.data.patient_id_column,
     )
     train_indices, val_indices, _ = _split_indices(
@@ -394,8 +394,8 @@ def train(
     val_transform = get_val_transforms(image_size=config.data.image_size)
 
     full_dataset, _ = MedicalMultimodalDataset.from_csv(
-        csv_path=config.data.csv_path,
-        image_dir=config.data.image_dir,
+        csv_path=config.data.resolved_csv_path,
+        image_dir=config.data.resolved_image_dir,
         image_column=config.data.image_path_column,
         target_column=config.data.target_column,
         numerical_features=config.data.numerical_features,

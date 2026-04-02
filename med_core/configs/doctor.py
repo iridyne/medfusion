@@ -245,15 +245,17 @@ class ConfigDoctor:
             )
             return
 
-        csv_path = Path(config.data.csv_path)
-        image_dir = Path(config.data.image_dir)
+        csv_path = config.data.resolved_csv_path
+        image_dir = config.data.resolved_image_dir
+        csv_path_label = format_oss_display_path(csv_path)
+        image_dir_label = format_oss_display_path(image_dir)
 
         if not csv_path.exists():
             errors.append(
                 DoctorIssue(
                     severity="error",
                     path="data.csv_path",
-                    message=f"CSV 不存在: {csv_path}",
+                    message=f"CSV 不存在: {csv_path_label}",
                     suggestion="先准备 metadata CSV，或改成仓库中真实存在的路径",
                     code="D101",
                 )
@@ -265,7 +267,7 @@ class ConfigDoctor:
                 DoctorIssue(
                     severity="error",
                     path="data.image_dir",
-                    message=f"图像目录不存在: {image_dir}",
+                    message=f"图像目录不存在: {image_dir_label}",
                     suggestion="确认 image_dir 指向真实图像目录",
                     code="D102",
                 )
@@ -438,13 +440,14 @@ class ConfigDoctor:
         info: list[dict[str, Any]],
         summary: dict[str, Any],
     ) -> None:
-        csv_path = Path(config.data.csv_path)
+        csv_path = config.data.resolved_csv_path
+        csv_path_label = format_oss_display_path(csv_path)
         if not csv_path.exists():
             errors.append(
                 DoctorIssue(
                     severity="error",
                     path="data.csv_path",
-                    message=f"CSV 不存在: {csv_path}",
+                    message=f"CSV 不存在: {csv_path_label}",
                     suggestion="先准备三相 CT manifest CSV，或改成真实存在的路径",
                     code="D201",
                 )

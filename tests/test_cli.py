@@ -17,17 +17,6 @@ from test_build_results import _create_checkpoint_and_logs
 os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-cli-test-"))
 
 
-def _anchor_test_data_paths_to_repo_root(config_path: Path) -> Path:
-    from med_core.configs import load_config, save_config
-
-    repo_root = Path(__file__).resolve().parents[1]
-    config = load_config(config_path)
-    config.data.csv_path = str((repo_root / config.data.csv_path).resolve())
-    config.data.image_dir = str((repo_root / config.data.image_dir).resolve())
-    save_config(config, config_path)
-    return config_path
-
-
 def test_cli_imports():
     """Test that CLI functions can be imported."""
     from med_core.cli import evaluate, import_run, preprocess, public_datasets, train
@@ -145,6 +134,27 @@ def test_validate_config_json_includes_model_and_artifact_contract(capsys):
     assert contract["recommended_commands"]["validate"] == (
         "medfusion validate-config --config configs/starter/quickstart.yaml"
     )
+
+
+def test_validate_config_cli_allows_repo_relative_data_paths_outside_oss(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from med_core.cli.doctor import validate_config
+
+    repo_root = Path(__file__).resolve().parents[1]
+    outside_cwd = tmp_path / "outside-validate-config"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    validate_config(
+        ["--config", str(repo_root / "configs/starter/quickstart.yaml"), "--json"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert payload["summary"]["dataset_rows"] > 0
 
 
 def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
@@ -296,6 +306,41 @@ def test_train_cli_anchors_relative_output_override_to_repo_root(
     assert target_dir.exists()
 
 
+def test_train_cli_anchors_relative_data_paths_to_repo_root(
+    tmp_path,
+    monkeypatch,
+):
+    from med_core.cli.train import MedicalMultimodalDataset, train
+    from med_core.configs import load_config, save_config
+
+    class StopAfterDataPathCheck(RuntimeError):
+        pass
+
+    repo_root = Path(__file__).resolve().parents[1]
+
+    def _assert_data_paths(*args, **kwargs):
+        assert Path(kwargs["csv_path"]) == repo_root / "data/mock/metadata.csv"
+        assert Path(kwargs["image_dir"]) == repo_root / "data/mock"
+        raise StopAfterDataPathCheck
+
+    config = load_config("configs/starter/quickstart.yaml")
+    config.logging.output_dir = str(tmp_path / "train-data-paths-output")
+    config_path = tmp_path / "train-data-paths.yaml"
+    save_config(config, config_path)
+
+    outside_cwd = tmp_path / "outside-train-data-paths"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+    monkeypatch.setattr(
+        MedicalMultimodalDataset,
+        "from_csv",
+        staticmethod(_assert_data_paths),
+    )
+
+    with pytest.raises(StopAfterDataPathCheck):
+        train(["--config", str(config_path)])
+
+
 def test_build_results_cli_anchors_relative_output_override_to_repo_root(
     tmp_path,
     monkeypatch,
@@ -304,7 +349,6 @@ def test_build_results_cli_anchors_relative_output_override_to_repo_root(
     from med_core.cli.build_results import build_results
 
     config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
-    _anchor_test_data_paths_to_repo_root(config_path)
     repo_root = Path(__file__).resolve().parents[1]
     relative_output_dir = f"outputs/pytest-build-results-anchor-{tmp_path.name}"
     target_dir = repo_root / relative_output_dir
@@ -405,7 +449,6 @@ def test_import_run_cli_anchors_relative_output_override_to_repo_root(
     from med_core.cli.import_run import import_run
 
     config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
-    _anchor_test_data_paths_to_repo_root(config_path)
     repo_root = Path(__file__).resolve().parents[1]
     relative_output_dir = f"outputs/pytest-import-run-anchor-{tmp_path.name}"
     target_dir = repo_root / relative_output_dir
