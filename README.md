@@ -55,6 +55,14 @@ OSS 不是 demo 壳，而是长期技术主干。
 如果你完全没有私有数据，推荐先走“公共数据快速验证”。
 先成功跑通一次，再迁移到自己的 YAML，阻力最小。
 
+如果你想要一个固定的本地 / CI 自检入口，而不是手敲整串命令，直接运行：
+
+```bash
+bash test/smoke.sh
+```
+
+它会按官方 BreastMNIST quickstart 主链执行 `prepare -> validate-config -> train -> build-results`，并检查标准产物是否都已经落盘。
+
 如果你更希望从 Web 入口开始理解这套系统，当前默认入口是：
 
 ```bash
