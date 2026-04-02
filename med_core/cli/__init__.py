@@ -19,6 +19,7 @@ from .evaluate import evaluate
 from .import_run import import_run
 from .preprocess import preprocess
 from .public_datasets import public_datasets
+from .run import run
 from .train import train
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "main",
     "preprocess",
     "public_datasets",
+    "run",
     "train",
     "validate_config",
 ]
@@ -42,6 +44,7 @@ def _print_help() -> None:
     print("")
     print("Commands:")
     print("  start       启动 MedFusion 工作台（推荐入口）")
+    print("  run         一条命令执行 validate-config -> train -> build-results")
     print("  train       训练模型")
     print("  evaluate    评估模型")
     print("  preprocess  数据预处理")
@@ -60,6 +63,7 @@ def _print_help() -> None:
     print("Recommended entrypoints:")
     print("  medfusion start")
     print("    Guided first-run entry for onboarding, quick validation, and result handoff")
+    print("  medfusion run --config configs/starter/quickstart.yaml")
     print("  medfusion validate-config --config configs/starter/quickstart.yaml")
     print("  medfusion train --config configs/starter/quickstart.yaml")
     print(
@@ -141,6 +145,10 @@ def main() -> None:
 
     if command == "train":
         _run_legacy_command(train, args, "medfusion train")
+        return
+
+    if command == "run":
+        _run_legacy_command(run, args, "medfusion run")
         return
 
     if command == "evaluate":

@@ -3,6 +3,7 @@ Tests for CLI module structure and imports.
 """
 
 import json
+import logging
 import os
 import shutil
 import sys
@@ -19,9 +20,17 @@ os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-c
 
 def test_cli_imports():
     """Test that CLI functions can be imported."""
-    from med_core.cli import evaluate, import_run, preprocess, public_datasets, train
+    from med_core.cli import (
+        evaluate,
+        import_run,
+        preprocess,
+        public_datasets,
+        run,
+        train,
+    )
 
     assert callable(train)
+    assert callable(run)
     assert callable(evaluate)
     assert callable(preprocess)
     assert callable(import_run)
@@ -34,9 +43,11 @@ def test_cli_submodule_imports():
     from med_core.cli.import_run import import_run
     from med_core.cli.preprocess import preprocess
     from med_core.cli.public_datasets import public_datasets
+    from med_core.cli.run import run
     from med_core.cli.train import train
 
     assert callable(train)
+    assert callable(run)
     assert callable(evaluate)
     assert callable(preprocess)
     assert callable(import_run)
@@ -61,6 +72,7 @@ def test_cli_module_structure():
     # Check __all__ exports
     assert hasattr(cli_module, "__all__")
     assert "train" in cli_module.__all__
+    assert "run" in cli_module.__all__
     assert "evaluate" in cli_module.__all__
     assert "preprocess" in cli_module.__all__
 
@@ -95,9 +107,57 @@ def test_start_help_matches_mvp_contract(capsys):
     output = capsys.readouterr().out
 
     assert "medfusion start" in output
+    assert "run" in output
     assert "validate-config" in output
     assert "build-results" in output
     assert "YAML" in output
+
+
+def test_run_help_matches_mvp_contract(capsys):
+    from med_core.cli.run import run
+
+    with pytest.raises(SystemExit) as exc_info:
+        run(["--help"])
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+
+    assert "--config" in output
+    assert "--output-dir" in output
+    assert "--skip-build-results" in output
+    assert "--json" in output
+    assert "validate-config" in output
+    assert "build-results" in output
+
+
+def test_main_dispatches_run_command(monkeypatch):
+    import med_core.cli as cli_module
+
+    captured = {}
+
+    def _fake_run(argv=None, prog="medfusion run"):
+        captured["argv"] = list(argv or [])
+        captured["prog"] = prog
+
+    monkeypatch.setattr(cli_module, "run", _fake_run)
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = [
+            "medfusion",
+            "run",
+            "--config",
+            "configs/starter/quickstart.yaml",
+            "--skip-build-results",
+        ]
+        cli_module.main()
+    finally:
+        sys.argv = original_argv
+
+    assert captured == {
+        "argv": ["--config", "configs/starter/quickstart.yaml", "--skip-build-results"],
+        "prog": "medfusion run",
+    }
 
 
 def test_validate_config_cli_surfaces_yaml_mainline_contract(capsys):
@@ -173,6 +233,161 @@ def test_validate_config_cli_resolves_repo_relative_config_outside_oss(
 
     assert payload["ok"] is True
     assert payload["summary"]["mainline_contract"]["output_dir"] == "outputs/quickstart"
+
+
+def test_run_cli_executes_validate_train_and_build_results(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    import importlib
+
+    from med_core.cli.run import run
+    from med_core.output_layout import RunOutputLayout
+
+    run_module = importlib.import_module("med_core.cli.run")
+    output_dir = tmp_path / "run-default-output"
+    calls: list[str] = []
+    layout = RunOutputLayout(output_dir).ensure_exists()
+    root_logger = logging.getLogger()
+    original_handlers = root_logger.handlers[:]
+    original_level = root_logger.level
+    root_handler = logging.StreamHandler(sys.stdout)
+    root_logger.handlers = [root_handler]
+    root_logger.setLevel(logging.INFO)
+
+    def _fake_validate_config(argv=None, prog="medfusion validate-config"):
+        calls.append("validate-config")
+        assert argv is not None
+        assert "--config" in argv
+        assert "--json" in argv
+        print(json.dumps({"ok": True, "summary": {}}))
+
+    def _fake_train(argv=None, prog="medfusion train"):
+        calls.append("train")
+        assert argv is not None
+        assert "--config" in argv
+        assert "--output-dir" in argv
+        print("TRAIN NOISE SHOULD NOT LEAK")
+        layout.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+        layout.logs_dir.mkdir(parents=True, exist_ok=True)
+        (layout.checkpoints_dir / "best.pth").write_bytes(b"checkpoint")
+        layout.history_path.write_text("{}", encoding="utf-8")
+
+    def _fake_build_results(argv=None, prog="medfusion build-results"):
+        calls.append("build-results")
+        assert argv is not None
+        assert "--checkpoint" in argv
+        assert "--json" in argv
+        layout.reports_dir.mkdir(parents=True, exist_ok=True)
+        layout.metrics_dir.mkdir(parents=True, exist_ok=True)
+        layout.summary_path.write_text("{}", encoding="utf-8")
+        layout.validation_path.write_text("{}", encoding="utf-8")
+        layout.report_path.write_text("# report", encoding="utf-8")
+        layout.metrics_path.write_text("{}", encoding="utf-8")
+        root_logger.info("BUILD RESULTS NOISE SHOULD NOT LEAK")
+        print(
+            json.dumps(
+                {
+                    "output_dir": str(layout.root_dir),
+                    "artifact_paths": {
+                        "summary_path": str(layout.summary_path),
+                        "validation_path": str(layout.validation_path),
+                        "report_path": str(layout.report_path),
+                        "metrics_path": str(layout.metrics_path),
+                    },
+                    "metrics": {},
+                    "validation": {},
+                }
+            )
+        )
+
+    monkeypatch.setattr(run_module, "validate_config", _fake_validate_config)
+    monkeypatch.setattr(run_module, "train", _fake_train)
+    monkeypatch.setattr(run_module, "build_results", _fake_build_results)
+
+    try:
+        run(
+            [
+                "--config",
+                "configs/starter/quickstart.yaml",
+                "--output-dir",
+                str(output_dir),
+                "--json",
+            ]
+        )
+        payload = json.loads(capsys.readouterr().out)
+    finally:
+        root_logger.handlers = original_handlers
+        root_logger.setLevel(original_level)
+
+    assert calls == ["validate-config", "train", "build-results"]
+    assert payload["output_dir"] == str(layout.root_dir)
+    assert payload["checkpoint"] == str(layout.checkpoints_dir / "best.pth")
+    assert payload["build_results_skipped"] is False
+    assert payload["artifact_paths"]["summary"] == str(layout.summary_path)
+    assert payload["artifact_paths"]["validation"] == str(layout.validation_path)
+    assert payload["artifact_paths"]["report"] == str(layout.report_path)
+
+
+def test_run_cli_can_skip_build_results(tmp_path, monkeypatch, capsys):
+    import importlib
+
+    from med_core.cli.run import run
+    from med_core.output_layout import RunOutputLayout
+
+    run_module = importlib.import_module("med_core.cli.run")
+    output_dir = tmp_path / "run-skip-output"
+    calls: list[str] = []
+    layout = RunOutputLayout(output_dir).ensure_exists()
+
+    def _fake_validate_config(argv=None, prog="medfusion validate-config"):
+        calls.append("validate-config")
+        print(json.dumps({"ok": True, "summary": {}}))
+
+    def _fake_train(argv=None, prog="medfusion train"):
+        calls.append("train")
+        (layout.checkpoints_dir / "best.pth").write_bytes(b"checkpoint")
+        layout.history_path.write_text("{}", encoding="utf-8")
+
+    def _fail_build_results(argv=None, prog="medfusion build-results"):
+        raise AssertionError("build-results should not be called when skipped")
+
+    monkeypatch.setattr(run_module, "validate_config", _fake_validate_config)
+    monkeypatch.setattr(run_module, "train", _fake_train)
+    monkeypatch.setattr(run_module, "build_results", _fail_build_results)
+
+    run(
+        [
+            "--config",
+            "configs/starter/quickstart.yaml",
+            "--output-dir",
+            str(output_dir),
+            "--skip-build-results",
+            "--json",
+        ]
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert calls == ["validate-config", "train"]
+    assert payload["build_results_skipped"] is True
+    assert payload["artifact_paths"]["checkpoint"] == str(layout.checkpoints_dir / "best.pth")
+    assert payload["artifact_paths"]["history"] == str(layout.history_path)
+
+
+def test_docs_promote_run_as_recommended_cli_mainline() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    workflow = Path("docs/contents/getting-started/cli-config-workflow.md").read_text(
+        encoding="utf-8"
+    )
+    quickstart = Path("docs/contents/getting-started/quickstart.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "uv run medfusion run --config configs/starter/quickstart.yaml" in readme
+    assert "uv run medfusion run --config configs/starter/quickstart.yaml" in workflow
+    assert "uv run medfusion run --config configs/starter/quickstart.yaml" in quickstart
+    assert "validate-config -> train -> build-results" in workflow
 
 
 def test_evaluate_cli_uses_canonical_result_contract(tmp_path):

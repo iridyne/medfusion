@@ -25,13 +25,20 @@
 ```bash
 uv run medfusion public-datasets list
 uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
-uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
-uv run medfusion build-results \
-  --config configs/public_datasets/breastmnist_quickstart.yaml \
-  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
+uv run medfusion run --config configs/public_datasets/breastmnist_quickstart.yaml
 ```
 
 ### B) 已有私有数据
+
+```bash
+uv run medfusion run --config configs/starter/quickstart.yaml
+```
+
+`medfusion run` 默认就是：
+
+`validate-config -> train -> build-results`
+
+如果你需要定位问题，再退回分阶段命令：
 
 ```bash
 uv run medfusion validate-config --config configs/starter/quickstart.yaml

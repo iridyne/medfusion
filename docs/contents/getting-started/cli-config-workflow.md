@@ -26,12 +26,12 @@ uv run medfusion start
 如果你还没有自己的数据，先去 [公开数据集快速验证清单](public-datasets.md)。
 
 ```bash
-uv run medfusion validate-config --config configs/starter/quickstart.yaml
-uv run medfusion train --config configs/starter/quickstart.yaml
-uv run medfusion build-results \
-  --config configs/starter/quickstart.yaml \
-  --checkpoint outputs/quickstart/checkpoints/best.pth
+uv run medfusion run --config configs/starter/quickstart.yaml
 ```
+
+它默认执行：
+
+`validate-config -> train -> build-results`
 
 这条链使用的是当前 dataclass 驱动的训练配置，适合：
 
@@ -39,7 +39,17 @@ uv run medfusion build-results \
 - 跑公开数据集 quick validation
 - 接 Web UI / artifact / validation / 报告
 
-其中三个命令分别解决三件事：
+如果你需要拆开排查问题，仍然可以直接执行：
+
+```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
+```
+
+其中三个底层命令分别解决三件事：
 
 - `validate-config`
   - 在训练前检查 YAML、CSV 列、图像路径、样本规模和 split 是否明显有坑
@@ -100,7 +110,7 @@ flowchart TB
   S3 --> R3
 ```
 
-> 小提示：第一次使用建议只走 `starter/public_datasets -> validate-config -> train -> build-results` 这条主链，先把闭环跑通，再进入 builder 结构实验。
+> 小提示：第一次使用建议优先走 `starter/public_datasets -> medfusion run --config ...` 这条闭环主链；需要诊断问题时，再拆回 `validate-config -> train -> build-results`。
 
 ## 二、Builder / 结构实验链
 
@@ -158,10 +168,10 @@ uv run medfusion start
 
 1. 先跑 `uv run medfusion start` 看推荐路径
 2. 再回到 `configs/starter/quickstart.yaml` 或 `configs/public_datasets/*`
-3. 先跑 `medfusion validate-config`
-4. 确认它打印出来的 contract 和输出目录符合预期
-5. 再跑 `medfusion train`
-6. 训练完再跑 `medfusion build-results`
+3. 优先跑 `medfusion run --config ...`
+4. 如果 run 失败，再先单独跑 `medfusion validate-config`
+5. 确认它打印出来的 contract 和输出目录符合预期
+6. 必要时再拆开执行 `medfusion train` 和 `medfusion build-results`
 7. 最后回到 Web 看结果页或 workbench overview
 
 ### 做研究原型的人

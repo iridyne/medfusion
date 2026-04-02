@@ -71,25 +71,26 @@ uv run medfusion start
 
 它会先把你带到 `Getting Started` 引导页，帮助你完成第一次成功闭环；真正长期做实验和复现时，仍然建议回到 `YAML + medfusion` 这条主链。
 
+如果你希望从 CLI 直接完成一次完整闭环，当前推荐命令是：
+
+```bash
+uv run medfusion run --config configs/starter/quickstart.yaml
+```
+
+它会默认执行 `validate-config -> train -> build-results`。如果你需要分阶段调试，仍然可以继续单独使用 `validate-config`、`train` 和 `build-results`。
+
 ### 1) 公共数据快速验证（推荐第一步）
 
 ```bash
 uv run medfusion public-datasets list
 uv run medfusion public-datasets prepare medmnist-breastmnist --overwrite
-uv run medfusion train --config configs/public_datasets/breastmnist_quickstart.yaml
-uv run medfusion build-results \
-  --config configs/public_datasets/breastmnist_quickstart.yaml \
-  --checkpoint outputs/public_datasets/breastmnist_quickstart/checkpoints/best.pth
+uv run medfusion run --config configs/public_datasets/breastmnist_quickstart.yaml
 ```
 
 ### 2) 本地数据路径
 
 ```bash
-uv run medfusion validate-config --config configs/starter/quickstart.yaml
-uv run medfusion train --config configs/starter/quickstart.yaml
-uv run medfusion build-results \
-  --config configs/starter/quickstart.yaml \
-  --checkpoint outputs/quickstart/checkpoints/best.pth
+uv run medfusion run --config configs/starter/quickstart.yaml
 ```
 
 这里的 `validate-config` 不只是“看有没有报错”。
@@ -101,6 +102,16 @@ uv run medfusion build-results \
 - 下一步建议命令：`train`、`build-results`、`import-run`
 
 也就是说，新手先看 `validate-config` 的输出，就能知道“这份 YAML 到底会跑什么、结果会写到哪里”，不需要先翻源码。
+
+如果你需要分阶段排查问题，再退回下面这条拆解命令链：
+
+```bash
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
+```
 
 ### 3) 专项 demo：三相 CT + 临床小样本
 
