@@ -93,7 +93,7 @@ def check_project_structure():
         "med_core/__init__.py": "核心模块",
         "tests/": "测试目录",
         "scripts/generate_mock_data.py": "数据生成脚本",
-        "scripts/smoke_test.py": "冒烟测试脚本",
+        "test/smoke.sh": "冒烟测试脚本",
         "Dockerfile": "Docker 配置",
         ".github/workflows/ci.yml": "CI 配置",
         ".github/workflows/release.yml": "发布配置",

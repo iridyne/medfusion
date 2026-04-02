@@ -42,7 +42,7 @@ Modes:
                 --ignore=tests/test_config_validation.py \
                 --ignore=tests/test_export.py
             - uv run pytest tests/test_end_to_end.py -v --tb=short
-            - uv run python scripts/smoke_test.py
+            - bash test/smoke.sh
           Notes:
             - The CI-aligned suite intentionally excludes:
               tests/test_config_validation.py
@@ -118,7 +118,7 @@ case "$MODE" in
       --ignore=tests/test_config_validation.py \
       --ignore=tests/test_export.py
     run uv run pytest tests/test_end_to_end.py -v --tb=short
-    run uv run python scripts/smoke_test.py
+    run bash test/smoke.sh
     ;;
   full)
     run bash scripts/local_ci_test.sh

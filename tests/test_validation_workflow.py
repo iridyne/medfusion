@@ -5,6 +5,8 @@ import stat
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -33,6 +35,34 @@ def test_full_regression_help_documents_supported_modes() -> None:
     assert "full" in result.stdout
     assert "tests/test_config_validation.py" in result.stdout
     assert "tests/test_export.py" in result.stdout
+    assert "bash test/smoke.sh" in result.stdout
+    assert "scripts/smoke_test.py" not in result.stdout
+
+
+def test_full_regression_ci_mode_uses_shell_smoke_entrypoint() -> None:
+    content = (REPO_ROOT / "scripts" / "full_regression.sh").read_text(encoding="utf-8")
+
+    assert "run bash test/smoke.sh" in content
+    assert "uv run python scripts/smoke_test.py" not in content
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "expected_reference"),
+    [
+        ("scripts/local_ci_test.sh", "test/smoke.sh"),
+        ("scripts/test_ci_locally.sh", "test/smoke.sh"),
+        ("scripts/quick_ci_test.py", "test/smoke.sh"),
+        ("scripts/ci_diagnostic.py", "test/smoke.sh"),
+        ("scripts/verify_ci_fixes.py", "test/smoke.sh"),
+    ],
+)
+def test_auxiliary_validation_scripts_reference_shell_smoke_entrypoint(
+    relative_path: str, expected_reference: str
+) -> None:
+    content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+    assert expected_reference in content
+    assert "scripts/smoke_test.py" not in content
 
 
 def test_top_level_docs_point_to_script_based_validation_workflow() -> None:

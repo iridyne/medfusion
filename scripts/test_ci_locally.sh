@@ -36,9 +36,13 @@ mypy med_core/ --ignore-missing-imports || echo "⚠ 类型检查发现问题"
 # 5. 检查关键文件
 echo ""
 echo "5. 检查关键文件..."
-for file in scripts/generate_mock_data.py scripts/smoke_test.py; do
+for file in scripts/generate_mock_data.py test/smoke.sh; do
     if [ -f "$file" ]; then
-        python -m py_compile "$file" && echo "✓ $file"
+        if [[ "$file" == *.sh ]]; then
+            bash -n "$file" && echo "✓ $file"
+        else
+            python -m py_compile "$file" && echo "✓ $file"
+        fi
     else
         echo "✗ $file 不存在"
     fi

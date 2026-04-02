@@ -138,12 +138,18 @@ print_step "步骤 6: 检查集成测试脚本"
 
 SCRIPTS=(
     "scripts/generate_mock_data.py"
-    "scripts/smoke_test.py"
+    "test/smoke.sh"
 )
 
 for script in "${SCRIPTS[@]}"; do
     if [ -f "$script" ]; then
-        if python -m py_compile "$script" 2>&1; then
+        if [[ "$script" == *.sh ]]; then
+            if bash -n "$script" 2>&1; then
+                print_success "脚本语法正确: $script"
+            else
+                print_error "脚本语法错误: $script"
+            fi
+        elif python -m py_compile "$script" 2>&1; then
             print_success "脚本语法正确: $script"
         else
             print_error "脚本语法错误: $script"

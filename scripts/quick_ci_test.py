@@ -59,10 +59,13 @@ def main():
 
     # 4. 检查脚本
     print("\n4. 检查关键脚本...")
-    scripts = ["scripts/generate_mock_data.py", "scripts/smoke_test.py"]
+    scripts = ["scripts/generate_mock_data.py", "test/smoke.sh"]
     for script in scripts:
         if Path(script).exists():
-            success, _ = run_cmd([sys.executable, "-m", "py_compile", script])
+            if script.endswith(".sh"):
+                success, _ = run_cmd(["bash", "-n", script])
+            else:
+                success, _ = run_cmd([sys.executable, "-m", "py_compile", script])
             print(f"  {'✓' if success else '✗'} {script}")
         else:
             print(f"  ⚠ {script} 不存在")

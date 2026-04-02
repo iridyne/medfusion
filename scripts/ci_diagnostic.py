@@ -231,7 +231,7 @@ def check_scripts():
 
     critical_scripts = [
         "scripts/generate_mock_data.py",
-        "scripts/smoke_test.py",
+        "test/smoke.sh",
     ]
 
     print_step("检查关键脚本")
@@ -245,9 +245,12 @@ def check_scripts():
             continue
 
         # 检查语法
-        success, output = run_command(
-            [sys.executable, "-m", "py_compile", script], check=False
-        )
+        if script.endswith(".sh"):
+            success, output = run_command(["bash", "-n", script], check=False)
+        else:
+            success, output = run_command(
+                [sys.executable, "-m", "py_compile", script], check=False
+            )
         if success:
             print_success(f"{script}")
         else:
