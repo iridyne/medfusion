@@ -69,6 +69,26 @@ def test_resolve_run_output_dir_infers_run_root_from_checkpoint(tmp_path: Path) 
     assert resolved == run_dir
 
 
+def test_run_output_layout_anchors_relative_root_to_oss_repo() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    layout = RunOutputLayout("outputs/anchored-layout")
+
+    assert layout.root_dir == repo_root / "outputs" / "anchored-layout"
+
+
+def test_resolve_run_output_dir_anchors_relative_config_to_oss_repo() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+
+    resolved = resolve_run_output_dir(
+        config_output_dir="outputs/anchored-run",
+        checkpoint_path=Path("/tmp/external-checkpoint.pth"),
+        override=None,
+    )
+
+    assert resolved == repo_root / "outputs" / "anchored-run"
+
+
 def test_web_training_job_output_uses_shared_run_layout(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

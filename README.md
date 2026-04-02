@@ -48,6 +48,7 @@ OSS 不是 demo 壳，而是长期技术主干。
 - 真正新的能力先扩 runtime，再扩 YAML
 
 > 以下命令默认在 **MedFusion OSS 仓库根目录** 执行。
+> `logging.output_dir` 和 `--output-dir` 这类相对输出路径也会统一锚定到这个仓库根目录，而不是你当前 shell 的 `cwd`。
 
 如果你完全没有私有数据，推荐先走“公共数据快速验证”。
 先成功跑通一次，再迁移到自己的 YAML，阻力最小。

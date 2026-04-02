@@ -4,14 +4,28 @@ Tests for CLI module structure and imports.
 
 import json
 import os
+import shutil
 import sys
 import tempfile
 import tomllib
 from pathlib import Path
 
+import pytest
+
 from test_build_results import _create_checkpoint_and_logs
 
 os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-cli-test-"))
+
+
+def _anchor_test_data_paths_to_repo_root(config_path: Path) -> Path:
+    from med_core.configs import load_config, save_config
+
+    repo_root = Path(__file__).resolve().parents[1]
+    config = load_config(config_path)
+    config.data.csv_path = str((repo_root / config.data.csv_path).resolve())
+    config.data.image_dir = str((repo_root / config.data.image_dir).resolve())
+    save_config(config, config_path)
+    return config_path
 
 
 def test_cli_imports():
@@ -244,6 +258,83 @@ def test_build_results_cli_supports_survival_and_importance_options(
     assert payload["validation"]["global_feature_importance"]["top_features"]
 
 
+def test_train_cli_anchors_relative_output_override_to_repo_root(
+    tmp_path,
+    monkeypatch,
+):
+    from med_core.cli.train import MedicalMultimodalDataset, train
+    from med_core.configs import load_config, save_config
+
+    class StopAfterOutputDir(RuntimeError):
+        pass
+
+    def _stop_after_output_dir(*args, **kwargs):
+        raise StopAfterOutputDir
+
+    config = load_config("configs/starter/quickstart.yaml")
+    config.logging.output_dir = str(tmp_path / "config-output")
+    config_path = tmp_path / "train-anchor.yaml"
+    save_config(config, config_path)
+
+    repo_root = Path(__file__).resolve().parents[1]
+    relative_output_dir = f"outputs/pytest-train-anchor-{tmp_path.name}"
+    target_dir = repo_root / relative_output_dir
+    shutil.rmtree(target_dir, ignore_errors=True)
+
+    outside_cwd = tmp_path / "outside-train"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+    monkeypatch.setattr(
+        MedicalMultimodalDataset,
+        "from_csv",
+        staticmethod(_stop_after_output_dir),
+    )
+
+    with pytest.raises(StopAfterOutputDir):
+        train(["--config", str(config_path), "--output-dir", relative_output_dir])
+
+    assert target_dir.exists()
+
+
+def test_build_results_cli_anchors_relative_output_override_to_repo_root(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from med_core.cli.build_results import build_results
+
+    config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
+    _anchor_test_data_paths_to_repo_root(config_path)
+    repo_root = Path(__file__).resolve().parents[1]
+    relative_output_dir = f"outputs/pytest-build-results-anchor-{tmp_path.name}"
+    target_dir = repo_root / relative_output_dir
+    shutil.rmtree(target_dir, ignore_errors=True)
+
+    outside_cwd = tmp_path / "outside-build-results"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    try:
+        build_results(
+            [
+                "--config",
+                str(config_path),
+                "--checkpoint",
+                str(checkpoint_path),
+                "--output-dir",
+                relative_output_dir,
+                "--attention-samples",
+                "0",
+                "--json",
+            ]
+        )
+        payload = json.loads(capsys.readouterr().out)
+        assert Path(payload["output_dir"]) == target_dir
+        assert (target_dir / "reports" / "summary.json").exists()
+    finally:
+        shutil.rmtree(target_dir, ignore_errors=True)
+
+
 def test_import_run_cli_preserves_result_contract_and_is_idempotent(tmp_path, capsys):
     from med_core.cli.import_run import import_run
 
@@ -304,3 +395,43 @@ def test_import_run_cli_preserves_result_contract_and_is_idempotent(tmp_path, ca
     import_run(base_args)
     second_payload = json.loads(capsys.readouterr().out)
     assert second_payload["model_id"] == first_payload["model_id"]
+
+
+def test_import_run_cli_anchors_relative_output_override_to_repo_root(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from med_core.cli.import_run import import_run
+
+    config_path, checkpoint_path = _create_checkpoint_and_logs(tmp_path)
+    _anchor_test_data_paths_to_repo_root(config_path)
+    repo_root = Path(__file__).resolve().parents[1]
+    relative_output_dir = f"outputs/pytest-import-run-anchor-{tmp_path.name}"
+    target_dir = repo_root / relative_output_dir
+    shutil.rmtree(target_dir, ignore_errors=True)
+
+    outside_cwd = tmp_path / "outside-import-run"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    try:
+        import_run(
+            [
+                "--config",
+                str(config_path),
+                "--checkpoint",
+                str(checkpoint_path),
+                "--output-dir",
+                relative_output_dir,
+                "--attention-samples",
+                "0",
+                "--json",
+            ]
+        )
+        payload = json.loads(capsys.readouterr().out)
+        artifact_paths = payload["artifact_paths"]
+        assert Path(artifact_paths["summary_path"]).parent.parent == target_dir
+        assert (target_dir / "reports" / "summary.json").exists()
+    finally:
+        shutil.rmtree(target_dir, ignore_errors=True)

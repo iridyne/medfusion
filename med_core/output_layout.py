@@ -6,6 +6,30 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+def oss_repo_root() -> Path:
+    """Return the MedFusion OSS repository root."""
+    return Path(__file__).resolve().parents[1]
+
+
+def resolve_oss_path(path: str | Path) -> Path:
+    """Anchor relative paths to the OSS repo root."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return oss_repo_root() / candidate
+
+
+def format_oss_display_path(path: str | Path) -> str:
+    """Prefer repo-relative display paths for paths inside the OSS repository."""
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        return str(candidate)
+    try:
+        return candidate.relative_to(oss_repo_root()).as_posix()
+    except ValueError:
+        return str(candidate)
+
+
 @dataclass(frozen=True)
 class RunOutputLayout:
     """Canonical directory layout for a training or import run."""
@@ -13,7 +37,7 @@ class RunOutputLayout:
     root_dir: Path
 
     def __init__(self, root_dir: str | Path):
-        object.__setattr__(self, "root_dir", Path(root_dir))
+        object.__setattr__(self, "root_dir", resolve_oss_path(root_dir))
 
     @property
     def checkpoints_dir(self) -> Path:
@@ -127,7 +151,7 @@ def resolve_run_output_dir(
 ) -> Path:
     """Resolve the run root, preserving explicit overrides."""
     if override is not None:
-        return Path(override)
+        return resolve_oss_path(override)
     if checkpoint_path.parent.name == "checkpoints":
         return checkpoint_path.parent.parent
-    return Path(config_output_dir)
+    return resolve_oss_path(config_output_dir)

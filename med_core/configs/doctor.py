@@ -11,7 +11,7 @@ import pandas as pd
 from med_core.configs.base_config import ExperimentConfig
 from med_core.configs.config_loader import load_config
 from med_core.configs.validation import validate_config
-from med_core.output_layout import RunOutputLayout
+from med_core.output_layout import RunOutputLayout, format_oss_display_path
 
 
 @dataclass
@@ -138,12 +138,14 @@ class ConfigDoctor:
         layout = RunOutputLayout(config.logging.output_dir)
         checkpoint_path = layout.checkpoints_dir / "best.pth"
         config_path_str = str(config_path)
+        display_output_dir = format_oss_display_path(layout.root_dir)
+        display_checkpoint_path = format_oss_display_path(checkpoint_path)
 
         return {
             "schema_family": "experiment",
             "config_path": config_path_str,
             "dataset_type": config.data.dataset_type,
-            "output_dir": str(layout.root_dir),
+            "output_dir": display_output_dir,
             "model": {
                 "model_type": config.model.model_type,
                 "vision_backbone": config.model.vision.backbone,
@@ -151,22 +153,22 @@ class ConfigDoctor:
                 "num_classes": config.model.num_classes,
             },
             "artifacts": {
-                "checkpoint": str(checkpoint_path),
-                "metrics": str(layout.metrics_path),
-                "validation": str(layout.validation_path),
-                "summary": str(layout.summary_path),
-                "report": str(layout.report_path),
+                "checkpoint": display_checkpoint_path,
+                "metrics": format_oss_display_path(layout.metrics_path),
+                "validation": format_oss_display_path(layout.validation_path),
+                "summary": format_oss_display_path(layout.summary_path),
+                "report": format_oss_display_path(layout.report_path),
             },
             "recommended_commands": {
                 "validate": f"medfusion validate-config --config {config_path_str}",
                 "train": f"medfusion train --config {config_path_str}",
                 "build_results": (
                     "medfusion build-results "
-                    f"--config {config_path_str} --checkpoint {checkpoint_path}"
+                    f"--config {config_path_str} --checkpoint {display_checkpoint_path}"
                 ),
                 "import_run": (
                     "medfusion import-run "
-                    f"--config {config_path_str} --checkpoint {checkpoint_path}"
+                    f"--config {config_path_str} --checkpoint {display_checkpoint_path}"
                 ),
             },
         }
