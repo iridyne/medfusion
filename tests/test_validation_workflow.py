@@ -46,6 +46,13 @@ def test_full_regression_ci_mode_uses_shell_smoke_entrypoint() -> None:
     assert "uv run python scripts/smoke_test.py" not in content
 
 
+def test_full_regression_full_mode_is_self_contained() -> None:
+    content = (REPO_ROOT / "scripts" / "full_regression.sh").read_text(encoding="utf-8")
+
+    assert "run_full_validation()" in content
+    assert "bash scripts/local_ci_test.sh" not in content
+
+
 def test_github_ci_workflow_uses_shell_smoke_entrypoint() -> None:
     content = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(
         encoding="utf-8"
@@ -81,11 +88,26 @@ def test_legacy_smoke_test_script_is_relocated_to_dev_diagnostics() -> None:
 
 
 @pytest.mark.parametrize(
+    ("relative_path", "expected_mode"),
+    [
+        ("scripts/local_ci_test.sh", "--full"),
+        ("scripts/test_ci_locally.sh", "--quick"),
+        ("scripts/quick_ci_test.py", "--quick"),
+    ],
+)
+def test_legacy_validation_entrypoints_delegate_to_full_regression(
+    relative_path: str, expected_mode: str
+) -> None:
+    content = (REPO_ROOT / relative_path).read_text(encoding="utf-8")
+
+    assert "scripts/full_regression.sh" in content
+    assert expected_mode in content
+
+
+@pytest.mark.parametrize(
     ("relative_path", "expected_reference"),
     [
-        ("scripts/local_ci_test.sh", "test/smoke.sh"),
-        ("scripts/test_ci_locally.sh", "test/smoke.sh"),
-        ("scripts/quick_ci_test.py", "test/smoke.sh"),
+        ("scripts/full_regression.sh", "test/smoke.sh"),
         ("scripts/ci_diagnostic.py", "test/smoke.sh"),
     ],
 )

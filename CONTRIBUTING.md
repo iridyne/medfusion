@@ -56,7 +56,7 @@ bash scripts/full_regression.sh --ci
 bash scripts/full_regression.sh --full
 ```
 
-会调用当前更完整的本地检查入口：`scripts/local_ci_test.sh`。
+当前 `--full` 已内置更完整的本地检查；`scripts/local_ci_test.sh` 仅作为兼容包装保留。
 
 ## 代码规范
 
