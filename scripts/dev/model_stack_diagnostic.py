@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Smoke Test for Med-Core Framework
+Model Stack Diagnostic for MedFusion
 
-This script performs a comprehensive smoke test to verify:
+This developer-only diagnostic script verifies:
 1. Model architecture (vision + tabular + fusion)
 2. Dimension alignment across all components
 3. Training loop functionality and gradient flow
 
+It is not the official repository smoke entrypoint.
+For project-level smoke validation, use `bash test/smoke.sh`.
+
 Usage:
-    uv run python scripts/smoke_test.py --config configs/testing/test_mock.yaml
-    uv run python scripts/smoke_test.py --config configs/testing/test_mock.yaml --epochs 5
+    uv run python scripts/dev/model_stack_diagnostic.py --config configs/testing/test_mock.yaml
+    uv run python scripts/dev/model_stack_diagnostic.py --config configs/testing/test_mock.yaml --epochs 5
 """
 
 import argparse
@@ -293,8 +296,8 @@ def test_training_loop(
 
 
 def generate_report(results: dict):
-    """Generate final smoke test report."""
-    print_section("SMOKE TEST REPORT")
+    """Generate final diagnostic report."""
+    print_section("MODEL STACK DIAGNOSTIC REPORT")
 
     all_passed = all(results.values())
 
@@ -317,7 +320,7 @@ def generate_report(results: dict):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run smoke test for Med-Core framework"
+        description="Run the MedFusion model stack diagnostic"
     )
     parser.add_argument(
         "--config",
@@ -329,11 +332,11 @@ def main():
         "--epochs",
         type=int,
         default=3,
-        help="Number of training epochs for smoke test",
+        help="Number of training epochs for the diagnostic run",
     )
     args = parser.parse_args()
 
-    print_section("MED-CORE FRAMEWORK SMOKE TEST")
+    print_section("MEDFUSION MODEL STACK DIAGNOSTIC")
     print(f"  Config: {args.config}")
     print(f"  Epochs: {args.epochs}")
 

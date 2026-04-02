@@ -14,3 +14,8 @@
 - `configs/public_datasets/`
 - `medfusion train`
 - `medfusion build-results`
+
+当前这里也包含一个典型示例：
+
+- `scripts/dev/model_stack_diagnostic.py`
+  用于开发阶段检查模型堆栈、张量维度和梯度流；它不是仓库官方 smoke 入口，项目级自检仍应使用 `bash test/smoke.sh`

@@ -65,6 +65,21 @@ def test_verify_ci_fixes_checks_shell_smoke_entrypoint_in_workflow() -> None:
     assert "历史 scripts/smoke_test.py 入口" in content
 
 
+def test_legacy_smoke_test_script_is_relocated_to_dev_diagnostics() -> None:
+    legacy_path = REPO_ROOT / "scripts" / "smoke_test.py"
+    diagnostic_path = REPO_ROOT / "scripts" / "dev" / "model_stack_diagnostic.py"
+
+    assert not legacy_path.exists()
+    assert diagnostic_path.exists()
+
+    content = diagnostic_path.read_text(encoding="utf-8")
+
+    assert "Model Stack Diagnostic for MedFusion" in content
+    assert "developer-only diagnostic script" in content
+    assert "scripts/dev/model_stack_diagnostic.py" in content
+    assert "scripts/smoke_test.py" not in content
+
+
 @pytest.mark.parametrize(
     ("relative_path", "expected_reference"),
     [
