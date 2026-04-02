@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from med_core.configs import load_config
+from med_core.configs.config_loader import resolve_config_path
 from med_core.postprocessing import build_results_artifacts
 
 # Setup logging
@@ -47,7 +48,7 @@ def evaluate(
     )
     args = parser.parse_args(argv)
 
-    config_path = Path(args.config)
+    config_path = resolve_config_path(args.config)
     checkpoint_path = Path(args.checkpoint)
     output_dir = Path(args.output_dir)
 

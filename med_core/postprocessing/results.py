@@ -27,6 +27,7 @@ from torch.utils.data import DataLoader
 
 from med_core.backbones import create_tabular_backbone, create_vision_backbone
 from med_core.configs import load_config
+from med_core.configs.config_loader import resolve_config_path
 from med_core.datasets import (
     MedicalMultimodalDataset,
     ThreePhaseCTCaseDataset,
@@ -1813,7 +1814,7 @@ def build_results_artifacts(
     if split not in {"train", "val", "test", "all"}:
         raise ValueError(f"Unsupported split: {split}")
 
-    config_path = Path(config_path)
+    config_path = resolve_config_path(config_path)
     checkpoint_path = Path(checkpoint_path)
     config = load_config(config_path)
     actual_output_dir = resolve_run_output_dir(

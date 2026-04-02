@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 
 from med_core.configs.base_config import ExperimentConfig
-from med_core.configs.config_loader import load_config
+from med_core.configs.config_loader import load_config, resolve_config_path
 from med_core.configs.validation import validate_config
 from med_core.output_layout import RunOutputLayout, format_oss_display_path
 
@@ -65,7 +65,7 @@ class ConfigDoctor:
         return pd.read_csv(csv_path, **read_csv_kwargs)
 
     def analyze(self, config_path: str | Path) -> ConfigDoctorReport:
-        config_path = Path(config_path)
+        config_path = resolve_config_path(config_path)
         errors: list[DoctorIssue] = []
         warnings: list[DoctorIssue] = []
         info: list[dict[str, Any]] = []

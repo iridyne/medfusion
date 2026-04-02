@@ -157,6 +157,24 @@ def test_validate_config_cli_allows_repo_relative_data_paths_outside_oss(
     assert payload["summary"]["dataset_rows"] > 0
 
 
+def test_validate_config_cli_resolves_repo_relative_config_outside_oss(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from med_core.cli.doctor import validate_config
+
+    outside_cwd = tmp_path / "outside-relative-config"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    validate_config(["--config", "configs/starter/quickstart.yaml", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["ok"] is True
+    assert payload["summary"]["mainline_contract"]["output_dir"] == "outputs/quickstart"
+
+
 def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
     from med_core.cli.evaluate import evaluate
 

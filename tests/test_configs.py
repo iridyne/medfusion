@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
 import yaml
 
 from med_core.configs import (
@@ -199,6 +200,39 @@ class TestConfigYAMLLoading(unittest.TestCase):
         self.assertIn("builder 风格配置", message)
         self.assertIn("build_model_from_config", message)
         self.assertIn("configs/starter/", message)
+
+
+def test_load_config_resolves_repo_relative_path_outside_oss(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    outside_cwd = tmp_path / "outside-load-config"
+    outside_cwd.mkdir()
+    monkeypatch.chdir(outside_cwd)
+
+    config = load_config("configs/starter/quickstart.yaml")
+
+    assert config.model.vision.backbone == "resnet18"
+    assert config.logging.output_dir == "outputs/quickstart"
+
+
+def test_load_config_prefers_existing_cwd_relative_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    local_config_dir = tmp_path / "configs" / "starter"
+    local_config_dir.mkdir(parents=True)
+    local_config_path = local_config_dir / "quickstart.yaml"
+    local_config_path.write_text(
+        yaml.safe_dump({"experiment_name": "local-override", "seed": 7}),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    config = load_config("configs/starter/quickstart.yaml")
+
+    assert config.experiment_name == "local-override"
+    assert config.seed == 7
 
 
 class TestConfigValidation(unittest.TestCase):

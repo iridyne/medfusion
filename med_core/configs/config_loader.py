@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 import yaml
 
+from med_core.output_layout import resolve_oss_path
 from med_core.configs.base_config import (
     BaseConfig,
     ClinicalPreprocessingConfig,
@@ -32,6 +33,19 @@ T = TypeVar("T", bound=BaseConfig)
 
 class UnsupportedConfigSchemaError(ValueError):
     """Raised when a config file uses a different schema than the requested loader."""
+
+
+def resolve_config_path(config_path: str | Path) -> Path:
+    """Resolve config paths by preferring cwd-local files before OSS repo fallbacks."""
+    candidate = Path(config_path)
+    if candidate.is_absolute():
+        return candidate
+    if candidate.exists():
+        return candidate
+    repo_candidate = resolve_oss_path(candidate)
+    if repo_candidate.exists():
+        return repo_candidate
+    return candidate
 
 
 def _merge_dicts(base: dict, override: dict) -> dict:
@@ -221,7 +235,7 @@ def load_config(
         >>> config = load_config("configs/starter/quickstart.yaml")
         >>> config = load_config("configs/starter/default.yaml", overrides={"training": {"num_epochs": 50}})
     """
-    config_path = Path(config_path)
+    config_path = resolve_config_path(config_path)
 
     if not config_path.exists():
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
