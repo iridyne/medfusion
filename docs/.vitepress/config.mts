@@ -130,8 +130,7 @@ export default defineConfig({
             { text: '梯度检查点', link: '/contents/guides/advanced-features/gradient-checkpointing' },
             { text: '模型压缩', link: '/contents/guides/advanced-features/model-compression' },
             { text: '数据缓存', link: '/contents/guides/advanced-features/data-caching' },
-            { text: '性能基准测试', link: '/contents/guides/advanced-features/performance-benchmarking' },
-            { text: 'CI/CD 流程', link: '/contents/guides/advanced-features/ci-cd' }
+            { text: '性能基准测试', link: '/contents/guides/advanced-features/performance-benchmarking' }
           ]
         },
         {
