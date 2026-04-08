@@ -26,6 +26,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           extras: "dev,web"
 
+      - name: Generate mock data
+        run: |
+          uv run python scripts/generate_mock_data.py
+
       - name: Run tests
         run: |
           uv run pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term --ignore=tests/test_config_validation.py --ignore=tests/test_export.py
