@@ -29,7 +29,7 @@ runs:
         path: |
           ~/.cache/uv
           ~/.cargo/bin/uv
-        key: ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+        key: ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-uv-${{ inputs.python-version }}-
           ${{ runner.os }}-uv-
@@ -37,21 +37,28 @@ runs:
     - name: Install uv and setup environment
       shell: bash
       run: |
-        # Install uv if not cached
+        set -euo pipefail
+
         if ! command -v uv &> /dev/null; then
           curl -LsSf https://astral.sh/uv/install.sh | sh
         fi
 
-        # Add uv to PATH for this step
         export PATH="$HOME/.cargo/bin:$PATH"
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-        # Add uv to PATH for subsequent steps
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-        # Create virtual environment and install dependencies
         uv venv
-        uv pip install -e ".[${{ inputs.extras }}]"
 
-        # Activate virtual environment for subsequent steps
-        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
-        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
+        extras_csv="${{ inputs.extras }}"
+        sync_args=()
+        IFS=',' read -ra extras_array <<< "$extras_csv"
+        for extra in "${extras_array[@]}"; do
+          extra="$(echo "$extra" | xargs)"
+          if [[ -n "$extra" ]]; then
+            sync_args+=(--extra "$extra")
+          fi
+        done
+
+        uv sync "${sync_args[@]}"
+
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> "$GITHUB_ENV"
