@@ -227,34 +227,44 @@ def test_three_phase_build_results_emits_roc_and_shap_artifacts(tmp_path: Path) 
 
     summary = json.loads((output_dir / "reports" / "summary.json").read_text())
     artifacts = summary["artifacts"]
-    assert artifacts["config_path"].endswith("artifacts/training-config.json")
-    assert artifacts["metrics_path"].endswith("metrics/metrics.json")
-    assert artifacts["validation_path"].endswith("metrics/validation.json")
-    assert artifacts["predictions_path"].endswith("metrics/predictions.json")
-    assert artifacts["case_explanations_path"].endswith(
+    assert Path(artifacts["config_path"]).as_posix().endswith(
+        "artifacts/training-config.json"
+    )
+    assert Path(artifacts["metrics_path"]).as_posix().endswith("metrics/metrics.json")
+    assert Path(artifacts["validation_path"]).as_posix().endswith(
+        "metrics/validation.json"
+    )
+    assert Path(artifacts["predictions_path"]).as_posix().endswith(
+        "metrics/predictions.json"
+    )
+    assert Path(artifacts["case_explanations_path"]).as_posix().endswith(
         "metrics/case_explanations.json"
     )
-    assert artifacts["phase_importance_path"].endswith(
+    assert Path(artifacts["phase_importance_path"]).as_posix().endswith(
         "metrics/phase_importance.json"
     )
-    assert artifacts["history_path"].endswith("logs/history.json")
-    assert artifacts["roc_curve_plot_path"].endswith("artifacts/visualizations/roc_curve.png")
-    assert artifacts["confusion_matrix_plot_path"].endswith(
+    assert Path(artifacts["history_path"]).as_posix().endswith("logs/history.json")
+    assert Path(artifacts["roc_curve_plot_path"]).as_posix().endswith(
+        "artifacts/visualizations/roc_curve.png"
+    )
+    assert Path(artifacts["confusion_matrix_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/confusion_matrix.png"
     )
-    assert artifacts["shap_bar_plot_path"].endswith(
+    assert Path(artifacts["shap_bar_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/shap/shap_bar.png"
     )
-    assert artifacts["shap_beeswarm_plot_path"].endswith(
+    assert Path(artifacts["shap_beeswarm_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/shap/shap_beeswarm.png"
     )
-    assert artifacts["feature_importance_bar_plot_path"].endswith(
+    assert Path(artifacts["feature_importance_bar_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/shap/shap_bar.png"
     )
-    assert artifacts["feature_importance_beeswarm_plot_path"].endswith(
+    assert Path(artifacts["feature_importance_beeswarm_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/shap/shap_beeswarm.png"
     )
-    assert artifacts["feature_importance_path"].endswith("artifacts/shap_summary.json")
+    assert Path(artifacts["feature_importance_path"]).as_posix().endswith(
+        "artifacts/shap_summary.json"
+    )
 
     report_text = (output_dir / "reports" / "report.md").read_text(encoding="utf-8")
     assert "## Overview" in report_text
@@ -904,10 +914,10 @@ def test_three_phase_build_results_uses_demo_small_sample_explainability_setting
 
     summary = json.loads((output_dir / "reports" / "summary.json").read_text())
     assert summary["split"] == "train"
-    assert summary["artifacts"]["roc_curve_plot_path"].endswith(
+    assert Path(summary["artifacts"]["roc_curve_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/roc_curve.png"
     )
-    assert summary["artifacts"]["shap_bar_plot_path"].endswith(
+    assert Path(summary["artifacts"]["shap_bar_plot_path"]).as_posix().endswith(
         "artifacts/visualizations/shap/shap_bar.png"
     )
 
