@@ -338,6 +338,17 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
                     "phase_feature_dim": 16,
                     "share_phase_encoder": False,
                     "use_risk_head": True,
+                    "doctor_interest": {
+                        "enabled": True,
+                        "hidden_channels": 8,
+                        "temperature": 6.0,
+                    },
+                    "topk_focus": {
+                        "enabled": True,
+                        "k": 3,
+                        "patch_size": [2, 2, 2],
+                        "projection_dim": 8,
+                    },
                     "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
                     "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
                 },
@@ -357,6 +368,7 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
                     "export_phase_importance": True,
                     "export_case_explanations": True,
                     "heatmap_ready": True,
+                    "export_doctor_interest_maps": True,
                 },
             },
             sort_keys=False,
@@ -367,16 +379,7 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
     train(["--config", str(config_path)])
     checkpoint_path = output_dir / "checkpoints" / "best.pth"
 
-    build_results(
-        [
-            "--config",
-            str(config_path),
-            "--checkpoint",
-            str(checkpoint_path),
-            "--split",
-            "train",
-        ]
-    )
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
 
     heatmap_manifest_path = (
         output_dir / "artifacts" / "visualizations" / "heatmaps" / "manifest.json"
@@ -436,21 +439,376 @@ def test_three_phase_build_results_emits_heatmap_artifacts_when_enabled(
         assert original_slice["image_shape"] == [8, 8]
 
     summary = json.loads((output_dir / "reports" / "summary.json").read_text())
-    assert summary["artifacts"]["heatmap_manifest_path"].endswith(
+    assert Path(summary["artifacts"]["heatmap_manifest_path"]).as_posix().endswith(
         "artifacts/visualizations/heatmaps/manifest.json"
     )
+    assert Path(summary["artifacts"]["doctor_interest_manifest_path"]).as_posix().endswith(
+        "artifacts/visualizations/doctor_interest/manifest.json"
+    )
+
+    doctor_interest_manifest = json.loads(
+        (
+            output_dir
+            / "artifacts"
+            / "visualizations"
+            / "doctor_interest"
+            / "manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert doctor_interest_manifest["split"] == "train"
+    assert doctor_interest_manifest["cases"]
+    first_doctor_interest = doctor_interest_manifest["cases"][0]["doctor_interest"][0]
+    assert len(first_doctor_interest["focus_regions"]) == 3
+    assert [region["rank"] for region in first_doctor_interest["focus_regions"]] == [
+        1,
+        2,
+        3,
+    ]
+    assert all(
+        "feature_map_center" in region
+        for region in first_doctor_interest["focus_regions"]
+    )
+    assert all("score" in region for region in first_doctor_interest["focus_regions"])
+    assert any(
+        item["space"] == "original_image" for item in first_doctor_interest["renderings"]
+    )
+    assert "focus_regions" in first_doctor_interest
 
     case_explanations = json.loads(
         (output_dir / "metrics" / "case_explanations.json").read_text(encoding="utf-8")
     )
     assert case_explanations["cases"]
     assert len(case_explanations["cases"][0]["heatmap_artifacts"]) == 3
+    assert len(case_explanations["cases"][0]["doctor_interest_artifacts"]) == 3
 
     report_text = (output_dir / "reports" / "report.md").read_text(encoding="utf-8")
     assert "## Imaging Heatmaps" in report_text
     assert "- 影像重点区域热图清单:" in report_text
     assert "- 原始切片叠加图:" in report_text
     assert "- 映射策略:" in report_text
+    assert "## Doctor Interest Maps" in report_text
+    assert "- 医生建议关注区清单:" in report_text
+    assert "- 关注区来源: 模型内生 doctor interest map" in report_text
+
+
+def test_three_phase_build_results_emits_empty_focus_regions_when_topk_disabled(
+    tmp_path: Path,
+) -> None:
+    rows: list[str] = [
+        "case_id,arterial_series_dir,portal_series_dir,noncontrast_series_dir,mvi_binary,age,sex,bmi"
+    ]
+    for index in range(4):
+        case_id = f"{index + 1:03d}"
+        phase_dirs = _write_case(tmp_path, case_id, 38 + index * 3)
+        label = index % 2
+        age = 54 + index
+        sex = index % 2
+        bmi = 23.0 + index * 0.3
+        rows.append(
+            f"{case_id},{phase_dirs['arterial']},{phase_dirs['portal']},{phase_dirs['noncontrast']},{label},{age},{sex},{bmi}"
+        )
+
+    manifest_path = tmp_path / "cases_topk_disabled.csv"
+    manifest_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    output_dir = tmp_path / "outputs_topk_disabled"
+    config_path = tmp_path / "smurf_mainline_topk_disabled.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment_name": "smurf_build_results_topk_disabled",
+                "device": "cpu",
+                "data": {
+                    "dataset_type": "three_phase_ct_tabular",
+                    "csv_path": str(manifest_path),
+                    "target_column": "mvi_binary",
+                    "patient_id_column": "case_id",
+                    "phase_dir_columns": {
+                        "arterial": "arterial_series_dir",
+                        "portal": "portal_series_dir",
+                        "noncontrast": "noncontrast_series_dir",
+                    },
+                    "clinical_feature_columns": ["age", "sex", "bmi"],
+                    "target_shape": [4, 8, 8],
+                    "window_preset": "liver",
+                    "batch_size": 2,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    "train_ratio": 1.0,
+                    "val_ratio": 0.0,
+                    "test_ratio": 0.0,
+                },
+                "model": {
+                    "model_type": "three_phase_ct_fusion",
+                    "num_classes": 2,
+                    "phase_feature_dim": 16,
+                    "share_phase_encoder": False,
+                    "use_risk_head": True,
+                    "doctor_interest": {
+                        "enabled": True,
+                        "hidden_channels": 8,
+                        "temperature": 6.0,
+                    },
+                    "topk_focus": {
+                        "enabled": False,
+                        "k": 3,
+                        "patch_size": [2, 2, 2],
+                        "projection_dim": 8,
+                    },
+                    "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
+                    "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
+                },
+                "training": {
+                    "num_epochs": 1,
+                    "mixed_precision": False,
+                    "use_progressive_training": False,
+                    "optimizer": {
+                        "optimizer": "adam",
+                        "learning_rate": 0.0005,
+                        "weight_decay": 0.0,
+                    },
+                    "scheduler": {"scheduler": "none"},
+                },
+                "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                    "export_doctor_interest_maps": True,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    train(["--config", str(config_path)])
+    checkpoint_path = output_dir / "checkpoints" / "best.pth"
+
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
+
+    doctor_interest_manifest = json.loads(
+        (
+            output_dir
+            / "artifacts"
+            / "visualizations"
+            / "doctor_interest"
+            / "manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert doctor_interest_manifest["cases"]
+    for case in doctor_interest_manifest["cases"]:
+        for item in case["doctor_interest"]:
+            assert item["focus_regions"] == []
+
+    summary = json.loads((output_dir / "reports" / "summary.json").read_text())
+    assert Path(summary["artifacts"]["doctor_interest_manifest_path"]).as_posix().endswith(
+        "artifacts/visualizations/doctor_interest/manifest.json"
+    )
+
+    case_explanations = json.loads(
+        (output_dir / "metrics" / "case_explanations.json").read_text(encoding="utf-8")
+    )
+    assert case_explanations["cases"]
+    assert all(
+        item["focus_regions"] == []
+        for case in case_explanations["cases"]
+        for item in case["doctor_interest_artifacts"]
+    )
+
+
+def test_three_phase_build_results_skips_doctor_interest_artifacts_when_disabled(
+    tmp_path: Path,
+) -> None:
+    rows: list[str] = [
+        "case_id,arterial_series_dir,portal_series_dir,noncontrast_series_dir,mvi_binary,age,sex,bmi"
+    ]
+    for index in range(4):
+        case_id = f"{index + 1:03d}"
+        phase_dirs = _write_case(tmp_path, case_id, 34 + index * 4)
+        label = index % 2
+        age = 57 + index
+        sex = index % 2
+        bmi = 22.5 + index * 0.4
+        rows.append(
+            f"{case_id},{phase_dirs['arterial']},{phase_dirs['portal']},{phase_dirs['noncontrast']},{label},{age},{sex},{bmi}"
+        )
+
+    manifest_path = tmp_path / "cases.csv"
+    manifest_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+    output_dir = tmp_path / "outputs"
+    config_path = tmp_path / "smurf_mainline_heatmaps_disabled.yaml"
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment_name": "smurf_build_results_heatmaps_disabled",
+                "device": "cpu",
+                "data": {
+                    "dataset_type": "three_phase_ct_tabular",
+                    "csv_path": str(manifest_path),
+                    "target_column": "mvi_binary",
+                    "patient_id_column": "case_id",
+                    "phase_dir_columns": {
+                        "arterial": "arterial_series_dir",
+                        "portal": "portal_series_dir",
+                        "noncontrast": "noncontrast_series_dir",
+                    },
+                    "clinical_feature_columns": ["age", "sex", "bmi"],
+                    "target_shape": [4, 8, 8],
+                    "window_preset": "liver",
+                    "batch_size": 2,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    "train_ratio": 1.0,
+                    "val_ratio": 0.0,
+                    "test_ratio": 0.0,
+                },
+                "model": {
+                    "model_type": "three_phase_ct_fusion",
+                    "num_classes": 2,
+                    "phase_feature_dim": 16,
+                    "share_phase_encoder": False,
+                    "use_risk_head": True,
+                    "doctor_interest": {
+                        "enabled": True,
+                        "hidden_channels": 8,
+                        "temperature": 6.0,
+                    },
+                    "topk_focus": {
+                        "enabled": False,
+                        "k": 3,
+                        "patch_size": [2, 2, 2],
+                        "projection_dim": 8,
+                    },
+                    "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
+                    "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
+                },
+                "training": {
+                    "num_epochs": 1,
+                    "mixed_precision": False,
+                    "use_progressive_training": False,
+                    "optimizer": {
+                        "optimizer": "adam",
+                        "learning_rate": 0.0005,
+                        "weight_decay": 0.0,
+                    },
+                    "scheduler": {"scheduler": "none"},
+                },
+                "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                    "export_doctor_interest_maps": True,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    train(["--config", str(config_path)])
+    checkpoint_path = output_dir / "checkpoints" / "best.pth"
+
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
+    enabled_manifest_path = (
+        output_dir / "artifacts" / "visualizations" / "doctor_interest" / "manifest.json"
+    )
+    assert enabled_manifest_path.exists()
+
+    config_path.write_text(
+        yaml.safe_dump(
+            {
+                "experiment_name": "smurf_build_results_heatmaps_disabled",
+                "device": "cpu",
+                "data": {
+                    "dataset_type": "three_phase_ct_tabular",
+                    "csv_path": str(manifest_path),
+                    "target_column": "mvi_binary",
+                    "patient_id_column": "case_id",
+                    "phase_dir_columns": {
+                        "arterial": "arterial_series_dir",
+                        "portal": "portal_series_dir",
+                        "noncontrast": "noncontrast_series_dir",
+                    },
+                    "clinical_feature_columns": ["age", "sex", "bmi"],
+                    "target_shape": [4, 8, 8],
+                    "window_preset": "liver",
+                    "batch_size": 2,
+                    "num_workers": 0,
+                    "pin_memory": False,
+                    "train_ratio": 1.0,
+                    "val_ratio": 0.0,
+                    "test_ratio": 0.0,
+                },
+                "model": {
+                    "model_type": "three_phase_ct_fusion",
+                    "num_classes": 2,
+                    "phase_feature_dim": 16,
+                    "share_phase_encoder": False,
+                    "use_risk_head": True,
+                    "doctor_interest": {
+                        "enabled": True,
+                        "hidden_channels": 8,
+                        "temperature": 6.0,
+                    },
+                    "topk_focus": {
+                        "enabled": False,
+                        "k": 3,
+                        "patch_size": [2, 2, 2],
+                        "projection_dim": 8,
+                    },
+                    "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
+                    "fusion": {"fusion_type": "gated", "hidden_dim": 12, "dropout": 0.1},
+                },
+                "training": {
+                    "num_epochs": 1,
+                    "mixed_precision": False,
+                    "use_progressive_training": False,
+                    "optimizer": {
+                        "optimizer": "adam",
+                        "learning_rate": 0.0005,
+                        "weight_decay": 0.0,
+                    },
+                    "scheduler": {"scheduler": "none"},
+                },
+                "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "heatmap_ready": True,
+                    "export_doctor_interest_maps": False,
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    build_results(["--config", str(config_path), "--checkpoint", str(checkpoint_path)])
+
+    summary = json.loads((output_dir / "reports" / "summary.json").read_text())
+    assert "doctor_interest_manifest_path" not in summary["artifacts"]
+    assert not (
+        output_dir
+        / "artifacts"
+        / "visualizations"
+        / "doctor_interest"
+        / "manifest.json"
+    ).exists()
+    assert not (
+        output_dir / "artifacts" / "visualizations" / "doctor_interest"
+    ).exists()
+
+    report_text = (output_dir / "reports" / "report.md").read_text(encoding="utf-8")
+    assert "## Doctor Interest Maps" not in report_text
+
+    case_explanations = json.loads(
+        (output_dir / "metrics" / "case_explanations.json").read_text(encoding="utf-8")
+    )
+    assert case_explanations["cases"]
+    assert case_explanations["cases"][0]["doctor_interest_artifacts"] == []
 
 
 def test_three_phase_build_results_uses_demo_small_sample_explainability_settings(
