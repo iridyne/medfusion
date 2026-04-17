@@ -13,22 +13,43 @@ from typing import Any
 
 import matplotlib
 import numpy as np
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Inches
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import (
-    Image,
-    PageBreak,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+
+try:
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Inches
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    Document = None
+    WD_ALIGN_PARAGRAPH = None
+    Inches = None
+
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch
+    from reportlab.platypus import (
+        Image,
+        PageBreak,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    colors = None
+    A4 = None
+    ParagraphStyle = None
+    getSampleStyleSheet = None
+    inch = None
+    Image = None
+    PageBreak = None
+    Paragraph = None
+    SimpleDocTemplate = None
+    Spacer = None
+    Table = None
+    TableStyle = None
 
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
@@ -38,6 +59,33 @@ from med_core.shared.visualization.font_utils import configure_matplotlib_fonts
 logger = logging.getLogger(__name__)
 
 configure_matplotlib_fonts()
+
+
+def _require_docx() -> None:
+    if Document is None or WD_ALIGN_PARAGRAPH is None or Inches is None:
+        raise RuntimeError(
+            "Word report generation requires the optional dependency 'python-docx'."
+        )
+
+
+def _require_reportlab() -> None:
+    if (
+        colors is None
+        or A4 is None
+        or ParagraphStyle is None
+        or getSampleStyleSheet is None
+        or inch is None
+        or Image is None
+        or PageBreak is None
+        or Paragraph is None
+        or SimpleDocTemplate is None
+        or Spacer is None
+        or Table is None
+        or TableStyle is None
+    ):
+        raise RuntimeError(
+            "PDF report generation requires the optional dependency 'reportlab'."
+        )
 
 
 class ReportGenerator:
@@ -171,6 +219,8 @@ class ReportGenerator:
         Returns:
             Path to generated Word document
         """
+        _require_docx()
+
         if output_filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"experiment_report_{timestamp}.docx"
@@ -241,6 +291,8 @@ class ReportGenerator:
         Returns:
             Path to generated PDF document
         """
+        _require_reportlab()
+
         if output_filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             output_filename = f"experiment_report_{timestamp}.pdf"

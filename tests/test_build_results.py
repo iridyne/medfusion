@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 import torch
+from PIL import Image
 from torch.utils.tensorboard import SummaryWriter
 
 from med_core.backbones import create_tabular_backbone, create_vision_backbone
@@ -14,16 +15,47 @@ from med_core.fusion import MultiModalFusionModel, create_fusion_module
 from med_core.postprocessing import build_results_artifacts
 
 
+def _create_mock_dataset_root(tmp_path: Path, sample_count: int = 20) -> tuple[Path, Path]:
+    data_root = tmp_path / "mock-data"
+    image_dir = data_root / "images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+
+    rows: list[dict[str, object]] = []
+    for index in range(sample_count):
+        image_name = f"patient_{index:03d}.png"
+        image_path = image_dir / image_name
+        pixel_value = 32 + (index * 7) % 180
+        Image.new("RGB", (64, 64), color=(pixel_value, pixel_value, pixel_value)).save(
+            image_path
+        )
+        rows.append(
+            {
+                "patient_id": f"P{index:03d}",
+                "image_path": f"images/{image_name}",
+                "age": 30 + index,
+                "gender": index % 2,
+                "diagnosis": index % 2,
+            }
+        )
+
+    csv_path = data_root / "metadata.csv"
+    pd.DataFrame(rows).to_csv(csv_path, index=False)
+    return csv_path, data_root
+
+
 def _create_checkpoint_and_logs(
     tmp_path: Path,
     *,
     include_survival: bool = False,
 ) -> tuple[Path, Path]:
     config = load_config("configs/starter/quickstart.yaml")
+    mock_csv_path, mock_image_dir = _create_mock_dataset_root(tmp_path)
     config.logging.output_dir = str(tmp_path / "run")
     config.data.image_size = 64
     config.data.batch_size = 8
     config.data.num_workers = 0
+    config.data.csv_path = str(mock_csv_path)
+    config.data.image_dir = str(mock_image_dir)
     config.model.vision.pretrained = False
     if include_survival:
         source_csv = Path(config.data.csv_path)
