@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -93,6 +94,17 @@ def test_three_phase_mainline_e2e(tmp_path: Path) -> None:
                     "model_type": "three_phase_ct_fusion",
                     "num_classes": 2,
                     "phase_feature_dim": 16,
+                    "doctor_interest": {
+                        "enabled": True,
+                        "hidden_channels": 8,
+                        "temperature": 6.0,
+                    },
+                    "topk_focus": {
+                        "enabled": True,
+                        "k": 3,
+                        "patch_size": [2, 2, 2],
+                        "projection_dim": 8,
+                    },
                     "share_phase_encoder": False,
                     "use_risk_head": True,
                     "tabular": {"hidden_dims": [16], "output_dim": 8, "dropout": 0.1},
@@ -100,6 +112,13 @@ def test_three_phase_mainline_e2e(tmp_path: Path) -> None:
                 },
                 "training": {
                     "num_epochs": 1,
+                    "doctor_interest_loss": {
+                        "cam_align_weight": 0.05,
+                        "consistency_weight": 0.02,
+                        "sparse_weight": 0.01,
+                        "diverse_weight": 0.01,
+                        "body_prior_weight": 0.02,
+                    },
                     "mixed_precision": False,
                     "use_progressive_training": False,
                     "optimizer": {
@@ -110,6 +129,14 @@ def test_three_phase_mainline_e2e(tmp_path: Path) -> None:
                     "scheduler": {"scheduler": "none"},
                 },
                 "logging": {"output_dir": str(output_dir), "use_tensorboard": False},
+                "explainability": {
+                    "export_phase_importance": True,
+                    "export_case_explanations": True,
+                    "export_doctor_interest_maps": True,
+                    "heatmap_ready": True,
+                    "build_results_split": "val",
+                    "min_global_importance_samples": 1,
+                },
             },
             sort_keys=False,
         ),
@@ -133,3 +160,9 @@ def test_three_phase_mainline_e2e(tmp_path: Path) -> None:
     assert (output_dir / "metrics" / "validation.json").exists()
     assert (output_dir / "reports" / "summary.json").exists()
     assert (output_dir / "reports" / "report.md").exists()
+
+    summary = json.loads((output_dir / "reports" / "summary.json").read_text())
+    assert "doctor_interest_manifest_path" in summary["artifacts"]
+
+    case_explanations = json.loads((output_dir / "metrics" / "case_explanations.json").read_text())
+    assert "doctor_interest_artifacts" in case_explanations["cases"][0]
