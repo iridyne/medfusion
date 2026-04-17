@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import torch
 from torch import nn
+from med_core.models.doctor_interest import (
+    DoctorInterestMapHead,
+    InterestGuidedPooling3D,
+    TopKLocalFocus3D,
+)
 
 
 def _build_norm(num_channels: int, norm_type: str) -> nn.Module:
@@ -76,10 +81,24 @@ class ThreePhaseCTFusionModel(nn.Module):
         phase_encoder_num_blocks: int = 3,
         phase_encoder_dropout: float = 0.1,
         phase_encoder_norm_type: str = "batch",
+        doctor_interest_enabled: bool = False,
+        doctor_interest_hidden_channels: int = 8,
+        doctor_interest_temperature: float = 6.0,
+        topk_focus_enabled: bool = False,
+        topk_focus_k: int = 3,
+        topk_focus_patch_size: tuple[int, int, int] = (4, 4, 4),
+        topk_focus_projection_dim: int = 16,
     ) -> None:
+        if topk_focus_enabled and not doctor_interest_enabled:
+            raise ValueError(
+                "topk_focus_enabled requires doctor_interest_enabled=True"
+            )
         super().__init__()
         self.phase_fusion_type = phase_fusion_type
         self.clinical_mask_dim = clinical_mask_dim
+        self.doctor_interest_enabled = doctor_interest_enabled
+        self.topk_focus_enabled = topk_focus_enabled
+        self._phase_encoder_channels = phase_encoder_base_channels * (2 ** max(phase_encoder_num_blocks - 1, 0))
         encoder_kwargs = {
             "base_channels": phase_encoder_base_channels,
             "num_blocks": phase_encoder_num_blocks,
@@ -121,6 +140,63 @@ class ThreePhaseCTFusionModel(nn.Module):
         self.classifier = nn.Linear(fusion_hidden_dim, num_classes)
         self.risk_head = nn.Linear(fusion_hidden_dim, 1) if use_risk_head else None
 
+        if self.doctor_interest_enabled:
+            self.doctor_interest_heads = nn.ModuleDict(
+                {
+                    "arterial": DoctorInterestMapHead(
+                        self._phase_encoder_channels,
+                        hidden_channels=doctor_interest_hidden_channels,
+                        temperature=doctor_interest_temperature,
+                    ),
+                    "portal": DoctorInterestMapHead(
+                        self._phase_encoder_channels,
+                        hidden_channels=doctor_interest_hidden_channels,
+                        temperature=doctor_interest_temperature,
+                    ),
+                    "noncontrast": DoctorInterestMapHead(
+                        self._phase_encoder_channels,
+                        hidden_channels=doctor_interest_hidden_channels,
+                        temperature=doctor_interest_temperature,
+                    ),
+                }
+            )
+            self.interest_pool = InterestGuidedPooling3D()
+            self.interest_projection = nn.ModuleDict(
+                {
+                    "arterial": nn.Linear(self._phase_encoder_channels, phase_feature_dim),
+                    "portal": nn.Linear(self._phase_encoder_channels, phase_feature_dim),
+                    "noncontrast": nn.Linear(self._phase_encoder_channels, phase_feature_dim),
+                }
+            )
+            self.topk_focus_modules = (
+                nn.ModuleDict(
+                    {
+                        "arterial": TopKLocalFocus3D(
+                            k=topk_focus_k,
+                            patch_size=topk_focus_patch_size,
+                            projection_dim=topk_focus_projection_dim,
+                        ),
+                        "portal": TopKLocalFocus3D(
+                            k=topk_focus_k,
+                            patch_size=topk_focus_patch_size,
+                            projection_dim=topk_focus_projection_dim,
+                        ),
+                        "noncontrast": TopKLocalFocus3D(
+                            k=topk_focus_k,
+                            patch_size=topk_focus_patch_size,
+                            projection_dim=topk_focus_projection_dim,
+                        ),
+                    }
+                )
+                if topk_focus_enabled
+                else None
+            )
+        else:
+            self.doctor_interest_heads = None
+            self.interest_pool = None
+            self.interest_projection = None
+            self.topk_focus_modules = None
+
         if freeze_phase_encoder:
             for encoder in (
                 self.arterial_encoder,
@@ -141,6 +217,43 @@ class ThreePhaseCTFusionModel(nn.Module):
         arterial_features, arterial_map = self.arterial_encoder(arterial)
         portal_features, portal_map = self.portal_encoder(portal)
         noncontrast_features, noncontrast_map = self.noncontrast_encoder(noncontrast)
+
+        doctor_interest_maps: dict[str, dict[str, torch.Tensor]] = {}
+        topk_focus_centers: dict[str, torch.Tensor] = {}
+        topk_focus_scores: dict[str, torch.Tensor] = {}
+
+        phase_feature_lookup = {
+            "arterial": (arterial_features, arterial_map),
+            "portal": (portal_features, portal_map),
+            "noncontrast": (noncontrast_features, noncontrast_map),
+        }
+
+        if self.doctor_interest_enabled and self.doctor_interest_heads is not None:
+            interest_features: list[torch.Tensor] = []
+            for phase_name, (phase_features, phase_map) in phase_feature_lookup.items():
+                interest_head = self.doctor_interest_heads[phase_name]
+                interest_outputs = interest_head(phase_map)
+                doctor_interest_maps[phase_name] = interest_outputs
+                pooled_features = self.interest_pool(
+                    phase_map, interest_outputs["prob_map"]
+                )
+                interest_features.append(
+                    self.interest_projection[phase_name](pooled_features)
+                )
+                if self.topk_focus_enabled and self.topk_focus_modules is not None:
+                    focus_outputs = self.topk_focus_modules[phase_name](
+                        phase_map, interest_outputs["score_map"]
+                    )
+                    topk_focus_centers[phase_name] = focus_outputs["centers"]
+                    topk_focus_scores[phase_name] = focus_outputs["scores"]
+
+            arterial_features = arterial_features + interest_features[0]
+            portal_features = portal_features + interest_features[1]
+            noncontrast_features = noncontrast_features + interest_features[2]
+        else:
+            doctor_interest_maps = {}
+            topk_focus_centers = {}
+            topk_focus_scores = {}
 
         if self.clinical_mask_dim > 0:
             if clinical_missing_mask is None:
@@ -204,4 +317,7 @@ class ThreePhaseCTFusionModel(nn.Module):
                 "portal": portal_map,
                 "noncontrast": noncontrast_map,
             },
+            "doctor_interest_maps": doctor_interest_maps,
+            "topk_focus_centers": topk_focus_centers,
+            "topk_focus_scores": topk_focus_scores,
         }
