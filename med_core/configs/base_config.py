@@ -221,6 +221,30 @@ class PhaseFusionConfig(BaseConfig):
 
 
 @dataclass
+class DoctorInterestMapConfig(BaseConfig):
+    enabled: bool = False
+    hidden_channels: int = 8
+    temperature: float = 6.0
+
+
+@dataclass
+class TopKFocusConfig(BaseConfig):
+    enabled: bool = False
+    k: int = 3
+    patch_size: list[int] = field(default_factory=lambda: [4, 4, 4])
+    projection_dim: int = 16
+
+
+@dataclass
+class DoctorInterestLossConfig(BaseConfig):
+    cam_align_weight: float = 0.05
+    consistency_weight: float = 0.02
+    sparse_weight: float = 0.01
+    diverse_weight: float = 0.01
+    body_prior_weight: float = 0.02
+
+
+@dataclass
 class ModelConfig(BaseConfig):
     """Complete model configuration."""
 
@@ -240,6 +264,10 @@ class ModelConfig(BaseConfig):
     phase_fusion_type: Literal["concatenate", "mean", "gated"] = "concatenate"
     phase_encoder: PhaseEncoderConfig = field(default_factory=PhaseEncoderConfig)
     phase_fusion: PhaseFusionConfig = field(default_factory=PhaseFusionConfig)
+    doctor_interest: DoctorInterestMapConfig = field(
+        default_factory=DoctorInterestMapConfig
+    )
+    topk_focus: TopKFocusConfig = field(default_factory=TopKFocusConfig)
     use_risk_head: bool = False
 
     # Pathology encoder selection
@@ -260,6 +288,10 @@ class ModelConfig(BaseConfig):
             self.phase_encoder = PhaseEncoderConfig(**self.phase_encoder)
         if isinstance(self.phase_fusion, dict):
             self.phase_fusion = PhaseFusionConfig(**self.phase_fusion)
+        if isinstance(self.doctor_interest, dict):
+            self.doctor_interest = DoctorInterestMapConfig(**self.doctor_interest)
+        if isinstance(self.topk_focus, dict):
+            self.topk_focus = TopKFocusConfig(**self.topk_focus)
 
         default_phase_fusion_mode = PhaseFusionConfig().mode
         default_phase_fusion_type = "concatenate"
@@ -324,6 +356,9 @@ class TrainingConfig(BaseConfig):
     # Loss settings
     label_smoothing: float = 0.1
     class_weights: list[float] | None = None
+    doctor_interest_loss: DoctorInterestLossConfig = field(
+        default_factory=DoctorInterestLossConfig
+    )
 
     # Attention supervision (requires VisionConfig.enable_attention_supervision=True)
     use_attention_supervision: bool = False
@@ -352,6 +387,12 @@ class TrainingConfig(BaseConfig):
     # Sub-configs
     optimizer: OptimizerConfig = field(default_factory=OptimizerConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+
+    def __post_init__(self) -> None:
+        if isinstance(self.doctor_interest_loss, dict):
+            self.doctor_interest_loss = DoctorInterestLossConfig(
+                **self.doctor_interest_loss
+            )
 
 
 @dataclass
@@ -383,6 +424,7 @@ class ExplainabilityConfig(BaseConfig):
     export_phase_importance: bool = False
     export_case_explanations: bool = False
     heatmap_ready: bool = False
+    export_doctor_interest_maps: bool = False
     build_results_split: Literal["train", "val", "test", "all"] = "test"
     min_global_importance_samples: int = 8
 
