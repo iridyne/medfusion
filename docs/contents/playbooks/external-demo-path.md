@@ -30,6 +30,13 @@ uv run medfusion build-results \
 - 用 `metrics/validation.json` 讲稳定性和风险点
 - 用 `reports/report.md` 讲可交付性（可读、可归档、可复核）
 
+补充关注的 doctor-interest 产物：
+
+- `artifacts/visualizations/doctor_interest/manifest.json`
+- `metrics/case_explanations.json`
+
+这些 doctor-interest overlays 表示模型建议医生复核的关注区域，不是分割轮廓，也不应表述成病灶边界。对外展示时建议统一说成“建议关注区”。
+
 ## 不建议这样讲
 
 - 夸大为“临床可直接部署”

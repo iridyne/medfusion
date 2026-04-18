@@ -252,6 +252,68 @@ class ConfigValidator:
                     )
                 )
 
+            if model.doctor_interest.enabled:
+                if model.doctor_interest.temperature <= 0:
+                    self.errors.append(
+                        ValidationError(
+                            path="model.doctor_interest.temperature",
+                            message="doctor_interest.temperature must be positive",
+                            error_code="E046",
+                            suggestion=(
+                                "Set model.doctor_interest.temperature to a value > 0"
+                            ),
+                        )
+                    )
+
+                if model.doctor_interest.hidden_channels <= 0:
+                    self.errors.append(
+                        ValidationError(
+                            path="model.doctor_interest.hidden_channels",
+                            message="doctor_interest.hidden_channels must be positive",
+                            error_code="E047",
+                            suggestion=(
+                                "Set model.doctor_interest.hidden_channels to a value > 0"
+                            ),
+                        )
+                    )
+
+            if model.topk_focus.enabled:
+                if model.topk_focus.k <= 0:
+                    self.errors.append(
+                        ValidationError(
+                            path="model.topk_focus.k",
+                            message="topk_focus.k must be positive",
+                            error_code="E048",
+                            suggestion="Set model.topk_focus.k to a value > 0",
+                        )
+                    )
+
+                if model.topk_focus.projection_dim <= 0:
+                    self.errors.append(
+                        ValidationError(
+                            path="model.topk_focus.projection_dim",
+                            message="topk_focus.projection_dim must be positive",
+                            error_code="E050",
+                            suggestion=(
+                                "Set model.topk_focus.projection_dim to a value > 0"
+                            ),
+                        )
+                    )
+
+                if len(model.topk_focus.patch_size) != 3 or any(
+                    int(dimension) <= 0 for dimension in model.topk_focus.patch_size
+                ):
+                    self.errors.append(
+                        ValidationError(
+                            path="model.topk_focus.patch_size",
+                            message=(
+                                "topk_focus.patch_size must contain three positive integers"
+                            ),
+                            error_code="E049",
+                            suggestion="Set model.topk_focus.patch_size like [4, 4, 4]",
+                        )
+                    )
+
     def _validate_data_config(self, config: ExperimentConfig) -> None:
         """Validate data configuration."""
         data = config.data
@@ -505,6 +567,38 @@ class ConfigValidator:
                 )
             )
 
+        for path, value in (
+            (
+                "training.doctor_interest_loss.cam_align_weight",
+                training.doctor_interest_loss.cam_align_weight,
+            ),
+            (
+                "training.doctor_interest_loss.consistency_weight",
+                training.doctor_interest_loss.consistency_weight,
+            ),
+            (
+                "training.doctor_interest_loss.sparse_weight",
+                training.doctor_interest_loss.sparse_weight,
+            ),
+            (
+                "training.doctor_interest_loss.diverse_weight",
+                training.doctor_interest_loss.diverse_weight,
+            ),
+            (
+                "training.doctor_interest_loss.body_prior_weight",
+                training.doctor_interest_loss.body_prior_weight,
+            ),
+        ):
+            if value < 0:
+                self.errors.append(
+                    ValidationError(
+                        path=path,
+                        message=f"{path.split('.')[-1]} must be non-negative",
+                        error_code="E051",
+                        suggestion=f"Set {path} to a value >= 0",
+                    )
+                )
+
     def _validate_logging_config(self, config: ExperimentConfig) -> None:
         """Validate logging configuration."""
         logging = config.logging
@@ -575,6 +669,25 @@ class ConfigValidator:
                     ),
                     error_code="E037",
                     suggestion="Set data.dataset_type to three_phase_ct_tabular",
+                )
+            )
+
+        if (
+            config.explainability.export_doctor_interest_maps
+            and not config.model.doctor_interest.enabled
+        ):
+            self.errors.append(
+                ValidationError(
+                    path="explainability.export_doctor_interest_maps",
+                    message=(
+                        "export_doctor_interest_maps=True requires "
+                        "model.doctor_interest.enabled=True"
+                    ),
+                    error_code="E052",
+                    suggestion=(
+                        "Enable model.doctor_interest.enabled or disable "
+                        "explainability.export_doctor_interest_maps"
+                    ),
                 )
             )
 

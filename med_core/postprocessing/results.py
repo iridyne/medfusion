@@ -275,13 +275,16 @@ def _split_three_phase_records(
     config: Any,
     dataset: ThreePhaseCTCaseDataset,
     split: str,
-) -> ThreePhaseCTCaseDataset:
+) -> tuple[ThreePhaseCTCaseDataset, str]:
     if split == "all":
-        return ThreePhaseCTCaseDataset(
-            records=list(dataset.records),
-            target_shape=dataset.target_shape,
-            window_preset=dataset.window_preset,
-            clinical_preprocessor=dataset.clinical_preprocessor,
+        return (
+            ThreePhaseCTCaseDataset(
+                records=list(dataset.records),
+                target_shape=dataset.target_shape,
+                window_preset=dataset.window_preset,
+                clinical_preprocessor=dataset.clinical_preprocessor,
+            ),
+            "all",
         )
 
     dataset_size = len(dataset.records)
@@ -301,15 +304,24 @@ def _split_three_phase_records(
         "test": indices[train_count + val_count :],
     }
     selected_indices = split_indices[split]
+    resolved_split = split
     if not selected_indices:
-        selected_indices = split_indices["val"] or split_indices["train"]
+        if split_indices["val"]:
+            selected_indices = split_indices["val"]
+            resolved_split = "val"
+        else:
+            selected_indices = split_indices["train"]
+            resolved_split = "train"
 
     selected_records = [dataset.records[index] for index in selected_indices]
-    return ThreePhaseCTCaseDataset(
-        records=selected_records,
-        target_shape=dataset.target_shape,
-        window_preset=dataset.window_preset,
-        clinical_preprocessor=dataset.clinical_preprocessor,
+    return (
+        ThreePhaseCTCaseDataset(
+            records=selected_records,
+            target_shape=dataset.target_shape,
+            window_preset=dataset.window_preset,
+            clinical_preprocessor=dataset.clinical_preprocessor,
+        ),
+        resolved_split,
     )
 
 
@@ -536,6 +548,201 @@ def _generate_three_phase_heatmap_artifacts(
     return heatmap_cases, {"heatmap_manifest_path": str(manifest_path)}
 
 
+def _generate_three_phase_doctor_interest_artifacts(
+    *,
+    model: ThreePhaseCTFusionModel,
+    dataset: ThreePhaseCTCaseDataset,
+    device: torch.device,
+    layout: RunOutputLayout,
+    cases: list[dict[str, Any]],
+    split: str,
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, str]]:
+    if not cases:
+        return {}, {}
+
+    doctor_interest_dir = layout.visualizations_dir / "doctor_interest"
+    doctor_interest_dir.mkdir(parents=True, exist_ok=True)
+    _reset_directory_children(doctor_interest_dir)
+
+    phase_names = ("arterial", "portal", "noncontrast")
+    manifest_cases: list[dict[str, Any]] = []
+    doctor_interest_cases: dict[str, list[dict[str, Any]]] = {}
+
+    model.eval()
+    with torch.inference_mode():
+        for index, case in enumerate(cases):
+            sample = dataset[index]
+            case_id = str(case["case_id"])
+            outputs = model(
+                arterial=sample["arterial"].unsqueeze(0).to(device),
+                portal=sample["portal"].unsqueeze(0).to(device),
+                noncontrast=sample["noncontrast"].unsqueeze(0).to(device),
+                clinical=sample["clinical"].unsqueeze(0).to(device),
+                clinical_missing_mask=sample["clinical_missing_mask"].unsqueeze(0).to(device),
+            )
+
+            doctor_interest_maps = outputs.get("doctor_interest_maps")
+            topk_focus_centers = outputs.get("topk_focus_centers")
+            topk_focus_scores = outputs.get("topk_focus_scores")
+            if not isinstance(doctor_interest_maps, dict):
+                raise RuntimeError(
+                    "Doctor-interest export requires model outputs['doctor_interest_maps']."
+                )
+            if not isinstance(topk_focus_centers, dict):
+                topk_focus_centers = {}
+            if not isinstance(topk_focus_scores, dict):
+                topk_focus_scores = {}
+
+            case_dir = doctor_interest_dir / case_id
+            case_dir.mkdir(parents=True, exist_ok=True)
+            phase_payloads: list[dict[str, Any]] = []
+
+            for phase_name in phase_names:
+                phase_payload = doctor_interest_maps.get(phase_name)
+                if not isinstance(phase_payload, dict):
+                    raise RuntimeError(
+                        "Doctor-interest export missing phase payload for "
+                        f"phase '{phase_name}'."
+                    )
+                score_map = phase_payload.get("score_map")
+                if score_map is None:
+                    score_map = phase_payload.get("prob_map")
+                if not isinstance(score_map, torch.Tensor):
+                    raise RuntimeError(
+                        "Doctor-interest export requires a tensor score_map or prob_map "
+                        f"for phase '{phase_name}'."
+                    )
+
+                input_volume = sample[phase_name].squeeze(0).detach().cpu().numpy()
+                render_context = dataset.get_phase_render_context(
+                    index=index, phase_name=phase_name
+                )
+                original_volume = np.asarray(
+                    render_context["original_volume"], dtype=np.float32
+                )
+                score_volume = torch.nn.functional.interpolate(
+                    score_map.detach().float(),
+                    size=input_volume.shape,
+                    mode="trilinear",
+                    align_corners=False,
+                ).squeeze(0).squeeze(0)
+                slice_index = select_representative_slice(
+                    score_volume.detach().cpu().numpy()
+                )
+                original_slice_index = map_slice_index_between_depths(
+                    source_index=slice_index,
+                    source_depth=int(input_volume.shape[0]),
+                    target_depth=int(original_volume.shape[0]),
+                )
+
+                model_overlay_path = case_dir / f"{phase_name}_doctor_interest_overlay.png"
+                original_overlay_path = (
+                    case_dir / f"{phase_name}_doctor_interest_original_overlay.png"
+                )
+                original_slice_path = (
+                    case_dir / f"{phase_name}_doctor_interest_original_slice.png"
+                )
+
+                model_rendering = render_overlay_artifact(
+                    image_slice=input_volume[slice_index],
+                    attention_slice=score_volume[slice_index].detach().cpu().numpy(),
+                    save_path=model_overlay_path,
+                    space="model_input",
+                    kind="overlay",
+                    slice_index=int(slice_index),
+                    title=f"Case {case_id} | {phase_name} | doctor_interest",
+                )
+                original_slice = original_volume[original_slice_index]
+                original_rendering = render_overlay_artifact(
+                    image_slice=original_slice,
+                    attention_slice=score_volume[slice_index].detach().cpu().numpy(),
+                    save_path=original_overlay_path,
+                    space="original_image",
+                    kind="overlay",
+                    slice_index=int(original_slice_index),
+                    title=f"Case {case_id} | {phase_name} | doctor_interest_original",
+                )
+                original_rgb = (
+                    prepare_overlay_image(original_slice) * 255.0
+                ).round().astype(np.uint8)
+                Image.fromarray(original_rgb).save(original_slice_path)
+                original_slice_rendering = build_rendering_metadata(
+                    space="original_image",
+                    kind="base_slice",
+                    image_path=original_slice_path,
+                    slice_index=int(original_slice_index),
+                    image_shape=original_slice.shape,
+                )
+                topk_centers = topk_focus_centers.get(phase_name)
+                topk_scores = topk_focus_scores.get(phase_name)
+                focus_regions = []
+                if isinstance(topk_centers, torch.Tensor) and isinstance(
+                    topk_scores, torch.Tensor
+                ):
+                    focus_regions = _extract_doctor_interest_focus_regions(
+                        topk_centers=topk_centers,
+                        topk_scores=topk_scores,
+                    )
+
+                phase_payloads.append(
+                    {
+                        "phase": phase_name,
+                        "method": "doctor_interest_map_overlay",
+                        "renderings": [
+                            model_rendering,
+                            original_rendering,
+                            original_slice_rendering,
+                        ],
+                        "focus_regions": focus_regions,
+                        "render_space": "model_input",
+                        "image_path": str(model_overlay_path),
+                        "slice_index": int(slice_index),
+                    }
+                )
+
+            doctor_interest_cases[case_id] = phase_payloads
+            manifest_cases.append(
+                {
+                    "case_id": case_id,
+                    "doctor_interest": phase_payloads,
+                }
+            )
+
+    manifest_path = doctor_interest_dir / "manifest.json"
+    manifest_payload = {
+        "schema_version": 1,
+        "generated_by": _BUILD_RESULTS_GENERATED_BY,
+        "split": split,
+        "cases": manifest_cases,
+    }
+    _write_json(manifest_path, manifest_payload)
+    return doctor_interest_cases, {"doctor_interest_manifest_path": str(manifest_path)}
+
+
+def _extract_doctor_interest_focus_regions(
+    *,
+    topk_centers: torch.Tensor,
+    topk_scores: torch.Tensor,
+) -> list[dict[str, Any]]:
+    if topk_centers.dim() == 3:
+        topk_centers = topk_centers[0]
+    if topk_scores.dim() == 2:
+        topk_scores = topk_scores[0]
+
+    focus_regions: list[dict[str, Any]] = []
+    for rank in range(min(topk_centers.shape[0], topk_scores.shape[0])):
+        focus_regions.append(
+            {
+                "rank": rank + 1,
+                "feature_map_center": [
+                    int(value) for value in topk_centers[rank].detach().cpu().tolist()
+                ],
+                "score": round(float(topk_scores[rank].detach().cpu()), 6),
+            }
+        )
+    return focus_regions
+
+
 def _build_three_phase_results(
     *,
     config: Any,
@@ -562,7 +769,7 @@ def _build_three_phase_results(
         window_preset=config.data.window_preset,
         clinical_preprocessor=clinical_preprocessor,
     )
-    dataset = _split_three_phase_records(config, full_dataset, split)
+    dataset, resolved_split = _split_three_phase_records(config, full_dataset, split)
     device = _resolve_device(config.device)
     clinical_mask_dim = (
         len(config.data.clinical_feature_columns)
@@ -585,6 +792,13 @@ def _build_three_phase_results(
         phase_encoder_num_blocks=config.model.phase_encoder.num_blocks,
         phase_encoder_dropout=config.model.phase_encoder.dropout,
         phase_encoder_norm_type=config.model.phase_encoder.norm,
+        doctor_interest_enabled=config.model.doctor_interest.enabled,
+        doctor_interest_hidden_channels=config.model.doctor_interest.hidden_channels,
+        doctor_interest_temperature=config.model.doctor_interest.temperature,
+        topk_focus_enabled=config.model.topk_focus.enabled,
+        topk_focus_k=config.model.topk_focus.k,
+        topk_focus_patch_size=tuple(config.model.topk_focus.patch_size),
+        topk_focus_projection_dim=config.model.topk_focus.projection_dim,
     )
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -736,7 +950,7 @@ def _build_three_phase_results(
         mean_phase_importance = np.zeros(len(phase_labels), dtype=float)
     phase_importance_payload = {
         "phase_labels": phase_labels,
-        "split": split,
+        "split": resolved_split,
         "mean_importance": {
             phase_name: round(float(value), 6)
             for phase_name, value in zip(
@@ -814,6 +1028,23 @@ def _build_three_phase_results(
         cases=cases,
         enabled=bool(config.explainability.heatmap_ready),
     )
+    doctor_interest_cases: dict[str, list[dict[str, Any]]] = {}
+    doctor_interest_artifact_paths: dict[str, str] = {}
+    if bool(getattr(config.explainability, "export_doctor_interest_maps", False)):
+        doctor_interest_cases, doctor_interest_artifact_paths = (
+            _generate_three_phase_doctor_interest_artifacts(
+                model=model,
+                dataset=dataset,
+                device=device,
+                layout=layout,
+                cases=cases,
+                split=resolved_split,
+            )
+        )
+    else:
+        doctor_interest_dir = layout.visualizations_dir / "doctor_interest"
+        if doctor_interest_dir.exists():
+            shutil.rmtree(doctor_interest_dir)
     case_explanations_payload = {
         "phase_labels": phase_labels,
         "cases": [
@@ -825,6 +1056,9 @@ def _build_three_phase_results(
                 "phase_importance": case["phase_importance"],
                 "top_clinical_factors": top_clinical_factors,
                 "heatmap_artifacts": heatmap_cases.get(case["case_id"], []),
+                "doctor_interest_artifacts": doctor_interest_cases.get(
+                    case["case_id"], []
+                ),
             }
             for case in cases
         ],
@@ -833,7 +1067,7 @@ def _build_three_phase_results(
     artifact_metadata = _build_artifact_metadata(
         config_path=config_path,
         checkpoint_path=checkpoint_path,
-        split=split,
+        split=resolved_split,
     )
     history_payload = _load_history(layout)
     metrics_payload = {
@@ -847,7 +1081,7 @@ def _build_three_phase_results(
     }
     validation_payload = {
         **artifact_metadata,
-        "overview": {"split": split, "sample_count": len(cases)},
+        "overview": {"split": resolved_split, "sample_count": len(cases)},
         "cases": cases,
         "global_feature_importance": importance_payload,
         "phase_importance": phase_importance_payload,
@@ -881,13 +1115,17 @@ def _build_three_phase_results(
         },
         "global_feature_importance": importance_payload,
     }
+    if doctor_interest_artifact_paths:
+        summary_payload["artifacts"]["doctor_interest_manifest_path"] = str(
+            doctor_interest_artifact_paths["doctor_interest_manifest_path"]
+        )
     report_lines = [
         "# MedFusion Result Report",
         "",
         "## Overview",
         "",
         f"- 任务名称: {config.experiment_name}",
-        f"- 数据划分: {split}",
+        f"- 数据划分: {resolved_split}",
         f"- 评估样本数: {len(cases)}",
         "",
         "## Metrics",
@@ -920,6 +1158,14 @@ def _build_three_phase_results(
         report_lines.append("- 生成方式: 三期 CT 逐期 Grad-CAM 代表层面叠加图")
         report_lines.append("- 原始切片叠加图: 每一期同时导出原始切片与关注热区叠加图")
         report_lines.append("- 映射策略: 按重采样前后层面比例回映，仅用于关注区域展示")
+    if doctor_interest_artifact_paths:
+        report_lines.extend(["", "## Doctor Interest Maps", ""])
+        report_lines.append(
+            "- 医生建议关注区清单: "
+            f"{doctor_interest_artifact_paths['doctor_interest_manifest_path']}"
+        )
+        report_lines.append("- 关注区来源: 模型内生 doctor interest map")
+        report_lines.append("- 展示方式: 原始切片叠加图 + 低分辨率兴趣图回映")
     report_lines.extend(["", "## Visual Artifacts", ""])
     if roc_curve_path is not None:
         report_lines.append(f"- ROC 曲线（区分能力）: {roc_curve_path}")
@@ -984,6 +1230,10 @@ def _build_three_phase_results(
         **importance_artifact_paths,
         **heatmap_artifact_paths,
     }
+    if doctor_interest_artifact_paths:
+        artifact_paths["doctor_interest_manifest_path"] = str(
+            doctor_interest_artifact_paths["doctor_interest_manifest_path"]
+        )
     artifact_paths = {key: value for key, value in artifact_paths.items() if value}
     return BuildResultsOutput(
         output_dir=str(layout.root_dir),

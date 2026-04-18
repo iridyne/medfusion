@@ -157,6 +157,16 @@ uv run medfusion build-results \
   但如果该病例的 `predicted_class` 本身就是阳性，
   那么两种视角在语义和图像上可能接近甚至重合
 
+### Three-Phase CT Doctor Interest Maps
+
+The native three-phase CT + clinical MVI path can now export:
+
+- per-phase `phase_importance`
+- case-level `doctor_interest_map` overlays
+- optional Top-K focus-region candidates for clinician review
+
+These artifacts are generated through the existing `build-results` workflow and are intended as clinician-facing review aids, not lesion contours.
+
 ---
 
 ## 预期输出（3 分钟自检）

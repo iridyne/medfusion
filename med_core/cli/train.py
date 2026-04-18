@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import pandas as pd
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader
@@ -31,6 +32,10 @@ from med_core.fusion import (
     create_fusion_module,
 )
 from med_core.models import ThreePhaseCTFusionModel
+from med_core.models.doctor_interest import (
+    build_body_mask_prior,
+    compute_doctor_interest_losses,
+)
 from med_core.output_layout import RunOutputLayout
 from med_core.shared.preprocessing.clinical import ClinicalFeaturePreprocessor
 from med_core.shared.model_utils import ModelCheckpoint
@@ -73,6 +78,117 @@ def _resolve_device(device_name: str) -> torch.device:
             return torch.device("mps")
         return torch.device("cpu")
     return torch.device(device_name)
+
+
+def _config_value(source, name: str, default=None):
+    if source is None:
+        return default
+    if isinstance(source, dict):
+        return source.get(name, default)
+    return getattr(source, name, default)
+
+
+def _resolve_body_prior_threshold(volume: torch.Tensor) -> float:
+    detached = volume.detach()
+    min_value = float(detached.amin().item())
+    max_value = float(detached.amax().item())
+    if min_value >= 0.0 and max_value <= 5.0:
+        return 0.1
+    if min_value >= -1.0 and max_value <= 1.5:
+        return 0.0
+    return -200.0
+
+
+def _compute_three_phase_doctor_interest_loss(
+    config,
+    phase_inputs: dict[str, torch.Tensor],
+    outputs,
+    device,
+):
+    doctor_interest_config = getattr(config.model, "doctor_interest", None)
+    enabled = bool(getattr(doctor_interest_config, "enabled", False))
+    zero = torch.zeros((), device=device)
+    if not enabled:
+        return zero, {
+            "cam_align": zero,
+            "consistency": zero,
+            "sparse": zero,
+            "diverse": zero,
+            "body_prior": zero,
+        }
+
+    doctor_interest_loss_config = _config_value(
+        config.training,
+        "doctor_interest_loss",
+    )
+    cam_align_weight = float(getattr(doctor_interest_loss_config, "cam_align_weight", 0.05))
+    consistency_weight = float(getattr(doctor_interest_loss_config, "consistency_weight", 0.02))
+    sparse_weight = float(getattr(doctor_interest_loss_config, "sparse_weight", 0.01))
+    diverse_weight = float(getattr(doctor_interest_loss_config, "diverse_weight", 0.01))
+    body_prior_weight = float(getattr(doctor_interest_loss_config, "body_prior_weight", 0.02))
+
+    total_loss = torch.zeros((), device=device)
+    component_sums: dict[str, torch.Tensor] = {}
+    contributing_phase_count = 0
+    doctor_interest_maps = outputs.get("doctor_interest_maps", {})
+    topk_focus_centers = outputs.get("topk_focus_centers", {})
+
+    for phase_name, input_volume in phase_inputs.items():
+        interest_outputs = doctor_interest_maps.get(phase_name)
+        if not interest_outputs:
+            continue
+        body_prior = build_body_mask_prior(
+            input_volume,
+            threshold_hu=_resolve_body_prior_threshold(input_volume),
+            border_ratio=0.1,
+        )
+        if body_prior.shape != interest_outputs["prob_map"].shape:
+            body_prior = F.interpolate(
+                body_prior,
+                size=interest_outputs["prob_map"].shape[-3:],
+                mode="nearest",
+            )
+        topk_centers = topk_focus_centers.get(phase_name)
+        if topk_centers is None:
+            topk_centers = torch.empty(
+                (interest_outputs["prob_map"].size(0), 0, 3),
+                device=device,
+                dtype=torch.long,
+            )
+        detached_prob_map = interest_outputs["prob_map"].detach()
+        augmented_prob_map = 0.5 * (
+            detached_prob_map
+            + torch.roll(detached_prob_map, shifts=1, dims=-1)
+        )
+        loss_payload = compute_doctor_interest_losses(
+            prob_map=interest_outputs["prob_map"],
+            teacher_map=interest_outputs["score_map"].detach(),
+            augmented_prob_map=augmented_prob_map,
+            topk_centers=topk_centers,
+            body_prior=body_prior,
+            cam_align_weight=cam_align_weight,
+            consistency_weight=consistency_weight,
+            sparse_weight=sparse_weight,
+            diverse_weight=diverse_weight,
+            body_prior_weight=body_prior_weight,
+        )
+        total_loss = total_loss + loss_payload["total"]
+        contributing_phase_count += 1
+        for name, value in loss_payload["components"].items():
+            component_sums[name] = component_sums.get(name, torch.zeros_like(value)) + value
+
+    if contributing_phase_count == 0:
+        return zero, {
+            "cam_align": zero,
+            "consistency": zero,
+            "sparse": zero,
+            "diverse": zero,
+            "body_prior": zero,
+        }
+
+    return total_loss / contributing_phase_count, {
+        name: value / contributing_phase_count for name, value in component_sums.items()
+    }
 
 
 def _build_optimizer(
@@ -260,6 +376,39 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
         phase_encoder_num_blocks=config.model.phase_encoder.num_blocks,
         phase_encoder_dropout=config.model.phase_encoder.dropout,
         phase_encoder_norm_type=config.model.phase_encoder.norm,
+        doctor_interest_enabled=_config_value(
+            getattr(config.model, "doctor_interest", None),
+            "enabled",
+            False,
+        ),
+        doctor_interest_hidden_channels=_config_value(
+            getattr(config.model, "doctor_interest", None),
+            "hidden_channels",
+            8,
+        ),
+        doctor_interest_temperature=_config_value(
+            getattr(config.model, "doctor_interest", None),
+            "temperature",
+            6.0,
+        ),
+        topk_focus_enabled=_config_value(
+            getattr(config.model, "topk_focus", None),
+            "enabled",
+            False,
+        ),
+        topk_focus_k=_config_value(
+            getattr(config.model, "topk_focus", None),
+            "k",
+            3,
+        ),
+        topk_focus_patch_size=tuple(
+            _config_value(getattr(config.model, "topk_focus", None), "patch_size", [4, 4, 4])
+        ),
+        topk_focus_projection_dim=_config_value(
+            getattr(config.model, "topk_focus", None),
+            "projection_dim",
+            16,
+        ),
     ).to(device)
     optimizer = _build_optimizer(
         model=model,
@@ -283,12 +432,18 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
     for epoch in range(max(config.training.num_epochs, 1)):
         model.train()
         train_loss_sum = 0.0
+        train_doctor_interest_sum = 0.0
         for batch in train_loader:
             optimizer.zero_grad()
+            phase_inputs = {
+                "arterial": batch["arterial"].to(device),
+                "portal": batch["portal"].to(device),
+                "noncontrast": batch["noncontrast"].to(device),
+            }
             outputs = model(
-                arterial=batch["arterial"].to(device),
-                portal=batch["portal"].to(device),
-                noncontrast=batch["noncontrast"].to(device),
+                arterial=phase_inputs["arterial"],
+                portal=phase_inputs["portal"],
+                noncontrast=phase_inputs["noncontrast"],
                 clinical=batch["clinical"].to(device),
                 clinical_missing_mask=(
                     batch["clinical_missing_mask"].to(device)
@@ -296,19 +451,33 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
                     else None
                 ),
             )
-            loss = criterion(outputs["logits"], batch["label"].to(device))
+            cls_loss = criterion(outputs["logits"], batch["label"].to(device))
+            doctor_interest_loss, _ = _compute_three_phase_doctor_interest_loss(
+                config=config,
+                phase_inputs=phase_inputs,
+                outputs=outputs,
+                device=device,
+            )
+            loss = cls_loss + doctor_interest_loss
             loss.backward()
             optimizer.step()
             train_loss_sum += float(loss.item())
+            train_doctor_interest_sum += float(doctor_interest_loss.item())
 
         model.eval()
         val_loss_sum = 0.0
+        val_doctor_interest_sum = 0.0
         with torch.inference_mode():
             for batch in val_loader:
+                phase_inputs = {
+                    "arterial": batch["arterial"].to(device),
+                    "portal": batch["portal"].to(device),
+                    "noncontrast": batch["noncontrast"].to(device),
+                }
                 outputs = model(
-                    arterial=batch["arterial"].to(device),
-                    portal=batch["portal"].to(device),
-                    noncontrast=batch["noncontrast"].to(device),
+                    arterial=phase_inputs["arterial"],
+                    portal=phase_inputs["portal"],
+                    noncontrast=phase_inputs["noncontrast"],
                     clinical=batch["clinical"].to(device),
                     clinical_missing_mask=(
                         batch["clinical_missing_mask"].to(device)
@@ -316,8 +485,16 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
                         else None
                     ),
                 )
-                loss = criterion(outputs["logits"], batch["label"].to(device))
+                cls_loss = criterion(outputs["logits"], batch["label"].to(device))
+                doctor_interest_loss, _ = _compute_three_phase_doctor_interest_loss(
+                    config=config,
+                    phase_inputs=phase_inputs,
+                    outputs=outputs,
+                    device=device,
+                )
+                loss = cls_loss + doctor_interest_loss
                 val_loss_sum += float(loss.item())
+                val_doctor_interest_sum += float(doctor_interest_loss.item())
 
         train_loss = train_loss_sum / max(len(train_loader), 1)
         val_loss = val_loss_sum / max(len(val_loader), 1)
@@ -332,6 +509,10 @@ def _train_three_phase_ct(config, run_layout: RunOutputLayout) -> None:
             "epoch": epoch,
             "train_loss": train_loss,
             "val_loss": val_loss,
+            "train_doctor_interest_loss": train_doctor_interest_sum
+            / max(len(train_loader), 1),
+            "val_doctor_interest_loss": val_doctor_interest_sum
+            / max(len(val_loader), 1),
             "learning_rate": float(optimizer.param_groups[0]["lr"]),
         }
         if val_loss <= best_val_loss:

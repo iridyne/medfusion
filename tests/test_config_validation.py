@@ -500,6 +500,128 @@ class TestConfigValidation:
             error.path == "data.clinical_preprocessing.strategy" for error in errors
         )
 
+    def test_three_phase_invalid_doctor_interest_temperature(self) -> None:
+        config = ExperimentConfig(
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                doctor_interest={"enabled": True, "temperature": 0.0},
+            ),
+        )
+        errors = validate_config(config)
+        assert any(error.path == "model.doctor_interest.temperature" for error in errors)
+
+    def test_three_phase_invalid_topk_focus_patch_size(self) -> None:
+        config = ExperimentConfig(
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+            ),
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                topk_focus={"enabled": True, "patch_size": [0, 4, 4]},
+            ),
+        )
+        errors = validate_config(config)
+        assert any(error.path == "model.topk_focus.patch_size" for error in errors)
+
+    def test_three_phase_invalid_topk_focus_projection_dim(self) -> None:
+        config = ExperimentConfig(
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+            ),
+            model=ModelConfig(
+                model_type="three_phase_ct_fusion",
+                topk_focus={"enabled": True, "projection_dim": 0},
+            ),
+        )
+        errors = validate_config(config)
+        assert any(error.path == "model.topk_focus.projection_dim" for error in errors)
+
+    def test_three_phase_invalid_doctor_interest_loss_weights(self) -> None:
+        config = ExperimentConfig(
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+            ),
+            model=ModelConfig(model_type="three_phase_ct_fusion"),
+            training=TrainingConfig(
+                doctor_interest_loss={
+                    "cam_align_weight": -0.01,
+                    "consistency_weight": -0.02,
+                    "sparse_weight": -0.03,
+                    "diverse_weight": -0.04,
+                    "body_prior_weight": -0.05,
+                }
+            ),
+        )
+        errors = validate_config(config)
+        assert any(
+            error.path == "training.doctor_interest_loss.cam_align_weight"
+            for error in errors
+        )
+        assert any(
+            error.path == "training.doctor_interest_loss.consistency_weight"
+            for error in errors
+        )
+        assert any(
+            error.path == "training.doctor_interest_loss.sparse_weight"
+            for error in errors
+        )
+        assert any(
+            error.path == "training.doctor_interest_loss.diverse_weight"
+            for error in errors
+        )
+        assert any(
+            error.path == "training.doctor_interest_loss.body_prior_weight"
+            for error in errors
+        )
+
+    def test_three_phase_export_doctor_interest_maps_requires_enabled(self) -> None:
+        config = ExperimentConfig(
+            data=DataConfig(
+                dataset_type="three_phase_ct_tabular",
+                target_shape=[16, 64, 64],
+                window_preset="liver",
+                patient_id_column="case_id",
+                phase_dir_columns={
+                    "arterial": "arterial_series_dir",
+                    "portal": "portal_series_dir",
+                    "noncontrast": "noncontrast_series_dir",
+                },
+                clinical_feature_columns=["age"],
+            ),
+            model=ModelConfig(model_type="three_phase_ct_fusion"),
+            explainability=ExplainabilityConfig(export_doctor_interest_maps=True),
+        )
+        errors = validate_config(config)
+        assert any(
+            error.path == "explainability.export_doctor_interest_maps"
+            for error in errors
+        )
+
     def test_progressive_training_epochs_mismatch(self):
         """Test validation catches progressive training epoch mismatch."""
         config = ExperimentConfig(
