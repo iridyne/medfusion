@@ -306,7 +306,7 @@ npm run preview
 - ECharts - 图表库
 - React Router - 路由管理
 - Axios - HTTP 客户端
-- Socket.IO - WebSocket 通信
+- 原生 WebSocket - 实时通信
 
 ## 🔧 故障排除
 

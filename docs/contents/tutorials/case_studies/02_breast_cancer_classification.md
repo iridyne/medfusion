@@ -2,6 +2,14 @@
 
 **预计时间：75 分钟**
 
+> 说明：
+> 这页属于教学型案例研究，重点是解释多模态任务拆解与数据组织。
+> 文中的 `MRIPreprocessor`、`center_crop_3d` 等片段应视为场景化示意，不是当前仓库已经稳定暴露的公共 API。
+> 如果你要走当前可运行主链，请优先参考：
+> - [Web UI 快速入门](../../getting-started/web-ui.md)
+> - [CLI 与 Config 使用路径](../../getting-started/cli-config-workflow.md)
+> - [Preprocessing API](../../api/preprocessing.md)
+
 ## 1. 医学背景
 
 乳腺癌是全球女性最常见的恶性肿瘤，早期诊断和精准分型对治疗方案选择至关重要。现代诊断通常结合多种模态：

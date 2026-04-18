@@ -2,6 +2,11 @@
 
 医学图像预处理模块，提供专业的图像处理工具。
 
+> 当前说明：
+> 本页描述的是 `med_core.preprocessing` 暴露的公共 Python API。
+> 当前训练主链的 `ExperimentConfig` 没有稳定开放独立的顶层 `preprocessing:` schema；
+> 如果你要复用这些能力，请在自定义脚本、dataset pipeline 或共享工具层里直接调用这些函数/类。
+
 ## 概述
 
 Preprocessing 模块提供了医学影像专用的预处理功能：
@@ -30,16 +35,16 @@ Preprocessing 模块提供了医学影像专用的预处理功能：
 from med_core.preprocessing import ImagePreprocessor
 
 preprocessor = ImagePreprocessor(
-    target_size=(512, 512),
-    normalize=True,
+    output_size=(512, 512),
+    normalize_method="percentile",
     apply_clahe=True
 )
 
-# 预处理单张图像
-processed_image = preprocessor.process(image)
+# 预处理单张图像，返回 NumPy 数组
+processed_image = preprocessor.preprocess(image)
 
-# 批量预处理
-processed_images = preprocessor.process_batch(image_list)
+# 批量预处理并落盘
+processed_paths = preprocessor.process_batch(image_paths, output_dir)
 ```
 
 ### normalize_intensity
@@ -52,7 +57,7 @@ processed_images = preprocessor.process_batch(image_list)
   - `"minmax"` - 最小-最大归一化到 [0, 1]
   - `"zscore"` - Z-score 标准化
   - `"percentile"` - 百分位数归一化
-- `clip_percentile` (tuple): 裁剪百分位数，默认 (1, 99)
+- `percentile_range` (tuple): 裁剪百分位数范围，默认 (1, 99)
 
 **返回：**
 - `np.ndarray`: 归一化后的图像
@@ -71,7 +76,7 @@ standardized = normalize_intensity(image, method="zscore")
 robust_normalized = normalize_intensity(
     image,
     method="percentile",
-    clip_percentile=(2, 98)
+    percentile_range=(2, 98)
 )
 ```
 
@@ -82,7 +87,7 @@ robust_normalized = normalize_intensity(
 **参数：**
 - `image` (np.ndarray): 输入图像
 - `clip_limit` (float): 对比度限制，默认 2.0
-- `tile_grid_size` (tuple): 网格大小，默认 (8, 8)
+- `tile_size` (tuple): 网格大小，默认 (8, 8)
 
 **返回：**
 - `np.ndarray`: 增强后的图像
@@ -103,7 +108,7 @@ enhanced = apply_clahe(image)
 enhanced = apply_clahe(
     image,
     clip_limit=3.0,  # 更强的增强
-    tile_grid_size=(16, 16)  # 更细的网格
+    tile_size=(16, 16)  # 更细的网格
 )
 ```
 
@@ -113,7 +118,7 @@ enhanced = apply_clahe(
 
 **参数：**
 - `image` (np.ndarray): 输入图像
-- `crop_size` (tuple): 裁剪尺寸 (height, width)
+- `size` (tuple): 裁剪尺寸 (width, height) 或单个整数
 
 **返回：**
 - `np.ndarray`: 裁剪后的图像
@@ -123,7 +128,7 @@ enhanced = apply_clahe(
 from med_core.preprocessing import crop_center
 
 # 裁剪中心 224x224 区域
-cropped = crop_center(image, crop_size=(224, 224))
+cropped = crop_center(image, size=(224, 224))
 ```
 
 ## 质量评估
@@ -133,26 +138,22 @@ cropped = crop_center(image, crop_size=(224, 224))
 图像质量指标类。
 
 **计算指标：**
-- `sharpness` - 清晰度（拉普拉斯方差）
-- `contrast` - 对比度（标准差）
-- `brightness` - 亮度（均值）
-- `snr` - 信噪比
-- `entropy` - 信息熵
+- `laplacian_variance` - 清晰度（拉普拉斯方差）
+- `contrast_rms` - 对比度
+- `snr_estimate` - 信噪比估计
+- `overall_score` - 综合质量分数
+- `warnings` - 质量告警列表
 
 **示例：**
 ```python
-from med_core.preprocessing import QualityMetrics
+from med_core.preprocessing import assess_image_quality
 
-metrics = QualityMetrics()
-
-# 计算单张图像质量
-quality = metrics.compute(image)
-print(f"清晰度: {quality['sharpness']:.2f}")
-print(f"对比度: {quality['contrast']:.2f}")
-print(f"信噪比: {quality['snr']:.2f}")
-
-# 批量计算
-quality_scores = metrics.compute_batch(image_list)
+quality = assess_image_quality(image)
+print(f"清晰度: {quality.laplacian_variance:.2f}")
+print(f"对比度: {quality.contrast_rms:.2f}")
+print(f"信噪比: {quality.snr_estimate:.2f}")
+print(f"综合分数: {quality.overall_score:.3f}")
+print(quality.warnings)
 ```
 
 ### assess_image_quality
@@ -161,22 +162,21 @@ quality_scores = metrics.compute_batch(image_list)
 
 **参数：**
 - `image` (np.ndarray): 输入图像
-- `return_details` (bool): 是否返回详细指标，默认 False
 
 **返回：**
-- `float` 或 `dict`: 质量分数（0-1）或详细指标字典
+- `QualityMetrics`: 包含整体质量分数、各项指标和 warning 的对象
 
 **示例：**
 ```python
 from med_core.preprocessing import assess_image_quality
 
 # 获取质量分数
-score = assess_image_quality(image)
-print(f"质量分数: {score:.3f}")
+quality = assess_image_quality(image)
+print(f"质量分数: {quality.overall_score:.3f}")
 
-# 获取详细指标
-details = assess_image_quality(image, return_details=True)
-print(details)
+# 查看详细指标和警告
+print(quality)
+print(quality.warnings)
 ```
 
 ### detect_artifacts
@@ -185,11 +185,6 @@ print(details)
 
 **参数：**
 - `image` (np.ndarray): 输入图像
-- `artifact_types` (list[str]): 要检测的伪影类型
-  - `"motion"` - 运动伪影
-  - `"noise"` - 噪声
-  - `"truncation"` - 截断伪影
-  - `"metal"` - 金属伪影
 
 **返回：**
 - `dict[str, bool]`: 伪影检测结果
@@ -200,14 +195,9 @@ from med_core.preprocessing import detect_artifacts
 
 # 检测所有伪影
 artifacts = detect_artifacts(image)
-print(f"运动伪影: {artifacts['motion']}")
-print(f"噪声: {artifacts['noise']}")
-
-# 检测特定伪影
-artifacts = detect_artifacts(
-    image,
-    artifact_types=["motion", "metal"]
-)
+print(f"运动模糊: {artifacts['motion_blur']}")
+print(f"压缩伪影: {artifacts['compression_artifacts']}")
+print(f"水印: {artifacts['watermark']}")
 ```
 
 ## 批量预处理
@@ -228,8 +218,8 @@ import numpy as np
 
 # 1. 创建预处理器
 preprocessor = ImagePreprocessor(
-    target_size=(512, 512),
-    normalize=True,
+    output_size=(512, 512),
+    normalize_method="percentile",
     apply_clahe=True
 )
 
@@ -245,23 +235,23 @@ for img_path in input_dir.glob("*.png"):
     image = np.array(Image.open(img_path))
 
     # 质量检查
-    quality_score = assess_image_quality(image)
+    quality = assess_image_quality(image)
     artifacts = detect_artifacts(image)
 
     # 记录质量信息
     quality_log.append({
         'filename': img_path.name,
-        'quality_score': quality_score,
+        'quality_score': quality.overall_score,
         'has_artifacts': any(artifacts.values())
     })
 
     # 跳过低质量图像
-    if quality_score < 0.5:
+    if quality.overall_score < 0.5:
         print(f"跳过低质量图像: {img_path.name}")
         continue
 
     # 预处理
-    processed = preprocessor.process(image)
+    processed = preprocessor.preprocess(image)
 
     # 保存
     output_path = output_dir / img_path.name
@@ -275,35 +265,20 @@ with open(output_dir / "quality_report.json", "w") as f:
 print(f"处理完成！共处理 {len(quality_log)} 张图像")
 ```
 
-## 配置示例
+## 配置说明
 
-在 YAML 配置文件中配置预处理：
+当前主训练 schema 没有稳定暴露如下形式的独立预处理段：
 
 ```yaml
 preprocessing:
-  image:
-    target_size: [512, 512]
-    normalize: true
-    normalization_method: percentile
-    clip_percentile: [1, 99]
-
-  enhancement:
-    apply_clahe: true
-    clip_limit: 2.0
-    tile_grid_size: [8, 8]
-
-  quality_control:
-    min_quality_score: 0.5
-    detect_artifacts: true
-    artifact_types:
-      - motion
-      - noise
-      - truncation
-
-  output:
-    format: png
-    compression: 9
+  ...
 ```
+
+如果你需要可配置的预处理，推荐做法是：
+
+1. 在自定义脚本中实例化 `ImagePreprocessor`
+2. 在 dataset / import / preprocessing pipeline 中显式调用它
+3. 只把已经稳定进入 `ExperimentConfig` 的字段写入训练 YAML
 
 ## 使用场景
 
@@ -314,8 +289,8 @@ from med_core.preprocessing import ImagePreprocessor, apply_clahe
 
 # CT 专用预处理
 preprocessor = ImagePreprocessor(
-    target_size=(512, 512),
-    normalize=True,
+    output_size=(512, 512),
+    normalize_method="percentile",
     apply_clahe=True
 )
 
@@ -328,7 +303,7 @@ def apply_window(image, window_center, window_width):
 
 # 肺窗
 lung_window = apply_window(ct_image, window_center=-600, window_width=1500)
-processed = preprocessor.process(lung_window)
+processed = preprocessor.preprocess(lung_window)
 ```
 
 ### 病理切片预处理
@@ -367,7 +342,7 @@ from med_core.preprocessing import (
 def preprocess_xray(image):
     # 1. 质量检查
     quality = assess_image_quality(image)
-    if quality < 0.6:
+    if quality.overall_score < 0.6:
         print("警告: 图像质量较低")
 
     # 2. 强度归一化
@@ -377,7 +352,7 @@ def preprocess_xray(image):
     enhanced = apply_clahe(
         normalized,
         clip_limit=3.0,
-        tile_grid_size=(16, 16)
+        tile_size=(16, 16)
     )
 
     return enhanced

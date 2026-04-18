@@ -206,12 +206,31 @@ docs/
 └── index.md                # Landing page
 ```
 
+Published-site boundary:
+
+- `docs/` is the published documentation source root
+- reader-facing tutorials, guides, references, and architecture pages belong here
+- internal plans, implementation notes, temporary specs, and working research memos do **not** belong here
+- for this workspace, keep non-published working docs in the companion Vault project:
+  `C:\Users\Administrator\Vault\Projects\MedML\仓库文档`
+
+Rationale:
+
+- VitePress treats markdown under the project source root as source content
+- keeping internal working docs outside `docs/` avoids accidental publication
+- separating published docs from working notes also reduces duplicate maintenance
+
 ### Adding New Documentation
 
 1. **Create the markdown file** in the appropriate directory
 2. **Update VitePress config** (`docs/.vitepress/config.mts`) to add the page to the sidebar
 3. **Test locally**: `cd docs && npm run dev`
 4. **Verify links** and navigation work correctly
+
+Before adding a new markdown file, first decide:
+
+- Is this intended for external readers and safe to publish? Put it under `docs/`
+- Is this a working note, implementation plan, or internal draft? Put it in the Vault-backed internal docs area, not in the repo
 
 ## Migration Plan
 

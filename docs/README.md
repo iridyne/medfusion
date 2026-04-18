@@ -126,6 +126,8 @@ npm run docs:preview
 说明：
 - `docs/node_modules/`、`docs/.vitepress/dist/`、`docs/.vitepress/cache/` 都是本地产物，不属于文档源码
 - 如果这些目录缺失，重新执行 `npm install` 或 `npm run docs:build` 即可恢复
+- `docs/` 是在线文档发布源；不适合公开站点的工作性文档（实现计划、内部 spec、临时研究笔记）不要放在这里
+- 在当前工作区，这类内容统一放到配套 Vault 项目：`C:\Users\Administrator\Vault\Projects\MedML\仓库文档`
 
 ---
 

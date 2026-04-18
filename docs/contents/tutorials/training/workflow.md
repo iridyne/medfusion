@@ -231,10 +231,10 @@ uv run medfusion train --config configs/starter/quickstart.yaml
 
 ```bash
 # 查看训练日志
-tail -f outputs/exp_001/logs/train.log
+tail -f outputs/exp_001/logs/training.log
 
 # 使用 grep 过滤关键信息
-tail -f outputs/exp_001/logs/train.log | grep -E "Epoch|loss|AUC"
+tail -f outputs/exp_001/logs/training.log | grep -E "Epoch|loss|AUC"
 ```
 
 ### 命令行进度条

@@ -4,6 +4,12 @@
 
 本教程介绍如何使用 TensorBoard 和 Weights & Biases 监控训练进度。
 
+先说明当前主链约束：
+
+- 当前稳定训练产物路径是 `outputs/<run_name>/logs/history.json` 和 `outputs/<run_name>/logs/training.log`
+- `LoggingConfig` 当前稳定字段以 `use_tensorboard / use_wandb / wandb_project / wandb_entity / log_every_n_steps` 为主
+- 像单独指定 `log_file`、`tensorboard_dir` 这类旧式字段，不属于当前主链推荐 schema
+
 ## TensorBoard 监控
 
 ### 启用 TensorBoard
@@ -12,7 +18,6 @@
 # configs/my_config.yaml
 logging:
   use_tensorboard: true
-  tensorboard_dir: "outputs/tensorboard"
   log_every_n_steps: 10
 ```
 
@@ -194,13 +199,13 @@ artifact_dir = artifact.download()
 
 ```bash
 # 查看训练日志
-tail -f outputs/logs/train.log
+tail -f outputs/<run_name>/logs/training.log
 
 # 只看错误
-tail -f outputs/logs/train.log | grep ERROR
+tail -f outputs/<run_name>/logs/training.log | grep ERROR
 
 # 实时统计
-tail -f outputs/logs/train.log | grep "Epoch"
+tail -f outputs/<run_name>/logs/training.log | grep "Epoch"
 ```
 
 ### 日志配置
@@ -208,10 +213,10 @@ tail -f outputs/logs/train.log | grep "Epoch"
 ```yaml
 # configs/my_config.yaml
 logging:
-  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  log_to_file: true
-  log_file: "outputs/logs/train.log"
-  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  output_dir: "outputs/exp_001"
+  use_tensorboard: true
+  use_wandb: false
+  log_every_n_steps: 10
 ```
 
 ### Python 日志记录
@@ -239,26 +244,34 @@ except Exception as e:
 ### 使用 matplotlib
 
 ```python
+import json
 import matplotlib.pyplot as plt
-import pandas as pd
 
 # 读取训练历史
-history = pd.read_csv('outputs/history.csv')
+with open("outputs/exp_001/logs/history.json", "r", encoding="utf-8") as handle:
+    payload = json.load(handle)
+
+history = payload["entries"]
+epochs = [entry["epoch"] for entry in history]
+train_loss = [entry.get("train_loss") for entry in history]
+val_loss = [entry.get("val_loss") for entry in history]
+train_acc = [entry.get("train_accuracy") for entry in history]
+val_acc = [entry.get("val_accuracy") for entry in history]
 
 # 绘制损失曲线
 plt.figure(figsize=(12, 4))
 
 plt.subplot(1, 2, 1)
-plt.plot(history['epoch'], history['train_loss'], label='Train')
-plt.plot(history['epoch'], history['val_loss'], label='Val')
+plt.plot(epochs, train_loss, label='Train')
+plt.plot(epochs, val_loss, label='Val')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
 plt.title('Training and Validation Loss')
 
 plt.subplot(1, 2, 2)
-plt.plot(history['epoch'], history['train_acc'], label='Train')
-plt.plot(history['epoch'], history['val_acc'], label='Val')
+plt.plot(epochs, train_acc, label='Train')
+plt.plot(epochs, val_acc, label='Val')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
@@ -286,11 +299,11 @@ plt.savefig('outputs/confusion_matrix.png')
 ### 启动 Web UI
 
 ```bash
-# 启动 Web 服务
-./start-webui.sh
+# 新手默认入口
+uv run medfusion start
 
-# 或手动启动
-uv run python -m med_core.web.cli web
+# 兼容入口
+uv run medfusion web
 
 # 访问 http://localhost:8000
 ```

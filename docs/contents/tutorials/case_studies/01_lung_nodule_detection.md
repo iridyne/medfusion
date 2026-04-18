@@ -2,6 +2,14 @@
 
 **预计时间：60 分钟**
 
+> 说明：
+> 这页属于教学型案例研究，重点是解释任务拆解和建模思路。
+> 文中的 `CTPreprocessor`、`load_dicom_series`、`save_nifti` 等片段应视为场景化示意，不是当前仓库已经稳定暴露的公共 API。
+> 如果你要走当前可运行主链，请优先参考：
+> - [Web UI 快速入门](../../getting-started/web-ui.md)
+> - [CLI 与 Config 使用路径](../../getting-started/cli-config-workflow.md)
+> - [Preprocessing API](../../api/preprocessing.md)
+
 ## 1. 医学背景
 
 肺结节是肺部组织中的小圆形或椭圆形病变，直径通常小于 3 厘米。早期检测肺结节对肺癌的诊断和治疗至关重要，因为早期肺癌的 5 年生存率可达 70-90%，而晚期仅为 10-20%。

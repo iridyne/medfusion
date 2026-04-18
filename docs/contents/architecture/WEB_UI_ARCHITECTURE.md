@@ -3,8 +3,19 @@
 > 文档状态：**Beta**
 
 **版本**: v0.3.0  
-**更新日期**: 2026-02-20  
-**状态**: 设计阶段 → 实施中
+**更新日期**: 2026-04-18  
+**状态**: 路线图文档（含当前实现快照）
+
+> 当前实现快照（2026-04-18）：
+>
+> - 默认入口是 `uv run medfusion start`
+> - 当前稳定页面为 `/start`、`/workbench`、`/datasets`、`/config`、`/training`、`/models`、`/system`
+> - `/workflow` 仍是实验态，默认关闭，且执行 runtime 尚未接入 OSS 主链
+> - 前端开发服务器当前使用 `localhost:3000`，后端 API 默认 `localhost:8000`
+> - 当前前后端实时通信使用原生 WebSocket，不是 Socket.IO
+> - `web/backend/` 现在是历史占位目录，不再承载真实后端实现
+>
+> 因此，本页中涉及多用户 / SaaS / 完整节点化工作流的部分，应理解为未来路线图或历史规划，而不是当前 MVP 已交付能力。
 
 ## 📋 目录
 
@@ -167,7 +178,7 @@ docker-compose up -d
 ┌──────────────────┐      ┌──────────────────┐
 │  前端开发服务器   │      │  后端 API 服务    │
 │  (Vite)          │◄────►│  (FastAPI)       │
-│  localhost:5173  │      │  localhost:8000  │
+│  localhost:3000  │      │  localhost:8000  │
 └──────────────────┘      └──────────────────┘
 ```
 
@@ -195,7 +206,7 @@ docker-compose up -d
 **实现：**
 ```bash
 # 开发模式
-npm run dev          # 前端开发服务器（5173）
+npm run dev          # 前端开发服务器（3000）
 uv run uvicorn med_core.web.app:app --reload --host 127.0.0.1 --port 8000
 
 # 生产模式
@@ -232,7 +243,7 @@ uv run medfusion start  # 启动集成服务器（8000）
 | 路由 | React Router | 6+ | 前端路由 |
 | 状态管理 | Zustand | 4+ | 轻量级状态管理 |
 | HTTP 客户端 | Axios | 1.6+ | API 请求 |
-| WebSocket | Socket.IO | 4+ | 实时通信 |
+| WebSocket | Native WebSocket | Browser API | 实时通信 |
 
 ### 4.3 开发工具
 
@@ -301,7 +312,7 @@ medfusion/
 │   │   ├── vite.config.ts
 │   │   └── tsconfig.json
 │   │
-│   └── backend/                 # 旧的独立后端（待清理）⚠️
+│   └── backend/                 # 历史占位目录（已弃用）⚠️
 │       └── app/
 │
 ├── docs/                        # 文档站与架构文档
@@ -1295,7 +1306,7 @@ npm install
 
 # 3. 启动开发服务器
 npm run dev
-# 访问 http://localhost:5173
+# 访问 http://localhost:3000
 ```
 
 ---

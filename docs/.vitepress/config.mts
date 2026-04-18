@@ -155,9 +155,7 @@ export default defineConfig({
           items: [
             { text: 'Core Runtime Architecture', link: '/contents/architecture/CORE_RUNTIME_ARCHITECTURE' },
             { text: 'Web UI 架构', link: '/contents/architecture/WEB_UI_ARCHITECTURE' },
-            { text: '工作流设计', link: '/contents/architecture/WORKFLOW_DESIGN' },
-            { text: 'OSS WebUI 工作流 Spec', link: '/contents/architecture/OSS_WEBUI_WORKFLOW_SPEC' },
-            { text: 'OSS WebUI 单页骨架图', link: '/contents/architecture/OSS_WEBUI_WORKFLOW_OVERVIEW' }
+            { text: '工作流设计（Legacy）', link: '/contents/architecture/WORKFLOW_DESIGN' }
           ]
         }
       ],
