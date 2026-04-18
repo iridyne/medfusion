@@ -1,10 +1,22 @@
 # MedFusion 节点化工作流设计文档
 
-> 文档状态：**Beta**
+> 文档状态：**Legacy**
 
 **版本**: v0.1.0  
 **日期**: 2026-02-20  
-**状态**: 设计阶段
+**状态**: 历史设计存档（不代表当前 OSS 默认主链）
+
+> 当前说明（2026-04-18）：
+> 这份文档保留的是早期“节点化零代码工作流”设计草案。
+> 当前仓库里的 workflow editor 仍处于实验态，默认关闭，且执行 runtime 还没有接入 OSS 主链。
+> 当前稳定路径仍然是：
+> `medfusion start -> Workbench / Run Wizard / Training API / medfusion train`
+>
+> 如果你要理解当前对外信息架构，请优先看：
+> - [Web UI 架构](./WEB_UI_ARCHITECTURE.md)
+>
+> 更细的内部 WebUI 设计稿和工作性 spec 已移到：
+> `C:\Users\Administrator\Vault\Projects\MedML\仓库文档\设计规格`
 
 ## 📋 目录
 
