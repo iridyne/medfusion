@@ -138,6 +138,10 @@ async def test_web_basic_routes(api_client) -> None:
     assert history_payload.status_code == 200
     assert len(history_payload.json()["entries"]) >= 1
 
+    completed_status = await api_client.get(f"/api/training/{job_id}/status")
+    assert completed_status.status_code == 200
+    assert completed_status.json()["result_model_id"] is not None
+
     refreshed_models = await api_client.get("/api/models/")
     assert refreshed_models.status_code == 200
     generated_model = next(

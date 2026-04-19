@@ -36,6 +36,19 @@ async def test_system_features_report_workflow_as_disabled(api_client) -> None:
     assert response.status_code == 200
 
     payload = response.json()
+    deployment_modes = payload["deployment_modes"]
+    assert [item["id"] for item in deployment_modes] == [
+        "local_browser",
+        "private_server",
+        "managed_cloud",
+    ]
+    assert all(item["api_bff"] == "FastAPI" for item in deployment_modes)
+    assert all(item["same_capabilities_as_runtime"] is True for item in deployment_modes)
+    assert payload["advanced_builder"]["status"] == "preview"
+    assert payload["advanced_builder"]["route"] == "/config/advanced"
+    assert payload["advanced_builder"]["canvas_route"] == "/config/advanced/canvas"
+    assert payload["advanced_builder"]["default_entry"] is False
+    assert "fusion" in payload["advanced_builder"]["supported_families"]
     assert payload["workflow"]["enabled"] is False
     assert payload["workflow"]["status"] == "disabled"
     assert payload["workflow"]["ui_exposed"] is False

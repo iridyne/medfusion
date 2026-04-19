@@ -31,6 +31,61 @@ async def get_feature_status() -> dict[str, Any]:
             "training_monitor",
             "model_library",
         ],
+        "deployment_modes": [
+            {
+                "id": "local_browser",
+                "label": "本机浏览器模式",
+                "status": "recommended_now",
+                "frontend": "React build served by FastAPI",
+                "api_bff": "FastAPI",
+                "worker": "Local Python subprocess worker",
+                "metadata_store": "SQLite",
+                "artifact_store": "Local filesystem",
+                "same_capabilities_as_runtime": True,
+            },
+            {
+                "id": "private_server",
+                "label": "私有服务器 / 自建部署模式",
+                "status": "supported_direction",
+                "frontend": "Static frontend served separately or via FastAPI",
+                "api_bff": "FastAPI",
+                "worker": "Independent Python training worker on GPU host",
+                "metadata_store": "PostgreSQL",
+                "artifact_store": "Object storage or shared filesystem",
+                "same_capabilities_as_runtime": True,
+            },
+            {
+                "id": "managed_cloud",
+                "label": "托管云模式",
+                "status": "future_direction",
+                "frontend": "Static frontend on CDN / gateway",
+                "api_bff": "FastAPI",
+                "worker": "Multiple independent Python workers",
+                "metadata_store": "PostgreSQL",
+                "artifact_store": "S3 / OSS / MinIO",
+                "same_capabilities_as_runtime": True,
+            },
+        ],
+        "advanced_builder": {
+            "route": "/config/advanced",
+            "canvas_route": "/config/advanced/canvas",
+            "status": "preview",
+            "ui_exposed": True,
+            "default_entry": False,
+            "message": (
+                "Advanced builder is exposed as a formal-release preview for "
+                "component registry, connection constraints, and compile-ready "
+                "blueprints. It is not the default entrypoint."
+            ),
+            "supported_families": [
+                "data_input",
+                "vision_backbone",
+                "tabular_encoder",
+                "fusion",
+                "head",
+                "training_strategy",
+            ],
+        },
         "workflow": {
             "enabled": settings.enable_experimental_workflow,
             "status": (
