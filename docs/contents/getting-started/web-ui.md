@@ -41,19 +41,21 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 当前默认第一页不再是假设你已经熟悉所有页面的工作台首页，而是 `Getting Started` 引导页。
 它的职责是：
 
-1. 做最小环境与输出路径检查
-2. 推荐一条公开数据 quickstart
-3. 解释“第一次成功”应该看到哪些产物
+1. 介绍正式版当前有哪些组件和页面职责
+2. 解释默认模式与高级模式的边界
+3. 把你带到问题向导与第一次运行链路
 4. 把你带到后续训练与结果页面
 
 大多数新手只需要这一条命令。
 
 当前 Getting Started 页后的推荐路径：
 
-1. 先进入 `Quickstart Run` 页面，确认推荐公开数据 profile、命令链和预期产物
-2. 执行 `medfusion public-datasets prepare` 与 `medfusion validate-config`
-3. 继续到训练监控页启动一次带默认参数的推荐训练
-4. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
+1. 先进入 `Run Wizard`，从问题定义出发拿到推荐骨架
+2. 如需理解高级边界，再进入 `/config/advanced` 查看组件注册表和连接约束
+3. 需要 first-run 演示时，再进入 `Quickstart Run` 页面确认公开数据 profile、命令链和预期产物
+4. 执行 `medfusion public-datasets prepare` 与 `medfusion validate-config`
+5. 继续到训练监控页启动一次带默认参数的推荐训练
+6. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
 
 ### Web 入口与 YAML 主链的关系
 
@@ -71,6 +73,32 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 当前 Web 向导**不会替你发明一个全新的模型能力**，它只是帮你减少现有 schema 的手写成本。
 
 高级或兼容场景再看下面几种方式。
+
+### 当前推荐的部署形态
+
+当前正式版默认按下面三种形态来理解，其中第一种是当前最推荐入口：
+
+1. **本机浏览器模式**
+   - React 构建产物由 FastAPI 提供
+   - FastAPI 负责 API/BFF
+   - 本地 Python subprocess worker 执行训练
+   - SQLite + 本地 artifact 目录
+2. **私有服务器 / 自建部署模式**
+   - 静态前端与 FastAPI 可分开部署
+   - FastAPI 继续作为 API/BFF
+   - Python worker 独立部署到 GPU 主机
+   - PostgreSQL + 对象存储 / 共享文件系统
+3. **托管云模式**
+   - 静态前端 + 网关 / CDN
+   - FastAPI API/BFF
+   - 多 Python worker
+   - PostgreSQL + S3 / OSS / MinIO
+
+关键点不变：
+
+- 不引入 Node 后端
+- 训练不要直接跑在 Web 进程里
+- runtime / config 才是执行真源
 
 ### 方法 2：使用启动脚本（兼容）
 
@@ -143,6 +171,18 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 引导子路径：
 
 - `/quickstart-run`：承接第一次运行链路说明，不单独放入主导航，但作为 Getting Started 的下一步
+
+高级模式路径：
+
+- `/config/advanced`：正式版高级模式的组件注册表与连接约束页，不作为默认首页，但用于承接后续节点式结构编辑
+- `/config/advanced/canvas`：高级模式节点图原型，当前允许在正式版组件边界内做局部结构编辑与编译边界检查，但还不直接提交给后端执行
+
+当前进展：
+
+1. 高级模式节点图现在可以编译出 RunSpec 草案
+2. 后端会继续做正式 `ExperimentConfig` contract 校验
+3. 当校验通过时，可以直接从高级模式创建真实训练任务
+4. 训练完成后，任务状态会附带结果 handoff 信息，并可继续跳到模型库查看结果
 
 非主链路径（如 `/workflow`、`/preprocessing`）保持实验或降级状态，不作为 OSS 默认入口叙事。
 

@@ -87,6 +87,7 @@ flowchart LR
 
 - [Playbooks 总入口](contents/playbooks/README.md)
 - [最小可复现实验（MRE）](contents/playbooks/minimum-reproducible-run.md)
+- [正式版 Smoke Matrix](contents/playbooks/release-smoke-matrix.md)
 - [对外 Demo 路径](contents/playbooks/external-demo-path.md)
 - [多 seed 稳定性汇报](contents/playbooks/multi-seed-stability-report.md)
 - [结果解读与交付检查](contents/playbooks/result-interpretation-checklist.md)

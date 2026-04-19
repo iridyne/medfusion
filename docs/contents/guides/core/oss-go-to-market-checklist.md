@@ -19,6 +19,12 @@
 
 可以扩展，但不要偏离这个中心。
 
+如果是从正式版产品壳来讲，还要补上一句运行策略：
+
+> GUI-first for users, engine-first internally, Web-first for deployment。
+
+也就是说，对外可以强调图形界面是用户主入口，但不要把 GUI 讲成新的执行真源。
+
 ### 可以重点讲的关键词
 
 - 医学 AI 研究验证

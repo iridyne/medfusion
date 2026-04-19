@@ -19,7 +19,95 @@
 
 ## 常见问题 (FAQ)
 
-### Q1: MedFusion 支持哪些 Python 版本？
+### Q1: MedFusion 现在到底是什么？
+
+**A**: 当前最准确的说法不是“完整医学 AI 平台”，而是：
+
+> **一个面向医学 AI 研究验证的研究运行时，外面包了一条 GUI-first 的模型搭建主链。**
+
+更具体一点：
+
+- 默认入口是 `medfusion start`
+- 默认主链是“问题定义 / 模型搭建 / 真实训练 / 结果回流 / 结果详情”
+- 底层执行真源仍然是 Python runtime / config
+
+### Q2: 它现在已经是完整的低代码 / ComfyUI 级 builder 了吗？
+
+**A**: 还没有。
+
+当前已经有：
+
+- `Run Wizard` 的问题向导
+- 高级模式组件注册表
+- 节点图原型
+- 图编译
+- `ExperimentConfig` contract 校验
+- 直接创建真实训练任务
+
+但当前还没有：
+
+- 完整成熟的自由拖拽建模体验
+- 任意模型自由组合能力
+- 完整图保存 / 加载 / 版本管理体系
+
+所以当前更准确的说法是：
+
+**正式版高级模式 preview**
+
+而不是“完整可视化 builder 成品”。
+
+### Q3: 为什么当前不引入 Node 后端？
+
+**A**: 因为这个项目的复杂度中心不在 SSR，而在：
+
+- 模型训练
+- 任务编排
+- 结果资产
+- 后续 AI 接入
+
+当前最稳的底座是：
+
+- 前端：React + TypeScript + Vite
+- API/BFF：FastAPI
+- 训练执行：独立 Python worker / subprocess
+
+也就是说：
+
+- 前端只和 FastAPI 说话
+- FastAPI 不直接承担长训练任务
+- 训练由独立 Python worker 跑
+
+### Q4: 现在已经能从高级模式直接起训练并看到结果了吗？
+
+**A**: 可以。
+
+当前高级模式已经能：
+
+1. 画受约束的节点图
+2. 编译成 RunSpec
+3. 做 `ExperimentConfig` contract 校验
+4. 直接创建真实训练任务
+5. 训练完成后回流到结果后台
+6. 在结果详情里显示来源链（来自哪个入口、哪个 blueprint）
+
+### Q5: 当前支持哪些部署形态？
+
+**A**: 当前已经明确 3 种形态：
+
+1. 本机浏览器模式
+2. 私有服务器 / 自建部署模式
+3. 托管云模式
+
+当前最成熟、最推荐的是：
+
+**本机浏览器模式**
+
+如果要看最小发布判断和 smoke 路径，直接看：
+
+- `docs/contents/playbooks/release-smoke-matrix.md`
+- `docs/contents/tutorials/deployment/production.md`
+
+### Q6: MedFusion 支持哪些 Python 版本？
 
 **A**: MedFusion 支持 Python 3.10, 3.11, 和 3.12。
 
@@ -31,7 +119,7 @@ python --version
 python3.11 -m venv .venv
 ```
 
-### Q2: 如何安装 MedFusion？
+### Q7: 如何安装 MedFusion？
 
 **A**: 使用 uv 或 pip 安装：
 
@@ -46,7 +134,7 @@ pip install -e .
 uv pip install -e ".[dev]"
 ```
 
-### Q3: 需要 GPU 吗？
+### Q8: 需要 GPU 吗？
 
 **A**: 不是必需的，但强烈推荐。
 
@@ -59,7 +147,7 @@ uv pip install -e ".[dev]"
 python -c "import torch; print(torch.cuda.is_available())"
 ```
 
-### Q4: 如何查看框架版本？
+### Q9: 如何查看框架版本？
 
 **A**: 
 
@@ -74,7 +162,7 @@ print(med_core.__version__)
 python -m med_core.cli --version
 ```
 
-### Q5: 支持哪些医学影像模态？
+### Q10: 支持哪些医学影像模态？
 
 **A**: MedFusion 支持多种模态：
 
@@ -85,7 +173,7 @@ python -m med_core.cli --version
 - 病理图像
 - 多模态融合
 
-### Q6: 如何贡献代码？
+### Q11: 如何贡献代码？
 
 **A**: 
 
@@ -97,7 +185,7 @@ python -m med_core.cli --version
 
 详见 [CONTRIBUTING.md](../../../../CONTRIBUTING.md)
 
-### Q7: 在哪里获取帮助？
+### Q12: 在哪里获取帮助？
 
 **A**: 
 

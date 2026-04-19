@@ -2,6 +2,9 @@
 
 本文档介绍如何使用 Docker 部署 MedFusion Web UI。
 
+> 当前建议把 Docker 理解成 **私有服务器 / 自建部署模式** 的一种实现，而不是另一套产品。
+> 前端仍然是 React 静态资源，API/BFF 仍然是 FastAPI，训练仍然建议由独立 Python worker 执行。
+
 ## 📋 目录
 
 - [快速开始](#快速开始)
@@ -20,6 +23,19 @@
 - Docker 20.10+
 - Docker Compose 2.0+（可选）
 - NVIDIA Docker（GPU 支持，可选）
+
+## 当前定位
+
+Docker 形态当前最适合：
+
+- 私有服务器 / 自建部署
+- 团队内部评估
+- 把 Web/API 和训练执行拆到更清楚的进程边界
+
+当前最不建议把 Docker 讲成：
+
+- 一套和本机版完全不同的产品
+- 一套需要 Node 后端才能成立的架构
 
 ### 一键启动（CPU 版本）
 

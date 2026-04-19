@@ -66,6 +66,30 @@ uv run uvicorn med_core.web.app:app --reload --host 127.0.0.1 --port 8000
 
 - 后端源码不在 `web/backend/`
 - 当前后端实现已经在 `med_core/web/`
+- 当前推荐拓扑是 `React frontend -> FastAPI API/BFF -> Python worker`
+
+## 当前部署形态
+
+### 本机浏览器模式
+
+- `uv run medfusion start`
+- React 构建产物由 FastAPI 提供
+- FastAPI 负责 API/BFF
+- 本地 Python subprocess worker 负责训练
+
+### 私有服务器 / 自建部署模式
+
+- 静态前端可独立部署
+- FastAPI 继续做 API/BFF
+- Python worker 独立部署到 GPU 主机
+
+### 托管云模式
+
+- 静态前端走 CDN / 网关
+- FastAPI 做 API/BFF
+- 多 Python worker 负责训练
+
+这三种形态都不建议额外引入 Node 后端。
 
 ## 构建产物与本地文件
 

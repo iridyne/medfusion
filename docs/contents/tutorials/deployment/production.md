@@ -1,557 +1,246 @@
-# 生产环境清单
-
-**预计时间：15分钟**
-
-本清单帮助你在将 MedFusion 模型部署到生产环境前进行全面检查。
-
-## 模型验证
+# MedFusion 发布前清单
 
-### 1. 功能测试
-
-```python
-import torch
-import numpy as np
-
-# 加载模型
-model = torch.load("outputs/checkpoints/best.pth")
-model.eval()
+> 文档状态：**Beta**
 
-# 测试基本推理
-test_input = torch.randn(1, 3, 224, 224)
-with torch.no_grad():
-    output = model(test_input)
-    assert output.shape == (1, 2), "输出形状错误"
-    assert not torch.isnan(output).any(), "输出包含 NaN"
-    assert not torch.isinf(output).any(), "输出包含 Inf"
+这页不讨论“如何做一个通用推理服务”，而是回答更具体的问题：
 
-print("✓ 基本功能测试通过")
-```
+**如果要把当前 MedFusion 正式版往外发，发布前到底要检查什么。**
 
-### 2. 边界条件测试
-
-```python
-# 测试不同批次大小
-for batch_size in [1, 8, 16, 32]:
-    x = torch.randn(batch_size, 3, 224, 224)
-    with torch.no_grad():
-        output = model(x)
-        assert output.shape[0] == batch_size
+当前正式版的推荐底座已经明确：
 
-# 测试极端输入
-test_cases = [
-    torch.zeros(1, 3, 224, 224),  # 全零
-    torch.ones(1, 3, 224, 224),   # 全一
-    torch.randn(1, 3, 224, 224) * 1000,  # 大值
-]
-
-for x in test_cases:
-    with torch.no_grad():
-        output = model(x)
-        assert not torch.isnan(output).any()
+- 前端：`React + TypeScript + Vite`
+- API/BFF：`FastAPI`
+- 训练执行：独立 `Python worker / subprocess`
+- 执行真源：`runtime / config`
+- 节点图：前台交互和结构编辑层，不是执行真源
 
-print("✓ 边界条件测试通过")
-```
+所以这份清单也围绕这条链路展开，而不是围绕一个假设中的 Node/SSR/纯推理产品。
 
-### 3. 性能基准测试
+---
 
-```python
-import time
-
-# 预热
-for _ in range(10):
-    with torch.no_grad():
-        _ = model(test_input)
-
-# 性能测试
-times = []
-for _ in range(100):
-    start = time.time()
-    with torch.no_grad():
-        _ = model(test_input)
-    times.append(time.time() - start)
+## 1. 先确认你要发的是哪种形态
 
-avg_time = np.mean(times)
-std_time = np.std(times)
-p95_time = np.percentile(times, 95)
+当前建议区分 3 种形态：
 
-print(f"平均推理时间: {avg_time*1000:.2f}ms")
-print(f"标准差: {std_time*1000:.2f}ms")
-print(f"P95 延迟: {p95_time*1000:.2f}ms")
-
-# 设置性能阈值
-assert avg_time < 0.1, "平均推理时间超过 100ms"
-assert p95_time < 0.15, "P95 延迟超过 150ms"
-
-print("✓ 性能基准测试通过")
-```
-
-### 4. 准确率验证
-
-```python
-from sklearn.metrics import accuracy_score, roc_auc_score
-
-# 在测试集上评估
-model.eval()
-all_preds = []
-all_labels = []
-
-with torch.no_grad():
-    for images, labels in test_loader:
-        outputs = model(images)
-        preds = torch.argmax(outputs, dim=1)
-        all_preds.extend(preds.cpu().numpy())
-        all_labels.extend(labels.cpu().numpy())
-
-accuracy = accuracy_score(all_labels, all_preds)
-auc = roc_auc_score(all_labels, all_preds)
-
-print(f"测试集准确率: {accuracy:.4f}")
-print(f"测试集 AUC: {auc:.4f}")
-
-# 设置最低准确率阈值
-assert accuracy > 0.80, f"准确率 {accuracy:.4f} 低于阈值 0.80"
-assert auc > 0.85, f"AUC {auc:.4f} 低于阈值 0.85"
+### 本机浏览器模式
 
-print("✓ 准确率验证通过")
-```
+- React 构建产物由 FastAPI 提供
+- FastAPI 同时承担 API/BFF
+- 本地 Python subprocess worker 执行训练
+- SQLite 存 metadata
+- 本地文件系统存 artifacts
 
-## 错误处理
+这是当前最推荐、最完整、最容易验证的正式版形态。
 
-### 1. 异常捕获
+### 私有服务器 / 自建部署模式
 
-```python
-def safe_predict(model, image):
-    """
-    安全的预测函数，包含完整的错误处理
-    """
-    try:
-        # 输入验证
-        if image is None:
-            raise ValueError("输入图像为 None")
-
-        if not isinstance(image, torch.Tensor):
-            raise TypeError(f"期望 torch.Tensor，得到 {type(image)}")
-
-        if image.dim() != 4:
-            raise ValueError(f"期望 4D 张量，得到 {image.dim()}D")
-
-        # 推理
-        model.eval()
-        with torch.no_grad():
-            output = model(image)
-
-        # 输出验证
-        if torch.isnan(output).any():
-            raise RuntimeError("模型输出包含 NaN")
-
-        if torch.isinf(output).any():
-            raise RuntimeError("模型输出包含 Inf")
-
-        return output
-
-    except ValueError as e:
-        print(f"输入验证错误: {e}")
-        return None
-    except RuntimeError as e:
-        print(f"推理错误: {e}")
-        return None
-    except Exception as e:
-        print(f"未知错误: {e}")
-        return None
-
-# 测试错误处理
-assert safe_predict(model, None) is None
-assert safe_predict(model, "invalid") is None
-assert safe_predict(model, torch.randn(3, 224, 224)) is None  # 缺少批次维度
-
-print("✓ 错误处理测试通过")
-```
-
-### 2. 日志记录
-
-```python
-import logging
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('production.log'),
-        logging.StreamHandler()
-    ]
-)
-
-logger = logging.getLogger(__name__)
-
-def predict_with_logging(model, image):
-    """
-    带日志记录的预测函数
-    """
-    logger.info("开始预测")
-
-    try:
-        output = safe_predict(model, image)
-
-        if output is None:
-            logger.error("预测失败")
-            return None
-
-        logger.info(f"预测成功，输出形状: {output.shape}")
-        return output
-
-    except Exception as e:
-        logger.exception("预测过程中发生异常")
-        return None
-
-print("✓ 日志记录配置完成")
-```
-
-## 监控和告警
-
-### 1. 性能监控
-
-```python
-import time
-from collections import deque
-
-class PerformanceMonitor:
-    """
-    性能监控器
-    """
-    def __init__(self, window_size=100):
-        self.latencies = deque(maxlen=window_size)
-        self.errors = 0
-        self.total_requests = 0
-
-    def record_request(self, latency, success=True):
-        self.total_requests += 1
-        self.latencies.append(latency)
-        if not success:
-            self.errors += 1
-
-    def get_metrics(self):
-        if not self.latencies:
-            return {}
-
-        return {
-            'avg_latency': np.mean(self.latencies),
-            'p95_latency': np.percentile(self.latencies, 95),
-            'p99_latency': np.percentile(self.latencies, 99),
-            'error_rate': self.errors / self.total_requests,
-            'total_requests': self.total_requests
-        }
-
-    def check_health(self):
-        metrics = self.get_metrics()
-
-        # 健康检查阈值
-        if metrics.get('avg_latency', 0) > 0.2:
-            logger.warning(f"平均延迟过高: {metrics['avg_latency']:.3f}s")
-
-        if metrics.get('error_rate', 0) > 0.05:
-            logger.error(f"错误率过高: {metrics['error_rate']:.2%}")
-
-        return metrics
-
-# 使用监控器
-monitor = PerformanceMonitor()
-
-for _ in range(100):
-    start = time.time()
-    output = safe_predict(model, test_input)
-    latency = time.time() - start
-    monitor.record_request(latency, success=(output is not None))
-
-metrics = monitor.check_health()
-print(f"监控指标: {metrics}")
-
-print("✓ 性能监控配置完成")
-```
-
-### 2. 健康检查端点
-
-```python
-from fastapi import FastAPI, HTTPException
-
-app = FastAPI()
-
-@app.get("/health")
-async def health_check():
-    """
-    健康检查端点
-    """
-    try:
-        # 检查模型是否可用
-        test_input = torch.randn(1, 3, 224, 224)
-        with torch.no_grad():
-            output = model(test_input)
-
-        # 检查性能指标
-        metrics = monitor.get_metrics()
-
-        if metrics.get('error_rate', 0) > 0.1:
-            raise HTTPException(status_code=503, detail="错误率过高")
-
-        return {
-            "status": "healthy",
-            "metrics": metrics
-        }
-
-    except Exception as e:
-        logger.exception("健康检查失败")
-        raise HTTPException(status_code=503, detail=str(e))
-
-@app.get("/ready")
-async def readiness_check():
-    """
-    就绪检查端点
-    """
-    # 检查模型是否加载
-    if model is None:
-        raise HTTPException(status_code=503, detail="模型未加载")
-
-    return {"status": "ready"}
-
-print("✓ 健康检查端点配置完成")
-```
-
-## 安全检查
-
-### 1. 输入验证
-
-```python
-def validate_input(image):
-    """
-    验证输入图像
-    """
-    # 类型检查
-    if not isinstance(image, torch.Tensor):
-        raise TypeError("输入必须是 torch.Tensor")
-
-    # 形状检查
-    if image.dim() != 4:
-        raise ValueError(f"输入必须是 4D 张量，得到 {image.dim()}D")
-
-    # 值范围检查
-    if image.min() < -10 or image.max() > 10:
-        raise ValueError("输入值超出合理范围")
-
-    # 大小检查
-    if image.shape[2] > 1024 or image.shape[3] > 1024:
-        raise ValueError("输入图像尺寸过大")
-
-    return True
-
-print("✓ 输入验证配置完成")
-```
-
-### 2. 速率限制
-
-```python
-from collections import defaultdict
-import time
-
-class RateLimiter:
-    """
-    简单的速率限制器
-    """
-    def __init__(self, max_requests=100, window=60):
-        self.max_requests = max_requests
-        self.window = window
-        self.requests = defaultdict(list)
-
-    def is_allowed(self, client_id):
-        now = time.time()
-        # 清理过期请求
-        self.requests[client_id] = [
-            t for t in self.requests[client_id]
-            if now - t < self.window
-        ]
-
-        # 检查是否超过限制
-        if len(self.requests[client_id]) >= self.max_requests:
-            return False
-
-        # 记录请求
-        self.requests[client_id].append(now)
-        return True
-
-rate_limiter = RateLimiter(max_requests=100, window=60)
-
-print("✓ 速率限制配置完成")
-```
-
-## 部署清单
-
-### 环境检查
-
-- [ ] Python 版本 >= 3.11
-- [ ] PyTorch 版本 >= 2.0
-- [ ] CUDA 版本兼容（如使用 GPU）
-- [ ] 所有依赖已安装
-- [ ] 环境变量已配置
-
-### 模型检查
-
-- [ ] 模型文件完整
-- [ ] 模型可以正常加载
-- [ ] 推理结果正确
-- [ ] 性能满足要求
-- [ ] 内存占用合理
-
-### 代码检查
-
-- [ ] 所有测试通过
-- [ ] 代码已经过 lint 检查
-- [ ] 类型检查通过
-- [ ] 无安全漏洞
-- [ ] 日志记录完善
-
-### 配置检查
-
-- [ ] 生产配置文件就绪
-- [ ] 敏感信息已移除
-- [ ] 资源限制已设置
-- [ ] 超时配置合理
-- [ ] 重试策略已配置
-
-### 监控检查
-
-- [ ] 日志收集配置完成
-- [ ] 性能监控已启用
-- [ ] 告警规则已设置
-- [ ] 健康检查端点可用
-- [ ] 指标导出正常
-
-### 安全检查
-
-- [ ] 输入验证已实现
-- [ ] 速率限制已启用
-- [ ] 认证授权已配置
-- [ ] HTTPS 已启用
-- [ ] 敏感数据已加密
-
-### 容灾检查
-
-- [ ] 备份策略已制定
-- [ ] 回滚方案已准备
-- [ ] 故障转移已配置
-- [ ] 数据恢复已测试
-- [ ] 应急预案已制定
-
-## 部署脚本
-
-### 自动化部署
+- 静态前端可独立部署
+- FastAPI 继续做 API/BFF
+- Python worker 独立部署到 GPU 主机
+- PostgreSQL 存 metadata
+- 对象存储或共享文件系统存 artifacts
+
+这条线的重点不是换技术栈，而是把 Web/API 和训练执行拆到清楚的进程边界。
+
+### 托管云模式
+
+- 静态前端 + 网关 / CDN
+- FastAPI API/BFF
+- 多 Python worker
+- PostgreSQL + S3 / OSS / MinIO
+
+这是未来方向，不是当前必须先补完的商业化形态。
+
+---
+
+## 2. 不要在发布前摇摆的技术判断
+
+发布前先把这些判断定死：
+
+- 不引入 Node 后端
+- 不把训练直接跑在 Web 进程里
+- 不把节点图当执行真源
+- 不把 workflow editor 当默认首页
+- 不把高级模式当成“任意模型都能画出来”的卖点
+
+如果这些判断还在摇摆，就不是真正进入发布阶段。
+
+---
+
+## 3. 信息层检查
+
+发布前先检查说法是否统一：
+
+- [ ] README 首屏已经说明 `GUI-first for users, engine-first internally, Web-first for deployment`
+- [ ] README 已明确 3 种部署形态
+- [ ] `medfusion start` 仍然是默认推荐入口
+- [ ] Web UI 文档已经说明 `FastAPI BFF + Python worker`
+- [ ] 高级模式的边界已清楚：注册表 / 连接约束 / 图编译 / contract 校验 / 真正训练
+- [ ] 对外 demo 路径已经说明“高级模式来源链会进入结果详情页”
+
+如果信息层不统一，发布时用户会把正式版误解成：
+
+- 另一套 Node 后端产品
+- 一个纯空画布 builder
+- 一个只会给 checkpoint、不负责结果交付的研究脚手架
+
+---
+
+## 4. 运行层检查
+
+### A. 默认主链
+
+至少保证下面这条链能跑通：
 
 ```bash
-#!/bin/bash
-# deploy.sh - 自动化部署脚本
-
-set -e  # 遇到错误立即退出
-
-echo "开始部署..."
-
-# 1. 环境检查
-echo "检查环境..."
-python --version
-pip list | grep torch
-
-# 2. 运行测试
-echo "运行测试..."
-pytest tests/ -v
-
-# 3. 构建 Docker 镜像
-echo "构建 Docker 镜像..."
-docker build -t medfusion:latest .
-
-# 4. 运行健康检查
-echo "运行健康检查..."
-docker run --rm medfusion:latest python -c "import torch; print('OK')"
-
-# 5. 部署
-echo "部署到生产环境..."
-docker-compose -f docker-compose.prod.yml up -d
-
-# 6. 验证部署
-echo "验证部署..."
-sleep 10
-curl -f http://localhost:8000/health || exit 1
-
-echo "部署完成！"
+uv run medfusion start
 ```
 
-### 回滚脚本
+然后确认：
+
+- [ ] 能进入 `Getting Started`
+- [ ] 能进入 `Run Wizard`
+- [ ] 能进入 `Training Monitor`
+- [ ] 能进入 `Model Library`
+
+### B. YAML 主链
+
+至少保证下面这条 CLI 主链能跑通：
 
 ```bash
-#!/bin/bash
-# rollback.sh - 回滚脚本
-
-set -e
-
-echo "开始回滚..."
-
-# 1. 停止当前版本
-docker-compose -f docker-compose.prod.yml down
-
-# 2. 恢复上一个版本
-docker tag medfusion:previous medfusion:latest
-
-# 3. 重新部署
-docker-compose -f docker-compose.prod.yml up -d
-
-# 4. 验证
-sleep 10
-curl -f http://localhost:8000/health || exit 1
-
-echo "回滚完成！"
+uv run medfusion validate-config --config configs/starter/quickstart.yaml
+uv run medfusion train --config configs/starter/quickstart.yaml
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
 
-## 常见问题
+并确认：
 
-### Q1: 如何设置性能阈值？
+- [ ] `validate-config` 会打印 mainline contract
+- [ ] `outputs/` 结构稳定
+- [ ] `summary.json / validation.json / report.md` 都落盘
 
-A: 根据业务需求设置：
-- 医疗诊断：准确率 > 90%，延迟 < 500ms
-- 辅助筛查：准确率 > 85%，延迟 < 200ms
-- 研究用途：准确率 > 80%，延迟 < 1s
+### C. 高级模式主链
 
-### Q2: 如何处理模型更新？
+至少保证下面这条正式版高级模式链能走通：
 
-A: 使用蓝绿部署或金丝雀发布：
-1. 部署新版本到独立环境
-2. 逐步切换流量
-3. 监控指标
-4. 出现问题立即回滚
+1. 进入 `/config/advanced`
+2. 打开 `/config/advanced/canvas`
+3. 选择一条 compile-ready blueprint
+4. 通过后端 `contract` 校验
+5. 直接创建真实训练任务
+6. 训练完成后跳到结果后台
+7. 结果详情显示来源信息：
+   - `source_type=advanced_builder`
+   - `entrypoint=advanced-builder-canvas`
+   - `blueprint_id`
 
-### Q3: 如何监控生产环境？
+这条链如果走不通，就不能对外讲“高级模式已经进入正式版 preview”。
 
-A: 三个层面：
-1. 基础设施：CPU、内存、磁盘、网络
-2. 应用层：延迟、吞吐量、错误率
-3. 业务层：准确率、用户满意度
+---
 
-### Q4: 如何保证高可用？
+## 5. 结果交付检查
 
-A: 多种策略：
-1. 负载均衡
-2. 多实例部署
-3. 自动重启
-4. 健康检查
-5. 故障转移
+正式版不是只验证“训练会不会动”，还要验证“结果能不能交付”。
 
-## 下一步
+至少确认：
 
-恭喜完成所有教程！接下来可以：
+- [ ] 训练完成后，job 状态里能拿到 `result_model_id`
+- [ ] 训练页能直接跳结果详情
+- [ ] Model Library 能承接训练 deep link
+- [ ] 结果详情按四层展示：
+  - 结论层
+  - 指标层
+  - 可视化层
+  - 文件层
+- [ ] 结果详情里能看到来源链信息
 
-- 查看 [API 文档](../../api/) - 深入了解 API
-- 阅读 [高级指南](../../guides/) - 学习高级特性
-- 参与 [社区讨论](https://github.com/iridyne/medfusion/discussions) - 与其他用户交流
-- 贡献代码 - 帮助改进 MedFusion
+如果训练完成后用户还得自己去文件夹找产物，这条正式版链就还没闭环。
 
-## 参考资源
+---
 
+## 6. 部署检查
+
+### 本机浏览器模式
+
+- [ ] `medfusion start` 一条命令可起
+- [ ] SQLite 正常写入 job / model metadata
+- [ ] 本地 Python worker 能拉起训练
+- [ ] 结果能落回本地 artifacts
+
+### 私有服务器 / 自建部署模式
+
+- [ ] Docker 文档说明仍以 `FastAPI BFF + Python worker` 为中心
+- [ ] 没有把 Docker 讲成另一套产品
+- [ ] 已明确前端/API/worker 的拆分建议
+- [ ] 已明确 PostgreSQL / 对象存储是推荐方向，而不是强制本轮完成项
+
+### 托管云模式
+
+- [ ] 当前只作为方向说明，不夸大为已完成能力
+- [ ] 文档里没有暗示“已经多租户上线”
+
+---
+
+## 7. 测试检查
+
+至少确认这些测试或等价 smoke path 已通过：
+
+- [ ] Web/API 边界测试
+- [ ] 训练控制 API 测试
+- [ ] 高级模式 API 测试
+- [ ] Web 最小闭环测试
+- [ ] 前端结果 handoff / 结果详情测试
+- [ ] 文档入口一致性测试
+
+这一步的重点不是“测试越多越好”，而是：
+
+**主叙事、主入口、主链路都已经有自动化约束。**
+
+---
+
+## 8. 当前不该当发布阻塞项的东西
+
+不要把这些东西误判成“发布前必须先做完”：
+
+- 一个新的 Node BFF
+- SSR / Next.js 改造
+- 泛聊天框
+- 任意模型自由拖拽
+- workflow editor 升格为默认首页
+- 完整云商业化能力
+
+这些都可能是后续演进方向，但不是当前正式版主链的先决条件。
+
+---
+
+## 9. 最小发布结论
+
+如果你要判断“现在能不能对外发一个正式版 preview”，可以用下面这个标准：
+
+### 可以发的最低条件
+
+- 默认入口已经清楚
+- 高级模式边界已经清楚
+- `FastAPI BFF + Python worker` 方向已经清楚
+- 默认主链、高级模式主链、结果交付主链已经打通
+- 文档说法与代码现状一致
+
+### 还不能发的信号
+
+- 默认入口还在摇摆
+- 高级模式还只是空画布
+- 结果后台还不能解释来源链
+- 文档还在混用旧架构和新架构
+- 发布口径里还在暗示 Node 后端 / SSR / 任意模型 builder
+
+---
+
+## 10. 推荐连读
+
+- [Web UI 快速入门](../../getting-started/web-ui.md)
+- [Web UI 架构](../../architecture/WEB_UI_ARCHITECTURE.md)
 - [Docker 部署指南](docker.md)
-- [模型导出指南](model-export.md)
-- [快速参考](../../guides/core/quick-reference.md)
-- [性能基准测试](../../guides/advanced-features/performance-benchmarking.md)
+- [正式版 Smoke Matrix](../../playbooks/release-smoke-matrix.md)
+- [对外 Demo 路径](../../playbooks/external-demo-path.md)

@@ -122,3 +122,4 @@ python -c "import torch; print(torch.cuda.memory_summary())"
 - `docs/contents/getting-started/cli-config-workflow.md`
 - `docs/contents/getting-started/web-ui.md`
 - `docs/contents/getting-started/public-datasets.md`
+- `docs/contents/tutorials/deployment/production.md`

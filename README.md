@@ -8,6 +8,73 @@
 MedFusion OSS 聚焦一件事：把医学 AI 的研究流程从“能训练”升级到“可验证、可复盘、可交付”。
 
 > 核心定位：**executable runtime + structured validation outputs**
+>
+> 当前正式版 preview 的最稳说法：
+> **研究运行时 + GUI 模型搭建主链 + 真实结果闭环**
+
+---
+
+## 正式版方向
+
+如果从正式版产品壳来理解 MedFusion，当前最合理的说法是：
+
+> **GUI-first for users, engine-first internally, Web-first for deployment。**
+
+这意味着：
+
+- 正式版默认从 `medfusion start` 进入图形界面，而不是让普通用户先从 CLI 和 YAML 开始
+- Web 前台负责把“问题定义 -> 模型搭建 -> 训练 -> 结果”这条主链讲清楚
+- runtime / CLI 仍然是执行真源，继续负责可预测、可审计、可回放、可复盘的训练与产物生成
+- 节点式编辑是长期重要方向，但当前阶段更适合作为高级模式，而不是默认首页
+
+换句话说，当前正式版不是在承诺“任意模型都能可视化点出来”，而是在把**GUI 模型搭建主链 + 真实结果闭环**收成一个可推出的产品壳。
+
+当前已经能成立的主链是：
+
+`问题定义 / 高级模式图编译 -> contract 校验 -> 真实训练任务 -> 结果回流 -> 结果详情`
+
+---
+
+## 部署形态
+
+当前正式版建议按三种形态来理解：
+
+### 1. 本机浏览器模式
+
+- 前端：React 构建产物由 FastAPI 直接提供
+- API/BFF：FastAPI
+- 训练执行：本地 Python subprocess worker
+- metadata：SQLite
+- artifacts：本地文件系统
+
+这是当前最推荐、最完整、最可复现的正式版入口。
+
+### 2. 私有服务器 / 自建部署模式
+
+- 前端：静态前端可独立部署，也可继续由 FastAPI 承载
+- API/BFF：FastAPI
+- 训练执行：独立 Python worker，建议部署到 GPU 机器
+- metadata：PostgreSQL
+- artifacts：共享文件系统或对象存储
+
+这条线的重点不是换技术栈，而是把 Web 进程和训练执行进程拆开。
+
+### 3. 托管云模式
+
+- 前端：静态前端 + 网关 / CDN
+- API/BFF：FastAPI
+- 训练执行：多 Python worker
+- metadata：PostgreSQL
+- artifacts：S3 / OSS / MinIO
+
+这仍然是同一条 runtime 主链，只是部署拓扑和多租户能力更强。
+
+无论哪种形态，当前都不建议引入 Node 后端。这个项目的复杂度中心在训练、编排、结果资产和后续 AI 接入，而不是 SSR。
+
+发布前如果你想确认“这版到底能不能对外展示”，推荐直接看：
+
+- [正式版 Smoke Matrix](docs/contents/playbooks/release-smoke-matrix.md)
+- [发布前清单](docs/contents/tutorials/deployment/production.md)
 
 ---
 
