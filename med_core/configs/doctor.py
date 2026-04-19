@@ -131,15 +131,20 @@ class ConfigDoctor:
         )
 
     @staticmethod
+    def _display_path(path: str | Path) -> str:
+        candidate = Path(format_oss_display_path(path))
+        return candidate.as_posix()
+
+    @staticmethod
     def _build_mainline_contract(
         config: ExperimentConfig,
         config_path: Path,
     ) -> dict[str, Any]:
         layout = RunOutputLayout(config.logging.output_dir)
         checkpoint_path = layout.checkpoints_dir / "best.pth"
-        config_path_str = str(config_path)
-        display_output_dir = format_oss_display_path(layout.root_dir)
-        display_checkpoint_path = format_oss_display_path(checkpoint_path)
+        config_path_str = ConfigDoctor._display_path(config_path)
+        display_output_dir = ConfigDoctor._display_path(layout.root_dir)
+        display_checkpoint_path = ConfigDoctor._display_path(checkpoint_path)
 
         return {
             "schema_family": "experiment",
@@ -154,10 +159,10 @@ class ConfigDoctor:
             },
             "artifacts": {
                 "checkpoint": display_checkpoint_path,
-                "metrics": format_oss_display_path(layout.metrics_path),
-                "validation": format_oss_display_path(layout.validation_path),
-                "summary": format_oss_display_path(layout.summary_path),
-                "report": format_oss_display_path(layout.report_path),
+                "metrics": ConfigDoctor._display_path(layout.metrics_path),
+                "validation": ConfigDoctor._display_path(layout.validation_path),
+                "summary": ConfigDoctor._display_path(layout.summary_path),
+                "report": ConfigDoctor._display_path(layout.report_path),
             },
             "recommended_commands": {
                 "validate": f"medfusion validate-config --config {config_path_str}",

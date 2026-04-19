@@ -98,6 +98,11 @@ yarn-error.log*
 target/
 Cargo.lock
 data/
+!data/
+data/*
+!data/mock/
+!data/mock/**
+tmp/
 .omc/
 .alma-snapshots
 
