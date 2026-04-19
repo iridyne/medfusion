@@ -22,7 +22,9 @@ import {
   Tabs,
 } from "antd";
 import {
+  CheckCircleOutlined,
   DisconnectOutlined,
+  EyeOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   PlusOutlined,
@@ -36,6 +38,8 @@ import { EChartsOption } from "echarts";
 import { getDatasets } from "../api/datasets";
 import { getModels, type Model as ResultModel } from "../api/models";
 import trainingApi, {
+  buildTrainingResultLink,
+  getTrainingResultState,
   type TrainingHistoryEntry,
   type TrainingJob,
   type TrainingJobCreate,
@@ -89,6 +93,24 @@ const BACKBONE_OPTIONS = [
   "swin_tiny",
 ];
 
+const STATUS_COLOR_MAP: Record<string, string> = {
+  queued: "default",
+  running: "processing",
+  paused: "warning",
+  completed: "success",
+  failed: "error",
+  stopped: "default",
+};
+
+const STATUS_LABEL_MAP: Record<string, string> = {
+  queued: "排队中",
+  running: "训练中",
+  paused: "已暂停",
+  completed: "已完成",
+  failed: "失败",
+  stopped: "已停止",
+};
+
 function toMetricHistory(entries: TrainingHistoryEntry[]): MetricHistory {
   if (!entries.length) {
     return EMPTY_HISTORY;
@@ -119,9 +141,39 @@ export default function TrainingMonitor() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [guidedStartNotice, setGuidedStartNotice] = useState(false);
+  const [activeTab, setActiveTab] = useState("jobs");
+  const [resultNoticeJobId, setResultNoticeJobId] = useState<string | null>(null);
   const wsClient = useRef<WebSocketClient | null>(null);
 
   const currentJob = jobs.find((job) => job.id === selectedJob);
+  const jobsWithReadyResults = jobs.filter(
+    (job) => getTrainingResultState(job) === "ready",
+  );
+  const jobsWaitingForResults = jobs.filter(
+    (job) => getTrainingResultState(job) === "pending",
+  );
+  const highlightedResultJob =
+    (resultNoticeJobId && jobs.find((job) => job.id === resultNoticeJobId)) ||
+    (currentJob && getTrainingResultState(currentJob) !== "unavailable" ? currentJob : null) ||
+    jobsWithReadyResults[0] ||
+    jobsWaitingForResults[0] ||
+    null;
+  const highlightedResultState = highlightedResultJob
+    ? getTrainingResultState(highlightedResultJob)
+    : "unavailable";
+  const highlightedResultLink = highlightedResultJob
+    ? buildTrainingResultLink(highlightedResultJob)
+    : null;
+
+  const handleOpenResult = (job: TrainingJob) => {
+    const link = buildTrainingResultLink(job);
+    if (!link) {
+      message.warning("该任务已完成，但结果还在归档中");
+      return;
+    }
+
+    navigate(link);
+  };
 
   const loadJobs = async () => {
     try {
@@ -189,6 +241,14 @@ export default function TrainingMonitor() {
 
   useEffect(() => {
     if (searchParams.get("action") !== "start") {
+      const targetJob = searchParams.get("job");
+      if (!targetJob) {
+        return;
+      }
+      setSelectedJob(targetJob);
+      const nextSearchParams = new URLSearchParams(searchParams);
+      nextSearchParams.delete("job");
+      setSearchParams(nextSearchParams, { replace: true });
       return;
     }
 
@@ -295,6 +355,8 @@ export default function TrainingMonitor() {
               totalEpochs: data.total_epochs ?? 0,
               loss: data.loss ?? 0,
               accuracy: data.accuracy ?? 0,
+              resultModelId: data.result_model_id ?? undefined,
+              resultModelName: data.result_model_name ?? undefined,
               startTime: "",
             },
             ...prevJobs,
@@ -310,6 +372,8 @@ export default function TrainingMonitor() {
                 epoch: data.epoch ?? job.epoch,
                 loss: data.loss ?? job.loss,
                 accuracy: data.accuracy ?? job.accuracy,
+                resultModelId: data.result_model_id ?? job.resultModelId,
+                resultModelName: data.result_model_name ?? job.resultModelName,
               }
             : job,
         );
@@ -330,8 +394,23 @@ export default function TrainingMonitor() {
 
     if (data.type === "training_complete") {
       message.success("训练任务已完成，模型已同步到模型库");
+      setResultNoticeJobId(data.job_id);
       void loadJobs();
       void loadOutputs();
+      if (data.job_id === selectedJob && data.result_model_id) {
+        setActiveTab("outputs");
+        setJobs((prevJobs) =>
+          prevJobs.map((job) =>
+            job.id === data.job_id
+              ? {
+                  ...job,
+                  resultModelId: data.result_model_id,
+                  resultModelName: data.result_model_name ?? job.resultModelName,
+                }
+              : job,
+          ),
+        );
+      }
       if (data.job_id === selectedJob) {
         void loadJobHistory(data.job_id);
       }
@@ -515,23 +594,7 @@ export default function TrainingMonitor() {
       dataIndex: "status",
       key: "status",
       render: (status: string) => {
-        const colorMap: Record<string, string> = {
-          queued: "default",
-          running: "processing",
-          paused: "warning",
-          completed: "success",
-          failed: "error",
-          stopped: "default",
-        };
-        const labelMap: Record<string, string> = {
-          queued: "排队中",
-          running: "训练中",
-          paused: "已暂停",
-          completed: "已完成",
-          failed: "失败",
-          stopped: "已停止",
-        };
-        return <Tag color={colorMap[status]}>{labelMap[status] || status}</Tag>;
+        return <Tag color={STATUS_COLOR_MAP[status]}>{STATUS_LABEL_MAP[status] || status}</Tag>;
       },
     },
     {
@@ -597,6 +660,19 @@ export default function TrainingMonitor() {
               恢复
             </Button>
           )}
+          {record.status === "completed" && record.resultModelId ? (
+            <Button
+              size="small"
+              type="primary"
+              icon={<EyeOutlined />}
+              onClick={() => handleOpenResult(record)}
+            >
+              查看结果
+            </Button>
+          ) : null}
+          {record.status === "completed" && !record.resultModelId ? (
+            <Tag color="gold">结果归档中</Tag>
+          ) : null}
           <Button size="small" onClick={() => setSelectedJob(record.id)}>
             查看
           </Button>
@@ -638,7 +714,7 @@ export default function TrainingMonitor() {
           <div className="hero-aside-panel__copy">
             {currentJob
               ? `当前任务进度 ${currentJob.progress}% ，状态为 ${currentJob.status}。`
-              : "先在任务列表中选择一个训练任务，或直接启动新的训练任务。"}
+              : "先在任务列表中选择一个训练任务，或直接启动新的训练任务。训练完成后，结果输出页签会给出直接进入结果后台的入口。"}
           </div>
           <Badge
             status={wsConnected ? "success" : "default"}
@@ -693,9 +769,61 @@ export default function TrainingMonitor() {
         />
       ) : null}
 
+      {highlightedResultJob ? (
+        <Alert
+          type={highlightedResultState === "ready" ? "success" : "warning"}
+          showIcon
+          icon={
+            highlightedResultState === "ready" ? (
+              <CheckCircleOutlined />
+            ) : (
+              <DisconnectOutlined />
+            )
+          }
+          style={{ marginBottom: 16 }}
+          message={
+            highlightedResultState === "ready"
+              ? "训练已完成，结果可直接进入结果后台"
+              : "训练已完成，正在等待结果归档"
+          }
+          description={
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <div>
+                <strong>{highlightedResultJob.name}</strong>
+                {highlightedResultState === "ready"
+                  ? ` 的结果已生成${highlightedResultJob.resultModelName ? `：${highlightedResultJob.resultModelName}` : ""}。你可以直接进入结果详情，也可以回到任务监控继续查看曲线和日志。`
+                  : " 已结束执行，但结果产物还没有出现在结果后台中。通常这是归档回流仍在同步的状态。"}
+              </div>
+              <Space wrap>
+                {highlightedResultLink ? (
+                  <Button
+                    type="primary"
+                    icon={<EyeOutlined />}
+                    onClick={() => handleOpenResult(highlightedResultJob)}
+                  >
+                    查看结果详情
+                  </Button>
+                ) : null}
+                <Button
+                  onClick={() => {
+                    setSelectedJob(highlightedResultJob.id);
+                    setActiveTab(highlightedResultState === "ready" ? "outputs" : "monitor");
+                  }}
+                >
+                  返回对应任务
+                </Button>
+              </Space>
+            </Space>
+          }
+          closable
+          onClose={() => setResultNoticeJobId(null)}
+        />
+      ) : null}
+
       <Card className="surface-card">
         <Tabs
-          defaultActiveKey="jobs"
+          activeKey={activeTab}
+          onChange={setActiveTab}
           items={[
             {
               key: "jobs",
@@ -796,77 +924,158 @@ export default function TrainingMonitor() {
             {
               key: "outputs",
               label: "结果输出",
-              children:
-                latestOutputs.length > 0 ? (
-                  <Row gutter={[16, 16]}>
-                    {latestOutputs.map((output) => (
-                      <Col xs={24} xl={12} key={output.id}>
-                        <Card
-                          title={output.name}
-                          extra={
-                            <Space wrap>
-                              <Tag color="blue">{output.backbone}</Tag>
-                              <Tag color="purple">
-                                {output.format?.toUpperCase() || "PYTORCH"}
-                              </Tag>
-                            </Space>
-                          }
-                        >
-                          <Space
-                            direction="vertical"
-                            size={12}
-                            style={{ width: "100%" }}
+              children: (
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  <Alert
+                    type={jobsWithReadyResults.length > 0 ? "success" : "info"}
+                    showIcon
+                    message="训练完成后的结果交付入口"
+                    description={
+                      jobsWithReadyResults.length > 0
+                        ? "优先从这里打开已完成任务的结果详情，再决定是否进入完整结果后台做归档复盘。"
+                        : "一旦训练任务完成并生成结果模型，这里会出现一条更直接的“查看结果”入口，把训练完成态和结果后台接起来。"
+                    }
+                  />
+
+                  {jobsWithReadyResults.length > 0 ? (
+                    <Row gutter={[16, 16]}>
+                      {jobsWithReadyResults.slice(0, 4).map((job) => (
+                        <Col xs={24} xl={12} key={job.id}>
+                          <Card
+                            title={job.name}
+                            extra={<Tag color="green">结果已就绪</Tag>}
                           >
-                            <div style={{ color: "var(--text-secondary)" }}>
-                              数据集：{output.dataset_name || "-"}
-                            </div>
-                            <Row gutter={12}>
-                              <Col span={8}>
-                                <Statistic
-                                  title="Accuracy"
-                                  value={(output.accuracy ?? 0) * 100}
-                                  precision={2}
-                                  suffix="%"
-                                />
-                              </Col>
-                              <Col span={8}>
-                                <Statistic
-                                  title="AUC"
-                                  value={output.visualizations?.roc_curve?.auc ?? 0}
-                                  precision={4}
-                                />
-                              </Col>
-                              <Col span={8}>
-                                <Statistic
-                                  title="Attention"
-                                  value={output.visualizations?.attention_maps?.length || 0}
-                                />
-                              </Col>
-                            </Row>
-                            <Alert
-                              type="success"
-                              showIcon
-                              message="结果文件已生成"
-                              description={`共 ${output.result_files?.length || 0} 个结果产物，包括模型权重、训练配置、结果摘要和日志。`}
-                            />
-                            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                              ROC AUC: {output.visualizations?.roc_curve?.auc?.toFixed(4) || "-"}{" "}
-                              | Loss: {output.loss?.toFixed(4) || "-"} | 创建时间:{" "}
-                              {output.created_at
-                                ? new Date(output.created_at).toLocaleString("zh-CN")
-                                : "-"}
-                            </div>
-                            <Button onClick={() => navigate("/models")}>
-                              查看完整结果页
-                            </Button>
-                          </Space>
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
-                ) : (
-                  <Empty description="训练完成后，这里会集中展示 ROC/AUC、attention 热力图和结果文件概览。" />
-                ),
+                            <Space
+                              direction="vertical"
+                              size={12}
+                              style={{ width: "100%" }}
+                            >
+                              <div style={{ color: "var(--text-secondary)" }}>
+                                {job.resultModelName
+                                  ? `结果模型：${job.resultModelName}`
+                                  : "结果模型已入库，可直接打开详情。"}
+                              </div>
+                              <Row gutter={12}>
+                                <Col span={8}>
+                                  <Statistic title="状态" value={STATUS_LABEL_MAP[job.status] || job.status} />
+                                </Col>
+                                <Col span={8}>
+                                  <Statistic title="进度" value={job.progress} suffix="%" />
+                                </Col>
+                                <Col span={8}>
+                                  <Statistic
+                                    title="准确率"
+                                    value={job.accuracy * 100}
+                                    precision={2}
+                                    suffix="%"
+                                  />
+                                </Col>
+                              </Row>
+                              <Space wrap>
+                                <Button
+                                  type="primary"
+                                  icon={<EyeOutlined />}
+                                  onClick={() => handleOpenResult(job)}
+                                >
+                                  查看结果详情
+                                </Button>
+                                <Button
+                                  onClick={() => {
+                                    setSelectedJob(job.id);
+                                    setActiveTab("monitor");
+                                  }}
+                                >
+                                  回到任务监控
+                                </Button>
+                              </Space>
+                            </Space>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  ) : null}
+
+                  {jobsWaitingForResults.length > 0 ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="仍有已完成任务等待结果归档"
+                      description={`当前有 ${jobsWaitingForResults.length} 个任务已经结束执行，但还没有出现在结果后台。你可以继续在监控页观察它们，或稍后刷新结果输出。`}
+                    />
+                  ) : null}
+
+                  {latestOutputs.length > 0 ? (
+                    <Row gutter={[16, 16]}>
+                      {latestOutputs.map((output) => (
+                        <Col xs={24} xl={12} key={output.id}>
+                          <Card
+                            title={output.name}
+                            extra={
+                              <Space wrap>
+                                <Tag color="blue">{output.backbone}</Tag>
+                                <Tag color="purple">
+                                  {output.format?.toUpperCase() || "PYTORCH"}
+                                </Tag>
+                              </Space>
+                            }
+                          >
+                            <Space
+                              direction="vertical"
+                              size={12}
+                              style={{ width: "100%" }}
+                            >
+                              <div style={{ color: "var(--text-secondary)" }}>
+                                数据集：{output.dataset_name || "-"}
+                              </div>
+                              <Row gutter={12}>
+                                <Col span={8}>
+                                  <Statistic
+                                    title="Accuracy"
+                                    value={(output.accuracy ?? 0) * 100}
+                                    precision={2}
+                                    suffix="%"
+                                  />
+                                </Col>
+                                <Col span={8}>
+                                  <Statistic
+                                    title="AUC"
+                                    value={output.visualizations?.roc_curve?.auc ?? 0}
+                                    precision={4}
+                                  />
+                                </Col>
+                                <Col span={8}>
+                                  <Statistic
+                                    title="Attention"
+                                    value={output.visualizations?.attention_maps?.length || 0}
+                                  />
+                                </Col>
+                              </Row>
+                              <Alert
+                                type="success"
+                                showIcon
+                                message="结果文件已生成"
+                                description={`共 ${output.result_files?.length || 0} 个结果产物，包括模型权重、训练配置、结果摘要和日志。`}
+                              />
+                              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                                ROC AUC: {output.visualizations?.roc_curve?.auc?.toFixed(4) || "-"}{" "}
+                                | Loss: {output.loss?.toFixed(4) || "-"} | 创建时间:{" "}
+                                {output.created_at
+                                  ? new Date(output.created_at).toLocaleString("zh-CN")
+                                  : "-"}
+                              </div>
+                              <Button onClick={() => navigate(`/models?model=${output.id}`)}>
+                                查看完整结果页
+                              </Button>
+                            </Space>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  ) : jobsWithReadyResults.length === 0 ? (
+                    <Empty description="训练完成后，这里会集中展示 ROC/AUC、attention 热力图和结果文件概览。" />
+                  ) : null}
+                </Space>
+              ),
             },
           ]}
         />

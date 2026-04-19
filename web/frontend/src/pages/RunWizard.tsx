@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -59,11 +59,57 @@ function toConfigFileName(experimentName: string): string {
   return `${normalized || "generated-run"}.yaml`;
 }
 
+type BuilderPathId =
+  | "first-success"
+  | "clinical-baseline"
+  | "result-handoff";
+
+interface BuilderPathOption {
+  id: BuilderPathId;
+  label: string;
+  problem: string;
+  runtimeShape: string;
+  editorMode: string;
+  preset: RunPresetId;
+}
+
+const BUILDER_PATH_OPTIONS: BuilderPathOption[] = [
+  {
+    id: "first-success",
+    label: "第一次先跑通一条真实主链",
+    problem: "我想先完成公开数据、训练和结果回流的一次成功闭环。",
+    runtimeShape: "image + tabular / classification / quickstart",
+    editorMode: "默认模式：向导 + 参数编辑",
+    preset: "quickstart",
+  },
+  {
+    id: "clinical-baseline",
+    label: "我要搭一个更稳的研究基线",
+    problem: "我已经知道任务方向，希望从正式版前台拿到一套更稳的分类基线骨架。",
+    runtimeShape: "image + tabular / classification / clinical baseline",
+    editorMode: "默认模式：骨架推荐 -> 参数细化",
+    preset: "clinical",
+  },
+  {
+    id: "result-handoff",
+    label: "我要做结果审查与对外交付",
+    problem: "我更关心结果 artifact、可视化和导入结果后台后的展示质量。",
+    runtimeShape: "image + tabular / classification / result audit",
+    editorMode: "默认模式：结果导向 preset + artifact 强化",
+    preset: "showcase",
+  },
+];
+
 export default function RunWizard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
+  const [builderPath, setBuilderPath] = useState<BuilderPathId>("first-success");
   const [preset, setPreset] = useState<RunPresetId>("quickstart");
   const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset("quickstart"));
+  const [compiledImportSource, setCompiledImportSource] = useState<string | null>(
+    null,
+  );
 
   const issues = useMemo(() => validateRunSpec(spec), [spec]);
   const yamlPreview = useMemo(() => buildYamlFromRunSpec(spec), [spec]);
@@ -152,6 +198,15 @@ export default function RunWizard() {
     setCurrentStep(0);
   };
 
+  const applyBuilderPath = (pathId: BuilderPathId) => {
+    const option = BUILDER_PATH_OPTIONS.find((item) => item.id === pathId);
+    if (!option) {
+      return;
+    }
+    setBuilderPath(pathId);
+    applyPreset(option.preset);
+  };
+
   const syncOutputDir = () => {
     updateLogging({ outputDir: inferOutputDir(spec.projectName, spec.experimentName) });
     message.success("已按项目名和实验名更新输出目录");
@@ -179,14 +234,17 @@ export default function RunWizard() {
   };
 
   const stepItems = [
-    { title: "实验基线", description: "项目名、路径和 preset" },
-    { title: "数据字段", description: "CSV、图像列与表格特征" },
-    { title: "模型结构", description: "backbone、fusion、attention" },
+    { title: "问题定义", description: "先选问题路径和推荐骨架" },
+    { title: "数据与输入", description: "CSV、图像列与表格特征" },
+    { title: "模型骨架", description: "backbone、fusion、attention" },
     { title: "训练策略", description: "epoch、optimizer、scheduler" },
-    { title: "预览导出", description: "YAML 与 CLI 命令" },
+    { title: "导出与执行", description: "YAML 与 CLI 命令" },
   ];
   const selectedPresetLabel =
     RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
+  const selectedBuilderPath =
+    BUILDER_PATH_OPTIONS.find((item) => item.id === builderPath) ??
+    BUILDER_PATH_OPTIONS[0];
   const trainingPrefillQuery = useMemo(() => {
     return buildTrainingPrefillQuery({
       experimentName: spec.experimentName,
@@ -205,33 +263,79 @@ export default function RunWizard() {
     spec.training.optimizer.learningRate,
   ]);
 
+  useEffect(() => {
+    const state = location.state as
+      | {
+          compiledRunSpec?: RunSpec;
+          compiledPreset?: RunPresetId;
+          source?: string;
+        }
+      | undefined;
+
+    if (!state?.compiledRunSpec) {
+      return;
+    }
+
+    setSpec(state.compiledRunSpec);
+    setPreset(state.compiledPreset || "quickstart");
+    setCurrentStep(0);
+    setCompiledImportSource(state.source || "advanced-builder");
+  }, [location.state]);
+
   const renderBasicsStep = () => (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Card size="small" title="选择起步 preset">
+      <Alert
+        type="info"
+        showIcon
+        message="当前正式版默认开放的是问题向导 + 参数编辑层"
+        description="这一步先从问题定义进入，再把你映射到当前 runtime 真正支持的模型骨架。节点式编辑仍然是高级模式，不直接替代这条默认路径。"
+      />
+
+      <Card size="small" title="先说你现在要解决什么问题">
         <Row gutter={[12, 12]}>
-          {RUN_PRESET_OPTIONS.map((item) => (
+          {BUILDER_PATH_OPTIONS.map((item) => (
             <Col xs={24} md={8} key={item.id}>
               <Card
                 size="small"
                 hoverable
-                onClick={() => applyPreset(item.id)}
+                onClick={() => applyBuilderPath(item.id)}
                 style={{
-                  borderColor: preset === item.id ? "#1677ff" : undefined,
-                  boxShadow: preset === item.id ? "0 0 0 2px rgba(22,119,255,0.12)" : undefined,
+                  borderColor: builderPath === item.id ? "#1677ff" : undefined,
+                  boxShadow:
+                    builderPath === item.id
+                      ? "0 0 0 2px rgba(22,119,255,0.12)"
+                      : undefined,
                   cursor: "pointer",
                 }}
               >
                 <Space direction="vertical" size={6} style={{ width: "100%" }}>
                   <Space>
                     <Text strong>{item.label}</Text>
-                    {preset === item.id ? <Tag color="processing">当前</Tag> : null}
+                    {builderPath === item.id ? (
+                      <Tag color="processing">当前</Tag>
+                    ) : null}
                   </Space>
-                  <Text type="secondary">{item.description}</Text>
+                  <Text type="secondary">{item.problem}</Text>
+                  <Text>当前会映射到：{item.runtimeShape}</Text>
+                  <Text type="secondary">{item.editorMode}</Text>
                 </Space>
               </Card>
             </Col>
           ))}
         </Row>
+      </Card>
+
+      <Card size="small" title="当前阶段的前台边界">
+        <div className="editorial-grid">
+          <div className="surface-note surface-note--dense">
+            <strong>默认模式</strong>
+            <p>先通过问题向导得到推荐骨架，再在参数级编辑层里调整字段和导出 YAML。</p>
+          </div>
+          <div className="surface-note surface-note--dense">
+            <strong>高级模式</strong>
+            <p>节点式编辑当前仍然保留为高级结构编辑面，不对外承诺可任意组合出 runtime 尚未支持的新能力。</p>
+          </div>
+        </div>
       </Card>
 
       <Card size="small" title="实验元信息">
@@ -978,18 +1082,21 @@ export default function RunWizard() {
 
   return (
     <PageScaffold
-      eyebrow="RunSpec Composer"
-      title="用一张桌面级向导生成真实训练配置"
-      description="这里直接对齐 `ExperimentConfig` 和 `medfusion train` 主链。Web 负责把复杂 schema 组织成可读表单，YAML 负责导出、执行与复现。"
+      eyebrow="Problem-first builder"
+      title="先定义问题，再生成可运行的模型骨架"
+      description="Run Wizard 现在承担正式版默认的模型搭建入口第一阶段：先把用户问题收敛成推荐骨架，再落到当前 runtime 已支持的参数编辑层、YAML 导出和真实训练链。"
       chips={[
-        { label: "Real schema", tone: "amber" },
-        { label: "CLI-aligned", tone: "teal" },
-        { label: "Reproducible export", tone: "blue" },
+        { label: "Problem-first", tone: "amber" },
+        { label: "Runtime-backed", tone: "teal" },
+        { label: "Formal release slice", tone: "blue" },
       ]}
       actions={
         <>
           <Button icon={<DownloadOutlined />} onClick={downloadYaml}>
             下载当前 YAML
+          </Button>
+          <Button onClick={() => navigate("/config/advanced")}>
+            打开高级模式
           </Button>
           <Button
             icon={<CopyOutlined />}
@@ -1004,22 +1111,22 @@ export default function RunWizard() {
       }
       aside={
         <div className="hero-aside-panel">
-          <span className="hero-aside-panel__label">Current configuration</span>
-          <div className="hero-aside-panel__value">{configFileName}</div>
+          <span className="hero-aside-panel__label">Current recommendation</span>
+          <div className="hero-aside-panel__value">{selectedBuilderPath.label}</div>
           <div className="hero-aside-panel__copy">
-            preset 为 <strong>{selectedPresetLabel}</strong>，输出目录位于{" "}
-            <code>{spec.logging.outputDir}</code>。
+            当前问题路径会映射到 <strong>{selectedPresetLabel}</strong> preset，
+            并继续通过当前 runtime 支持的配置空间导出真实 YAML。
           </div>
           <div className="surface-note">
-            就绪检查: {errorCount} error / {warningCount} warning
+            当前支持：<strong>{selectedBuilderPath.runtimeShape}</strong>
           </div>
         </div>
       }
       metrics={[
         {
-          label: "Preset",
+          label: "Problem path",
           value: selectedPresetLabel,
-          hint: "Current starting point",
+          hint: selectedBuilderPath.label,
           tone: "amber",
         },
         {
@@ -1029,25 +1136,36 @@ export default function RunWizard() {
           tone: "blue",
         },
         {
-          label: "Blocking errors",
-          value: errorCount.toLocaleString(),
-          hint: "Must be zero before running",
-          tone: errorCount > 0 ? "rose" : "teal",
+          label: "Edit mode",
+          value: "guided by default",
+          hint: "Node editing remains an advanced mode",
+          tone: "teal",
         },
         {
-          label: "Warnings",
-          value: warningCount.toLocaleString(),
-          hint: readyToRun ? "Ready to export or execute" : "Review before handoff",
-          tone: warningCount > 0 ? "amber" : "teal",
+          label: "Blocking errors",
+          value: errorCount.toLocaleString(),
+          hint: readyToRun
+            ? `Warnings: ${warningCount}`
+            : "Must be zero before running",
+          tone: errorCount > 0 ? "rose" : "teal",
         },
       ]}
     >
       <Alert
         type="info"
         showIcon
-        message="这一步解决的是“配置如何产生”"
-        description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 开始。后续能力扩展也应复用这份 RunSpec，而不是另起一套配置系统。"
+        message="这一步先解决的是“你到底在搭什么模型”"
+        description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 和 schema 字段开始。Run Wizard 需要先解释问题路径、模板边界和推荐骨架，再把配置导回真实主链。"
       />
+      {compiledImportSource ? (
+        <Alert
+          type="success"
+          showIcon
+          style={{ marginTop: 16 }}
+          message="已从高级模式导入一份可编辑配置草案"
+          description={`当前这份 RunSpec 来自 ${compiledImportSource} 的图编译结果。你现在可以继续在默认模式里微调字段，再导出 YAML 或进入训练。`}
+        />
+      ) : null}
 
       <div className="split-grid">
         <Card className="surface-card">
@@ -1130,6 +1248,9 @@ export default function RunWizard() {
               <Text type="secondary">
                 当前建议优先下载 YAML 并通过 CLI 执行，以保证训练和结果链路可复现。Web 训练入口适合本地快速验证。
               </Text>
+              <Button onClick={() => navigate("/config/advanced")}>
+                查看高级模式的组件注册表
+              </Button>
             </Space>
           </Card>
         </Space>

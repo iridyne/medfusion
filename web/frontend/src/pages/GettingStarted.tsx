@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, Button, Card, Tag } from "antd";
 import {
   ArrowRightOutlined,
+  ControlOutlined,
   ExperimentOutlined,
   FileSearchOutlined,
   PlayCircleOutlined,
@@ -10,8 +11,9 @@ import {
 import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
 import {
-  START_CHECKS,
-  START_NEXT_STEPS,
+  START_COMPONENTS,
+  START_MODE_POSITIONING,
+  START_PRIMARY_FLOW,
 } from "@/config/startExperience";
 
 export default function GettingStarted() {
@@ -19,58 +21,71 @@ export default function GettingStarted() {
 
   return (
     <PageScaffold
-      eyebrow="Guided first run"
-      title="先跑通一次，再开始扩展 MedFusion"
-      description="第一次进入时，先沿着一条推荐 quickstart 走通公开数据、训练和结果构建。Web 负责把路径讲清楚，真实执行仍然回到同一条 CLI 主链。"
+      eyebrow="Formal release entry"
+      title="先理解正式版组件，再开始定义你的模型问题"
+      description="正式版默认入口先介绍组件职责，再把你带到问题向导与模型搭建主链。GUI 是用户入口，runtime / CLI 仍然是执行真源；节点式编辑保留为高级模式，不直接替代默认首页。"
       chips={[
-        { label: "Beginner-first", tone: "amber" },
-        { label: "CLI-backed", tone: "blue" },
-        { label: "Artifact-aware", tone: "teal" },
+        { label: "GUI-first", tone: "amber" },
+        { label: "Runtime-backed", tone: "blue" },
+        { label: "Default before advanced", tone: "teal" },
       ]}
       actions={
         <>
           <Button
             type="primary"
             size="large"
+            icon={<ControlOutlined />}
+            onClick={() => navigate("/config")}
+          >
+            开始问题向导
+          </Button>
+          <Button
+            size="large"
             icon={<PlayCircleOutlined />}
             onClick={() => navigate("/quickstart-run")}
           >
-            运行推荐 quickstart
+            查看第一次运行链路
           </Button>
           <Button
             size="large"
             icon={<ArrowRightOutlined />}
             onClick={() => navigate("/workbench")}
           >
-            跳到工作台总览
+            打开工作台总览
           </Button>
         </>
       }
       aside={
         <div className="hero-aside-panel">
           <span className="hero-aside-panel__label">Primary entry</span>
-          <div className="hero-aside-panel__value">默认从统一入口进入引导页</div>
+          <div className="hero-aside-panel__value">默认先走组件介绍与问题定义</div>
           <div className="hero-aside-panel__copy">
-            第一次成功的目标不是看懂所有页面，而是完成一次真实的主链运行。
+            目标不是先理解仓库结构，而是先知道有哪些组件、哪条路是主链、以及下一步该去哪里搭模型。
           </div>
           <pre className="command-block">{PRIMARY_ENTRY_COMMAND}</pre>
           <div className="surface-note">
             推荐下一步：
-            <strong> {START_NEXT_STEPS.join(" -> ")}</strong>
+            <strong> {START_PRIMARY_FLOW.join(" -> ")}</strong>
           </div>
         </div>
       }
       metrics={[
         {
-          label: "Recommended path",
-          value: "public dataset quickstart",
-          hint: "prepare -> validate-config -> train -> build-results",
+          label: "Default mode",
+          value: "question -> skeleton -> parameter edit",
+          hint: START_MODE_POSITIONING.defaultMode,
           tone: "amber",
         },
         {
-          label: "Research path",
-          value: "YAML + medfusion",
-          hint: "For reproduction and mature experiment assembly",
+          label: "Execution source",
+          value: "runtime / CLI",
+          hint: "GUI explains and assembles, runtime executes and reproduces",
+          tone: "blue",
+        },
+        {
+          label: "Advanced mode",
+          value: "node editing",
+          hint: START_MODE_POSITIONING.advancedMode,
           tone: "blue",
         },
       ]}
@@ -79,30 +94,37 @@ export default function GettingStarted() {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="第一次成功标准"
-        description="你应该至少得到 checkpoint、metrics.json、validation.json、summary.json 和 report.md，并知道这些文件写到了哪里。"
+        message="正式版当前边界"
+        description="当前默认前台围绕 GUI 模型搭建主链展开：先介绍组件，再进入问题向导和骨架推荐；训练与结果仍然严格复用 runtime 主链，不承诺凭空组合出仓库里还不存在的新能力。"
       />
 
       <div className="split-grid">
         <Card className="surface-card surface-card--accent">
           <div className="section-heading">
             <div>
-              <div className="section-heading__eyebrow">Readiness checks</div>
-              <h2 className="section-heading__title">四项最小检查</h2>
+              <div className="section-heading__eyebrow">Product shell</div>
+              <h2 className="section-heading__title">四个正式版组件</h2>
               <p className="section-heading__description">
-                先确认入口、依赖、静态资源和输出路径，再开始第一次运行。
+                入口页先把当前真正可用的组件讲清楚，避免用户误把实验页和历史页面当成默认主链。
               </p>
             </div>
-            <Tag color="processing">{START_CHECKS.length} checks</Tag>
+            <Tag color="processing">{START_COMPONENTS.length} components</Tag>
           </div>
 
           <div className="workbench-flow">
-            {START_CHECKS.map((item, index) => (
+            {START_COMPONENTS.map((item, index) => (
               <div key={item.key} className="flow-step">
                 <strong>
                   {index + 1}. {item.title}
                 </strong>
                 <p>{item.description}</p>
+                <Button
+                  size="small"
+                  icon={<ArrowRightOutlined />}
+                  onClick={() => navigate(item.route)}
+                >
+                  打开组件
+                </Button>
               </div>
             ))}
           </div>
@@ -111,39 +133,49 @@ export default function GettingStarted() {
         <Card className="surface-card surface-card--editorial">
           <div className="section-heading">
             <div>
-              <div className="section-heading__eyebrow">What happens next</div>
-              <h2 className="section-heading__title">推荐第一次运行链路</h2>
+              <div className="section-heading__eyebrow">Primary flow</div>
+              <h2 className="section-heading__title">正式版默认怎么走</h2>
               <p className="section-heading__description">
-                这不是另一套 Web runtime，而是对现有主链的引导和解释层。
+                默认路径先降低认知负担，再把用户带入真实训练与结果回流；高级节点式编辑暂时不抢默认入口。
               </p>
             </div>
           </div>
 
           <div className="editorial-stack">
             <div className="surface-note surface-note--dense">
-              <strong>1. 准备数据</strong>
-              <p>使用公开数据 profile，减少私有数据准备带来的变量。</p>
+              <strong>1. 先看组件与能力</strong>
+              <p>明确问题向导、训练执行、结果后台和工作台各自负责什么，不再从空表单或空画布直接开始。</p>
             </div>
             <div className="surface-note surface-note--dense">
-              <strong>2. 校验配置并训练</strong>
-              <p>继续使用真实 YAML 和真实 CLI 主链，不发明另一套执行语义。</p>
+              <strong>2. 先回答问题，再收敛骨架</strong>
+              <p>从问题定义出发，映射到当前 runtime 已支持的模板和参数编辑层，而不是先手写 YAML 字段。</p>
             </div>
             <div className="surface-note surface-note--dense">
-              <strong>3. 构建结果并解释输出</strong>
-              <p>跑完后回到 Web 读 summary、validation、report 和关键 artifacts。</p>
+              <strong>3. 训练和结果继续复用主链</strong>
+              <p>训练执行、artifact 构建和结果回流仍然保持可预测、可审计、可回放的 CLI / runtime 语义。</p>
+            </div>
+            <div className="surface-note surface-note--dense">
+              <strong>4. 节点式编辑保留为高级模式</strong>
+              <p>当前阶段优先默认模式，节点图承担后续高级结构编辑，不直接取代向导式入口。</p>
             </div>
 
             <Button
-              icon={<ExperimentOutlined />}
-              onClick={() => navigate("/quickstart-run")}
+              icon={<ControlOutlined />}
+              onClick={() => navigate("/config")}
             >
-              打开 quickstart 链路
+              进入问题向导
             </Button>
             <Button
               icon={<FileSearchOutlined />}
               onClick={() => navigate("/models")}
             >
-              直接查看结果入口
+              查看结果后台
+            </Button>
+            <Button
+              icon={<ExperimentOutlined />}
+              onClick={() => navigate("/quickstart-run")}
+            >
+              再看 quickstart 演示链路
             </Button>
           </div>
         </Card>

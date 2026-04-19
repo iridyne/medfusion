@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Card,
@@ -24,8 +24,6 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   EyeOutlined,
-  ExperimentOutlined,
-  TrophyOutlined,
   ImportOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
@@ -37,11 +35,17 @@ import {
   type Model as ApiModel,
   type ModelImportRequest,
 } from "@/api/models";
+import {
+  buildTrainingMonitorLink,
+  clearTrainingResultHandoffParams,
+  parseTrainingResultHandoff,
+  type TrainingResultHandoff,
+} from "@/api/training";
 import ModelResultPanel from "@/components/model/ModelResultPanel";
 import VirtualList from "@/components/VirtualList";
 import PageScaffold from "@/components/layout/PageScaffold";
 
-const { Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 interface Model extends ApiModel {
   displayFormat: "pytorch" | "onnx" | "torchscript";
@@ -84,6 +88,7 @@ function mapModelPayload(item: any): Model {
 }
 
 export default function ModelLibrary() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [importForm] = Form.useForm<ImportFormValues>();
   const [models, setModels] = useState<Model[]>([]);
@@ -96,6 +101,10 @@ export default function ModelLibrary() {
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [resultHandoff, setResultHandoff] = useState<TrainingResultHandoff | null>(null);
+  const [attemptedHandoffModelId, setAttemptedHandoffModelId] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     filterModels();
@@ -113,6 +122,7 @@ export default function ModelLibrary() {
         const refreshedSelected = mapped.find((item) => item.id === targetModelId) || null;
         setSelectedModel(refreshedSelected);
         if (focusModelId && refreshedSelected) {
+          setAttemptedHandoffModelId(null);
           setDetailModalOpen(true);
         }
       }
@@ -129,14 +139,40 @@ export default function ModelLibrary() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("action") !== "import") {
+    if (searchParams.get("action") === "import") {
+      setImportModalOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
       return;
     }
-    setImportModalOpen(true);
-    const next = new URLSearchParams(searchParams);
-    next.delete("action");
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+
+    const handoff = parseTrainingResultHandoff(searchParams);
+    if (!handoff?.modelId) {
+      return;
+    }
+
+    setResultHandoff(handoff);
+    const matched = models.find((item) => item.id === handoff.modelId) || null;
+    if (matched) {
+      setSelectedModel(matched);
+      setDetailModalOpen(true);
+      setAttemptedHandoffModelId(null);
+      setSearchParams(clearTrainingResultHandoffParams(searchParams), { replace: true });
+      return;
+    }
+
+    if (!loading && attemptedHandoffModelId !== handoff.modelId) {
+      setAttemptedHandoffModelId(handoff.modelId);
+      void loadModels(handoff.modelId);
+    }
+  }, [
+    searchParams,
+    setSearchParams,
+    models,
+    loading,
+    attemptedHandoffModelId,
+  ]);
 
   const filterModels = () => {
     let filtered = models;
@@ -276,16 +312,29 @@ export default function ModelLibrary() {
         modelsWithAccuracy.length
       : 0;
   const latestModel = models[0];
+  const handoffModel =
+    (resultHandoff?.modelId &&
+      (models.find((item) => item.id === resultHandoff.modelId) ||
+        (selectedModel?.id === resultHandoff.modelId ? selectedModel : null))) ||
+    null;
+  const handoffResolved = Boolean(resultHandoff?.modelId && handoffModel);
+  const handoffPending =
+    Boolean(resultHandoff?.modelId) &&
+    !handoffResolved &&
+    !loading &&
+    attemptedHandoffModelId === resultHandoff?.modelId;
+  const handoffMatchesSelectedModel =
+    Boolean(resultHandoff?.modelId) && selectedModel?.id === resultHandoff?.modelId;
 
   return (
     <PageScaffold
-      eyebrow="Result Archive"
-      title="把训练产物沉淀成一座可检索、可复盘的结果库"
-      description="模型库不只是下载 checkpoint 的地方，它也是研究结果的归档面。这里会集中显示骨干网络、关键指标、生成的可视化以及真实 CLI 运行导回来的 artifact。"
+      eyebrow="Result backend"
+      title="正式版结果后台：归档、回流并展示真实训练结果"
+      description="Model Library 不只是下载 checkpoint 的地方，它是正式版结果后台。这里集中承接真实 run 回流后的 summary、validation、report 和可视化 artifact，用于复盘、演示和交付。"
       chips={[
-        { label: "Artifact archive", tone: "teal" },
+        { label: "Result backend", tone: "teal" },
         { label: "Real-run import", tone: "amber" },
-        { label: "Evaluation trace", tone: "blue" },
+        { label: "Artifact delivery", tone: "blue" },
       ]}
       actions={
         <>
@@ -307,7 +356,7 @@ export default function ModelLibrary() {
       }
       aside={
         <div className="hero-aside-panel">
-          <span className="hero-aside-panel__label">Latest indexed result</span>
+          <span className="hero-aside-panel__label">Latest archived run</span>
           <div className="hero-aside-panel__value">
             {latestModel ? latestModel.name : "尚未导入模型产物"}
           </div>
@@ -315,7 +364,7 @@ export default function ModelLibrary() {
             {latestModel
               ? latestModel.descriptionText ||
                 "最近一次训练产物已经被索引，可用于展示多模态研究结果。"
-              : "完成一次训练或导入真实 run 后，这里会出现最新归档的结果摘要。"}
+              : "完成一次训练或导入真实 run 后，这里会出现最新归档的结果摘要，并承接训练完成后的直接深链打开。"}
           </div>
           {latestModel ? (
             <>
@@ -366,6 +415,78 @@ export default function ModelLibrary() {
         },
       ]}
     >
+      {handoffResolved && resultHandoff ? (
+        <Alert
+          type="success"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="训练结果已回流到结果后台"
+          description={
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <div>
+                {resultHandoff.jobName ? `训练任务 ${resultHandoff.jobName}` : "训练任务"}
+                已经把结果交付到结果后台。
+                {resultHandoff.resultModelName || handoffModel?.name
+                  ? ` 当前可直接打开结果详情：${resultHandoff.resultModelName || handoffModel?.name}。`
+                  : " 当前可直接打开结果详情并继续复盘。"}
+              </div>
+              <Space wrap>
+                <Button
+                  type="primary"
+                  icon={<EyeOutlined />}
+                  onClick={() => {
+                    setSelectedModel(handoffModel);
+                    setDetailModalOpen(true);
+                  }}
+                >
+                  打开结果详情
+                </Button>
+                {resultHandoff.jobId ? (
+                  <Button onClick={() => navigate(buildTrainingMonitorLink(resultHandoff.jobId!))}>
+                    返回训练看板
+                  </Button>
+                ) : null}
+              </Space>
+            </Space>
+          }
+          closable
+          onClose={() => setResultHandoff(null)}
+        />
+      ) : null}
+
+      {handoffPending && resultHandoff ? (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="结果深链已收到，但结果后台还没定位到对应模型"
+          description={
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <div>
+                {resultHandoff.jobName ? `训练任务 ${resultHandoff.jobName}` : "对应训练任务"}
+                已完成，但结果后台暂时还没有查到模型记录。你可以先刷新一次，或回到训练看板确认归档状态。
+              </div>
+              <Space wrap>
+                <Button
+                  type="primary"
+                  icon={<ReloadOutlined />}
+                  onClick={() => void loadModels(resultHandoff.modelId)}
+                >
+                  重新查询结果
+                </Button>
+                {resultHandoff.jobId ? (
+                  <Button onClick={() => navigate(buildTrainingMonitorLink(resultHandoff.jobId!))}>
+                    返回训练看板
+                  </Button>
+                ) : null}
+              </Space>
+            </Space>
+          }
+          closable
+          onClose={() => setResultHandoff(null)}
+        />
+      ) : null}
+
       <Card className="surface-card" loading={loading}>
         <div className="section-heading">
           <div>
@@ -424,10 +545,23 @@ export default function ModelLibrary() {
             data={filteredModels}
             itemHeight={132}
             renderItem={(model) => (
-              <div className="library-row">
+              <div
+                className="library-row"
+                style={
+                  resultHandoff?.modelId === model.id
+                    ? {
+                        boxShadow: "0 0 0 1px rgba(22, 119, 255, 0.24) inset",
+                        background: "rgba(22, 119, 255, 0.03)",
+                      }
+                    : undefined
+                }
+              >
                 <div className="library-row__main">
                   <div className="library-row__title">
                     <strong>{model.name}</strong>
+                    {resultHandoff?.modelId === model.id ? (
+                      <Tag color="gold">结果刚送达</Tag>
+                    ) : null}
                     <Tag color="blue">{model.backbone}</Tag>
                     <Tag color="green">{formatParams(model.params)}</Tag>
                     {model.accuracy ? (
@@ -488,9 +622,9 @@ export default function ModelLibrary() {
           <div className="section-heading">
             <div>
               <div className="section-heading__eyebrow">Import chain</div>
-              <h2 className="section-heading__title">真实训练结果如何回流</h2>
+              <h2 className="section-heading__title">真实 run 如何回流到结果后台</h2>
               <p className="section-heading__description">
-                先验证配置、再执行训练、最后导入 artifact，结果库负责把这些产物组织成一套可浏览的研究证据。
+                先验证配置、再执行训练、最后导入 artifact；结果后台负责把这些产物组织成一套可浏览、可汇报、可交付的研究证据。
               </p>
             </div>
           </div>
@@ -505,9 +639,9 @@ export default function ModelLibrary() {
           <div className="section-heading">
             <div>
               <div className="section-heading__eyebrow">Archive intent</div>
-              <h2 className="section-heading__title">为什么结果库很重要</h2>
+              <h2 className="section-heading__title">为什么正式版必须有结果后台</h2>
               <p className="section-heading__description">
-                这里帮助评估者判断系统输出是否真实可用，也帮助研究者进行复盘和分享。
+                正式版不能只做到“能训练”，还要做到“能交付结果”。这里帮助评估者判断系统输出是否真实可用，也帮助研究者进行复盘和分享。
               </p>
             </div>
           </div>
@@ -652,6 +786,14 @@ export default function ModelLibrary() {
         width={1100}
         rootClassName="surface-modal"
         footer={[
+          resultHandoff?.jobId && handoffMatchesSelectedModel ? (
+            <Button
+              key="back-to-job"
+              onClick={() => navigate(buildTrainingMonitorLink(resultHandoff.jobId!))}
+            >
+              返回训练看板
+            </Button>
+          ) : null,
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
             关闭
           </Button>,
@@ -670,6 +812,19 @@ export default function ModelLibrary() {
       >
         {selectedModel && (
           <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            {handoffMatchesSelectedModel && resultHandoff ? (
+              <Alert
+                type="success"
+                showIcon
+                message="这是从训练完成态直接打开的结果详情"
+                description={
+                  resultHandoff.jobName
+                    ? `来源任务：${resultHandoff.jobName}。现在可以直接复盘结果、下载产物，或返回训练看板继续查看运行记录。`
+                    : "这个详情页来自训练完成后的直接 handoff。现在可以直接复盘结果、下载产物，或返回训练看板继续查看运行记录。"
+                }
+              />
+            ) : null}
+
             <Alert
               type="success"
               showIcon

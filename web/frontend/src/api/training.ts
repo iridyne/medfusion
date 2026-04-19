@@ -27,7 +27,19 @@ export interface TrainingJob {
   totalEpochs: number;
   loss: number;
   accuracy: number;
+  resultModelId?: number;
+  resultModelName?: string;
   startTime: string;
+}
+
+export type TrainingResultState = "ready" | "pending" | "unavailable";
+
+export interface TrainingResultHandoff {
+  modelId?: number;
+  source?: string;
+  jobId?: string;
+  jobName?: string;
+  resultModelName?: string;
 }
 
 export interface TrainingHistoryEntry {
@@ -52,6 +64,8 @@ interface BackendTrainingJob {
   total_epochs: number;
   current_loss: number | null;
   current_accuracy: number | null;
+  result_model_id?: number | null;
+  result_model_name?: string | null;
   created_at: string;
 }
 
@@ -66,6 +80,8 @@ interface BackendTrainingStatus {
   total_epochs: number;
   current_loss: number | null;
   current_accuracy: number | null;
+  result_model_id?: number | null;
+  result_model_name?: string | null;
 }
 
 function normalizeJob(job: BackendTrainingJob | BackendTrainingStatus): TrainingJob {
@@ -79,8 +95,85 @@ function normalizeJob(job: BackendTrainingJob | BackendTrainingStatus): Training
     totalEpochs: job.total_epochs ?? 0,
     loss: job.current_loss ?? 0,
     accuracy: job.current_accuracy ?? 0,
+    resultModelId: job.result_model_id ?? undefined,
+    resultModelName: job.result_model_name ?? undefined,
     startTime: (job as BackendTrainingJob).created_at ?? "",
   };
+}
+
+export function getTrainingResultState(
+  job: Pick<TrainingJob, "status" | "resultModelId">,
+): TrainingResultState {
+  if (typeof job.resultModelId === "number") {
+    return "ready";
+  }
+
+  if (job.status === "completed") {
+    return "pending";
+  }
+
+  return "unavailable";
+}
+
+export function buildTrainingResultLink(
+  job: Pick<TrainingJob, "id" | "name" | "resultModelId" | "resultModelName">,
+  source = "training-monitor",
+): string | null {
+  if (typeof job.resultModelId !== "number") {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    model: String(job.resultModelId),
+    source,
+    job: job.id,
+  });
+
+  if (job.name) {
+    params.set("jobName", job.name);
+  }
+
+  if (job.resultModelName) {
+    params.set("result", job.resultModelName);
+  }
+
+  return `/models?${params.toString()}`;
+}
+
+export function buildTrainingMonitorLink(jobId: string, source = "model-library"): string {
+  const params = new URLSearchParams({ job: jobId, source });
+  return `/training?${params.toString()}`;
+}
+
+export function parseTrainingResultHandoff(
+  searchParams: URLSearchParams,
+): TrainingResultHandoff | null {
+  const modelId = Number(searchParams.get("model"));
+  const source = searchParams.get("source") || undefined;
+  const jobId = searchParams.get("job") || undefined;
+  const jobName = searchParams.get("jobName") || undefined;
+  const resultModelName = searchParams.get("result") || undefined;
+  const resolvedModelId = Number.isFinite(modelId) ? modelId : undefined;
+
+  if (!resolvedModelId && !source && !jobId && !jobName && !resultModelName) {
+    return null;
+  }
+
+  return {
+    modelId: resolvedModelId,
+    source,
+    jobId,
+    jobName,
+    resultModelName,
+  };
+}
+
+export function clearTrainingResultHandoffParams(
+  searchParams: URLSearchParams,
+): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  ["model", "source", "job", "jobName", "result"].forEach((key) => next.delete(key));
+  return next;
 }
 
 /**
