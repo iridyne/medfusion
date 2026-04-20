@@ -6,6 +6,7 @@ export interface AdvancedBuilderCompileIssue {
   message: string;
   path?: string;
   context?: Record<string, unknown>;
+  suggestion?: string;
 }
 
 export interface AdvancedBuilderCompileResponse {

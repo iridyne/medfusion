@@ -346,6 +346,7 @@ def _issue(
     message: str,
     path: str | None = None,
     context: dict[str, Any] | None = None,
+    suggestion: str | None = None,
 ) -> dict[str, Any]:
     issue: dict[str, Any] = {
         "level": level,
@@ -356,6 +357,8 @@ def _issue(
         issue["path"] = path
     if context:
         issue["context"] = context
+    if suggestion:
+        issue["suggestion"] = suggestion
     return issue
 
 
@@ -812,6 +815,7 @@ def _apply_component_to_spec(
                 code="ABG-W001",
                 path="model.vision",
                 message="当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
+                suggestion="确认这是预期路径；如需更稳妥的默认链，改用 ResNet18 或 EfficientNet-B0 backbone。",
             )
         )
         return
@@ -843,6 +847,7 @@ def _apply_component_to_spec(
                 code="ABG-W002",
                 path="model.fusion",
                 message="当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
+                suggestion="如果只需要最稳主链，可改用 concatenate fusion 或 gated fusion。",
             )
         )
         return
@@ -868,6 +873,7 @@ def _apply_component_to_spec(
             path="nodes[].data.componentId",
             message=f"当前编译器还不能把组件 {component_id} 降级映射到正式版 RunSpec。",
             context={"component_id": component_id},
+            suggestion="替换为当前编译器已支持的组件后重试。",
         )
     )
 
@@ -937,6 +943,7 @@ def compile_graph_to_runspec(
                 code="ABG-E001",
                 path="nodes",
                 message="当前画布为空，无法生成配置草案。",
+                suggestion="先选择一条 compile-ready blueprint，或手动补齐 6 个核心组件家族。",
             )
         )
         return {
@@ -965,6 +972,7 @@ def compile_graph_to_runspec(
                     path="nodes[].data.componentId",
                     message=f"节点 {node_id or '<unknown>'} 缺少合法 componentId。",
                     context={"node_id": node_id or "<unknown>"},
+                    suggestion="为该节点重新选择一个合法组件，或删除这个无效节点。",
                 )
             )
             continue
@@ -986,6 +994,7 @@ def compile_graph_to_runspec(
                         "component_id": component.id,
                         "node_id": node_id or "<unknown>",
                     },
+                    suggestion="把该节点替换为 compile-ready 或 conditional 组件后再编译。",
                 )
             )
 
@@ -1000,6 +1009,7 @@ def compile_graph_to_runspec(
                 path="nodes[].data.componentId",
                 message=f"当前图存在重复组件家族：{family_labels}。正式版编译层当前要求每个核心家族最多一个组件。",
                 context={"families": duplicate_families},
+                suggestion="每个核心 family 仅保留一个节点，删除重复节点后重试。",
             )
         )
 
@@ -1012,6 +1022,7 @@ def compile_graph_to_runspec(
                 path="nodes",
                 message=f"缺少必需组件家族：{' / '.join(ADVANCED_BUILDER_FAMILY_LABELS[f] for f in missing_families)}。",
                 context={"families": missing_families},
+                suggestion="补齐缺失家族对应的组件节点，再重新编译。",
             )
         )
 
@@ -1047,6 +1058,7 @@ def compile_graph_to_runspec(
                             "source_node_id": source_node_id or "<empty>",
                             "target_node_id": target_node_id or "<empty>",
                         },
+                        suggestion="修复或删除悬空连接，确保 source/target 都指向现存节点。",
                     )
                 )
             continue
@@ -1064,6 +1076,7 @@ def compile_graph_to_runspec(
                         "source_node_id": source_node_id or "<empty>",
                         "target_node_id": target_node_id or "<empty>",
                     },
+                    suggestion="按连接规则重新连线，使用已定义的 family 连接组合。",
                 )
             )
             continue
@@ -1080,6 +1093,7 @@ def compile_graph_to_runspec(
                         "source_node_id": source_node_id or "<empty>",
                         "target_node_id": target_node_id or "<empty>",
                     },
+                    suggestion="删除这条被禁止的连接，并按 required/conditional 规则重连。",
                 )
             )
             continue
@@ -1100,6 +1114,7 @@ def compile_graph_to_runspec(
                             "from_family": rule.from_family,
                             "to_family": rule.to_family,
                         },
+                        suggestion="补上这条 required 连接后再编译。",
                     )
                 )
 

@@ -94,6 +94,19 @@ function pickContextString(
   return typeof value === "string" ? value : null;
 }
 
+function renderIssueDescription(issue: AdvancedBuilderCompileIssue) {
+  const issueMeta = [issue.code, issue.path].filter(Boolean).join(" · ") || null;
+  if (!issueMeta && !issue.suggestion) {
+    return undefined;
+  }
+  return (
+    <Space direction="vertical" size={0}>
+      {issueMeta ? <Text type="secondary">{issueMeta}</Text> : null}
+      {issue.suggestion ? <Text type="secondary">{issue.suggestion}</Text> : null}
+    </Space>
+  );
+}
+
 export default function AdvancedBuilderCanvas() {
   const navigate = useNavigate();
   const [selectedBlueprintId, setSelectedBlueprintId] = useState(
@@ -389,6 +402,7 @@ export default function AdvancedBuilderCanvas() {
               code: "ABG-E999",
               message:
                 "后端编译服务暂时不可用，当前无法把节点图降级生成正式版 RunSpec 草案。",
+              suggestion: "检查后端服务状态后重试。",
             },
           ],
           contractValidation: null,
@@ -632,9 +646,7 @@ export default function AdvancedBuilderCanvas() {
                     type={issue.level === "error" ? "error" : "warning"}
                     showIcon
                     message={issue.message}
-                    description={[issue.code, issue.path]
-                      .filter(Boolean)
-                      .join(" · ") || undefined}
+                    description={renderIssueDescription(issue)}
                     action={
                       issue.context ? (
                         <Button

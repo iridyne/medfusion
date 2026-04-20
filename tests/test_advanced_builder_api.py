@@ -149,6 +149,7 @@ async def test_advanced_builder_compile_rejects_dangling_edges(api_client) -> No
     assert dangling_issue["path"] == "edges"
     assert dangling_issue["context"]["source_node_id"] == "n-missing"
     assert dangling_issue["context"]["target_node_id"] == "n6"
+    assert "悬空连接" in dangling_issue["suggestion"]
 
 
 async def test_advanced_builder_compile_emits_structured_draft_component_issue(
@@ -171,6 +172,28 @@ async def test_advanced_builder_compile_emits_structured_draft_component_issue(
     assert draft_issue["path"] == "nodes[].data.componentId"
     assert draft_issue["context"]["component_id"] == "three_phase_ct_dataset"
     assert draft_issue["context"]["node_id"] == "n1"
+    assert "compile-ready" in draft_issue["suggestion"]
+
+
+async def test_advanced_builder_compile_rejects_blocked_connection(api_client) -> None:
+    graph = _quickstart_graph()
+    graph["edges"].append({"source": "n1", "target": "n5"})
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_spec"] is None
+    blocked_issue = next(
+        issue for issue in payload["issues"] if issue.get("code") == "ABG-E008"
+    )
+    assert blocked_issue["path"] == "edges"
+    assert blocked_issue["context"]["source_node_id"] == "n1"
+    assert blocked_issue["context"]["target_node_id"] == "n5"
+    assert "删除这条被禁止的连接" in blocked_issue["suggestion"]
 
 
 async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) -> None:

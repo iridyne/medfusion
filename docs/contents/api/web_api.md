@@ -158,6 +158,7 @@ WebSocket 推送关键类型：
 
 - 这是正式版高级模式预览能力，不是默认入口。
 - `start-training` 会先做图编译和 contract 校验，校验通过后直接创建真实训练任务。
+- `compile` 的 `issues[]` 采用结构化字段：`level`、`code`、`message`、`path`、`context`、`suggestion`，用于前端定位与修复提示。
 
 ## 6. 实验态 API（experimental）
 
