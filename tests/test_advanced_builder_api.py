@@ -223,3 +223,24 @@ async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) 
     assert captured_source_context["source_type"] == "advanced_builder"
     assert captured_source_context["entrypoint"] == "advanced-builder-canvas"
     assert captured_source_context["blueprint_id"] == "quickstart_multimodal"
+
+
+async def test_advanced_builder_start_training_rejects_unready_graph(api_client) -> None:
+    graph = _quickstart_graph()
+    graph["edges"] = graph["edges"][:-1]
+
+    response = await api_client.post(
+        "/api/advanced-builder/start-training",
+        json=graph,
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "advanced_builder_compile_not_ready"
+    compile_result = detail["compile_result"]
+    assert compile_result["run_spec"] is None
+    required_link_issue = next(
+        issue for issue in compile_result["issues"] if issue.get("code") == "ABG-E009"
+    )
+    assert required_link_issue["path"] == "edges"
+    assert "required 连接" in required_link_issue["suggestion"]
