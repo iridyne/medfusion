@@ -16,5 +16,6 @@ describe("ComfyUIBridge", () => {
     expect(markup).toContain("连接配置");
     expect(markup).toContain("最小上线链路");
     expect(markup).toContain("打开 ComfyUI");
+    expect(markup).toContain("回流到结果后台导入");
   });
 });

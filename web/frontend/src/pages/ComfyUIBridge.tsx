@@ -1,9 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Input, Space, Tag, Typography, message } from "antd";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Input,
+  Row,
+  Select,
+  Space,
+  Tag,
+  Typography,
+  message,
+} from "antd";
 import {
   ArrowLeftOutlined,
   CopyOutlined,
+  ImportOutlined,
   LinkOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
@@ -16,6 +29,18 @@ const { Paragraph, Text } = Typography;
 const STORAGE_KEY = "medfusion.comfyui.base_url";
 const DEFAULT_COMFYUI_BASE_URL = "http://127.0.0.1:8188";
 
+interface ModelImportPrefill {
+  config_path: string;
+  checkpoint_path: string;
+  output_dir?: string;
+  split: "train" | "val" | "test";
+  attention_samples: number;
+  importance_sample_limit: number;
+  name?: string;
+  description?: string;
+  tags?: string;
+}
+
 export default function ComfyUIBridge() {
   const navigate = useNavigate();
   const [baseUrl, setBaseUrl] = useState<string>(() => {
@@ -27,6 +52,17 @@ export default function ComfyUIBridge() {
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState<ComfyUIHealthResponse | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [importPrefill, setImportPrefill] = useState<ModelImportPrefill>({
+    config_path: "configs/starter/quickstart.yaml",
+    checkpoint_path: "outputs/quickstart/checkpoints/best.pth",
+    output_dir: "outputs/quickstart",
+    split: "test",
+    attention_samples: 4,
+    importance_sample_limit: 128,
+    name: "comfyui-handoff-run",
+    description: "ComfyUI 预处理后回流到 MedFusion 结果后台",
+    tags: "comfyui, handoff",
+  });
 
   const probeTag = useMemo(() => {
     if (!health) {
@@ -90,6 +126,28 @@ export default function ComfyUIBridge() {
     message.success("启动命令已复制");
   };
 
+  const handleOpenImportPrefill = () => {
+    if (!importPrefill.config_path.trim() || !importPrefill.checkpoint_path.trim()) {
+      message.error("请先填写配置路径和权重路径");
+      return;
+    }
+
+    navigate("/models?action=import", {
+      state: {
+        importSource: "ComfyUI Bridge",
+        importPrefill: {
+          ...importPrefill,
+          config_path: importPrefill.config_path.trim(),
+          checkpoint_path: importPrefill.checkpoint_path.trim(),
+          output_dir: importPrefill.output_dir?.trim() || undefined,
+          name: importPrefill.name?.trim() || undefined,
+          description: importPrefill.description?.trim() || undefined,
+          tags: importPrefill.tags?.trim() || undefined,
+        },
+      },
+    });
+  };
+
   return (
     <PageScaffold
       eyebrow="ComfyUI bridge"
@@ -142,6 +200,12 @@ export default function ComfyUIBridge() {
               : "-",
           hint: health?.probe.probe_url || "/system_stats",
           tone: "amber",
+        },
+        {
+          label: "Import handoff",
+          value: "Ready",
+          hint: "预填后直接跳结果后台导入",
+          tone: "teal",
         },
       ]}
     >
@@ -221,6 +285,96 @@ export default function ComfyUIBridge() {
           </Space>
         </Card>
       </div>
+
+      <Card className="surface-card" title="ComfyUI -> 结果后台预填回流">
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <Alert
+            type="info"
+            showIcon
+            message="把回流参数先在这里填好，再一键进入结果后台导入"
+            description="这一步不会直接执行导入；它会把参数带到 Model Library 的导入弹窗，减少重复手填。"
+          />
+          <Row gutter={12}>
+            <Col xs={24} xl={12}>
+              <Text type="secondary">配置路径</Text>
+              <Input
+                value={importPrefill.config_path}
+                onChange={(event) =>
+                  setImportPrefill((current) => ({
+                    ...current,
+                    config_path: event.target.value,
+                  }))
+                }
+                placeholder="configs/starter/quickstart.yaml"
+              />
+            </Col>
+            <Col xs={24} xl={12}>
+              <Text type="secondary">权重路径</Text>
+              <Input
+                value={importPrefill.checkpoint_path}
+                onChange={(event) =>
+                  setImportPrefill((current) => ({
+                    ...current,
+                    checkpoint_path: event.target.value,
+                  }))
+                }
+                placeholder="outputs/quickstart/checkpoints/best.pth"
+              />
+            </Col>
+            <Col xs={24} xl={8}>
+              <Text type="secondary">输出目录（可选）</Text>
+              <Input
+                value={importPrefill.output_dir}
+                onChange={(event) =>
+                  setImportPrefill((current) => ({
+                    ...current,
+                    output_dir: event.target.value,
+                  }))
+                }
+                placeholder="outputs/quickstart"
+              />
+            </Col>
+            <Col xs={24} xl={8}>
+              <Text type="secondary">Validation Split</Text>
+              <Select
+                style={{ width: "100%" }}
+                value={importPrefill.split}
+                onChange={(value: "train" | "val" | "test") =>
+                  setImportPrefill((current) => ({ ...current, split: value }))
+                }
+                options={[
+                  { label: "test", value: "test" },
+                  { label: "val", value: "val" },
+                  { label: "train", value: "train" },
+                ]}
+              />
+            </Col>
+            <Col xs={24} xl={8}>
+              <Text type="secondary">标签（可选）</Text>
+              <Input
+                value={importPrefill.tags}
+                onChange={(event) =>
+                  setImportPrefill((current) => ({
+                    ...current,
+                    tags: event.target.value,
+                  }))
+                }
+                placeholder="comfyui, handoff"
+              />
+            </Col>
+          </Row>
+          <Space>
+            <Button
+              type="primary"
+              icon={<ImportOutlined />}
+              onClick={handleOpenImportPrefill}
+            >
+              回流到结果后台导入
+            </Button>
+            <Button onClick={() => navigate("/models")}>直接打开结果后台</Button>
+          </Space>
+        </Space>
+      </Card>
 
       {health?.handoff_hint ? (
         <Alert

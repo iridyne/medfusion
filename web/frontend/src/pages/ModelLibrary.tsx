@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Card,
@@ -70,6 +70,11 @@ interface ImportFormValues {
   tags?: string;
 }
 
+interface ModelImportPrefillState {
+  importPrefill?: Partial<ImportFormValues>;
+  importSource?: string;
+}
+
 function mapModelPayload(item: any): Model {
   return {
     ...item,
@@ -88,8 +93,10 @@ function mapModelPayload(item: any): Model {
 }
 
 export default function ModelLibrary() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const importPrefillConsumedRef = useRef(false);
   const [importForm] = Form.useForm<ImportFormValues>();
   const [models, setModels] = useState<Model[]>([]);
   const [filteredModels, setFilteredModels] = useState<Model[]>(models);
@@ -173,6 +180,39 @@ export default function ModelLibrary() {
     loading,
     attemptedHandoffModelId,
   ]);
+
+  useEffect(() => {
+    if (importPrefillConsumedRef.current) {
+      return;
+    }
+
+    const state = location.state as ModelImportPrefillState | null;
+    const prefill = state?.importPrefill;
+    if (!prefill) {
+      return;
+    }
+
+    importForm.setFieldsValue({
+      config_path: prefill.config_path,
+      checkpoint_path: prefill.checkpoint_path,
+      output_dir: prefill.output_dir,
+      split: prefill.split,
+      attention_samples: prefill.attention_samples,
+      survival_time_column: prefill.survival_time_column,
+      survival_event_column: prefill.survival_event_column,
+      importance_sample_limit: prefill.importance_sample_limit,
+      name: prefill.name,
+      description: prefill.description,
+      tags: prefill.tags,
+    });
+    setImportModalOpen(true);
+    importPrefillConsumedRef.current = true;
+    message.success(
+      state?.importSource
+        ? `已从 ${state.importSource} 预填导入参数`
+        : "已预填导入参数",
+    );
+  }, [location.state, importForm]);
 
   const filterModels = () => {
     let filtered = models;

@@ -191,6 +191,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 3. 当校验通过时，可以直接从高级模式创建真实训练任务
 4. 训练完成后，任务状态会附带结果 handoff 信息，并可继续跳到模型库查看结果
 5. ComfyUI 已有独立上线入口页，可先检查连通性再进入外部画布联调
+6. ComfyUI 入口页支持把 `config/checkpoint/output` 参数预填后，一键跳到结果后台导入弹窗
 
 结果详情页的推荐解读顺序也已固定：
 
