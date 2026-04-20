@@ -2,7 +2,10 @@ import api from "./index";
 
 export interface AdvancedBuilderCompileIssue {
   level: "error" | "warning";
+  code?: string;
   message: string;
+  path?: string;
+  context?: Record<string, unknown>;
 }
 
 export interface AdvancedBuilderCompileResponse {

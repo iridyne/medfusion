@@ -34,6 +34,7 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 
 import {
+  type AdvancedBuilderCompileIssue,
   compileAdvancedBuilder,
   startTrainingFromAdvancedBuilder,
 } from "@/api/advancedBuilder";
@@ -103,7 +104,7 @@ export default function AdvancedBuilderCanvas() {
   const [compileResult, setCompileResult] = useState<{
     preset: RunPresetId;
     spec: RunSpec | null;
-    issues: Array<{ level: "error" | "warning"; message: string }>;
+    issues: AdvancedBuilderCompileIssue[];
     contractValidation: {
       ok: boolean;
       errors: Array<{
@@ -310,6 +311,7 @@ export default function AdvancedBuilderCanvas() {
           issues: [
             {
               level: "error",
+              code: "ABG-E999",
               message:
                 "后端编译服务暂时不可用，当前无法把节点图降级生成正式版 RunSpec 草案。",
             },
@@ -551,10 +553,13 @@ export default function AdvancedBuilderCanvas() {
               {compileResult.issues.length ? (
                 compileResult.issues.map((issue, index) => (
                   <Alert
-                    key={`${issue.level}-${index}`}
+                    key={`${issue.level}-${issue.code || "na"}-${index}`}
                     type={issue.level === "error" ? "error" : "warning"}
                     showIcon
                     message={issue.message}
+                    description={[issue.code, issue.path]
+                      .filter(Boolean)
+                      .join(" · ") || undefined}
                   />
                 ))
               ) : (

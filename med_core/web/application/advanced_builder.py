@@ -339,6 +339,26 @@ def _slugify(value: str) -> str:
     )
 
 
+def _issue(
+    *,
+    level: Literal["error", "warning"],
+    code: str,
+    message: str,
+    path: str | None = None,
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    issue: dict[str, Any] = {
+        "level": level,
+        "code": code,
+        "message": message,
+    }
+    if path:
+        issue["path"] = path
+    if context:
+        issue["context"] = context
+    return issue
+
+
 def _create_run_spec_preset(preset: str) -> dict[str, Any]:
     base: dict[str, Any] = {
         "projectName": "medfusion-oss",
@@ -767,7 +787,7 @@ def _infer_preset(chosen_components: dict[AdvancedBuilderFamily, str]) -> str:
 def _apply_component_to_spec(
     spec: dict[str, Any],
     component_id: str,
-    issues: list[dict[str, str]],
+    issues: list[dict[str, Any]],
 ) -> None:
     if component_id == "image_tabular_dataset":
         return
@@ -787,10 +807,12 @@ def _apply_component_to_spec(
         spec["model"]["vision"]["attentionType"] = "cbam"
         spec["training"]["useAttentionSupervision"] = True
         issues.append(
-            {
-                "level": "warning",
-                "message": "当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
-            }
+            _issue(
+                level="warning",
+                code="ABG-W001",
+                path="model.vision",
+                message="当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
+            )
         )
         return
     if component_id == "mlp_tabular_encoder":
@@ -816,10 +838,12 @@ def _apply_component_to_spec(
         spec["model"]["fusion"]["numHeads"] = 4
         spec["model"]["fusion"]["dropout"] = 0.25
         issues.append(
-            {
-                "level": "warning",
-                "message": "当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
-            }
+            _issue(
+                level="warning",
+                code="ABG-W002",
+                path="model.fusion",
+                message="当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
+            )
         )
         return
     if component_id == "classification_head":
@@ -838,10 +862,13 @@ def _apply_component_to_spec(
         return
 
     issues.append(
-        {
-            "level": "error",
-            "message": f"当前编译器还不能把组件 {component_id} 降级映射到正式版 RunSpec。",
-        }
+        _issue(
+            level="error",
+            code="ABG-E010",
+            path="nodes[].data.componentId",
+            message=f"当前编译器还不能把组件 {component_id} 降级映射到正式版 RunSpec。",
+            context={"component_id": component_id},
+        )
     )
 
 
@@ -899,12 +926,19 @@ def compile_graph_to_runspec(
     nodes: list[dict[str, Any]],
     edges: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    issues: list[dict[str, str]] = []
+    issues: list[dict[str, Any]] = []
     components = _component_map()
     rules = _rule_map()
 
     if not nodes:
-        issues.append({"level": "error", "message": "当前画布为空，无法生成配置草案。"})
+        issues.append(
+            _issue(
+                level="error",
+                code="ABG-E001",
+                path="nodes",
+                message="当前画布为空，无法生成配置草案。",
+            )
+        )
         return {
             "preset": "quickstart",
             "run_spec": None,
@@ -925,10 +959,13 @@ def compile_graph_to_runspec(
         component_id = data.get("componentId")
         if component_id not in components:
             issues.append(
-                {
-                    "level": "error",
-                    "message": f"节点 {node_id or '<unknown>'} 缺少合法 componentId。",
-                }
+                _issue(
+                    level="error",
+                    code="ABG-E002",
+                    path="nodes[].data.componentId",
+                    message=f"节点 {node_id or '<unknown>'} 缺少合法 componentId。",
+                    context={"node_id": node_id or "<unknown>"},
+                )
             )
             continue
         component = components[component_id]
@@ -940,10 +977,13 @@ def compile_graph_to_runspec(
 
         if component.status == "draft_only":
             issues.append(
-                {
-                    "level": "error",
-                    "message": f"当前图包含仅草稿组件：{component.label}。这些组件还不能编译进正式版主链。",
-                }
+                _issue(
+                    level="error",
+                    code="ABG-E003",
+                    path="nodes[].data.componentId",
+                    message=f"当前图包含仅草稿组件：{component.label}。这些组件还不能编译进正式版主链。",
+                    context={"component_id": component.id},
+                )
             )
 
     if duplicate_families:
@@ -951,19 +991,25 @@ def compile_graph_to_runspec(
             ADVANCED_BUILDER_FAMILY_LABELS[family] for family in duplicate_families
         )
         issues.append(
-            {
-                "level": "error",
-                "message": f"当前图存在重复组件家族：{family_labels}。正式版编译层当前要求每个核心家族最多一个组件。",
-            }
+            _issue(
+                level="error",
+                code="ABG-E004",
+                path="nodes[].data.componentId",
+                message=f"当前图存在重复组件家族：{family_labels}。正式版编译层当前要求每个核心家族最多一个组件。",
+                context={"families": duplicate_families},
+            )
         )
 
     missing_families = [family for family in REQUIRED_FAMILIES if family not in chosen_components]
     if missing_families:
         issues.append(
-            {
-                "level": "error",
-                "message": f"缺少必需组件家族：{' / '.join(ADVANCED_BUILDER_FAMILY_LABELS[f] for f in missing_families)}。",
-            }
+            _issue(
+                level="error",
+                code="ABG-E005",
+                path="nodes",
+                message=f"缺少必需组件家族：{' / '.join(ADVANCED_BUILDER_FAMILY_LABELS[f] for f in missing_families)}。",
+                context={"families": missing_families},
+            )
         )
 
     family_by_node_id: dict[str, AdvancedBuilderFamily] = {}
@@ -986,26 +1032,49 @@ def compile_graph_to_runspec(
                 missing_endpoints.append(f"target={target_node_id or '<empty>'}")
             if missing_endpoints:
                 issues.append(
-                    {
-                        "level": "error",
-                        "message": (
+                    _issue(
+                        level="error",
+                        code="ABG-E006",
+                        path="edges",
+                        message=(
                             "发现悬空连接，当前连接引用了不存在的节点："
                             f"{', '.join(missing_endpoints)}。"
                         ),
-                    }
+                        context={
+                            "source": source_node_id or "<empty>",
+                            "target": target_node_id or "<empty>",
+                        },
+                    )
                 )
             continue
         rule = rules.get((source_family, target_family))
         if rule is None:
             issues.append(
-                {
-                    "level": "error",
-                    "message": f"当前没有定义 {ADVANCED_BUILDER_FAMILY_LABELS[source_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[target_family]} 的正式版连接规则。",
-                }
+                _issue(
+                    level="error",
+                    code="ABG-E007",
+                    path="edges",
+                    message=f"当前没有定义 {ADVANCED_BUILDER_FAMILY_LABELS[source_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[target_family]} 的正式版连接规则。",
+                    context={
+                        "from_family": source_family,
+                        "to_family": target_family,
+                    },
+                )
             )
             continue
         if rule.status == "blocked":
-            issues.append({"level": "error", "message": rule.description})
+            issues.append(
+                _issue(
+                    level="error",
+                    code="ABG-E008",
+                    path="edges",
+                    message=rule.description,
+                    context={
+                        "from_family": source_family,
+                        "to_family": target_family,
+                    },
+                )
+            )
             continue
         present_connections.add((source_family, target_family))
 
@@ -1015,10 +1084,16 @@ def compile_graph_to_runspec(
         if rule.from_family in chosen_components and rule.to_family in chosen_components:
             if (rule.from_family, rule.to_family) not in present_connections:
                 issues.append(
-                    {
-                        "level": "error",
-                        "message": f"缺少必需连接：{ADVANCED_BUILDER_FAMILY_LABELS[rule.from_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[rule.to_family]}。",
-                    }
+                    _issue(
+                        level="error",
+                        code="ABG-E009",
+                        path="edges",
+                        message=f"缺少必需连接：{ADVANCED_BUILDER_FAMILY_LABELS[rule.from_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[rule.to_family]}。",
+                        context={
+                            "from_family": rule.from_family,
+                            "to_family": rule.to_family,
+                        },
+                    )
                 )
 
     preset = _infer_preset(chosen_components)

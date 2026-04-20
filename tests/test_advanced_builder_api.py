@@ -124,6 +124,7 @@ async def test_advanced_builder_compile_rejects_missing_required_links(api_clien
     assert payload["run_spec"] is None
     assert payload["contract_validation"] is None
     assert any(issue["level"] == "error" for issue in payload["issues"])
+    assert any(issue.get("code") == "ABG-E009" for issue in payload["issues"])
 
 
 async def test_advanced_builder_compile_rejects_dangling_edges(api_client) -> None:
@@ -142,6 +143,7 @@ async def test_advanced_builder_compile_rejects_dangling_edges(api_client) -> No
     assert any(
         "悬空连接" in issue["message"] for issue in payload["issues"]
     )
+    assert any(issue.get("code") == "ABG-E006" for issue in payload["issues"])
 
 
 async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) -> None:
