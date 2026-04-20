@@ -34,6 +34,36 @@
    - blueprint 是哪一个
    - 结果如何回流成 summary / validation / report / visual artifacts
 
+## 3 分钟固定演示脚本
+
+1. `0:00 - 0:40`
+   先从 `medfusion start` 进入 `Getting Started`，明确默认路径与高级模式边界。
+2. `0:40 - 1:30`
+   进入 `/config/advanced/canvas`，选 compile-ready blueprint，演示图编译与 `ExperimentConfig` contract 校验。
+3. `1:30 - 2:10`
+   直接创建真实训练任务，等待任务完成后从训练页跳转到结果详情。
+4. `2:10 - 3:00`
+   按固定四层口径讲结果详情，并补充高级模式来源链字段。
+
+## 结果详情固定口径（演示与文档一致）
+
+1. 结论层：`reports/summary.json` 的核心结论与主指标
+2. 指标层：`metrics/metrics.json` 与 `metrics/validation.json`
+3. 可视化层：ROC / 混淆矩阵 / 注意力等图示 artifact
+4. 文件层：可下载与可归档文件（`report.md`、图示 artifact）
+
+高级模式 run 还要显式展示来源链：
+- `source_type=advanced_builder`
+- `entrypoint=advanced-builder-canvas`
+- `blueprint_id=<当前蓝图>`
+
+## 演示最小证据点
+
+- 训练任务完成后可直接跳 `Model Library` 结果详情
+- 结果详情能看到 summary / metrics / validation / report / artifact
+- 结果详情里能看到高级模式来源链字段
+- 文件系统中能看到 `metrics/`、`reports/`、`artifacts/` 标准目录
+
 ## 演示命令
 
 ```bash

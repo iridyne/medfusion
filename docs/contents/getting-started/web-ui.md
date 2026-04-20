@@ -175,7 +175,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 高级模式路径：
 
 - `/config/advanced`：正式版高级模式的组件注册表与连接约束页，不作为默认首页，但用于承接后续节点式结构编辑
-- `/config/advanced/canvas`：高级模式节点图原型，当前允许在正式版组件边界内做局部结构编辑与编译边界检查，但还不直接提交给后端执行
+- `/config/advanced/canvas`：高级模式节点图入口，当前允许在正式版组件边界内做结构编辑、编译检查，并在 contract 校验通过后直接创建真实训练任务
 
 当前进展：
 
@@ -183,6 +183,15 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 2. 后端会继续做正式 `ExperimentConfig` contract 校验
 3. 当校验通过时，可以直接从高级模式创建真实训练任务
 4. 训练完成后，任务状态会附带结果 handoff 信息，并可继续跳到模型库查看结果
+
+结果详情页的推荐解读顺序也已固定：
+
+1. 结论层：先看 `summary.json` 的主结论
+2. 指标层：再看 `metrics.json` 与 `validation.json`
+3. 可视化层：再看 ROC / 混淆矩阵 / 注意力等图示 artifact
+4. 文件层：最后回到可下载文件用于复盘与交付
+
+如果是高级模式发起的 run，结果详情会补充来源链（`source_type`、`entrypoint`、`blueprint_id`），用于对外演示和内部复核。
 
 非主链路径（如 `/workflow`、`/preprocessing`）保持实验或降级状态，不作为 OSS 默认入口叙事。
 

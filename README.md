@@ -91,6 +91,16 @@ MedFusion OSS 优先保证主链闭环：
 `logs/history.json` / `metrics/metrics.json` / `metrics/validation.json` /
 `reports/summary.json` / `reports/report.md` + 可视化 artifacts。
 
+正式版结果详情建议统一按四层阅读：
+
+- 结论层：`summary.json` 的主结论与主要指标
+- 指标层：`metrics.json` 与 `validation.json` 的稳定性和风险点
+- 可视化层：ROC / 混淆矩阵 / 注意力等图示 artifact
+- 文件层：可下载、可复核、可交付的落盘文件
+
+如果 run 来自高级模式，结果详情还应明确来源链：
+`source_type`、`entrypoint`、`blueprint_id`。
+
 ---
 
 ## OSS 与 Pro 的关系
@@ -357,6 +367,8 @@ bash scripts/inspect_ci_failure.sh
 - [Examples Guide](examples/README.md)
 - [文档站首页](docs/README.md)
 - [任务手册（按目标执行）](docs/contents/playbooks/README.md)
+- [结果解读与交付检查](docs/contents/playbooks/result-interpretation-checklist.md)
+- [高级模式结果回流演示路径](docs/contents/playbooks/external-demo-path.md)
 - [Why MedFusion OSS（定位对比）](docs/contents/guides/core/why-medfusion-oss.md)
 - [OSS roadmap](../docs/roadmap/oss/README.md)
 

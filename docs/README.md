@@ -19,6 +19,8 @@
 - [快速上手](contents/getting-started/quickstart.md)
 - [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - [任务手册（按目标执行）](contents/playbooks/README.md)
+- [高级模式结果回流演示路径](contents/playbooks/external-demo-path.md)
+- [结果解读与交付检查](contents/playbooks/result-interpretation-checklist.md)
 - [FAQ 和故障排除](contents/guides/core/faq.md)
 
 ## 新手 60 秒决策
@@ -47,6 +49,14 @@ uv run medfusion validate-config --config configs/starter/quickstart.yaml
 uv run medfusion train --config configs/starter/quickstart.yaml
 uv run medfusion build-results --config configs/starter/quickstart.yaml --checkpoint outputs/quickstart/checkpoints/best.pth
 ```
+
+结果详情建议统一按四层阅读：
+- 结论层（`summary.json`）
+- 指标层（`metrics.json` + `validation.json`）
+- 可视化层（ROC / 混淆矩阵 / 注意力等图示 artifact）
+- 文件层（可下载、可复核的落盘文件）
+
+如果 run 来自高级模式，结果详情还应标注来源链：`source_type`、`entrypoint`、`blueprint_id`。
 
 ---
 
@@ -158,4 +168,5 @@ npm run docs:preview
 - 第一次使用先 `medfusion start`，再回到 YAML 主线真正执行。
 - 先走“主链跑通”，再看架构和 API。
 - 如果你要判断是否接入，优先看输出契约：`metrics/metrics.json / metrics/validation.json / reports/summary.json / reports/report.md`。
+- 如果你要对外演示高级模式，优先按固定脚本展示“图编译 -> 真实训练 -> 结果回流 -> 结果详情来源链”。
 - 如果链接失效或内容过期，欢迎直接提 Issue 或 PR。
