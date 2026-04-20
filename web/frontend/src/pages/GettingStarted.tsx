@@ -105,7 +105,7 @@ export default function GettingStarted() {
         showIcon
         style={{ marginBottom: 16 }}
         message="唯一主线：配置 -> 训练 -> 结果"
-        description="正式版只有一条主线。ComfyUI 是这条主线里的可选适配模块，不是并列主路径。"
+        description="正式版只有一条主线。当前在配置阶段默认使用 ComfyUI 适配配置，训练与结果仍由 MedFusion 主链执行。"
       />
       <Alert
         type="success"

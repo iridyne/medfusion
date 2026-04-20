@@ -55,6 +55,7 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 当前 Getting Started 页后的推荐路径：
 
 1. 先进入 `Run Wizard`，从问题定义出发拿到推荐骨架
+   - 当前默认会先落到 ComfyUI 适配配置语义（仍在 MedFusion 主线内）
 2. 如需理解高级边界，再进入 `/config/advanced` 查看组件注册表和连接约束
 3. 需要 first-run 演示时，再进入 `Quickstart Run` 页面确认公开数据 profile、命令链和预期产物
 4. 执行 `medfusion public-datasets prepare` 与 `medfusion validate-config`

@@ -61,6 +61,7 @@ function toConfigFileName(experimentName: string): string {
 }
 
 type BuilderPathId =
+  | "comfy-default"
   | "first-success"
   | "clinical-baseline"
   | "result-handoff";
@@ -75,6 +76,14 @@ interface BuilderPathOption {
 }
 
 const BUILDER_PATH_OPTIONS: BuilderPathOption[] = [
+  {
+    id: "comfy-default",
+    label: "ComfyUI 默认适配配置（推荐）",
+    problem: "我希望以 ComfyUI 适配语义作为默认配置起点，再回到 MedFusion 主链执行训练与结果回流。",
+    runtimeShape: "image + tabular / classification / quickstart (comfy-adapted)",
+    editorMode: "默认模式：问题向导 + ComfyUI 适配入口",
+    preset: "quickstart",
+  },
   {
     id: "first-success",
     label: "第一次先跑通一条真实主链",
@@ -105,7 +114,7 @@ export default function RunWizard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [builderPath, setBuilderPath] = useState<BuilderPathId>("first-success");
+  const [builderPath, setBuilderPath] = useState<BuilderPathId>("comfy-default");
   const [preset, setPreset] = useState<RunPresetId>("quickstart");
   const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset("quickstart"));
   const [compiledImportSource, setCompiledImportSource] = useState<string | null>(
@@ -291,6 +300,19 @@ export default function RunWizard() {
         message="当前正式版默认开放的是问题向导 + 参数编辑层"
         description="这一步先从问题定义进入，再把你映射到当前 runtime 真正支持的模型骨架。节点式编辑仍然是高级模式，不直接替代这条默认路径。"
       />
+      {builderPath === "comfy-default" ? (
+        <Alert
+          type="success"
+          showIcon
+          message="当前默认配置已切到 ComfyUI 适配模式"
+          description="你仍在同一条 MedFusion 主线里。若需要检查 ComfyUI 连通性或选择适配档案，可打开 ComfyUI 入口页。"
+          action={
+            <Button size="small" onClick={() => navigate("/config/comfyui")}>
+              打开 ComfyUI 入口
+            </Button>
+          }
+        />
+      ) : null}
 
       <Card size="small" title="先说你现在要解决什么问题">
         <Row gutter={[12, 12]}>

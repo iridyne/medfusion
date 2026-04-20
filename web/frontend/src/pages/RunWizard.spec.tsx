@@ -14,6 +14,7 @@ describe("RunWizard", () => {
 
     expect(markup).toContain("先定义问题，再生成可运行的模型骨架");
     expect(markup).toContain("先说你现在要解决什么问题");
+    expect(markup).toContain("ComfyUI 默认适配配置");
     expect(markup).toContain("第一次先跑通一条真实主链");
     expect(markup).toContain("当前阶段的前台边界");
     expect(markup).toContain("问题定义");
