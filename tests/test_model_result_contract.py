@@ -52,6 +52,11 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
     feature_importance_beeswarm_plot_path = (
         tmp_path / "artifacts" / "visualizations" / "feature_importance_beeswarm.png"
     )
+    phase_importance_path = tmp_path / "metrics" / "phase_importance.json"
+    case_explanations_path = tmp_path / "metrics" / "case_explanations.json"
+    heatmap_manifest_path = (
+        tmp_path / "artifacts" / "visualizations" / "heatmaps" / "manifest.json"
+    )
 
     _write_json(
         summary_path,
@@ -105,6 +110,53 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
         feature_importance_path,
         {"top_features": [{"feature": "age", "importance": 0.4}]},
     )
+    _write_json(
+        phase_importance_path,
+        {
+            "phase_labels": ["arterial", "portal", "noncontrast"],
+            "mean_importance": {
+                "arterial": 0.42,
+                "portal": 0.33,
+                "noncontrast": 0.25,
+            },
+        },
+    )
+    _write_json(
+        case_explanations_path,
+        {
+            "phase_labels": ["arterial", "portal", "noncontrast"],
+            "cases": [
+                {
+                    "case_id": "001",
+                    "phase_importance": {
+                        "arterial": 0.42,
+                        "portal": 0.33,
+                        "noncontrast": 0.25,
+                    },
+                    "heatmap_artifacts": [{"phase": "arterial"}],
+                }
+            ],
+        },
+    )
+    _write_json(
+        heatmap_manifest_path,
+        {
+            "method": "gradcam_3d_slice_overlay",
+            "phase_labels": ["arterial", "portal", "noncontrast"],
+            "cases": [
+                {
+                    "case_id": "001",
+                    "heatmaps": [
+                        {
+                            "phase": "arterial",
+                            "default_explanation_target": "predicted_class",
+                            "image_path": "artifacts/visualizations/heatmaps/001/arterial.png",
+                        }
+                    ],
+                }
+            ],
+        },
+    )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("# report", encoding="utf-8")
     for image_path in (
@@ -149,6 +201,9 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
                 "feature_importance_beeswarm_plot_path": str(
                     feature_importance_beeswarm_plot_path
                 ),
+                "phase_importance_path": str(phase_importance_path),
+                "case_explanations_path": str(case_explanations_path),
+                "heatmap_manifest_path": str(heatmap_manifest_path),
             },
             "result_summary": {"best_accuracy": 0.71},
         },
@@ -180,5 +235,19 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
     assert payload["visualizations"]["feature_importance_bar"]["image_url"] == (
         "/api/models/7/artifacts/feature_importance_bar_plot"
     )
+    assert payload["visualizations"]["phase_importance"]["mean_importance"]["arterial"] == 0.42
+    assert payload["visualizations"]["case_explanations"]["cases"][0]["case_id"] == "001"
+    assert payload["visualizations"]["three_phase_heatmaps"]["case_count"] == 1
+    assert payload["visualizations"]["three_phase_heatmaps"]["heatmap_count"] == 1
+    assert payload["visualizations"]["three_phase_heatmaps"]["artifact_key"] == "heatmap_manifest"
+    assert payload["visualizations"]["three_phase_heatmaps"]["cases"][0]["case_id"] == "001"
     result_file_keys = {item["key"] for item in payload["result_files"]}
-    assert {"summary", "validation", "report", "history"} <= result_file_keys
+    assert {
+        "summary",
+        "validation",
+        "report",
+        "history",
+        "phase_importance",
+        "case_explanations",
+        "heatmap_manifest",
+    } <= result_file_keys

@@ -46,6 +46,38 @@ const mockModel = {
       ],
     },
   },
+  visualizations: {
+    phase_importance: {
+      phase_labels: ["arterial", "portal", "noncontrast"],
+      mean_importance: {
+        arterial: 0.42,
+        portal: 0.33,
+        noncontrast: 0.25,
+      },
+      artifact_key: "phase_importance",
+    },
+    case_explanations: {
+      cases: [{ case_id: "001" }],
+      artifact_key: "case_explanations",
+    },
+    three_phase_heatmaps: {
+      method: "gradcam_3d_slice_overlay",
+      artifact_key: "heatmap_manifest",
+      case_count: 1,
+      heatmap_count: 3,
+      cases: [
+        {
+          case_id: "001",
+          heatmaps: [
+            {
+              phase: "arterial",
+              image_path: "outputs/demo-run/arterial.png",
+            },
+          ],
+        },
+      ],
+    },
+  },
   result_files: [
     {
       key: "summary",
@@ -67,6 +99,7 @@ describe("ModelResultPanel", () => {
     expect(markup).toContain("4. 文件层");
     expect(markup).toContain("结果交付摘要");
     expect(markup).toContain("结果文件");
+    expect(markup).toContain("三期解释热图");
     expect(markup).toContain("advanced_builder");
     expect(markup).toContain("advanced-builder-canvas");
     expect(markup).toContain("quickstart_multimodal");

@@ -166,6 +166,17 @@ def _build_artifact_index(model: ModelInfo) -> dict[str, dict[str, Any]]:
             "变量重要性蜂群图",
             artifact_paths.get("feature_importance_beeswarm_plot_path"),
         ),
+        ("phase_importance", "三期贡献", artifact_paths.get("phase_importance_path")),
+        (
+            "case_explanations",
+            "病例解释",
+            artifact_paths.get("case_explanations_path"),
+        ),
+        (
+            "heatmap_manifest",
+            "热图清单",
+            artifact_paths.get("heatmap_manifest_path"),
+        ),
     ]
 
     artifact_index: dict[str, dict[str, Any]] = {}
@@ -228,6 +239,9 @@ def _collect_result_files(model: ModelInfo) -> list[dict[str, Any]]:
                 "summary",
                 "metrics",
                 "validation",
+                "phase_importance",
+                "case_explanations",
+                "heatmap_manifest",
                 "history",
                 "roc_curve_plot",
                 "confusion_matrix_plot",
@@ -374,6 +388,43 @@ def _load_visualizations(model: ModelInfo) -> dict[str, Any]:
         visualizations["training_curves"] = {
             "artifact_key": "training_curves_plot",
             "image_url": _artifact_download_url(model.id, "training_curves_plot"),
+        }
+
+    phase_importance_path = artifact_paths.get("phase_importance_path")
+    phase_importance_payload = _safe_load_json(phase_importance_path)
+    if phase_importance_payload:
+        visualizations["phase_importance"] = {
+            **phase_importance_payload,
+            "artifact_key": "phase_importance",
+            "artifact_url": _artifact_download_url(model.id, "phase_importance"),
+        }
+
+    case_explanations_path = artifact_paths.get("case_explanations_path")
+    case_explanations_payload = _safe_load_json(case_explanations_path)
+    if case_explanations_payload:
+        visualizations["case_explanations"] = {
+            **case_explanations_payload,
+            "artifact_key": "case_explanations",
+            "artifact_url": _artifact_download_url(model.id, "case_explanations"),
+        }
+
+    heatmap_manifest_path = artifact_paths.get("heatmap_manifest_path")
+    heatmap_manifest_payload = _safe_load_json(heatmap_manifest_path)
+    if heatmap_manifest_payload:
+        case_count = len(heatmap_manifest_payload.get("cases", []))
+        heatmap_count = sum(
+            len(case.get("heatmaps", []))
+            for case in heatmap_manifest_payload.get("cases", [])
+        )
+
+        visualizations["three_phase_heatmaps"] = {
+            "method": heatmap_manifest_payload.get("method"),
+            "phase_labels": heatmap_manifest_payload.get("phase_labels", []),
+            "artifact_key": "heatmap_manifest",
+            "artifact_url": _artifact_download_url(model.id, "heatmap_manifest"),
+            "case_count": case_count,
+            "heatmap_count": heatmap_count,
+            "cases": heatmap_manifest_payload.get("cases", []),
         }
 
     return visualizations

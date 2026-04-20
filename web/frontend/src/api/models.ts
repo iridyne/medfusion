@@ -279,6 +279,52 @@ export interface Model {
       artifact_key: string;
       image_url: string;
     };
+    phase_importance?: {
+      phase_labels?: string[];
+      mean_importance?: Record<string, number>;
+      cases?: Array<{
+        case_id: string;
+        phase_importance: Record<string, number>;
+      }>;
+      artifact_key?: string | null;
+      artifact_url?: string | null;
+    };
+    case_explanations?: {
+      phase_labels?: string[];
+      cases?: Array<{
+        case_id: string;
+        predicted_label?: number;
+        pred_probability?: number;
+        risk_score?: number;
+        phase_importance?: Record<string, number>;
+        top_clinical_factors?: string[];
+        heatmap_artifacts?: Array<Record<string, any>>;
+      }>;
+      artifact_key?: string | null;
+      artifact_url?: string | null;
+    };
+    three_phase_heatmaps?: {
+      method?: string;
+      phase_labels?: string[];
+      artifact_key?: string | null;
+      artifact_url?: string | null;
+      case_count?: number;
+      heatmap_count?: number;
+      cases?: Array<{
+        case_id: string;
+        predicted_label?: number;
+        pred_probability?: number;
+        heatmaps?: Array<{
+          phase: string;
+          method?: string;
+          default_explanation_target?: string;
+          image_path?: string;
+          slice_index?: number;
+          phase_importance?: number;
+          targets?: Record<string, { target_class?: number; image_path?: string }>;
+        }>;
+      }>;
+    };
   };
   created_at: string;
   updated_at?: string;

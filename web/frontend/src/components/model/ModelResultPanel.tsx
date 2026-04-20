@@ -121,6 +121,9 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const rocCurve = model.visualizations?.roc_curve;
   const confusionMatrix = model.visualizations?.confusion_matrix;
   const attentionMaps = model.visualizations?.attention_maps || [];
+  const phaseImportance = model.visualizations?.phase_importance;
+  const caseExplanations = model.visualizations?.case_explanations;
+  const threePhaseHeatmaps = model.visualizations?.three_phase_heatmaps;
   const validation = model.validation;
   const validationOverview = validation?.overview;
   const validationDataset = validation?.dataset;
@@ -137,6 +140,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const trainingHistory = model.training_history?.entries || [];
   const resultFiles = model.result_files || [];
   const existingResultFiles = resultFiles.filter((artifact) => artifact.exists);
+  const phaseImportanceEntries = Object.entries(phaseImportance?.mean_importance || {});
   const auxiliaryVisuals = [
     {
       key: model.visualizations?.training_curves?.artifact_key,
@@ -204,6 +208,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const visualizationArtifactCount =
     attentionMaps.length +
     auxiliaryVisuals.length +
+    (threePhaseHeatmaps?.heatmap_count || 0) +
     (rocCurve?.plot_url ? 1 : 0) +
     (confusionMatrix?.plot_url ? 1 : 0) +
     (confusionMatrix?.normalized_plot_url ? 1 : 0);
@@ -840,6 +845,12 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                   <Descriptions.Item label="注意力热图">
                     {attentionMaps.length}
                   </Descriptions.Item>
+                  <Descriptions.Item label="三期热图病例">
+                    {threePhaseHeatmaps?.case_count || 0}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="三期贡献指标">
+                    {phaseImportanceEntries.length}
+                  </Descriptions.Item>
                   <Descriptions.Item label="辅助图表">
                     {auxiliaryVisuals.length}
                   </Descriptions.Item>
@@ -974,6 +985,69 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                 </Col>
               )}
             </Row>
+          </Card>
+
+          <Card
+            size="small"
+            title="三期解释热图（模型空间 + 原始切片）"
+            extra={
+              threePhaseHeatmaps?.artifact_key ? (
+                <Button
+                  size="small"
+                  icon={<DownloadOutlined />}
+                  onClick={() =>
+                    void handleDownloadArtifact(
+                      threePhaseHeatmaps.artifact_key!,
+                      `${model.name}-heatmap-manifest.json`,
+                    )
+                  }
+                >
+                  下载清单
+                </Button>
+              ) : null
+            }
+          >
+            <Space direction="vertical" size={12} style={{ width: "100%" }}>
+              <Descriptions column={1} size="small" labelStyle={{ width: 160 }}>
+                <Descriptions.Item label="热图方法">
+                  {threePhaseHeatmaps?.method || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="病例数">
+                  {threePhaseHeatmaps?.case_count || 0}
+                </Descriptions.Item>
+                <Descriptions.Item label="热图条目">
+                  {threePhaseHeatmaps?.heatmap_count || 0}
+                </Descriptions.Item>
+                <Descriptions.Item label="病例解释数">
+                  {caseExplanations?.cases?.length || 0}
+                </Descriptions.Item>
+                <Descriptions.Item label="三期贡献">
+                  {phaseImportanceEntries.length ? (
+                    <Space wrap>
+                      {phaseImportanceEntries.map(([phase, value]) => (
+                        <Tag key={phase} color="geekblue">
+                          {phase}: {formatPercent(value)}
+                        </Tag>
+                      ))}
+                    </Space>
+                  ) : (
+                    "暂无"
+                  )}
+                </Descriptions.Item>
+              </Descriptions>
+
+              {threePhaseHeatmaps?.cases?.length ? (
+                <Space wrap>
+                  {threePhaseHeatmaps.cases.slice(0, 6).map((caseItem) => (
+                    <Tag key={caseItem.case_id} color="blue">
+                      病例 {caseItem.case_id} · 热图 {(caseItem.heatmaps || []).length} 张
+                    </Tag>
+                  ))}
+                </Space>
+              ) : (
+                <Empty description="暂无三期解释热图" />
+              )}
+            </Space>
           </Card>
 
           {auxiliaryVisuals.length ? (
