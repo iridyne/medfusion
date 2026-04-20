@@ -12,8 +12,8 @@ import {
 import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
 import {
+  START_COMFYUI_OPTIONAL_MODULE,
   START_COMPONENTS,
-  START_COMFYUI_WORKFLOW,
   START_MODE_POSITIONING,
   START_PRIMARY_FLOW,
   START_RECOMMENDED_WORKFLOW,
@@ -104,8 +104,8 @@ export default function GettingStarted() {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="先走一条清晰主线，再进入高级或外部适配"
-        description="如果你只是要跑通 MedFusion，请优先走“标准主线”；如果你要接 ComfyUI，请走“ComfyUI 适配线”。两条路径最终都回到同一套训练与结果合同。"
+        message="唯一主线：配置 -> 训练 -> 结果"
+        description="正式版只有一条主线。ComfyUI 是这条主线里的可选适配模块，不是并列主路径。"
       />
       <Alert
         type="success"
@@ -205,40 +205,37 @@ export default function GettingStarted() {
         </Card>
       </div>
 
-      <div className="split-grid" style={{ marginTop: 16 }}>
-        <Card className="surface-card" title="标准主线（推荐）">
-          <div className="editorial-stack">
-            {START_RECOMMENDED_WORKFLOW.map((step) => (
-              <div key={step} className="surface-note surface-note--dense">
+      <Card className="surface-card" style={{ marginTop: 16 }} title="唯一主线（推荐）">
+        <div className="editorial-stack">
+          {START_RECOMMENDED_WORKFLOW.map((step) => (
+            <div key={step} className="surface-note surface-note--dense">
+              {step}
+            </div>
+          ))}
+          <Button
+            type="primary"
+            icon={<ControlOutlined />}
+            onClick={() => navigate("/config")}
+          >
+            按唯一主线开始
+          </Button>
+          <div className="surface-note surface-note--dense">
+            <strong>可选模块：ComfyUI 适配（不改变主线）</strong>
+            {START_COMFYUI_OPTIONAL_MODULE.map((step) => (
+              <p key={step} style={{ marginBottom: 0 }}>
                 {step}
-              </div>
+              </p>
             ))}
             <Button
-              type="primary"
-              icon={<ControlOutlined />}
-              onClick={() => navigate("/config")}
-            >
-              按标准主线开始
-            </Button>
-          </div>
-        </Card>
-
-        <Card className="surface-card" title="ComfyUI 适配线（预览）">
-          <div className="editorial-stack">
-            {START_COMFYUI_WORKFLOW.map((step) => (
-              <div key={step} className="surface-note surface-note--dense">
-                {step}
-              </div>
-            ))}
-            <Button
+              size="small"
               icon={<LinkOutlined />}
               onClick={() => navigate("/config/comfyui")}
             >
-              按 ComfyUI 适配线开始
+              打开 ComfyUI 适配模块
             </Button>
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
     </PageScaffold>
   );
 }

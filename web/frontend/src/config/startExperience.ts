@@ -61,11 +61,10 @@ export const START_RECOMMENDED_WORKFLOW = [
   "4) /models 回流并复盘结果",
 ] as const;
 
-export const START_COMFYUI_WORKFLOW = [
-  "1) /config/comfyui 检查 ComfyUI 连通性",
-  "2) 选择适配档案并跳到 /config/advanced/canvas",
-  "3) 画布编译通过后创建训练任务",
-  "4) 回到 /models 做结果导入与交付复盘",
+export const START_COMFYUI_OPTIONAL_MODULE = [
+  "在 /config/comfyui 检查 ComfyUI 连通性",
+  "选择适配档案并跳到 /config/advanced/canvas",
+  "完成编译与训练后回到 /models 复盘结果",
 ] as const;
 
 export const START_MODE_POSITIONING = {
