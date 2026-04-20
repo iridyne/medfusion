@@ -21,6 +21,54 @@ ARTIFACTS=(
   "$OUTPUT_DIR/reports/report.md"
 )
 
+UV_BIN=""
+
+find_first_command() {
+  local candidate
+  for candidate in "$@"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+prefer_windows_uv() {
+  [[ -n "${WSL_DISTRO_NAME:-}" && "$REPO_ROOT" == /mnt/c/* ]]
+}
+
+resolve_uv_bin() {
+  local candidate
+
+  if prefer_windows_uv; then
+    if candidate="$(find_first_command uv.exe)"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+
+    candidate="/mnt/c/Users/Administrator/.local/bin/uv.exe"
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  if candidate="$(find_first_command uv uv.exe)"; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  for candidate in "$HOME/.local/bin/uv" "/home/yixian/.local/bin/uv"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 step() {
   echo
   echo "==> $1"
@@ -32,10 +80,19 @@ run() {
 }
 
 ensure_uv() {
-  if ! command -v uv >/dev/null 2>&1; then
+  if [[ -n "$UV_BIN" ]]; then
+    return 0
+  fi
+
+  if ! UV_BIN="$(resolve_uv_bin)"; then
     echo "uv not found in PATH" >&2
     exit 1
   fi
+}
+
+uv() {
+  ensure_uv
+  "$UV_BIN" "$@"
 }
 
 prepare_dataset_if_needed() {

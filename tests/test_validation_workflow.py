@@ -10,21 +10,29 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _bash_script_path(script: Path) -> str:
+    return script.relative_to(REPO_ROOT).as_posix()
+
+
 def test_full_regression_entrypoint_exists_and_is_executable() -> None:
     script = REPO_ROOT / "scripts" / "full_regression.sh"
 
     assert script.exists()
-    assert script.stat().st_mode & stat.S_IXUSR
+    assert script.read_text(encoding="utf-8").startswith("#!/usr/bin/env bash")
+    if os.name != "nt":
+        assert script.stat().st_mode & stat.S_IXUSR
 
 
 def test_full_regression_help_documents_supported_modes() -> None:
     script = REPO_ROOT / "scripts" / "full_regression.sh"
 
     result = subprocess.run(
-        ["bash", str(script), "--help"],
+        ["bash", _bash_script_path(script), "--help"],
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=REPO_ROOT,
         env={**os.environ, "TERM": "dumb"},
     )
@@ -33,9 +41,9 @@ def test_full_regression_help_documents_supported_modes() -> None:
     assert "quick" in result.stdout
     assert "ci" in result.stdout
     assert "full" in result.stdout
-    assert "tests/test_config_validation.py" in result.stdout
-    assert "tests/test_export.py" in result.stdout
     assert "bash test/smoke.sh" in result.stdout
+    assert ".github/workflows/ci.yml" in result.stdout
+    assert "bash scripts/inspect_ci_failure.sh" in result.stdout
     assert "scripts/smoke_test.py" not in result.stdout
 
 
@@ -43,6 +51,8 @@ def test_full_regression_ci_mode_uses_shell_smoke_entrypoint() -> None:
     content = (REPO_ROOT / "scripts" / "full_regression.sh").read_text(encoding="utf-8")
 
     assert "run bash test/smoke.sh" in content
+    assert "pytest 已迁移到 GitHub Actions CI" in content
+    assert "uv run pytest tests/" not in content
     assert "uv run python scripts/smoke_test.py" not in content
 
 
@@ -63,9 +73,7 @@ def test_github_ci_workflow_uses_shell_smoke_entrypoint() -> None:
 
 
 def test_verify_ci_fixes_checks_shell_smoke_entrypoint_in_workflow() -> None:
-    content = (REPO_ROOT / "scripts" / "verify_ci_fixes.py").read_text(
-        encoding="utf-8"
-    )
+    content = (REPO_ROOT / "scripts" / "verify_ci_fixes.py").read_text(encoding="utf-8")
 
     assert "bash test/smoke.sh" in content
     assert "CI smoke 入口已统一到 test/smoke.sh" in content
@@ -90,8 +98,8 @@ def test_legacy_smoke_test_script_is_relocated_to_dev_diagnostics() -> None:
 @pytest.mark.parametrize(
     ("relative_path", "expected_mode"),
     [
-        ("scripts/local_ci_test.sh", "--full"),
-        ("scripts/test_ci_locally.sh", "--quick"),
+        ("scripts/local_ci_test.sh", "--ci"),
+        ("scripts/test_ci_locally.sh", "--ci"),
         ("scripts/quick_ci_test.py", "--quick"),
     ],
 )
@@ -128,6 +136,4 @@ def test_top_level_docs_point_to_script_based_validation_workflow() -> None:
         assert "bash scripts/full_regression.sh --quick" in content
         assert "bash scripts/full_regression.sh --ci" in content
         assert "bash scripts/full_regression.sh --full" in content
-
-    assert "tests/test_config_validation.py" in readme
-    assert "tests/test_export.py" in readme
+        assert "bash scripts/inspect_ci_failure.sh" in content

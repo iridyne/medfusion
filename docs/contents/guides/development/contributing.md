@@ -30,7 +30,7 @@ Thank you for your interest in contributing to MedFusion! This guide will help y
 
 4. **Verify installation**:
    ```bash
-   uv run pytest -q
+   bash test/smoke.sh
    ```
 
 ### Frontend Setup (Optional)
@@ -62,17 +62,23 @@ Branch naming conventions:
 
 Follow the project's coding standards (see below).
 
-### 3. Run Tests
+### 3. Local Preflight
 
 ```bash
-# Run all tests
-uv run pytest
+# Fast local preflight
+bash scripts/full_regression.sh --quick
 
-# Run specific test file
-uv run pytest tests/test_models.py
+# Local smoke / CI handoff
+bash scripts/full_regression.sh --ci
 
-# Run with coverage
-uv run pytest --cov=med_core --cov-report=html
+# Broader local non-pytest validation
+bash scripts/full_regression.sh --full
+```
+
+`pytest` runs in GitHub Actions CI. When CI fails, inspect the Actions logs or run:
+
+```bash
+bash scripts/inspect_ci_failure.sh
 ```
 
 ### 4. Format and Lint

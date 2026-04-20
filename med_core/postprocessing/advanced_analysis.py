@@ -23,6 +23,10 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _stringify_path(path: str | Path) -> str:
+    return Path(path).as_posix()
+
+
 def _coerce_event_array(values: pd.Series | np.ndarray) -> np.ndarray:
     if isinstance(values, pd.Series):
         raw = values.to_numpy()
@@ -497,8 +501,8 @@ def build_shap_artifacts(
             "intercept": round(intercept, 6),
             "features": ranked_features,
             "artifacts": {
-                "shap_bar_plot_path": str(shap_bar_path),
-                "shap_beeswarm_plot_path": str(shap_beeswarm_path),
+                "shap_bar_plot_path": _stringify_path(shap_bar_path),
+                "shap_beeswarm_plot_path": _stringify_path(shap_beeswarm_path),
             },
         }
     )
@@ -506,9 +510,9 @@ def build_shap_artifacts(
     shap_json_path = output_dir / "shap_summary.json"
     _write_json(shap_json_path, payload)
     artifact_paths = {
-        "shap_summary_json_path": str(shap_json_path),
-        "shap_bar_plot_path": str(shap_bar_path),
-        "shap_beeswarm_plot_path": str(shap_beeswarm_path),
+        "shap_summary_json_path": _stringify_path(shap_json_path),
+        "shap_bar_plot_path": _stringify_path(shap_bar_path),
+        "shap_beeswarm_plot_path": _stringify_path(shap_beeswarm_path),
     }
     metric_updates = {
         "shap_method": method,

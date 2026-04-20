@@ -18,6 +18,10 @@ from test_build_results import _create_checkpoint_and_logs
 os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-cli-test-"))
 
 
+def _assert_path_equal(actual: str, expected: Path) -> None:
+    assert Path(actual) == expected
+
+
 def test_cli_imports():
     """Test that CLI functions can be imported."""
     from med_core.cli import (
@@ -322,12 +326,12 @@ def test_run_cli_executes_validate_train_and_build_results(
         root_logger.setLevel(original_level)
 
     assert calls == ["validate-config", "train", "build-results"]
-    assert payload["output_dir"] == str(layout.root_dir)
-    assert payload["checkpoint"] == str(layout.checkpoints_dir / "best.pth")
+    _assert_path_equal(payload["output_dir"], layout.root_dir)
+    _assert_path_equal(payload["checkpoint"], layout.checkpoints_dir / "best.pth")
     assert payload["build_results_skipped"] is False
-    assert payload["artifact_paths"]["summary"] == str(layout.summary_path)
-    assert payload["artifact_paths"]["validation"] == str(layout.validation_path)
-    assert payload["artifact_paths"]["report"] == str(layout.report_path)
+    _assert_path_equal(payload["artifact_paths"]["summary"], layout.summary_path)
+    _assert_path_equal(payload["artifact_paths"]["validation"], layout.validation_path)
+    _assert_path_equal(payload["artifact_paths"]["report"], layout.report_path)
 
 
 def test_run_cli_can_skip_build_results(tmp_path, monkeypatch, capsys):
@@ -371,8 +375,11 @@ def test_run_cli_can_skip_build_results(tmp_path, monkeypatch, capsys):
 
     assert calls == ["validate-config", "train"]
     assert payload["build_results_skipped"] is True
-    assert payload["artifact_paths"]["checkpoint"] == str(layout.checkpoints_dir / "best.pth")
-    assert payload["artifact_paths"]["history"] == str(layout.history_path)
+    _assert_path_equal(
+        payload["artifact_paths"]["checkpoint"],
+        layout.checkpoints_dir / "best.pth",
+    )
+    _assert_path_equal(payload["artifact_paths"]["history"], layout.history_path)
 
 
 def test_docs_promote_run_as_recommended_cli_mainline() -> None:
@@ -425,9 +432,9 @@ def test_evaluate_cli_uses_canonical_result_contract(tmp_path):
     assert metrics["meta"]["generated_by"] == "medfusion.build_results"
     assert validation["meta"] == metrics["meta"]
     assert summary["meta"] == metrics["meta"]
-    assert summary["artifacts"]["metrics_path"] == str(metrics_path)
-    assert summary["artifacts"]["validation_path"] == str(validation_path)
-    assert summary["artifacts"]["report_path"] == str(report_path)
+    _assert_path_equal(summary["artifacts"]["metrics_path"], metrics_path)
+    _assert_path_equal(summary["artifacts"]["validation_path"], validation_path)
+    _assert_path_equal(summary["artifacts"]["report_path"], report_path)
     assert validation["overview"]["split"] == "train"
     assert "## Contract Metadata" in report_text
     assert "## Artifact Index" in report_text

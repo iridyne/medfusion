@@ -12,6 +12,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import type {
+  NameType,
+  Payload,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
 
 interface ComparisonMetrics {
   metric: string;
@@ -23,6 +28,33 @@ interface MetricsChartProps {
   data: ComparisonMetrics[];
   chartType: "bar" | "line";
   height?: number;
+}
+
+function getTooltipScalar(
+  value: ValueType | undefined,
+): number | string | undefined {
+  const scalarValue = Array.isArray(value) ? value[0] : value;
+  return typeof scalarValue === "number" || typeof scalarValue === "string"
+    ? scalarValue
+    : undefined;
+}
+
+function formatTooltipSeriesName(name: NameType | undefined): string {
+  return name === undefined ? "" : String(name);
+}
+
+function formatMetricsTooltip(
+  value: ValueType | undefined,
+  name: NameType | undefined,
+  item: Payload<ValueType, NameType>,
+): [string, string] {
+  const scalarValue = getTooltipScalar(value);
+  const numericValue =
+    typeof scalarValue === "number" ? scalarValue : Number(scalarValue ?? 0);
+  const metricName = String((item.payload as { metric?: string }).metric ?? "");
+  const suffix = metricName === "Loss" ? "" : "%";
+
+  return [`${numericValue.toFixed(2)}${suffix}`, formatTooltipSeriesName(name)];
 }
 
 const MetricsChart: React.FC<MetricsChartProps> = ({
@@ -75,13 +107,7 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
             }}
           />
           <Tooltip
-            formatter={(
-              value: number | undefined,
-              name: string | undefined,
-            ) => [
-              `${(value ?? 0).toFixed(2)}${(name ?? "") === "Loss" ? "" : "%"}`,
-              name ?? "",
-            ]}
+            formatter={formatMetricsTooltip}
           />
           <Legend />
           {experimentNames.map((expName, index) => (
@@ -113,10 +139,7 @@ const MetricsChart: React.FC<MetricsChartProps> = ({
           }}
         />
         <Tooltip
-          formatter={(value: number | undefined, name: string | undefined) => [
-            `${(value ?? 0).toFixed(2)}${(name ?? "") === "Loss" ? "" : "%"}`,
-            name ?? "",
-          ]}
+          formatter={formatMetricsTooltip}
         />
         <Legend />
         {experimentNames.map((expName, index) => (

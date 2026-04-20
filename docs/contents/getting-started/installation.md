@@ -54,8 +54,8 @@ pip install -e ".[dev,web]"
 # 检查命令行工具
 uv run medfusion train --help
 
-# 运行测试（可选）
-uv run pytest -q
+# 可选：跑仓库 smoke 主链
+bash test/smoke.sh
 ```
 
 **预期输出：**

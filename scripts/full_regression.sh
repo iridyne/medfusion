@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 统一验证入口：快速检查 / CI 对齐 / 完整回归
+# 统一验证入口：本地轻量预检 + GitHub Actions CI handoff
 
 set -euo pipefail
 
@@ -7,15 +7,79 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 MODE="full"
+UV_BIN=""
+PYTHON_BIN=""
 QUICK_PY_LINT_TARGETS=(
   tests/test_output_layout.py
   tests/test_build_results.py
   tests/test_validation_workflow.py
 )
-QUICK_TEST_TARGETS=(
-  tests/test_output_layout.py
-  tests/test_build_results.py
-)
+
+find_first_command() {
+  local candidate
+  for candidate in "$@"; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      command -v "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+prefer_windows_uv() {
+  [[ -n "${WSL_DISTRO_NAME:-}" && "$REPO_ROOT" == /mnt/c/* ]]
+}
+
+resolve_uv_bin() {
+  local candidate
+
+  if prefer_windows_uv; then
+    if candidate="$(find_first_command uv.exe)"; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+
+    candidate="/mnt/c/Users/Administrator/.local/bin/uv.exe"
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  if candidate="$(find_first_command uv uv.exe)"; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  for candidate in "$HOME/.local/bin/uv" "/home/yixian/.local/bin/uv"; do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_python_bin() {
+  local candidate
+  if candidate="$(find_first_command python python3)"; then
+    printf '%s\n' "$candidate"
+    return 0
+  fi
+
+  for candidate in \
+    "/usr/bin/python3" \
+    "/mnt/c/Users/Administrator/AppData/Local/Microsoft/WindowsApps/python.exe"
+  do
+    if [[ -x "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
 
 usage() {
   cat <<'EOF'
@@ -27,37 +91,34 @@ Usage:
   bash scripts/full_regression.sh --help
 
 Modes:
-  quick   Fast local validation for everyday development.
+  quick   Fast local preflight for everyday development.
           Runs:
             - uv sync --extra dev
             - bash -n scripts/full_regression.sh
             - uv run ruff check <focused validation python files>
             - uv run ruff format --check <focused validation python files>
-            - uv run pytest tests/test_output_layout.py tests/test_build_results.py -v
           Notes:
-            - quick is intentionally scoped to the current validation workflow files.
-            - It does not attempt to clean up all historical repo-wide formatting debt.
+            - quick stays local and intentionally does not run pytest.
+            - pytest ownership lives in GitHub Actions CI: .github/workflows/ci.yml
 
-  ci      Closest local approximation of GitHub CI.
+  ci      Local handoff check before GitHub Actions CI.
           Runs:
             - uv sync --extra dev --extra web
-            - uv run pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term \
-                --ignore=tests/test_config_validation.py \
-                --ignore=tests/test_export.py
-            - uv run pytest tests/test_end_to_end.py -v --tb=short
             - bash test/smoke.sh
           Notes:
-            - The CI-aligned suite intentionally excludes:
-              tests/test_config_validation.py
-              tests/test_export.py
+            - pytest is intentionally delegated to GitHub Actions CI.
+            - inspect recent failures with: bash scripts/inspect_ci_failure.sh
 
-  full    Broader local regression pass.
+  full    Broader local non-pytest regression pass.
           Runs:
-            - embedded full local validation suite
+            - embedded local checks (env, lint, format, mypy, smoke, build, safety)
+          Notes:
+            - pytest is intentionally excluded from local full mode.
+            - use CI logs as the source of truth for pytest failures.
 
 Why this exists:
-  This is the repository's script-based validation entrypoint.
-  It replaces “remember a bunch of commands in your head” with one real command.
+  Local scripts stay focused on preflight and smoke.
+  Full pytest responsibility is owned by .github/workflows/ci.yml.
 EOF
 }
 
@@ -97,19 +158,51 @@ full_print_warning() {
   FULL_WARNINGS=$((FULL_WARNINGS + 1))
 }
 
+ensure_python() {
+  if [[ -n "$PYTHON_BIN" ]]; then
+    return 0
+  fi
+
+  if ! PYTHON_BIN="$(resolve_python_bin)"; then
+    echo "python not found" >&2
+    exit 1
+  fi
+}
+
+ensure_uv() {
+  if [[ -n "$UV_BIN" ]]; then
+    return 0
+  fi
+
+  if ! UV_BIN="$(resolve_uv_bin)"; then
+    echo "uv not found" >&2
+    exit 1
+  fi
+}
+
+python() {
+  ensure_python
+  "$PYTHON_BIN" "$@"
+}
+
+uv() {
+  ensure_uv
+  "$UV_BIN" "$@"
+}
+
+print_ci_pytest_notice() {
+  echo
+  echo "pytest now runs in GitHub Actions CI: .github/workflows/ci.yml"
+  echo "Inspect recent failed logs with: bash scripts/inspect_ci_failure.sh"
+}
+
 run_full_validation() {
   full_print_step "步骤 0: 检查环境依赖"
 
-  if ! command -v python >/dev/null 2>&1; then
-    full_print_error "Python 未安装"
-    exit 1
-  fi
+  ensure_python
   full_print_success "Python 已安装: $(python --version)"
 
-  if ! command -v uv >/dev/null 2>&1; then
-    full_print_error "uv 未安装"
-    exit 1
-  fi
+  ensure_uv
   full_print_success "uv 已安装: $(uv --version)"
 
   local python_version
@@ -163,21 +256,20 @@ run_full_validation() {
     head -30 /tmp/mypy.log
   fi
 
-  full_print_step "步骤 5: 运行单元测试"
-  if [[ ! -d "tests" ]]; then
-    full_print_error "tests/ 目录不存在"
-  elif uv run pytest tests/ -v --cov=med_core --cov-report=term --cov-report=xml > /tmp/pytest.log 2>&1; then
-    full_print_success "单元测试通过"
-    echo
-    echo "覆盖率报告:"
-    grep -A 5 "TOTAL" /tmp/pytest.log || echo "未找到覆盖率信息"
+  full_print_step "步骤 5: 仓库 smoke 主链"
+  if bash test/smoke.sh > /tmp/medfusion_smoke.log 2>&1; then
+    full_print_success "Smoke 主链通过"
   else
-    full_print_error "单元测试失败"
-    echo "查看详情: /tmp/pytest.log"
-    tail -50 /tmp/pytest.log
+    full_print_error "Smoke 主链失败"
+    echo "查看详情: /tmp/medfusion_smoke.log"
+    tail -50 /tmp/medfusion_smoke.log
   fi
 
-  full_print_step "步骤 6: 检查集成测试脚本"
+  full_print_step "步骤 6: pytest 交给 GitHub Actions CI"
+  full_print_success "本地 full 模式不运行 pytest"
+  echo "查看 CI 失败日志: bash scripts/inspect_ci_failure.sh"
+
+  full_print_step "步骤 7: 检查集成测试脚本"
   local script
   for script in "scripts/generate_mock_data.py" "test/smoke.sh"; do
     if [[ ! -f "$script" ]]; then
@@ -197,7 +289,7 @@ run_full_validation() {
     fi
   done
 
-  full_print_step "步骤 7: 检查 Docker 配置"
+  full_print_step "步骤 8: 检查 Docker 配置"
   if [[ -f "Dockerfile" ]]; then
     full_print_success "Dockerfile 存在"
     if command -v docker >/dev/null 2>&1; then
@@ -213,7 +305,7 @@ run_full_validation() {
     full_print_warning "Dockerfile 不存在，跳过 Docker 检查"
   fi
 
-  full_print_step "步骤 8: 检查示例代码语法"
+  full_print_step "步骤 9: 检查示例代码语法"
   if [[ -d "examples" ]]; then
     local example example_errors=0
     for example in examples/*.py; do
@@ -235,7 +327,7 @@ run_full_validation() {
     full_print_warning "examples/ 目录不存在"
   fi
 
-  full_print_step "步骤 9: 测试包构建"
+  full_print_step "步骤 10: 测试包构建"
   if uv run --with build python -m build --outdir /tmp/dist > /tmp/build.log 2>&1; then
     full_print_success "包构建成功"
     ls -lh /tmp/dist/
@@ -244,7 +336,7 @@ run_full_validation() {
     cat /tmp/build.log
   fi
 
-  full_print_step "步骤 10: 安全扫描"
+  full_print_step "步骤 11: 安全扫描"
   echo "执行安全扫描..."
   if uv run --with bandit bandit -r med_core/ -f json -o /tmp/bandit-report.json > /tmp/bandit.log 2>&1; then
     full_print_success "Bandit 安全扫描通过"
@@ -268,6 +360,8 @@ run_full_validation() {
   echo "警告: $FULL_WARNINGS"
   echo
 
+  print_ci_pytest_notice
+
   if [[ $FULL_FAILED -eq 0 ]]; then
     echo -e "${FULL_GREEN}=========================================="
     echo "所有关键测试通过！✓"
@@ -279,13 +373,6 @@ run_full_validation() {
   echo "发现 $FULL_FAILED 个失败项！✗"
   echo -e "==========================================${FULL_NC}"
   return 1
-}
-
-ensure_uv() {
-  if ! command -v uv >/dev/null 2>&1; then
-    echo "uv not found" >&2
-    exit 1
-  fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -327,15 +414,12 @@ case "$MODE" in
     run bash -n scripts/full_regression.sh
     run uv run ruff check "${QUICK_PY_LINT_TARGETS[@]}"
     run uv run ruff format --check "${QUICK_PY_LINT_TARGETS[@]}"
-    run uv run pytest "${QUICK_TEST_TARGETS[@]}" -v
+    print_ci_pytest_notice
     ;;
   ci)
     run uv sync --extra dev --extra web
-    run uv run pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term \
-      --ignore=tests/test_config_validation.py \
-      --ignore=tests/test_export.py
-    run uv run pytest tests/test_end_to_end.py -v --tb=short
     run bash test/smoke.sh
+    print_ci_pytest_notice
     ;;
   full)
     run_full_validation

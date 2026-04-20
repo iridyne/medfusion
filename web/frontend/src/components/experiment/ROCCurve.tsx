@@ -11,6 +11,10 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
+import type {
+  NameType,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
 
 interface ROCCurveProps {
   experimentIds: string[];
@@ -25,6 +29,19 @@ interface ROCData {
     tpr: number;
     threshold: number;
   }>;
+}
+
+function getTooltipScalar(
+  value: ValueType | undefined,
+): number | string | undefined {
+  const scalarValue = Array.isArray(value) ? value[0] : value;
+  return typeof scalarValue === "number" || typeof scalarValue === "string"
+    ? scalarValue
+    : undefined;
+}
+
+function formatTooltipName(name: NameType | undefined): string {
+  return name === undefined ? "" : String(name);
 }
 
 const ROCCurve: React.FC<ROCCurveProps> = ({ experimentIds }) => {
@@ -170,11 +187,16 @@ const ROCCurve: React.FC<ROCCurveProps> = ({ experimentIds }) => {
             }}
           />
           <Tooltip
-            formatter={(
-              value: number | undefined,
-              name: string | undefined,
-            ) => [(value ?? 0).toFixed(3), (name ?? "").replace("_tpr", "")]}
-            labelFormatter={(label) => `FPR: ${parseFloat(label).toFixed(3)}`}
+            formatter={(value: ValueType | undefined, name: NameType | undefined) => {
+              const scalarValue = getTooltipScalar(value);
+              const numericValue =
+                typeof scalarValue === "number"
+                  ? scalarValue
+                  : Number(scalarValue ?? 0);
+
+              return [numericValue.toFixed(3), formatTooltipName(name).replace("_tpr", "")];
+            }}
+            labelFormatter={(label) => `FPR: ${Number(label).toFixed(3)}`}
           />
           <Legend
             wrapperStyle={{ paddingTop: 20 }}

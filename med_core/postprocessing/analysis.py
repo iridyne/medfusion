@@ -24,6 +24,12 @@ from med_core.postprocessing.advanced_analysis import (
 )
 
 
+def _stringify_path(path: str | Path | None) -> str | None:
+    if path is None:
+        return None
+    return Path(path).as_posix()
+
+
 def resolve_survival_columns(
     config: Any,
     *,
@@ -47,7 +53,7 @@ def _copy_if_exists(source_path: str | None, target_path: Path) -> str | None:
         return None
     target_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target_path)
-    return str(target_path)
+    return _stringify_path(target_path)
 
 
 def build_survival_artifacts(

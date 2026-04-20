@@ -327,20 +327,24 @@ oss/
 ## 开发与验证
 
 ```bash
-# 最小回归（推荐日常）
+# 日常本地预检
 bash scripts/full_regression.sh --quick
 
-# 对齐 CI
+# 提交前本地 smoke / handoff
 bash scripts/full_regression.sh --ci
 
-# 完整本地回归
+# 更完整的本地非-pytest 检查
 bash scripts/full_regression.sh --full
 ```
 
-其中最关键的基础回归包括：
+`pytest` 当前固定由 GitHub Actions CI 执行：
+- [CI Workflow](.github/workflows/ci.yml)
 
-- `tests/test_config_validation.py`
-- `tests/test_export.py`
+如果 CI 失败，优先看 GitHub Actions 日志；本机装了 `gh` 时也可以直接运行：
+
+```bash
+bash scripts/inspect_ci_failure.sh
+```
 
 ---
 

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Python Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Sync dependencies
+        run: uv sync --extra dev --extra web
+
+      - name: Run repository tests
+        run: |
+          uv run pytest tests/ -v --cov=med_core --cov-report=xml --cov-report=term \
+            --junitxml=pytest-suite.xml \
+            --ignore=tests/test_config_validation.py \
+            --ignore=tests/test_export.py
+
+      - name: Run workflow regression
+        run: uv run pytest tests/test_end_to_end.py -v --tb=short --junitxml=pytest-e2e.xml
+
+      - name: Run shell smoke
+        run: |
+          set -o pipefail
+          bash test/smoke.sh | tee smoke.log
+
+      - name: Upload CI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-pytest-and-smoke
+          if-no-files-found: ignore
+          path: |
+            pytest-suite.xml
+            pytest-e2e.xml
+            coverage.xml
+            smoke.log

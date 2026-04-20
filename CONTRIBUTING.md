@@ -15,11 +15,13 @@
 1. 创建功能分支：`git checkout -b feature/your-feature`
 2. 编写代码和测试
 3. 先跑快速验证：`bash scripts/full_regression.sh --quick`
-4. 准备提交较大改动时，再跑：`bash scripts/full_regression.sh --ci`
-5. 如需更重的本地整套检查，再跑：`bash scripts/full_regression.sh --full`
-6. 提交更改：`git commit -m "feat: your feature"`
-7. 推送分支：`git push origin feature/your-feature`
-8. 创建 Pull Request
+4. 提交前跑本地 smoke / handoff：`bash scripts/full_regression.sh --ci`
+5. 如需更重的本地非-pytest 检查，再跑：`bash scripts/full_regression.sh --full`
+6. 推送分支后让 GitHub Actions CI 跑 `pytest`
+7. 如果 CI 失败，检查 Actions 日志，或运行：`bash scripts/inspect_ci_failure.sh`
+8. 提交更改：`git commit -m "feat: your feature"`
+9. 推送分支：`git push origin feature/your-feature`
+10. 创建 Pull Request
 
 ## 验证模式说明
 
@@ -36,6 +38,7 @@ bash scripts/full_regression.sh --quick
 ```
 
 适合日常开发后的最小自检。它当前只覆盖验证工作流相关的关键文件和最小测试集，不负责一次性清理整个仓库的历史格式化债。
+`pytest` 不在这个模式里运行。
 
 ### ci
 
@@ -43,12 +46,8 @@ bash scripts/full_regression.sh --quick
 bash scripts/full_regression.sh --ci
 ```
 
-尽量对齐当前 GitHub CI。这个模式会显式忽略：
-
-- `tests/test_config_validation.py`
-- `tests/test_export.py`
-
-这两项是当前 CI 对齐约定的一部分。
+这个模式负责本地 smoke 和提交流程 handoff，不在本地执行 `pytest`。
+`pytest` 的真源已经迁移到 GitHub Actions CI。
 
 ### full
 
@@ -56,7 +55,19 @@ bash scripts/full_regression.sh --ci
 bash scripts/full_regression.sh --full
 ```
 
-当前 `--full` 已内置更完整的本地检查；`scripts/local_ci_test.sh` 仅作为兼容包装保留。
+当前 `--full` 已内置更完整的本地非-pytest 检查；`scripts/local_ci_test.sh` 仅作为兼容包装保留。
+
+## CI 失败排查
+
+`pytest` 当前固定在 GitHub Actions CI 里执行：
+
+- `.github/workflows/ci.yml`
+
+如需直接查看最近失败日志：
+
+```bash
+bash scripts/inspect_ci_failure.sh
+```
 
 ## 代码规范
 
@@ -81,7 +92,9 @@ bash scripts/full_regression.sh --full
 
 - 所有新功能必须包含测试
 - 提交前至少运行 `bash scripts/full_regression.sh --quick`
-- 涉及较大改动时，建议运行 `--ci` 或 `--full`
+- 提交前建议运行 `bash scripts/full_regression.sh --ci`
+- `pytest` 由 GitHub Actions CI 负责，失败时按 CI 日志修复
+- 如需更完整的本地非-pytest 检查，再运行 `--full`
 - 新增流程性约定时，请同步更新脚本和文档，避免只存在于口头约定里
 
 ## 问题反馈

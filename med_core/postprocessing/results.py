@@ -141,6 +141,23 @@ def _round_metric(value: float | None, digits: int = 4) -> float | None:
     return round(float(value), digits)
 
 
+def _stringify_path(path: str | Path | None) -> str | None:
+    if path is None:
+        return None
+    return Path(path).as_posix()
+
+
+def _normalize_artifact_paths(
+    paths: dict[str, str | Path | None],
+) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in paths.items():
+        path_string = _stringify_path(value)
+        if path_string:
+            normalized[key] = path_string
+    return normalized
+
+
 def _format_importance_method(method: str | None) -> str:
     if not method:
         return "-"
@@ -159,8 +176,8 @@ def _build_artifact_metadata(
         "schema_version": _BUILD_RESULTS_SCHEMA_VERSION,
         "generated_by": _BUILD_RESULTS_GENERATED_BY,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "source_config_path": str(config_path),
-        "checkpoint_path": str(checkpoint_path),
+        "source_config_path": _stringify_path(config_path),
+        "checkpoint_path": _stringify_path(checkpoint_path),
         "split": split,
     }
 
@@ -533,7 +550,7 @@ def _generate_three_phase_heatmap_artifacts(
     }
     manifest_path = heatmap_dir / "manifest.json"
     _write_json(manifest_path, manifest_payload)
-    return heatmap_cases, {"heatmap_manifest_path": str(manifest_path)}
+    return heatmap_cases, {"heatmap_manifest_path": _stringify_path(manifest_path)}
 
 
 def _build_three_phase_results(
@@ -694,7 +711,7 @@ def _build_three_phase_results(
     roc_payload = {
         "artifact_key": "roc_curve_plot",
         "auc": _round_metric(auc_value),
-        "plot_path": str(roc_curve_path) if roc_curve_path else None,
+        "plot_path": _stringify_path(roc_curve_path),
     }
     confusion_payload = {
         "artifact_key": "confusion_matrix_plot",
@@ -860,25 +877,27 @@ def _build_three_phase_results(
         "primary_metric_value": round(float(accuracy), 4)
         if auc_value is None
         else _round_metric(auc_value),
-        "checkpoint": str(checkpoint_path),
-        "artifacts": {
-            "config_path": str(layout.config_snapshot_path),
-            "metrics_path": str(layout.metrics_path),
-            "validation_path": str(layout.validation_path),
-            "predictions_path": str(layout.predictions_path),
-            "prediction_path": str(layout.predictions_path),
-            "case_explanations_path": str(case_explanations_path),
-            "phase_importance_path": str(phase_importance_path),
-            "summary_path": str(layout.summary_path),
-            "report_path": str(layout.report_path),
-            "history_path": str(layout.history_path),
-            "roc_curve_json_path": str(layout.roc_curve_json_path),
-            "confusion_matrix_json_path": str(layout.confusion_matrix_json_path),
-            "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
-            "confusion_matrix_plot_path": str(confusion_matrix_path),
-            **importance_artifact_paths,
-            **heatmap_artifact_paths,
-        },
+        "checkpoint": _stringify_path(checkpoint_path),
+        "artifacts": _normalize_artifact_paths(
+            {
+                "config_path": layout.config_snapshot_path,
+                "metrics_path": layout.metrics_path,
+                "validation_path": layout.validation_path,
+                "predictions_path": layout.predictions_path,
+                "prediction_path": layout.predictions_path,
+                "case_explanations_path": case_explanations_path,
+                "phase_importance_path": phase_importance_path,
+                "summary_path": layout.summary_path,
+                "report_path": layout.report_path,
+                "history_path": layout.history_path,
+                "roc_curve_json_path": layout.roc_curve_json_path,
+                "confusion_matrix_json_path": layout.confusion_matrix_json_path,
+                "roc_curve_plot_path": roc_curve_path,
+                "confusion_matrix_plot_path": confusion_matrix_path,
+                **importance_artifact_paths,
+                **heatmap_artifact_paths,
+            }
+        ),
         "global_feature_importance": importance_payload,
     }
     report_lines = [
@@ -966,27 +985,28 @@ def _build_three_phase_results(
         _write_json(layout.history_path, history_payload)
     layout.report_path.write_text("\n".join(report_lines) + "\n", encoding="utf-8")
 
-    artifact_paths = {
-        "config_path": str(layout.config_snapshot_path),
-        "metrics_path": str(layout.metrics_path),
-        "validation_path": str(layout.validation_path),
-        "predictions_path": str(layout.predictions_path),
-        "prediction_path": str(layout.predictions_path),
-        "case_explanations_path": str(case_explanations_path),
-        "phase_importance_path": str(phase_importance_path),
-        "summary_path": str(layout.summary_path),
-        "report_path": str(layout.report_path),
-        "history_path": str(layout.history_path),
-        "roc_curve_json_path": str(layout.roc_curve_json_path),
-        "confusion_matrix_json_path": str(layout.confusion_matrix_json_path),
-        "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
-        "confusion_matrix_plot_path": str(confusion_matrix_path),
-        **importance_artifact_paths,
-        **heatmap_artifact_paths,
-    }
-    artifact_paths = {key: value for key, value in artifact_paths.items() if value}
+    artifact_paths = _normalize_artifact_paths(
+        {
+            "config_path": layout.config_snapshot_path,
+            "metrics_path": layout.metrics_path,
+            "validation_path": layout.validation_path,
+            "predictions_path": layout.predictions_path,
+            "prediction_path": layout.predictions_path,
+            "case_explanations_path": case_explanations_path,
+            "phase_importance_path": phase_importance_path,
+            "summary_path": layout.summary_path,
+            "report_path": layout.report_path,
+            "history_path": layout.history_path,
+            "roc_curve_json_path": layout.roc_curve_json_path,
+            "confusion_matrix_json_path": layout.confusion_matrix_json_path,
+            "roc_curve_plot_path": roc_curve_path,
+            "confusion_matrix_plot_path": confusion_matrix_path,
+            **importance_artifact_paths,
+            **heatmap_artifact_paths,
+        }
+    )
     return BuildResultsOutput(
-        output_dir=str(layout.root_dir),
+        output_dir=_stringify_path(layout.root_dir) or str(layout.root_dir),
         artifact_paths=artifact_paths,
         metrics=metrics_payload,
         validation=validation_payload,
@@ -1536,14 +1556,14 @@ def _build_metrics_payload(
         "positive_class_label": positive_class_label,
         "auc": round(float(roc_auc), 4) if roc_auc is not None else None,
         "points": roc_points,
-        "plot_path": str(roc_curve_path) if roc_curve_path else None,
+        "plot_path": _stringify_path(roc_curve_path),
     }
     confusion_payload = {
         "artifact_key": "confusion_matrix_plot",
         "labels": labels,
         "matrix": matrix.tolist(),
-        "plot_path": str(confusion_matrix_path),
-        "normalized_plot_path": str(normalized_confusion_matrix_path),
+        "plot_path": _stringify_path(confusion_matrix_path),
+        "normalized_plot_path": _stringify_path(normalized_confusion_matrix_path),
     }
     validation_overview = {
         "split": split,
@@ -1694,26 +1714,23 @@ def _build_metrics_payload(
     _write_json(predictions_path, predictions_payload)
 
     artifact_paths = {
-        "prediction_path": str(predictions_path),
-        "predictions_path": str(predictions_path),
-        "roc_curve_json_path": str(roc_curve_json_path),
-        "roc_curve_plot_path": str(roc_curve_path) if roc_curve_path else None,
-        "confusion_matrix_json_path": str(confusion_matrix_json_path),
-        "confusion_matrix_plot_path": str(confusion_matrix_path),
-        "confusion_matrix_normalized_plot_path": str(normalized_confusion_matrix_path),
-        "training_curves_plot_path": str(training_curves_path)
-        if training_curves_path
-        else None,
-        "validation_path": str(validation_path),
-        "calibration_curve_plot_path": str(calibration_curve_path)
-        if calibration_curve_path
-        else None,
-        "probability_distribution_plot_path": str(probability_distribution_path)
-        if probability_distribution_path
-        else None,
+        **_normalize_artifact_paths(
+            {
+                "prediction_path": predictions_path,
+                "predictions_path": predictions_path,
+                "roc_curve_json_path": roc_curve_json_path,
+                "roc_curve_plot_path": roc_curve_path,
+                "confusion_matrix_json_path": confusion_matrix_json_path,
+                "confusion_matrix_plot_path": confusion_matrix_path,
+                "confusion_matrix_normalized_plot_path": normalized_confusion_matrix_path,
+                "training_curves_plot_path": training_curves_path,
+                "validation_path": validation_path,
+                "calibration_curve_plot_path": calibration_curve_path,
+                "probability_distribution_plot_path": probability_distribution_path,
+            }
+        ),
         **attention_artifacts,
     }
-    artifact_paths = {key: value for key, value in artifact_paths.items() if value}
     return metrics_payload, validation_payload, artifact_paths
 
 
@@ -1741,16 +1758,20 @@ def _write_summary_and_report(
     )
 
     summary_artifact_paths = {
-        "checkpoint_path": str(checkpoint_path),
-        "config_path": str(config_snapshot_path),
-        "metrics_path": str(metrics_path),
-        "validation_path": str(layout.validation_path),
-        "prediction_path": str(layout.predictions_path),
-        "predictions_path": str(layout.predictions_path),
-        "summary_path": str(summary_path),
-        "report_path": str(report_path),
-        "log_path": str(layout.training_log_path),
-        "history_path": str(history_path),
+        **_normalize_artifact_paths(
+            {
+                "checkpoint_path": checkpoint_path,
+                "config_path": config_snapshot_path,
+                "metrics_path": metrics_path,
+                "validation_path": layout.validation_path,
+                "prediction_path": layout.predictions_path,
+                "predictions_path": layout.predictions_path,
+                "summary_path": summary_path,
+                "report_path": report_path,
+                "log_path": layout.training_log_path,
+                "history_path": history_path,
+            }
+        ),
         **artifact_paths,
     }
     validation_overview = validation_payload.get("overview", {})
@@ -1761,8 +1782,8 @@ def _write_summary_and_report(
         "backbone": config.model.vision.backbone,
         "num_classes": config.model.num_classes,
         "split": split,
-        "checkpoint_path": str(checkpoint_path),
-        "source_config_path": str(config_path),
+        "checkpoint_path": _stringify_path(checkpoint_path),
+        "source_config_path": _stringify_path(config_path),
         "artifacts": summary_artifact_paths,
         "metrics": metrics_payload,
         "validation_overview": validation_overview,
@@ -1788,14 +1809,16 @@ def _write_summary_and_report(
         backbone=config.model.vision.backbone,
     )
 
-    return {
-        "config_path": str(config_snapshot_path),
-        "metrics_path": str(metrics_path),
-        "summary_path": str(summary_path),
-        "report_path": str(report_path),
-        "log_path": str(layout.training_log_path),
-        "history_path": str(history_path),
-    }
+    return _normalize_artifact_paths(
+        {
+            "config_path": config_snapshot_path,
+            "metrics_path": metrics_path,
+            "summary_path": summary_path,
+            "report_path": report_path,
+            "log_path": layout.training_log_path,
+            "history_path": history_path,
+        }
+    )
 
 
 def build_results_artifacts(
@@ -1929,11 +1952,13 @@ def build_results_artifacts(
         importance_payload=importance_payload,
         artifact_metadata=artifact_metadata,
     )
-    visualization_paths = {
-        **visualization_paths,
-        **survival_artifact_paths,
-        **importance_artifact_paths,
-    }
+    visualization_paths = _normalize_artifact_paths(
+        {
+            **visualization_paths,
+            **survival_artifact_paths,
+            **importance_artifact_paths,
+        }
+    )
     summary_paths = _write_summary_and_report(
         layout=layout,
         config_path=config_path,
@@ -1951,7 +1976,7 @@ def build_results_artifacts(
         **visualization_paths,
     }
     return BuildResultsOutput(
-        output_dir=str(layout.root_dir),
+        output_dir=_stringify_path(layout.root_dir) or str(layout.root_dir),
         artifact_paths=artifact_paths,
         metrics=metrics_payload,
         validation=validation_payload,

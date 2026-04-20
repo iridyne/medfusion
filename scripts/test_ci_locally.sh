@@ -6,5 +6,5 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-echo "scripts/test_ci_locally.sh 已降级为兼容入口，转调 scripts/full_regression.sh --quick"
-exec bash scripts/full_regression.sh --quick "$@"
+echo "scripts/test_ci_locally.sh 已降级为兼容入口，转调 scripts/full_regression.sh --ci"
+exec bash scripts/full_regression.sh --ci "$@"

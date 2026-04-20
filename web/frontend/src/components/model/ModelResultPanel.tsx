@@ -32,6 +32,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { ValueType } from "recharts/types/component/DefaultTooltipContent";
 
 import { downloadModelArtifact, type Model } from "@/api/models";
 
@@ -69,11 +70,12 @@ function formatCount(value?: number | null) {
   return value !== undefined && value !== null ? `${value}` : "-";
 }
 
-function formatChartTooltipValue(value?: number | string) {
-  if (typeof value === "number") {
-    return value.toFixed(4);
+function formatChartTooltipValue(value?: ValueType) {
+  const scalarValue = Array.isArray(value) ? value[0] : value;
+  if (typeof scalarValue === "number") {
+    return scalarValue.toFixed(4);
   }
-  return value ?? "-";
+  return scalarValue === undefined ? "-" : String(scalarValue);
 }
 
 function PreviewImageCard({
