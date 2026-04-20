@@ -499,6 +499,27 @@ def _artifact_paths_from_model(model: ModelInfo | None) -> dict[str, Any]:
     return artifact_paths if isinstance(artifact_paths, dict) else {}
 
 
+def _artifact_paths_from_experiment_record(
+    record: ExperimentRecord | None,
+) -> dict[str, Any]:
+    if record is None or not isinstance(record.config, dict):
+        return {}
+    artifact_paths = record.config.get("artifact_paths")
+    return artifact_paths if isinstance(artifact_paths, dict) else {}
+
+
+def _resolve_record_for_experiment_id(
+    db: Session,
+    experiment_id: str,
+) -> ExperimentRecord | None:
+    numeric_id = _parse_numeric_experiment_id(experiment_id)
+    if numeric_id is None:
+        return None
+    if not experiment_id.startswith("run-"):
+        return None
+    return db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+
+
 def _resolve_model_for_experiment_id(
     db: Session,
     experiment_id: str,
@@ -527,6 +548,25 @@ def _resolve_model_for_experiment_id(
         return db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
 
     return None
+
+
+def _resolve_artifact_paths_for_experiment_id(
+    db: Session,
+    experiment_id: str,
+) -> dict[str, Any]:
+    model_paths = _artifact_paths_from_model(
+        _resolve_model_for_experiment_id(db, experiment_id)
+    )
+    if model_paths:
+        return model_paths
+
+    record_paths = _artifact_paths_from_experiment_record(
+        _resolve_record_for_experiment_id(db, experiment_id)
+    )
+    if record_paths:
+        return record_paths
+
+    return {}
 
 
 def _parse_history_entries(payload: dict[str, Any] | list[Any] | None) -> list[dict[str, Any]]:
@@ -748,8 +788,7 @@ async def get_metrics_history(
             raise HTTPException(status_code=404, detail="Experiment not found")
 
         history: list[TrainingHistory] = []
-        model = _resolve_model_for_experiment_id(db, experiment_id)
-        artifact_paths = _artifact_paths_from_model(model)
+        artifact_paths = _resolve_artifact_paths_for_experiment_id(db, experiment_id)
         history_payload = _load_json_payload(artifact_paths.get("history_path"))
         entries = _parse_history_entries(history_payload)
 
@@ -827,8 +866,7 @@ async def get_confusion_matrix(
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
-        model = _resolve_model_for_experiment_id(db, experiment_id)
-        artifact_paths = _artifact_paths_from_model(model)
+        artifact_paths = _resolve_artifact_paths_for_experiment_id(db, experiment_id)
         confusion_payload = _load_json_payload(
             artifact_paths.get("confusion_matrix_json_path")
         )
@@ -898,8 +936,7 @@ async def get_roc_curve(
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
-        model = _resolve_model_for_experiment_id(db, experiment_id)
-        artifact_paths = _artifact_paths_from_model(model)
+        artifact_paths = _resolve_artifact_paths_for_experiment_id(db, experiment_id)
         roc_payload = _load_json_payload(artifact_paths.get("roc_curve_json_path"))
 
         auc = experiment.metrics.auc or 0.85

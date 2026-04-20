@@ -20,6 +20,7 @@ os.environ.setdefault(
 from med_core.web.app import app
 from med_core.web.config import settings
 from med_core.web.database import SessionLocal, init_db
+from med_core.web.models import Experiment as ExperimentRecord
 from med_core.web.models import ModelInfo
 
 
@@ -91,6 +92,56 @@ def _delete_model(model_id: int) -> None:
     db = SessionLocal()
     try:
         row = db.query(ModelInfo).filter(ModelInfo.id == model_id).first()
+        if row is not None:
+            db.delete(row)
+            db.commit()
+    finally:
+        db.close()
+
+
+def _create_experiment_record(
+    name: str,
+    artifact_paths: dict[str, str] | None = None,
+) -> int:
+    db = SessionLocal()
+    try:
+        config: dict[str, object] = {
+            "model": {"backbone": "resnet18", "fusion_type": "concatenate"},
+            "training": {
+                "num_epochs": 4,
+                "optimizer": {"optimizer": "adam", "learning_rate": 0.001},
+            },
+            "data": {"batch_size": 16},
+        }
+        if artifact_paths:
+            config["artifact_paths"] = artifact_paths
+
+        row = ExperimentRecord(
+            name=name,
+            description="experiments api test run record",
+            config=config,
+            status="completed",
+            metrics={
+                "accuracy": 0.89,
+                "precision": 0.87,
+                "recall": 0.86,
+                "f1_score": 0.865,
+                "auc": 0.92,
+                "loss": 0.19,
+            },
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return int(row.id)
+    finally:
+        db.close()
+
+
+def _delete_experiment_record(experiment_id: int) -> None:
+    db = SessionLocal()
+    try:
+        row = db.query(ExperimentRecord).filter(ExperimentRecord.id == experiment_id).first()
         if row is not None:
             db.delete(row)
             db.commit()
@@ -254,3 +305,95 @@ async def test_experiments_roc_curve_prefers_artifact_json(
         assert payload["points"][2]["threshold"] == pytest.approx(0.0)
     finally:
         _delete_model(model_id)
+
+
+@pytest.mark.asyncio
+async def test_run_experiment_metrics_uses_experiment_artifact_paths_when_model_missing(
+    api_client, tmp_path: Path,
+) -> None:
+    marker = f"exp-api-run-history-{uuid.uuid4().hex[:8]}"
+    history_path = tmp_path / "run-metrics" / "history.json"
+    _write_json(
+        history_path,
+        {
+            "entries": [
+                {
+                    "epoch": 1,
+                    "train_loss": 0.51,
+                    "val_loss": 0.43,
+                    "train_accuracy": 0.82,
+                    "val_accuracy": 0.84,
+                    "learning_rate": 0.0005,
+                }
+            ]
+        },
+    )
+
+    run_id = _create_experiment_record(
+        marker,
+        artifact_paths={"history_path": str(history_path)},
+    )
+
+    try:
+        response = await api_client.get(f"/api/experiments/run-{run_id}/metrics")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["experiment_id"] == f"run-{run_id}"
+        assert len(payload["history"]) == 1
+        assert payload["history"][0]["train_loss"] == pytest.approx(0.51)
+        assert payload["history"][0]["val_accuracy"] == pytest.approx(0.84)
+    finally:
+        _delete_experiment_record(run_id)
+
+
+@pytest.mark.asyncio
+async def test_run_experiment_charts_use_experiment_artifact_paths_when_model_missing(
+    api_client, tmp_path: Path,
+) -> None:
+    marker = f"exp-api-run-chart-{uuid.uuid4().hex[:8]}"
+    confusion_path = tmp_path / "run-metrics" / "confusion_matrix.json"
+    roc_path = tmp_path / "run-metrics" / "roc_curve.json"
+    _write_json(
+        confusion_path,
+        {
+            "labels": ["benign", "malignant"],
+            "matrix": [[22, 1], [2, 19]],
+        },
+    )
+    _write_json(
+        roc_path,
+        {
+            "auc": 0.955,
+            "points": [
+                {"fpr": 0.0, "tpr": 0.0, "threshold": 1.0},
+                {"fpr": 0.2, "tpr": 0.9, "threshold": 0.7},
+                {"fpr": 1.0, "tpr": 1.0, "threshold": 0.0},
+            ],
+        },
+    )
+    run_id = _create_experiment_record(
+        marker,
+        artifact_paths={
+            "confusion_matrix_json_path": str(confusion_path),
+            "roc_curve_json_path": str(roc_path),
+        },
+    )
+
+    try:
+        confusion_response = await api_client.get(
+            f"/api/experiments/run-{run_id}/confusion-matrix"
+        )
+        assert confusion_response.status_code == 200
+        confusion_payload = confusion_response.json()
+        assert confusion_payload["classes"] == ["benign", "malignant"]
+        assert confusion_payload["matrix"] == [[22, 1], [2, 19]]
+
+        roc_response = await api_client.get(f"/api/experiments/run-{run_id}/roc-curve")
+        assert roc_response.status_code == 200
+        roc_payload = roc_response.json()
+        assert roc_payload["auc"] == pytest.approx(0.955)
+        assert len(roc_payload["points"]) == 3
+        assert roc_payload["points"][1]["fpr"] == pytest.approx(0.2)
+        assert roc_payload["points"][1]["tpr"] == pytest.approx(0.9)
+    finally:
+        _delete_experiment_record(run_id)
