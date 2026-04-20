@@ -7,7 +7,13 @@ export interface TrainingLaunchPrefill {
   learningRate: number;
 }
 
-export type TrainingLaunchSource = "guided-start" | null;
+export type TrainingLaunchSource =
+  | "guided-start"
+  | "comfyui-bridge"
+  | "run-wizard"
+  | "model-library"
+  | "training-monitor"
+  | null;
 
 function parsePositiveNumber(raw: string | null): number | undefined {
   if (!raw) {
@@ -80,7 +86,15 @@ export function consumeTrainingLaunchParams(
   prefill: Partial<TrainingLaunchPrefill>;
   nextSearchParams: URLSearchParams;
 } {
-  const source = searchParams.get("source") === "guided-start" ? "guided-start" : null;
+  const rawSource = searchParams.get("source");
+  const source: TrainingLaunchSource =
+    rawSource === "guided-start" ||
+    rawSource === "comfyui-bridge" ||
+    rawSource === "run-wizard" ||
+    rawSource === "model-library" ||
+    rawSource === "training-monitor"
+      ? rawSource
+      : null;
   const nextSearchParams = new URLSearchParams(searchParams);
 
   nextSearchParams.delete("action");

@@ -373,8 +373,6 @@ bash scripts/inspect_ci_failure.sh
 - [结果解读与交付检查](docs/contents/playbooks/result-interpretation-checklist.md)
 - [高级模式结果回流演示路径](docs/contents/playbooks/external-demo-path.md)
 - [Why MedFusion OSS（定位对比）](docs/contents/guides/core/why-medfusion-oss.md)
-- [OSS 路线图状态](docs/roadmap/oss/roadmap-status.md)
-- [OSS roadmap](../docs/roadmap/oss/README.md)
 
 ---
 

@@ -29,20 +29,23 @@ uv run medfusion --version
 uv run medfusion start --host 127.0.0.1 --port 8000 --no-browser
 ```
 
-Windows 卸载（保留数据）：
+Windows 卸载（保留数据，推荐）：
 
 ```powershell
-# 删除项目运行环境（保留 outputs 与用户数据）
-Remove-Item -LiteralPath .venv -Recurse -Force
+uv run medfusion uninstall --yes
 ```
 
 Windows 彻底清理卸载（删除数据）：
 
 ```powershell
-# 删除项目运行环境与本地产物
-Remove-Item -LiteralPath .venv, outputs, logs, checkpoints -Recurse -Force
+uv run medfusion uninstall --purge-data --yes
+```
 
-# 删除默认用户数据目录（如存在）
+手工兜底（当卸载命令不可用时）：
+
+```powershell
+Remove-Item -LiteralPath .venv -Recurse -Force
+Remove-Item -LiteralPath .venv, outputs, logs, checkpoints -Recurse -Force
 Remove-Item -LiteralPath "$env:USERPROFILE\.medfusion" -Recurse -Force
 ```
 

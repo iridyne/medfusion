@@ -45,7 +45,10 @@ import {
   validateRunSpec,
   VISION_BACKBONE_OPTIONS,
 } from "@/utils/runSpec";
-import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
+import {
+  buildTrainingPrefillQuery,
+  type TrainingLaunchSource,
+} from "@/utils/trainingPrefill";
 import PageScaffold from "@/components/layout/PageScaffold";
 
 const { Paragraph, Text, Title } = Typography;
@@ -60,14 +63,7 @@ function toConfigFileName(experimentName: string): string {
   return `${normalized || "generated-run"}.yaml`;
 }
 
-type BuilderPathId =
-  | "comfy-default"
-  | "first-success"
-  | "clinical-baseline"
-  | "result-handoff";
-
 interface BuilderPathOption {
-  id: BuilderPathId;
   label: string;
   problem: string;
   runtimeShape: string;
@@ -75,50 +71,34 @@ interface BuilderPathOption {
   preset: RunPresetId;
 }
 
-const BUILDER_PATH_OPTIONS: BuilderPathOption[] = [
-  {
-    id: "comfy-default",
-    label: "ComfyUI 默认适配配置（推荐）",
-    problem: "我希望以 ComfyUI 适配语义作为默认配置起点，再回到 MedFusion 主链执行训练与结果回流。",
-    runtimeShape: "image + tabular / classification / quickstart (comfy-adapted)",
-    editorMode: "默认模式：问题向导 + ComfyUI 适配入口",
-    preset: "quickstart",
-  },
-  {
-    id: "first-success",
-    label: "第一次先跑通一条真实主链",
-    problem: "我想先完成公开数据、训练和结果回流的一次成功闭环。",
-    runtimeShape: "image + tabular / classification / quickstart",
-    editorMode: "默认模式：向导 + 参数编辑",
-    preset: "quickstart",
-  },
-  {
-    id: "clinical-baseline",
-    label: "我要搭一个更稳的研究基线",
-    problem: "我已经知道任务方向，希望从正式版前台拿到一套更稳的分类基线骨架。",
-    runtimeShape: "image + tabular / classification / clinical baseline",
-    editorMode: "默认模式：骨架推荐 -> 参数细化",
-    preset: "clinical",
-  },
-  {
-    id: "result-handoff",
-    label: "我要做结果审查与对外交付",
-    problem: "我更关心结果 artifact、可视化和导入结果后台后的展示质量。",
-    runtimeShape: "image + tabular / classification / result audit",
-    editorMode: "默认模式：结果导向 preset + artifact 强化",
-    preset: "showcase",
-  },
-];
+interface WizardPrefillState {
+  projectName?: string;
+  experimentName?: string;
+  description?: string;
+  outputDir?: string;
+  backbone?: string;
+  numClasses?: number;
+}
+
+const DEFAULT_BUILDER_PATH: BuilderPathOption = {
+  label: "ComfyUI 默认适配配置（推荐）",
+  problem: "以 ComfyUI 适配语义作为默认配置起点，再回到 MedFusion 主链执行训练与结果回流。",
+  runtimeShape: "image + tabular / classification / quickstart (comfy-adapted)",
+  editorMode: "默认模式：问题向导 + ComfyUI 适配入口",
+  preset: "quickstart",
+};
 
 export default function RunWizard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [builderPath, setBuilderPath] = useState<BuilderPathId>("comfy-default");
-  const [preset, setPreset] = useState<RunPresetId>("quickstart");
-  const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset("quickstart"));
+  const [preset, setPreset] = useState<RunPresetId>(DEFAULT_BUILDER_PATH.preset);
+  const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset(DEFAULT_BUILDER_PATH.preset));
   const [compiledImportSource, setCompiledImportSource] = useState<string | null>(
     null,
+  );
+  const [compiledImportMode, setCompiledImportMode] = useState<"compiled" | "prefill">(
+    "compiled",
   );
 
   const issues = useMemo(() => validateRunSpec(spec), [spec]);
@@ -208,15 +188,6 @@ export default function RunWizard() {
     setCurrentStep(0);
   };
 
-  const applyBuilderPath = (pathId: BuilderPathId) => {
-    const option = BUILDER_PATH_OPTIONS.find((item) => item.id === pathId);
-    if (!option) {
-      return;
-    }
-    setBuilderPath(pathId);
-    applyPreset(option.preset);
-  };
-
   const syncOutputDir = () => {
     updateLogging({ outputDir: inferOutputDir(spec.projectName, spec.experimentName) });
     message.success("已按项目名和实验名更新输出目录");
@@ -252,9 +223,7 @@ export default function RunWizard() {
   ];
   const selectedPresetLabel =
     RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
-  const selectedBuilderPath =
-    BUILDER_PATH_OPTIONS.find((item) => item.id === builderPath) ??
-    BUILDER_PATH_OPTIONS[0];
+  const selectedBuilderPath = DEFAULT_BUILDER_PATH;
   const trainingPrefillQuery = useMemo(() => {
     return buildTrainingPrefillQuery({
       experimentName: spec.experimentName,
@@ -272,24 +241,77 @@ export default function RunWizard() {
     spec.data.batchSize,
     spec.training.optimizer.learningRate,
   ]);
+  const trainingLaunchSource: Exclude<TrainingLaunchSource, null> = useMemo(() => {
+    if (compiledImportMode === "prefill") {
+      if (compiledImportSource === "comfyui-bridge") {
+        return "comfyui-bridge";
+      }
+      if (compiledImportSource === "model-library") {
+        return "model-library";
+      }
+      if (compiledImportSource === "training-monitor") {
+        return "training-monitor";
+      }
+    }
+    return "run-wizard";
+  }, [compiledImportMode, compiledImportSource]);
 
   useEffect(() => {
     const state = location.state as
       | {
           compiledRunSpec?: RunSpec;
           compiledPreset?: RunPresetId;
+          wizardPrefill?: WizardPrefillState;
           source?: string;
         }
       | undefined;
 
-    if (!state?.compiledRunSpec) {
+    if (!state) {
       return;
     }
 
-    setSpec(state.compiledRunSpec);
-    setPreset(state.compiledPreset || "quickstart");
-    setCurrentStep(0);
-    setCompiledImportSource(state.source || "advanced-builder");
+    if (state.compiledRunSpec) {
+      setSpec(state.compiledRunSpec);
+      setPreset(state.compiledPreset || "quickstart");
+      setCurrentStep(0);
+      setCompiledImportMode("compiled");
+      setCompiledImportSource(state.source || "advanced-builder");
+      return;
+    }
+
+    if (state.wizardPrefill) {
+      const nextBackbone = state.wizardPrefill?.backbone;
+      const nextNumClasses = state.wizardPrefill?.numClasses;
+      const supportedBackbone =
+        typeof nextBackbone === "string" &&
+        VISION_BACKBONE_OPTIONS.includes(nextBackbone as (typeof VISION_BACKBONE_OPTIONS)[number])
+          ? (nextBackbone as (typeof VISION_BACKBONE_OPTIONS)[number])
+          : null;
+      setSpec((prev) => ({
+        ...prev,
+        projectName: state.wizardPrefill?.projectName || prev.projectName,
+        experimentName: state.wizardPrefill?.experimentName || prev.experimentName,
+        description: state.wizardPrefill?.description || prev.description,
+        model: {
+          ...prev.model,
+          numClasses:
+            typeof nextNumClasses === "number" && nextNumClasses > 0
+              ? nextNumClasses
+              : prev.model.numClasses,
+          vision: {
+            ...prev.model.vision,
+            backbone: supportedBackbone || prev.model.vision.backbone,
+          },
+        },
+        logging: {
+          ...prev.logging,
+          outputDir: state.wizardPrefill?.outputDir || prev.logging.outputDir,
+        },
+      }));
+      setCurrentStep(0);
+      setCompiledImportMode("prefill");
+      setCompiledImportSource(state.source || "comfyui-bridge");
+    }
   }, [location.state]);
 
   const renderBasicsStep = () => (
@@ -300,52 +322,28 @@ export default function RunWizard() {
         message="当前正式版默认开放的是问题向导 + 参数编辑层"
         description="这一步先从问题定义进入，再把你映射到当前 runtime 真正支持的模型骨架。节点式编辑仍然是高级模式，不直接替代这条默认路径。"
       />
-      {builderPath === "comfy-default" ? (
-        <Alert
-          type="success"
-          showIcon
-          message="当前默认配置已切到 ComfyUI 适配模式"
-          description="你仍在同一条 MedFusion 主线里。若需要检查 ComfyUI 连通性或选择适配档案，可打开 ComfyUI 入口页。"
-          action={
-            <Button size="small" onClick={() => navigate("/config/comfyui")}>
-              打开 ComfyUI 入口
-            </Button>
-          }
-        />
-      ) : null}
+      <Alert
+        type="success"
+        showIcon
+        message="当前默认配置已切到 ComfyUI 适配模式"
+        description="你仍在同一条 MedFusion 主线里。若需要检查 ComfyUI 连通性或选择适配档案，可打开 ComfyUI 入口页。"
+        action={
+          <Button size="small" onClick={() => navigate("/config/comfyui")}>
+            打开 ComfyUI 入口
+          </Button>
+        }
+      />
 
       <Card size="small" title="先说你现在要解决什么问题">
-        <Row gutter={[12, 12]}>
-          {BUILDER_PATH_OPTIONS.map((item) => (
-            <Col xs={24} md={8} key={item.id}>
-              <Card
-                size="small"
-                hoverable
-                onClick={() => applyBuilderPath(item.id)}
-                style={{
-                  borderColor: builderPath === item.id ? "#1677ff" : undefined,
-                  boxShadow:
-                    builderPath === item.id
-                      ? "0 0 0 2px rgba(22,119,255,0.12)"
-                      : undefined,
-                  cursor: "pointer",
-                }}
-              >
-                <Space direction="vertical" size={6} style={{ width: "100%" }}>
-                  <Space>
-                    <Text strong>{item.label}</Text>
-                    {builderPath === item.id ? (
-                      <Tag color="processing">当前</Tag>
-                    ) : null}
-                  </Space>
-                  <Text type="secondary">{item.problem}</Text>
-                  <Text>当前会映射到：{item.runtimeShape}</Text>
-                  <Text type="secondary">{item.editorMode}</Text>
-                </Space>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+        <Space direction="vertical" size={6} style={{ width: "100%" }}>
+          <Space>
+            <Text strong>{selectedBuilderPath.label}</Text>
+            <Tag color="processing">当前主线默认路径</Tag>
+          </Space>
+          <Text type="secondary">{selectedBuilderPath.problem}</Text>
+          <Text>当前会映射到：{selectedBuilderPath.runtimeShape}</Text>
+          <Text type="secondary">{selectedBuilderPath.editorMode}</Text>
+        </Space>
       </Card>
 
       <Card size="small" title="当前阶段的前台边界">
@@ -1060,7 +1058,7 @@ export default function RunWizard() {
           <Button icon={<CopyOutlined />} onClick={() => void copyText(trainCommand, "训练命令已复制")}>复制训练命令</Button>
           <Button
             icon={<ExperimentOutlined />}
-            onClick={() => navigate(`/training?${trainingPrefillQuery}`)}
+            onClick={() => navigate(`/training?source=${trainingLaunchSource}&${trainingPrefillQuery}`)}
           >
             打开训练监控
           </Button>
@@ -1180,6 +1178,27 @@ export default function RunWizard() {
       <Alert
         type="info"
         showIcon
+        style={{ marginBottom: 16 }}
+        message="当前主线步骤：配置（1/3）"
+        description={
+          <Space wrap>
+            <span>完成配置后继续进入训练监控，再到结果后台复盘。</span>
+            <Button
+              size="small"
+              icon={<ExperimentOutlined />}
+              onClick={() => navigate(`/training?source=${trainingLaunchSource}&${trainingPrefillQuery}`)}
+            >
+              下一步：训练监控
+            </Button>
+            <Button size="small" icon={<LinkOutlined />} onClick={() => navigate("/models")}>
+              跳到结果后台
+            </Button>
+          </Space>
+        }
+      />
+      <Alert
+        type="info"
+        showIcon
         message="这一步先解决的是“你到底在搭什么模型”"
         description="CLI 仍然保留作为执行和自动化层，但普通用户不应该再从手写 YAML 和 schema 字段开始。Run Wizard 需要先解释问题路径、模板边界和推荐骨架，再把配置导回真实主链。"
       />
@@ -1188,8 +1207,16 @@ export default function RunWizard() {
           type="success"
           showIcon
           style={{ marginTop: 16 }}
-          message="已从高级模式导入一份可编辑配置草案"
-          description={`当前这份 RunSpec 来自 ${compiledImportSource} 的图编译结果。你现在可以继续在默认模式里微调字段，再导出 YAML 或进入训练。`}
+          message={
+            compiledImportMode === "compiled"
+              ? "已从高级模式导入一份可编辑配置草案"
+              : "已从上游页面预填一份可编辑配置草案"
+          }
+          description={
+            compiledImportMode === "compiled"
+              ? `当前这份 RunSpec 来自 ${compiledImportSource} 的图编译结果。你现在可以继续在默认模式里微调字段，再导出 YAML 或进入训练。`
+              : `当前字段来自 ${compiledImportSource} 的预填。你可以继续在默认模式里微调字段，再导出 YAML 或进入训练。`
+          }
         />
       ) : null}
 

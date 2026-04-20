@@ -70,4 +70,64 @@ describe("training prefill helpers", () => {
     });
     expect(consumed.nextSearchParams.toString()).toBe("keep=1");
   });
+
+  it("consumes comfyui bridge source and keeps prefill behavior consistent", () => {
+    const params = new URLSearchParams(
+      "action=start&source=comfyui-bridge&experimentName=comfy-handoff&backbone=resnet50&keep=1",
+    );
+
+    const consumed = consumeTrainingLaunchParams(params, backboneOptions);
+
+    expect(consumed.source).toBe("comfyui-bridge");
+    expect(consumed.prefill).toEqual({
+      experimentName: "comfy-handoff",
+      backbone: "resnet50",
+    });
+    expect(consumed.nextSearchParams.toString()).toBe("keep=1");
+  });
+
+  it("consumes run wizard source and keeps prefill behavior consistent", () => {
+    const params = new URLSearchParams(
+      "action=start&source=run-wizard&experimentName=wizard-run&backbone=vit_b16&keep=1",
+    );
+
+    const consumed = consumeTrainingLaunchParams(params, backboneOptions);
+
+    expect(consumed.source).toBe("run-wizard");
+    expect(consumed.prefill).toEqual({
+      experimentName: "wizard-run",
+      backbone: "vit_b16",
+    });
+    expect(consumed.nextSearchParams.toString()).toBe("keep=1");
+  });
+
+  it("consumes model library source and keeps prefill behavior consistent", () => {
+    const params = new URLSearchParams(
+      "action=start&source=model-library&experimentName=rerun-a&backbone=resnet18&keep=1",
+    );
+
+    const consumed = consumeTrainingLaunchParams(params, backboneOptions);
+
+    expect(consumed.source).toBe("model-library");
+    expect(consumed.prefill).toEqual({
+      experimentName: "rerun-a",
+      backbone: "resnet18",
+    });
+    expect(consumed.nextSearchParams.toString()).toBe("keep=1");
+  });
+
+  it("consumes training monitor source and keeps prefill behavior consistent", () => {
+    const params = new URLSearchParams(
+      "action=start&source=training-monitor&experimentName=rerun-b&backbone=resnet50&keep=1",
+    );
+
+    const consumed = consumeTrainingLaunchParams(params, backboneOptions);
+
+    expect(consumed.source).toBe("training-monitor");
+    expect(consumed.prefill).toEqual({
+      experimentName: "rerun-b",
+      backbone: "resnet50",
+    });
+    expect(consumed.nextSearchParams.toString()).toBe("keep=1");
+  });
 });

@@ -55,16 +55,16 @@ export const START_PRIMARY_FLOW = [
 ] as const;
 
 export const START_RECOMMENDED_WORKFLOW = [
-  "1) /start 先选任务路径",
+  "1) /start 进入默认主线入口",
   "2) /config 生成并检查 RunSpec",
   "3) /training 启动真实训练",
   "4) /models 回流并复盘结果",
 ] as const;
 
-export const START_COMFYUI_OPTIONAL_MODULE = [
-  "在 /config/comfyui 检查 ComfyUI 连通性",
-  "选择适配档案并跳到 /config/advanced/canvas",
-  "完成编译与训练后回到 /models 复盘结果",
+export const START_COMFYUI_DEFAULT_ADAPTER = [
+  "主线默认配置已采用 ComfyUI 适配语义，不需要先切第二条线",
+  "需要检查桥接连通性时，可在 /config/comfyui 选择适配档案并跳到 /config/advanced/canvas",
+  "完成编译与训练后继续回到 /models 做结果复盘",
 ] as const;
 
 export const START_MODE_POSITIONING = {

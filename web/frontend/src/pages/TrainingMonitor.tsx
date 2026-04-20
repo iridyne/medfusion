@@ -23,8 +23,10 @@ import {
 } from "antd";
 import {
   CheckCircleOutlined,
+  ControlOutlined,
   DisconnectOutlined,
   EyeOutlined,
+  FileSearchOutlined,
   PauseCircleOutlined,
   PlayCircleOutlined,
   PlusOutlined,
@@ -47,7 +49,10 @@ import trainingApi, {
 import LazyChart from "../components/LazyChart";
 import WebSocketClient from "../utils/websocket";
 import PageScaffold from "@/components/layout/PageScaffold";
-import { consumeTrainingLaunchParams } from "@/utils/trainingPrefill";
+import {
+  consumeTrainingLaunchParams,
+  type TrainingLaunchSource,
+} from "@/utils/trainingPrefill";
 
 interface DatasetOption {
   id: string;
@@ -140,7 +145,7 @@ export default function TrainingMonitor() {
   const [wsConnected, setWsConnected] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [guidedStartNotice, setGuidedStartNotice] = useState(false);
+  const [launchSourceNotice, setLaunchSourceNotice] = useState<TrainingLaunchSource>(null);
   const [activeTab, setActiveTab] = useState("jobs");
   const [resultNoticeJobId, setResultNoticeJobId] = useState<string | null>(null);
   const wsClient = useRef<WebSocketClient | null>(null);
@@ -173,6 +178,30 @@ export default function TrainingMonitor() {
     }
 
     navigate(link);
+  };
+
+  const handleLoopBackToConfig = () => {
+    const sourceJob = currentJob || highlightedResultJob || jobs[0] || null;
+    if (!sourceJob) {
+      navigate("/config");
+      return;
+    }
+    const matchedDataset = sourceJob.datasetName
+      ? datasets.find((item) => item.name === sourceJob.datasetName)
+      : undefined;
+
+    navigate("/config", {
+      state: {
+        source: "training-monitor",
+        wizardPrefill: {
+          projectName: "medfusion-rerun",
+          experimentName: `${sourceJob.name}-rerun`,
+          description: `基于训练任务 ${sourceJob.name} 重开配置`,
+          backbone: sourceJob.backbone,
+          numClasses: matchedDataset?.numClasses,
+        },
+      },
+    });
   };
 
   const loadJobs = async () => {
@@ -260,7 +289,7 @@ export default function TrainingMonitor() {
       form.setFieldsValue(prefill as Partial<CreateTrainingValues>);
     }
 
-    setGuidedStartNotice(source === "guided-start");
+    setLaunchSourceNotice(source);
     setCreateModalOpen(true);
     setSearchParams(nextSearchParams, { replace: true });
   }, [form, searchParams, setSearchParams]);
@@ -349,6 +378,8 @@ export default function TrainingMonitor() {
             {
               id: data.job_id,
               name: data.experiment_name || data.job_id,
+              datasetName: data.dataset_name ?? undefined,
+              backbone: data.backbone ?? undefined,
               status: data.status,
               progress: Math.round(data.progress ?? 0),
               epoch: data.epoch ?? 0,
@@ -365,11 +396,13 @@ export default function TrainingMonitor() {
 
         return prevJobs.map((job) =>
           job.id === data.job_id
-            ? {
-                ...job,
-                status: data.status,
-                progress: Math.round(data.progress ?? job.progress),
-                epoch: data.epoch ?? job.epoch,
+              ? {
+                  ...job,
+                  datasetName: data.dataset_name ?? job.datasetName,
+                  backbone: data.backbone ?? job.backbone,
+                  status: data.status,
+                  progress: Math.round(data.progress ?? job.progress),
+                  epoch: data.epoch ?? job.epoch,
                 loss: data.loss ?? job.loss,
                 accuracy: data.accuracy ?? job.accuracy,
                 resultModelId: data.result_model_id ?? job.resultModelId,
@@ -757,17 +790,60 @@ export default function TrainingMonitor() {
         },
       ]}
     >
-      {guidedStartNotice ? (
+      {launchSourceNotice ? (
         <Alert
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="从 Getting Started 进入的推荐训练链路"
-          description="当前推荐路径仍然是同一条 YAML + CLI 主链：先准备公开数据或确认已有数据集，再启动训练，最后用 build-results 生成结构化结果。这里的弹窗只是把第一次运行解释清楚，不会引入另一套执行语义。"
+          message={
+            launchSourceNotice === "comfyui-bridge"
+              ? "从 ComfyUI Bridge 进入的主线训练链路"
+              : launchSourceNotice === "model-library"
+                ? "从结果后台重开配置进入的主线训练链路"
+              : launchSourceNotice === "training-monitor"
+                ? "从训练看板重开配置进入的主线训练链路"
+              : launchSourceNotice === "run-wizard"
+                ? "从 Run Wizard 进入的主线训练链路"
+              : "从 Getting Started 进入的推荐训练链路"
+          }
+          description={
+            launchSourceNotice === "comfyui-bridge"
+              ? "你仍在同一条 MedFusion 主线中。这里会带入推荐训练参数，后续继续按配置/训练/结果闭环执行；ComfyUI 只承担前置适配与桥接，不替代训练执行层。"
+              : launchSourceNotice === "model-library"
+                ? "你正在执行结果驱动的下一轮迭代：从结果后台回到配置后再次进入训练。这里会带入上一轮上下文，便于快速重跑与复盘。"
+              : launchSourceNotice === "training-monitor"
+                ? "你正在执行训练阶段驱动的下一轮迭代：从训练看板回到配置后再次进入训练，便于在参数微调后快速重跑。"
+              : launchSourceNotice === "run-wizard"
+                ? "你正在沿同一条主线从配置进入训练。这里会自动带入向导参数，训练完成后继续进入结果后台复盘。"
+              : "当前推荐路径仍然是同一条 YAML + CLI 主链：先准备公开数据或确认已有数据集，再启动训练，最后用 build-results 生成结构化结果。这里的弹窗只是把第一次运行解释清楚，不会引入另一套执行语义。"
+          }
           closable
-          onClose={() => setGuidedStartNotice(false)}
+          onClose={() => setLaunchSourceNotice(null)}
         />
       ) : null}
+
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="主线快捷跳转：配置 -> 训练 -> 结果"
+        description={
+          <Space wrap>
+            <Button size="small" icon={<ControlOutlined />} onClick={handleLoopBackToConfig}>
+              基于当前任务重开配置
+            </Button>
+            <Button size="small" icon={<ControlOutlined />} onClick={() => navigate("/config")}>
+              回到配置主线
+            </Button>
+            <Button size="small" icon={<PlayCircleOutlined />} onClick={() => navigate("/training")}>
+              留在训练监控
+            </Button>
+            <Button size="small" icon={<FileSearchOutlined />} onClick={() => navigate("/models")}>
+              进入结果后台
+            </Button>
+          </Space>
+        }
+      />
 
       {highlightedResultJob ? (
         <Alert

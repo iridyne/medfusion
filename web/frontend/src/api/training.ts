@@ -21,6 +21,8 @@ export interface TrainingJobCreate {
 export interface TrainingJob {
   id: string;
   name: string;
+  datasetName?: string;
+  backbone?: string;
   status: "queued" | "running" | "paused" | "completed" | "failed" | "stopped";
   progress: number;
   epoch: number;
@@ -89,6 +91,8 @@ function normalizeJob(job: BackendTrainingJob | BackendTrainingStatus): Training
   return {
     id: jobId,
     name: job.experiment_name || jobId,
+    datasetName: job.dataset_name ?? undefined,
+    backbone: job.backbone ?? undefined,
     status: job.status as TrainingJob["status"],
     progress: Math.round(job.progress ?? 0),
     epoch: job.current_epoch ?? 0,

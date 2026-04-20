@@ -47,7 +47,7 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 1. 介绍正式版当前有哪些组件和页面职责
 2. 解释默认模式与高级模式的边界
-3. 把你带到问题向导与第一次运行链路
+3. 把你带到问题向导与主线配置入口
 4. 把你带到后续训练与结果页面
 
 大多数新手只需要这一条命令。
@@ -56,11 +56,10 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 1. 先进入 `Run Wizard`，从问题定义出发拿到推荐骨架
    - 当前默认会先落到 ComfyUI 适配配置语义（仍在 MedFusion 主线内）
-2. 如需理解高级边界，再进入 `/config/advanced` 查看组件注册表和连接约束
-3. 需要 first-run 演示时，再进入 `Quickstart Run` 页面确认公开数据 profile、命令链和预期产物
-4. 执行 `medfusion public-datasets prepare` 与 `medfusion validate-config`
-5. 继续到训练监控页启动一次带默认参数的推荐训练
-6. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
+2. 继续到训练监控页启动一次带默认参数的推荐训练
+3. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
+4. 如需理解高级边界，再进入 `/config/advanced` 查看组件注册表和连接约束
+5. 需要 first-run 演示材料时，再进入 `Quickstart Run` 页面查看公开数据 profile、命令链和预期产物
 
 如果你是发布前自检，建议直接跑统一脚本：
 
@@ -169,7 +168,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 
 ### OSS 主链页面范围（固定）
 
-当前 OSS Web 默认主链固定为 7 个页面与 1 条引导子路径：
+当前 OSS Web 默认主链固定为 7 个页面与 1 条可选引导子路径：
 
 1. `/start`（Getting Started）
 2. `/workbench`（运行后概览）
@@ -181,14 +180,15 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 
 引导子路径：
 
-- `/quickstart-run`：承接第一次运行链路说明，不单独放入主导航，但作为 Getting Started 的下一步
+- `/quickstart-run`：承接第一次运行链路说明，不单独放入主导航，也不作为默认主线下一步
 
 高级模式路径：
 
 - `/config/advanced`：正式版高级模式的组件注册表与连接约束页，不作为默认首页，但用于承接后续节点式结构编辑
 - `/config/advanced/canvas`：高级模式节点图入口，当前允许在正式版组件边界内做结构编辑、编译检查，并在 contract 校验通过后直接创建真实训练任务
-- `/config/comfyui`：ComfyUI 集成入口（preview），提供连通性检查、快速打开和主链回流提示
+- `/config/comfyui`：ComfyUI 集成入口，提供连通性检查、快速打开和主链回流提示
   - 入口方式：可直接从 `/start` 首页按钮进入，无需手动输入 URL
+  - 页面内可直接返回 `/config` 或进入 `/training`，减少“停在桥接页”后的路径断点
 
 当前进展：
 
@@ -199,6 +199,15 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 5. ComfyUI 已有独立上线入口页，可先检查连通性再进入外部画布联调
 6. ComfyUI 入口页支持把 `config/checkpoint/output` 参数预填后，一键跳到结果后台导入弹窗
 7. ComfyUI 入口页支持选择“适配档案”，并一键跳到对应的 MedFusion 高级模式组件骨架画布
+8. ComfyUI 入口页支持一键“带推荐参数进入训练监控”，减少手工回填
+9. Run Wizard 导出动作支持一键“带向导参数进入训练监控”，并在训练页显示来源提示
+10. ComfyUI 入口页支持“带预填回到配置向导”，用于先微调配置再进入训练
+11. ComfyUI 入口页顶部提供“主线步骤提示 + 配置/训练/结果快捷跳转”
+12. 结果后台支持“基于当前结果重开配置”，直接进入下一轮主线迭代
+13. 从结果后台重开配置后，训练页会显示 `model-library` 来源提示，方便区分迭代链路
+14. 结果后台支持“基于当前结果直接重跑训练”，用于快速迭代验证
+15. 训练看板支持“基于当前任务重开配置”，并在训练页显示 `training-monitor` 来源提示
+16. 从 ComfyUI/结果后台/训练看板重开配置时，会预填关键字段（如 `backbone`、`numClasses`）
 
 结果详情页的推荐解读顺序也已固定：
 

@@ -3,7 +3,6 @@ import { Alert, Button, Card, Space, Tag } from "antd";
 import {
   ArrowRightOutlined,
   ControlOutlined,
-  ExperimentOutlined,
   FileSearchOutlined,
   LinkOutlined,
   PlayCircleOutlined,
@@ -11,16 +10,19 @@ import {
 
 import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
+import { QUICKSTART_TRAINING_PREFILL } from "@/config/quickstartRun";
 import {
-  START_COMFYUI_OPTIONAL_MODULE,
+  START_COMFYUI_DEFAULT_ADAPTER,
   START_COMPONENTS,
   START_MODE_POSITIONING,
   START_PRIMARY_FLOW,
   START_RECOMMENDED_WORKFLOW,
 } from "@/config/startExperience";
+import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
 
 export default function GettingStarted() {
   const navigate = useNavigate();
+  const trainingPrefillQuery = buildTrainingPrefillQuery(QUICKSTART_TRAINING_PREFILL);
 
   return (
     <PageScaffold
@@ -45,9 +47,9 @@ export default function GettingStarted() {
           <Button
             size="large"
             icon={<PlayCircleOutlined />}
-            onClick={() => navigate("/quickstart-run")}
+            onClick={() => navigate("/training")}
           >
-            查看第一次运行链路
+            进入训练监控
           </Button>
           <Button
             size="large"
@@ -196,10 +198,10 @@ export default function GettingStarted() {
               查看结果后台
             </Button>
             <Button
-              icon={<ExperimentOutlined />}
-              onClick={() => navigate("/quickstart-run")}
+              icon={<PlayCircleOutlined />}
+              onClick={() => navigate("/training")}
             >
-              再看 quickstart 演示链路
+              打开训练监控
             </Button>
           </div>
         </Card>
@@ -220,8 +222,8 @@ export default function GettingStarted() {
             按唯一主线开始
           </Button>
           <div className="surface-note surface-note--dense">
-            <strong>可选模块：ComfyUI 适配（不改变主线）</strong>
-            {START_COMFYUI_OPTIONAL_MODULE.map((step) => (
+            <strong>默认配置适配层：ComfyUI（仍在同一主线）</strong>
+            {START_COMFYUI_DEFAULT_ADAPTER.map((step) => (
               <p key={step} style={{ marginBottom: 0 }}>
                 {step}
               </p>
@@ -232,6 +234,36 @@ export default function GettingStarted() {
               onClick={() => navigate("/config/comfyui")}
             >
               打开 ComfyUI 适配模块
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="surface-card" style={{ marginTop: 16 }} title="最短可复现实操指引">
+        <div className="editorial-stack">
+          <div className="surface-note surface-note--dense">
+            <strong>Step 1</strong>
+            <p>从问题向导生成一份可运行配置（默认 ComfyUI 适配语义，不改变主线）。</p>
+            <Button size="small" icon={<ControlOutlined />} onClick={() => navigate("/config")}>
+              打开问题向导
+            </Button>
+          </div>
+          <div className="surface-note surface-note--dense">
+            <strong>Step 2</strong>
+            <p>进入训练监控并带入推荐参数，启动一次真实训练任务。</p>
+            <Button
+              size="small"
+              icon={<PlayCircleOutlined />}
+              onClick={() => navigate(`/training?source=guided-start&${trainingPrefillQuery}`)}
+            >
+              带推荐参数进入训练
+            </Button>
+          </div>
+          <div className="surface-note surface-note--dense">
+            <strong>Step 3</strong>
+            <p>训练完成后直接进入结果后台，确认 summary / metrics / report / artifacts。</p>
+            <Button size="small" icon={<FileSearchOutlined />} onClick={() => navigate("/models")}>
+              打开结果后台
             </Button>
           </div>
         </div>

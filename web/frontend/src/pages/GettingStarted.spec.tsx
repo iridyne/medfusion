@@ -20,6 +20,7 @@ describe("GettingStarted", () => {
     expect(markup).toContain("高级模式");
     expect(markup).toContain("ComfyUI 集成");
     expect(markup).toContain("唯一主线（推荐）");
-    expect(markup).toContain("可选模块：ComfyUI 适配");
+    expect(markup).toContain("最短可复现实操指引");
+    expect(markup).toContain("默认配置适配层：ComfyUI（仍在同一主线）");
   });
 });

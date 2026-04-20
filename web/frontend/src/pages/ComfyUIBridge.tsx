@@ -17,9 +17,12 @@ import {
 import {
   AppstoreOutlined,
   ArrowLeftOutlined,
+  ControlOutlined,
   CopyOutlined,
+  FileSearchOutlined,
   ImportOutlined,
   LinkOutlined,
+  PlayCircleOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 
@@ -30,6 +33,8 @@ import {
   type ComfyUIHealthResponse,
 } from "@/api/comfyui";
 import PageScaffold from "@/components/layout/PageScaffold";
+import { QUICKSTART_TRAINING_PREFILL } from "@/config/quickstartRun";
+import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
 
 const { Paragraph, Text } = Typography;
 
@@ -88,6 +93,15 @@ export default function ComfyUIBridge() {
     () =>
       adapterProfiles.find((item) => item.id === selectedAdapterProfileId) || null,
     [adapterProfiles, selectedAdapterProfileId],
+  );
+  const trainingPrefillQuery = useMemo(
+    () =>
+      buildTrainingPrefillQuery({
+        ...QUICKSTART_TRAINING_PREFILL,
+        experimentName:
+          importPrefill.name?.trim() || QUICKSTART_TRAINING_PREFILL.experimentName,
+      }),
+    [importPrefill.name],
   );
 
   const checkConnection = async (targetBaseUrl?: string) => {
@@ -190,6 +204,27 @@ export default function ComfyUIBridge() {
     });
   };
 
+  const handleOpenWizardPrefill = () => {
+    const experimentName = importPrefill.name?.trim() || "comfyui-handoff-run";
+    const outputDir = importPrefill.output_dir?.trim() || "outputs/quickstart";
+    const description =
+      importPrefill.description?.trim() || "来自 ComfyUI 桥接页的主线配置预填";
+
+    navigate("/config", {
+      state: {
+        source: "comfyui-bridge",
+        wizardPrefill: {
+          projectName: "medfusion-comfyui",
+          experimentName,
+          description,
+          outputDir,
+          backbone: QUICKSTART_TRAINING_PREFILL.backbone,
+          numClasses: QUICKSTART_TRAINING_PREFILL.numClasses,
+        },
+      },
+    });
+  };
+
   const handleSelectAdapterProfile = (profileId: string) => {
     setSelectedAdapterProfileId(profileId);
     const profile = adapterProfiles.find((item) => item.id === profileId);
@@ -213,10 +248,10 @@ export default function ComfyUIBridge() {
   return (
     <PageScaffold
       eyebrow="ComfyUI bridge"
-      title="ComfyUI 上线入口（预览）"
-      description="这里提供 ComfyUI 连通性检查、快速打开和最小回流指导。ComfyUI 负责工作流画布与生成交互，MedFusion 继续负责训练与结果合同。"
+      title="ComfyUI 上线入口（主线适配）"
+      description="这里提供 ComfyUI 连通性检查、快速打开和最小回流指导。ComfyUI 负责工作流画布与生成交互，MedFusion 继续负责配置、训练监控与结果回流主链。"
       chips={[
-        { label: "Bridge preview", tone: "amber" },
+        { label: "Mainline adapter", tone: "amber" },
         { label: "Connectivity check", tone: "blue" },
         { label: "Mainline handoff", tone: "teal" },
       ]}
@@ -271,6 +306,31 @@ export default function ComfyUIBridge() {
         },
       ]}
     >
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="当前主线步骤：配置适配（1/3）"
+        description={
+          <Space wrap>
+            <span>在桥接页完成连通性与适配后，继续按配置 -&gt; 训练 -&gt; 结果推进。</span>
+            <Button size="small" icon={<ControlOutlined />} onClick={() => navigate("/config")}>
+              回到配置向导
+            </Button>
+            <Button
+              size="small"
+              icon={<PlayCircleOutlined />}
+              onClick={() => navigate(`/training?source=comfyui-bridge&${trainingPrefillQuery}`)}
+            >
+              带推荐参数进入训练
+            </Button>
+            <Button size="small" icon={<FileSearchOutlined />} onClick={() => navigate("/models")}>
+              进入结果后台
+            </Button>
+          </Space>
+        }
+      />
+
       <div className="split-grid">
         <Card className="surface-card" title="连接配置">
           <Space direction="vertical" size={12} style={{ width: "100%" }}>
@@ -338,11 +398,21 @@ export default function ComfyUIBridge() {
             <div className="surface-note surface-note--dense">
               <strong>3. 回到 MedFusion 主链训练和回流</strong>
               <Paragraph style={{ marginBottom: 0 }}>
-                ComfyUI 不替代 MedFusion 训练执行层。完成前置后，继续用 Run Wizard / CLI 做可复现训练。
+                ComfyUI 不替代 MedFusion 训练执行层。完成前置后，按页面主线继续：`/config` 到 `/training` 再到 `/models`。
               </Paragraph>
-              <pre className="command-block">
-                uv run medfusion train --config &lt;your_config.yaml&gt;
-              </pre>
+              <Space style={{ marginTop: 8 }}>
+                <Button size="small" onClick={() => navigate("/config")}>
+                  回到配置主线
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() =>
+                    navigate(`/training?source=comfyui-bridge&${trainingPrefillQuery}`)
+                  }
+                >
+                  带推荐参数进入训练
+                </Button>
+              </Space>
             </div>
           </Space>
         </Card>
@@ -485,6 +555,7 @@ export default function ComfyUIBridge() {
             </Col>
           </Row>
           <Space>
+            <Button onClick={handleOpenWizardPrefill}>带预填回到配置向导</Button>
             <Button
               type="primary"
               icon={<ImportOutlined />}

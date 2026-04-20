@@ -20,11 +20,13 @@ import {
   Form,
 } from "antd";
 import {
+  ControlOutlined,
   SearchOutlined,
   DownloadOutlined,
   DeleteOutlined,
   EyeOutlined,
   ImportOutlined,
+  PlayCircleOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 import {
@@ -44,6 +46,8 @@ import {
 import ModelResultPanel from "@/components/model/ModelResultPanel";
 import VirtualList from "@/components/VirtualList";
 import PageScaffold from "@/components/layout/PageScaffold";
+import { QUICKSTART_TRAINING_PREFILL } from "@/config/quickstartRun";
+import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
 
 const { Text } = Typography;
 
@@ -366,6 +370,54 @@ export default function ModelLibrary() {
   const handoffMatchesSelectedModel =
     Boolean(resultHandoff?.modelId) && selectedModel?.id === resultHandoff?.modelId;
 
+  const handleLoopBackToConfig = () => {
+    const sourceModel = selectedModel || latestModel || null;
+    if (!sourceModel) {
+      navigate("/config");
+      return;
+    }
+
+    const sourceModelAny = sourceModel as Model & {
+      project_name?: string;
+      output_dir?: string;
+    };
+    navigate("/config", {
+      state: {
+        source: "model-library",
+        wizardPrefill: {
+          projectName: sourceModelAny.project_name || "medfusion-rerun",
+          experimentName: `${sourceModel.name}-rerun`,
+          description: `基于结果后台模型 ${sourceModel.name} 发起下一轮主线配置`,
+          outputDir: sourceModelAny.output_dir,
+          backbone: sourceModel.backbone,
+          numClasses: sourceModel.numClasses,
+        },
+      },
+    });
+  };
+
+  const handleLoopBackToTraining = () => {
+    const sourceModel = selectedModel || latestModel || null;
+    if (!sourceModel) {
+      navigate("/training");
+      return;
+    }
+
+    const prefillQuery = buildTrainingPrefillQuery({
+      experimentName: `${sourceModel.name}-rerun`,
+      backbone: sourceModel.backbone || QUICKSTART_TRAINING_PREFILL.backbone,
+      numClasses:
+        sourceModel.numClasses > 0
+          ? sourceModel.numClasses
+          : QUICKSTART_TRAINING_PREFILL.numClasses,
+      epochs: QUICKSTART_TRAINING_PREFILL.epochs,
+      batchSize: QUICKSTART_TRAINING_PREFILL.batchSize,
+      learningRate: QUICKSTART_TRAINING_PREFILL.learningRate,
+    });
+
+    navigate(`/training?source=model-library&${prefillQuery}`);
+  };
+
   return (
     <PageScaffold
       eyebrow="Result backend"
@@ -526,6 +578,30 @@ export default function ModelLibrary() {
           onClose={() => setResultHandoff(null)}
         />
       ) : null}
+
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="当前主线步骤：结果（3/3）"
+        description={
+          <Space wrap>
+            <span>这里负责结果复盘与交付；如需重跑可直接回到配置或训练页。</span>
+            <Button size="small" icon={<ControlOutlined />} onClick={handleLoopBackToConfig}>
+              基于当前结果重开配置
+            </Button>
+            <Button size="small" icon={<PlayCircleOutlined />} onClick={handleLoopBackToTraining}>
+              基于当前结果直接重跑训练
+            </Button>
+            <Button size="small" icon={<ControlOutlined />} onClick={() => navigate("/config")}>
+              回到配置主线
+            </Button>
+            <Button size="small" icon={<PlayCircleOutlined />} onClick={() => navigate("/training")}>
+              回到训练监控
+            </Button>
+          </Space>
+        }
+      />
 
       <Card className="surface-card" loading={loading}>
         <div className="section-heading">

@@ -104,7 +104,6 @@ flowchart LR
 - [对外 Demo 路径](contents/playbooks/external-demo-path.md)
 - [多 seed 稳定性汇报](contents/playbooks/multi-seed-stability-report.md)
 - [结果解读与交付检查](contents/playbooks/result-interpretation-checklist.md)
-- [OSS 路线图状态](roadmap/oss/roadmap-status.md)
 
 ### 2) 我想理解系统怎么工作的
 

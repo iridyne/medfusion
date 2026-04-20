@@ -114,6 +114,7 @@ def test_start_help_matches_mvp_contract(capsys):
     assert "run" in output
     assert "validate-config" in output
     assert "build-results" in output
+    assert "uninstall" in output
     assert "YAML" in output
 
 
@@ -162,6 +163,84 @@ def test_main_dispatches_run_command(monkeypatch):
         "argv": ["--config", "configs/starter/quickstart.yaml", "--skip-build-results"],
         "prog": "medfusion run",
     }
+
+
+def test_main_dispatches_uninstall_command(monkeypatch):
+    import med_core.cli as cli_module
+
+    captured = {}
+
+    def _fake_uninstall(argv=None, prog="medfusion uninstall"):
+        captured["argv"] = list(argv or [])
+        captured["prog"] = prog
+
+    monkeypatch.setattr(cli_module, "uninstall", _fake_uninstall)
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["medfusion", "uninstall", "--purge-data", "--yes"]
+        cli_module.main()
+    finally:
+        sys.argv = original_argv
+
+    assert captured == {
+        "argv": ["--purge-data", "--yes"],
+        "prog": "medfusion uninstall",
+    }
+
+
+def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):
+    from med_core.cli.uninstall import uninstall
+
+    monkeypatch.chdir(tmp_path)
+
+    # Keep-data mode should only remove .venv by default.
+    (tmp_path / ".venv" / "Scripts").mkdir(parents=True)
+    (tmp_path / "outputs").mkdir(parents=True)
+    user_data_dir = tmp_path / "user-data"
+    user_data_dir.mkdir(parents=True)
+
+    uninstall(
+        [
+            "--yes",
+            "--json",
+            "--venv-path",
+            ".venv",
+            "--user-data-dir",
+            str(user_data_dir),
+        ]
+    )
+    keep_payload = json.loads(capsys.readouterr().out)
+    assert keep_payload["ok"] is True
+    assert keep_payload["mode"] == "keep-data"
+    assert not (tmp_path / ".venv").exists()
+    assert (tmp_path / "outputs").exists()
+    assert user_data_dir.exists()
+
+    # Purge-data mode should remove project artifacts and user data directory.
+    (tmp_path / ".venv").mkdir(parents=True)
+    (tmp_path / "logs").mkdir(parents=True)
+    (tmp_path / "checkpoints").mkdir(parents=True)
+
+    uninstall(
+        [
+            "--yes",
+            "--json",
+            "--purge-data",
+            "--venv-path",
+            ".venv",
+            "--user-data-dir",
+            str(user_data_dir),
+        ]
+    )
+    purge_payload = json.loads(capsys.readouterr().out)
+    assert purge_payload["ok"] is True
+    assert purge_payload["mode"] == "purge-data"
+    assert not (tmp_path / ".venv").exists()
+    assert not (tmp_path / "outputs").exists()
+    assert not (tmp_path / "logs").exists()
+    assert not (tmp_path / "checkpoints").exists()
+    assert not user_data_dir.exists()
 
 
 def test_validate_config_cli_surfaces_yaml_mainline_contract(capsys):

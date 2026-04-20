@@ -9,16 +9,6 @@ def _read_text(path: str) -> str:
     return (REPO_ROOT / path).read_text(encoding="utf-8")
 
 
-def test_support_matrix_names_official_mvp_supported_paths() -> None:
-    text = _read_text("docs/roadmap/oss/demo-and-model-creation-support-matrix.md")
-
-    assert "MVP 官方支持矩阵" in text
-    assert "configs/public_datasets/breastmnist_quickstart.yaml" in text
-    assert "configs/public_datasets/pathmnist_quickstart.yaml" in text
-    assert "configs/starter/quickstart.yaml" in text
-    assert "configs/starter/default.yaml" in text
-
-
 def test_starter_readme_declares_official_supported_yaml_set() -> None:
     text = _read_text("configs/starter/README.md")
 
