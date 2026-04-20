@@ -54,6 +54,20 @@ export const START_PRIMARY_FLOW = [
   "结果后台",
 ] as const;
 
+export const START_RECOMMENDED_WORKFLOW = [
+  "1) /start 先选任务路径",
+  "2) /config 生成并检查 RunSpec",
+  "3) /training 启动真实训练",
+  "4) /models 回流并复盘结果",
+] as const;
+
+export const START_COMFYUI_WORKFLOW = [
+  "1) /config/comfyui 检查 ComfyUI 连通性",
+  "2) 选择适配档案并跳到 /config/advanced/canvas",
+  "3) 画布编译通过后创建训练任务",
+  "4) 回到 /models 做结果导入与交付复盘",
+] as const;
+
 export const START_MODE_POSITIONING = {
   defaultMode: "问题向导 -> 模板骨架 -> 参数编辑",
   advancedMode: "节点式编辑保留为高级模式，不作为默认首页",

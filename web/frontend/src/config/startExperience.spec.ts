@@ -20,6 +20,8 @@ describe("start experience contract", () => {
       "训练执行",
       "结果后台",
     ]);
+    expect(startExperience?.START_RECOMMENDED_WORKFLOW).toHaveLength(4);
+    expect(startExperience?.START_COMFYUI_WORKFLOW).toHaveLength(4);
     expect(startExperience?.START_MODE_POSITIONING?.advancedMode).toContain(
       "高级模式",
     );

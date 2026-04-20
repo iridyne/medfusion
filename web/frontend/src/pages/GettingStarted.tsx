@@ -13,8 +13,10 @@ import PageScaffold from "@/components/layout/PageScaffold";
 import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
 import {
   START_COMPONENTS,
+  START_COMFYUI_WORKFLOW,
   START_MODE_POSITIONING,
   START_PRIMARY_FLOW,
+  START_RECOMMENDED_WORKFLOW,
 } from "@/config/startExperience";
 
 export default function GettingStarted() {
@@ -102,8 +104,8 @@ export default function GettingStarted() {
         type="info"
         showIcon
         style={{ marginBottom: 16 }}
-        message="正式版当前边界"
-        description="当前默认前台围绕 GUI 模型搭建主链展开：先介绍组件，再进入问题向导和骨架推荐；训练与结果仍然严格复用 runtime 主链，不承诺凭空组合出仓库里还不存在的新能力。"
+        message="先走一条清晰主线，再进入高级或外部适配"
+        description="如果你只是要跑通 MedFusion，请优先走“标准主线”；如果你要接 ComfyUI，请走“ComfyUI 适配线”。两条路径最终都回到同一套训练与结果合同。"
       />
       <Alert
         type="success"
@@ -198,6 +200,41 @@ export default function GettingStarted() {
               onClick={() => navigate("/quickstart-run")}
             >
               再看 quickstart 演示链路
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      <div className="split-grid" style={{ marginTop: 16 }}>
+        <Card className="surface-card" title="标准主线（推荐）">
+          <div className="editorial-stack">
+            {START_RECOMMENDED_WORKFLOW.map((step) => (
+              <div key={step} className="surface-note surface-note--dense">
+                {step}
+              </div>
+            ))}
+            <Button
+              type="primary"
+              icon={<ControlOutlined />}
+              onClick={() => navigate("/config")}
+            >
+              按标准主线开始
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="surface-card" title="ComfyUI 适配线（预览）">
+          <div className="editorial-stack">
+            {START_COMFYUI_WORKFLOW.map((step) => (
+              <div key={step} className="surface-note surface-note--dense">
+                {step}
+              </div>
+            ))}
+            <Button
+              icon={<LinkOutlined />}
+              onClick={() => navigate("/config/comfyui")}
+            >
+              按 ComfyUI 适配线开始
             </Button>
           </div>
         </Card>

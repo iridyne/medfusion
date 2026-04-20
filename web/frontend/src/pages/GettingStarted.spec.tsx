@@ -19,5 +19,7 @@ describe("GettingStarted", () => {
     expect(markup).toContain("结果后台");
     expect(markup).toContain("高级模式");
     expect(markup).toContain("ComfyUI 集成");
+    expect(markup).toContain("标准主线（推荐）");
+    expect(markup).toContain("ComfyUI 适配线（预览）");
   });
 });

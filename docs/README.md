@@ -14,6 +14,7 @@
 ## 高频入口（90% 场景）
 
 - [Web UI 快速入门](contents/getting-started/web-ui.md)
+- [启动流程与使用工作流（统一口径）](contents/getting-started/startup-workflow.md)
 - [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
 - [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - [快速上手](contents/getting-started/quickstart.md)
@@ -29,6 +30,7 @@
 如果你只想知道“我现在该点哪篇文档”，按这个来：
 
 - **第一次进入仓库** → 先看 [Web UI 快速入门](contents/getting-started/web-ui.md)
+- **想先看唯一工作流** → 先看 [启动流程与使用工作流（统一口径）](contents/getting-started/startup-workflow.md)
 - **没有私有数据** → 先看 [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - **有私有数据，想先跑通** → 先看 [CLI 与 Config 使用路径](contents/getting-started/cli-config-workflow.md)
 - **想自己新建 YAML / 模型** → 先看 [如何新建模型与 YAML](contents/getting-started/model-creation-paths.md)
