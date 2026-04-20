@@ -7,14 +7,19 @@
 
 ## 1. 发布级范围（不做过度工程化）
 
+### 当前执行焦点（2026-04-20 起）
+
+- 只优先推进 Windows 安装与卸载闭环。
+- Linux 与 Docker 的安装/卸载落地放到后续里程碑，不作为当前实现阻塞。
+
 ### P0（本轮发布阻塞项）
 
 - Windows 10/11 x64：安装、启动、smoke、卸载闭环
-- Linux（Ubuntu 22.04+）：安装、启动、smoke、卸载闭环
-- Docker（私有部署）：部署、启动、smoke、停止/清理闭环
 
 ### P1（下一阶段）
 
+- Linux（Ubuntu 22.04+）：安装、启动、smoke、卸载闭环
+- Docker（私有部署）：部署、启动、smoke、停止/清理闭环
 - macOS（Apple Silicon）安装与卸载闭环
 - Windows `winget` 分发清单与升级路径
 
@@ -71,7 +76,7 @@
 - `medfusion` 命令不可用（或显式提示未安装）
 - 已选择保留的数据仍可访问，或已按 `--purge-data` 清空
 
-## 4. Linux 规划（与 Windows 对齐）
+## 4. Linux 规划（后置阶段，与 Windows 对齐）
 
 ### 4.1 交付件
 
@@ -84,7 +89,7 @@
 - 仍然执行 `install -> start -> smoke -> uninstall`
 - 命令与参数语义尽量与 Windows 对齐（避免“平台特化命令宇宙”）
 
-## 5. Docker 规划（部署形态）
+## 5. Docker 规划（后置阶段，部署形态）
 
 ### 5.1 交付件
 
@@ -104,11 +109,15 @@
 - [ ] Windows 安装脚本可重复执行（幂等）
 - [ ] Windows 卸载脚本支持 `--keep-data` / `--purge-data`
 - [ ] Windows 能跑通 `release_smoke.py --mode local`
+- [ ] 文档中安装、部署、卸载命令与脚本入口一致
+- [ ] CI 至少有一条 Windows smoke 任务
+
+后置阶段验收项：
+
 - [ ] Linux 安装/卸载脚本可重复执行
 - [ ] Linux 能跑通 `release_smoke.py --mode local`
 - [ ] Docker 能跑通 `release_smoke.py --mode docker`
-- [ ] 文档中安装、部署、卸载命令与脚本入口一致
-- [ ] CI 至少有一条 Windows smoke 任务和一条 Docker smoke 任务
+- [ ] CI 补 Docker smoke 任务
 
 ## 7. 执行里程碑（建议）
 

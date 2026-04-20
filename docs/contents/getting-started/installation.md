@@ -14,6 +14,34 @@
 
 ## 安装步骤
 
+### Windows（当前优先，推荐脚本入口）
+
+在仓库根目录执行：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/install/windows/install-medfusion.ps1 -VerifyStart
+```
+
+如果你还要同时跑本机 release smoke：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/install/windows/install-medfusion.ps1 -VerifyStart -RunSmoke
+```
+
+Windows 卸载（默认保留数据）：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/uninstall/windows/uninstall-medfusion.ps1
+```
+
+Windows 彻底清理卸载（删除数据）：
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/uninstall/windows/uninstall-medfusion.ps1 -PurgeData
+```
+
+> 说明：当前路线图先推进 Windows 安装/卸载闭环；Linux 和 Docker 的安装脚本在后置阶段补齐。
+
 ### 1. 克隆仓库
 
 ```bash

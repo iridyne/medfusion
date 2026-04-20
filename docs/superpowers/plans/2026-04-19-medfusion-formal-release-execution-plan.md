@@ -184,7 +184,7 @@
 
 - 动作：
   - 定义 Windows 的发布级最小合同：`install -> start -> smoke -> uninstall`
-  - 固定 Linux / Docker 的对等合同，保证主链语义一致
+  - 把 Linux / Docker 的对等合同放入后置里程碑，不阻塞当前 Windows 主线
   - 明确“卸载”不是删除程序文件就结束，而是要区分保留数据与彻底清理两种模式
   - 将安装、部署、卸载步骤沉淀为脚本入口 + 文档入口 + smoke 验收入口三位一体
 - 主要文件：
@@ -196,8 +196,8 @@
   - `scripts/install/*`（后续新增）
   - `scripts/uninstall/*`（后续新增）
 - 验收：
-  - Windows 路径能稳定完成安装、启动、一次最小 smoke、可选保留数据卸载、彻底清理卸载
-  - Linux / Docker 至少各有一条同语义的可复现安装与卸载路径
+  - 当前阶段：Windows 路径能稳定完成安装、启动、一次最小 smoke、可选保留数据卸载、彻底清理卸载
+  - 后置阶段：Linux / Docker 再补同语义的可复现安装与卸载路径
 
 ## Phase 4：市场与演示包装
 

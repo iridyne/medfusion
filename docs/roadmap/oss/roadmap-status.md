@@ -19,11 +19,13 @@
 - [x] Phase 3.2：Web API 文档与实现字段首轮对齐（含结果可视化字段与 experimental 边界）
 - [ ] Phase 3.3：沉淀 Windows 与 Docker 两条路径的可复现执行证据（命令 + 结果记录）
 - [x] Phase 3.4：新增全平台安装/部署/卸载完整规划（Windows 优先）
-- [ ] Phase 3.4：落地 Windows install/uninstall 脚本与双模式卸载（keep-data / purge-data）
-- [ ] Phase 3.4：补 Linux 对等 install/uninstall 脚本并与 Windows 语义对齐
+- [x] Phase 3.4：落地 Windows install/uninstall 脚本首版与双模式卸载（keep-data / purge-data）
+- [ ] Phase 3.4：补 Windows 安装实录（install -> start -> smoke -> uninstall）并沉淀证据
+- [ ] Phase 3.4（后置）：补 Linux 对等 install/uninstall 脚本并与 Windows 语义对齐
+- [ ] Phase 3.4（后置）：补 Docker 安装/卸载口径与 CI smoke 对齐
 
 ## 下一步建议（按最小可落地顺序）
 
-1. 先落地 Windows 安装与卸载脚本，并在本机完成一次 `install -> start -> smoke -> uninstall` 实录。
-2. 再补 Linux 对等脚本，保持参数语义与 Windows 一致。
-3. 最后把 Windows + Docker smoke 纳入发布前 CI 必过项。
+1. 先在 Windows 本机完成一次 `install -> start -> smoke -> uninstall` 实录并沉淀证据。
+2. 把 Windows install/uninstall 命令接入安装文档主入口。
+3. Linux 与 Docker 脚本放到后置里程碑，不阻塞当前 Windows 主线。
