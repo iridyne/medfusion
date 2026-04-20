@@ -959,6 +959,7 @@ def compile_graph_to_runspec(
     chosen_components: dict[AdvancedBuilderFamily, str] = {}
     duplicate_families: list[AdvancedBuilderFamily] = []
     node_by_id: dict[str, dict[str, Any]] = {}
+    family_node_ids: dict[AdvancedBuilderFamily, list[str]] = {}
 
     for node in nodes:
         node_id = str(node.get("id") or "")
@@ -978,6 +979,7 @@ def compile_graph_to_runspec(
             continue
         component = components[component_id]
         node_by_id[node_id] = node
+        family_node_ids.setdefault(component.family, []).append(node_id or "<unknown>")
         if component.family in chosen_components:
             duplicate_families.append(component.family)
         else:
@@ -1002,13 +1004,24 @@ def compile_graph_to_runspec(
         family_labels = " / ".join(
             ADVANCED_BUILDER_FAMILY_LABELS[family] for family in duplicate_families
         )
+        duplicate_node_ids = list(
+            dict.fromkeys(
+                node_id
+                for family in duplicate_families
+                for node_id in family_node_ids.get(family, [])
+                if node_id and not node_id.startswith("<")
+            )
+        )
         issues.append(
             _issue(
                 level="error",
                 code="ABG-E004",
                 path="nodes[].data.componentId",
                 message=f"当前图存在重复组件家族：{family_labels}。正式版编译层当前要求每个核心家族最多一个组件。",
-                context={"families": duplicate_families},
+                context={
+                    "families": duplicate_families,
+                    "node_ids": duplicate_node_ids,
+                },
                 suggestion="每个核心 family 仅保留一个节点，删除重复节点后重试。",
             )
         )

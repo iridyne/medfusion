@@ -94,6 +94,17 @@ function pickContextString(
   return typeof value === "string" ? value : null;
 }
 
+function pickContextStringArray(
+  issue: AdvancedBuilderCompileIssue,
+  key: string,
+): string[] {
+  const value = issue.context?.[key];
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 function renderIssueDescription(issue: AdvancedBuilderCompileIssue) {
   const issueMeta = [issue.code, issue.path].filter(Boolean).join(" · ") || null;
   if (!issueMeta && !issue.suggestion) {
@@ -180,12 +191,19 @@ export default function AdvancedBuilderCanvas() {
 
   const locateIssueOnCanvas = (issue: AdvancedBuilderCompileIssue) => {
     const nodeIdSet = new Set<string>();
+    const contextNodeIds = pickContextStringArray(issue, "node_ids");
+    const contextFamilies = pickContextStringArray(issue, "families");
     const sourceNodeId = pickContextString(issue, "source_node_id");
     const targetNodeId = pickContextString(issue, "target_node_id");
     const nodeId = pickContextString(issue, "node_id");
     const fromFamily = pickContextString(issue, "from_family");
     const toFamily = pickContextString(issue, "to_family");
 
+    for (const item of contextNodeIds) {
+      if (!item.startsWith("<")) {
+        nodeIdSet.add(item);
+      }
+    }
     if (nodeId && !nodeId.startsWith("<")) {
       nodeIdSet.add(nodeId);
     }
@@ -196,18 +214,25 @@ export default function AdvancedBuilderCanvas() {
       nodeIdSet.add(targetNodeId);
     }
 
-    const resolveNodeIdByFamily = (family: string | null): string | null => {
+    const resolveNodeIdsByFamily = (family: string | null): string[] => {
       if (!family) {
-        return null;
+        return [];
       }
-      const matched = nodes.find(
-        (item) => item.data.family === (family as AdvancedBuilderFamily),
-      );
-      return matched?.id || null;
+      return nodes
+        .filter((item) => item.data.family === (family as AdvancedBuilderFamily))
+        .map((item) => item.id);
     };
 
-    const fromFamilyNodeId = resolveNodeIdByFamily(fromFamily);
-    const toFamilyNodeId = resolveNodeIdByFamily(toFamily);
+    for (const family of contextFamilies) {
+      for (const resolvedId of resolveNodeIdsByFamily(family)) {
+        nodeIdSet.add(resolvedId);
+      }
+    }
+
+    const fromFamilyNodeIds = resolveNodeIdsByFamily(fromFamily);
+    const toFamilyNodeIds = resolveNodeIdsByFamily(toFamily);
+    const fromFamilyNodeId = fromFamilyNodeIds[0] || null;
+    const toFamilyNodeId = toFamilyNodeIds[0] || null;
     if (fromFamilyNodeId) {
       nodeIdSet.add(fromFamilyNodeId);
     }

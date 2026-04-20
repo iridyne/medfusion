@@ -196,6 +196,34 @@ async def test_advanced_builder_compile_rejects_blocked_connection(api_client) -
     assert "删除这条被禁止的连接" in blocked_issue["suggestion"]
 
 
+async def test_advanced_builder_compile_rejects_duplicate_families(api_client) -> None:
+    graph = _quickstart_graph()
+    graph["nodes"].append(
+        {
+            "id": "n7",
+            "type": "advancedBuilderComponent",
+            "position": {"x": 2, "y": 2},
+            "data": {"componentId": "efficientnet_b0_backbone"},
+        }
+    )
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_spec"] is None
+    duplicate_issue = next(
+        issue for issue in payload["issues"] if issue.get("code") == "ABG-E004"
+    )
+    assert duplicate_issue["path"] == "nodes[].data.componentId"
+    assert "vision_backbone" in duplicate_issue["context"]["families"]
+    assert {"n2", "n7"}.issubset(set(duplicate_issue["context"]["node_ids"]))
+    assert "仅保留一个节点" in duplicate_issue["suggestion"]
+
+
 async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) -> None:
     from med_core.web.api import training as training_api
     captured_source_context: dict[str, object] = {}
