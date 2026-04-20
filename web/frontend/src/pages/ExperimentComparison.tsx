@@ -11,14 +11,10 @@ import {
   Statistic,
   Tag,
   message,
-  Spin,
   Empty,
-  Tooltip,
-  Modal,
 } from "antd";
 import {
   BarChartOutlined,
-  LineChartOutlined,
   DownloadOutlined,
   FileWordOutlined,
   FilePdfOutlined,
@@ -30,11 +26,12 @@ import type { ColumnsType } from "antd/es/table";
 import MetricsChart from "../components/experiment/MetricsChart";
 import ConfusionMatrix from "../components/experiment/ConfusionMatrix";
 import ROCCurve from "../components/experiment/ROCCurve";
+import api from "../api";
 
 interface Experiment {
   id: string;
   name: string;
-  status: "completed" | "running" | "failed";
+  status: "completed" | "running" | "failed" | "pending";
   config: {
     backbone: string;
     fusion: string;
@@ -62,6 +59,26 @@ interface ComparisonMetrics {
   best_experiment: string;
 }
 
+interface ExperimentListResponse {
+  experiments: Experiment[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+interface ComparisonResponse {
+  experiments: Experiment[];
+  metrics: ComparisonMetrics[];
+  summary: Record<string, unknown>;
+}
+
+interface ReportResponse {
+  report_id: string;
+  download_url: string;
+  format: "word" | "pdf";
+  created_at: string;
+}
+
 const ExperimentComparison: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [selectedExperiments, setSelectedExperiments] = useState<string[]>([]);
@@ -72,110 +89,26 @@ const ExperimentComparison: React.FC = () => {
   const [showCharts, setShowCharts] = useState(false);
 
   useEffect(() => {
-    fetchExperiments();
+    void fetchExperiments();
   }, []);
 
   const fetchExperiments = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockExperiments: Experiment[] = [
-        {
-          id: "exp-001",
-          name: "ResNet50 + Concatenate",
-          status: "completed",
-          config: {
-            backbone: "resnet50",
-            fusion: "concatenate",
-            learning_rate: 0.001,
-            batch_size: 32,
-            epochs: 50,
-          },
-          metrics: {
-            accuracy: 0.892,
-            precision: 0.885,
-            recall: 0.878,
-            f1_score: 0.881,
-            auc: 0.945,
-            loss: 0.234,
-          },
-          training_time: 3600,
-          created_at: "2026-02-15T10:30:00Z",
-          is_favorite: true,
+      const { data } = await api.get<ExperimentListResponse>("/experiments/", {
+        params: {
+          page: 1,
+          page_size: 100,
+          sort_by: "created_at",
+          order: "desc",
         },
-        {
-          id: "exp-002",
-          name: "ViT-Base + Attention",
-          status: "completed",
-          config: {
-            backbone: "vit_base",
-            fusion: "attention",
-            learning_rate: 0.0001,
-            batch_size: 16,
-            epochs: 50,
-          },
-          metrics: {
-            accuracy: 0.915,
-            precision: 0.908,
-            recall: 0.902,
-            f1_score: 0.905,
-            auc: 0.962,
-            loss: 0.198,
-          },
-          training_time: 5400,
-          created_at: "2026-02-16T14:20:00Z",
-          is_favorite: false,
-        },
-        {
-          id: "exp-003",
-          name: "Swin-Base + Gated",
-          status: "completed",
-          config: {
-            backbone: "swin_base",
-            fusion: "gated",
-            aggregator: "attention",
-            learning_rate: 0.0005,
-            batch_size: 24,
-            epochs: 50,
-          },
-          metrics: {
-            accuracy: 0.928,
-            precision: 0.922,
-            recall: 0.918,
-            f1_score: 0.920,
-            auc: 0.971,
-            loss: 0.176,
-          },
-          training_time: 7200,
-          created_at: "2026-02-17T09:15:00Z",
-          is_favorite: true,
-        },
-        {
-          id: "exp-004",
-          name: "EfficientNet-B3 + Bilinear",
-          status: "completed",
-          config: {
-            backbone: "efficientnet_b3",
-            fusion: "bilinear",
-            learning_rate: 0.001,
-            batch_size: 32,
-            epochs: 50,
-          },
-          metrics: {
-            accuracy: 0.901,
-            precision: 0.895,
-            recall: 0.889,
-            f1_score: 0.892,
-            auc: 0.953,
-            loss: 0.215,
-          },
-          training_time: 4200,
-          created_at: "2026-02-18T11:45:00Z",
-          is_favorite: false,
-        },
-      ];
+      });
 
-      setExperiments(mockExperiments);
+      const items = data.experiments ?? [];
+      setExperiments(items);
+      setSelectedExperiments((prev) =>
+        prev.filter((id) => items.some((exp) => exp.id === id)),
+      );
     } catch (error) {
       message.error("Failed to fetch experiments");
       console.error(error);
@@ -184,7 +117,7 @@ const ExperimentComparison: React.FC = () => {
     }
   };
 
-  const handleCompare = () => {
+  const handleCompare = async () => {
     if (selectedExperiments.length < 2) {
       message.warning("Please select at least 2 experiments to compare");
       return;
@@ -192,69 +125,11 @@ const ExperimentComparison: React.FC = () => {
 
     setComparing(true);
     try {
-      const selected = experiments.filter((exp) =>
-        selectedExperiments.includes(exp.id)
+      const { data } = await api.post<ComparisonResponse>(
+        "/experiments/compare",
+        selectedExperiments,
       );
-
-      const metrics: ComparisonMetrics[] = [
-        {
-          metric: "Accuracy",
-          experiments: {},
-          best_experiment: "",
-        },
-        {
-          metric: "Precision",
-          experiments: {},
-          best_experiment: "",
-        },
-        {
-          metric: "Recall",
-          experiments: {},
-          best_experiment: "",
-        },
-        {
-          metric: "F1 Score",
-          experiments: {},
-          best_experiment: "",
-        },
-        {
-          metric: "AUC",
-          experiments: {},
-          best_experiment: "",
-        },
-        {
-          metric: "Loss",
-          experiments: {},
-          best_experiment: "",
-        },
-      ];
-
-      selected.forEach((exp) => {
-        metrics[0].experiments[exp.name] = exp.metrics.accuracy;
-        metrics[1].experiments[exp.name] = exp.metrics.precision;
-        metrics[2].experiments[exp.name] = exp.metrics.recall;
-        metrics[3].experiments[exp.name] = exp.metrics.f1_score;
-        metrics[4].experiments[exp.name] = exp.metrics.auc || 0;
-        metrics[5].experiments[exp.name] = exp.metrics.loss;
-      });
-
-      // Find best experiment for each metric
-      metrics.forEach((m) => {
-        const isLowerBetter = m.metric === "Loss";
-        const values = Object.entries(m.experiments);
-        const best = values.reduce((prev, curr) =>
-          isLowerBetter
-            ? curr[1] < prev[1]
-              ? curr
-              : prev
-            : curr[1] > prev[1]
-            ? curr
-            : prev
-        );
-        m.best_experiment = best[0];
-      });
-
-      setComparisonData(metrics);
+      setComparisonData(data.metrics ?? []);
       setShowCharts(true);
     } catch (error) {
       message.error("Failed to compare experiments");
@@ -270,27 +145,54 @@ const ExperimentComparison: React.FC = () => {
       return;
     }
 
-    message.loading(`Generating ${format.toUpperCase()} report...`, 0);
+    const messageKey = `report-${format}`;
+    message.loading({
+      content: `Generating ${format.toUpperCase()} report...`,
+      key: messageKey,
+      duration: 0,
+    });
     try {
-      // Mock API call - replace with actual implementation
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      message.destroy();
-      message.success(`${format.toUpperCase()} report generated successfully`);
+      const { data } = await api.post<ReportResponse>("/experiments/report", {
+        experiment_ids: selectedExperiments,
+        format,
+        include_charts: true,
+        include_config: true,
+        include_metrics: true,
+      });
+
+      message.success({
+        content: `${format.toUpperCase()} report generated successfully`,
+        key: messageKey,
+      });
+      if (data.download_url) {
+        window.open(data.download_url, "_blank", "noopener,noreferrer");
+      }
     } catch (error) {
-      message.destroy();
-      message.error("Failed to generate report");
+      message.error({ content: "Failed to generate report", key: messageKey });
       console.error(error);
     }
   };
 
-  const toggleFavorite = (experimentId: string) => {
-    setExperiments((prev) =>
-      prev.map((exp) =>
-        exp.id === experimentId
-          ? { ...exp, is_favorite: !exp.is_favorite }
-          : exp
-      )
-    );
+  const toggleFavorite = async (experimentId: string) => {
+    try {
+      const { data } = await api.patch<{ is_favorite?: boolean }>(
+        `/experiments/${experimentId}/favorite`,
+      );
+      setExperiments((prev) =>
+        prev.map((exp) => {
+          if (exp.id !== experimentId) {
+            return exp;
+          }
+          if (typeof data.is_favorite === "boolean") {
+            return { ...exp, is_favorite: data.is_favorite };
+          }
+          return { ...exp, is_favorite: !exp.is_favorite };
+        }),
+      );
+    } catch (error) {
+      message.error("Failed to update favorite status");
+      console.error(error);
+    }
   };
 
   const columns: ColumnsType<Experiment> = [
@@ -327,7 +229,7 @@ const ExperimentComparison: React.FC = () => {
               <StarOutlined />
             )
           }
-          onClick={() => toggleFavorite(record.id)}
+          onClick={() => void toggleFavorite(record.id)}
         />
       ),
     },
@@ -348,6 +250,7 @@ const ExperimentComparison: React.FC = () => {
           completed: "success",
           running: "processing",
           failed: "error",
+          pending: "default",
         };
         return <Tag color={colorMap[status as keyof typeof colorMap]}>{status}</Tag>;
       },
@@ -371,7 +274,9 @@ const ExperimentComparison: React.FC = () => {
       width: 100,
       sorter: (a, b) => a.metrics.accuracy - b.metrics.accuracy,
       render: (value: number) => (
-        <span style={{ fontWeight: 500 }}>{(value * 100).toFixed(2)}%</span>
+        <span style={{ fontWeight: 500 }}>
+          {typeof value === "number" ? `${(value * 100).toFixed(2)}%` : "-"}
+        </span>
       ),
     },
     {
@@ -431,10 +336,12 @@ const ExperimentComparison: React.FC = () => {
         title: exp?.name || expId,
         key: expId,
         width: 150,
-        render: (record: ComparisonMetrics) => {
+      render: (record: ComparisonMetrics) => {
           const value = record.experiments[exp?.name || ""];
+          if (typeof value !== "number") {
+            return <span>-</span>;
+          }
           const isBest = record.best_experiment === exp?.name;
-          const isLowerBetter = record.metric === "Loss";
 
           return (
             <span
@@ -460,8 +367,10 @@ const ExperimentComparison: React.FC = () => {
 
   const getBestExperiment = () => {
     if (experiments.length === 0) return null;
+    const metric = (value: number | undefined) =>
+      typeof value === "number" ? value : 0;
     return experiments.reduce((prev, curr) =>
-      curr.metrics.accuracy > prev.metrics.accuracy ? curr : prev
+      metric(curr.metrics.accuracy) > metric(prev.metrics.accuracy) ? curr : prev
     );
   };
 
@@ -478,13 +387,13 @@ const ExperimentComparison: React.FC = () => {
         }
         extra={
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={fetchExperiments}>
+            <Button icon={<ReloadOutlined />} onClick={() => void fetchExperiments()}>
               Refresh
             </Button>
             <Button
               type="primary"
               icon={<BarChartOutlined />}
-              onClick={handleCompare}
+              onClick={() => void handleCompare()}
               loading={comparing}
               disabled={selectedExperiments.length < 2}
             >
@@ -492,14 +401,14 @@ const ExperimentComparison: React.FC = () => {
             </Button>
             <Button
               icon={<FileWordOutlined />}
-              onClick={() => handleGenerateReport("word")}
+              onClick={() => void handleGenerateReport("word")}
               disabled={selectedExperiments.length === 0}
             >
               Export Word
             </Button>
             <Button
               icon={<FilePdfOutlined />}
-              onClick={() => handleGenerateReport("pdf")}
+              onClick={() => void handleGenerateReport("pdf")}
               disabled={selectedExperiments.length === 0}
             >
               Export PDF

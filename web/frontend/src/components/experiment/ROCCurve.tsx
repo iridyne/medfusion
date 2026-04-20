@@ -15,6 +15,7 @@ import type {
   NameType,
   ValueType,
 } from "recharts/types/component/DefaultTooltipContent";
+import api from "../../api";
 
 interface ROCCurveProps {
   experimentIds: string[];
@@ -51,48 +52,29 @@ const ROCCurve: React.FC<ROCCurveProps> = ({ experimentIds }) => {
 
   useEffect(() => {
     if (experimentIds.length > 0) {
-      fetchROCData();
+      void fetchROCData();
       setSelectedExperiments(experimentIds.slice(0, 4)); // Show max 4 by default
+    } else {
+      setData([]);
+      setSelectedExperiments([]);
     }
   }, [experimentIds]);
 
   const fetchROCData = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockData: ROCData[] = experimentIds.map((id, index) => {
-        // Generate realistic ROC curve points
-        const points = [];
-        const numPoints = 50;
-
-        // Different AUC values for different experiments
-        const baseAUC = 0.85 + index * 0.05;
-
-        for (let i = 0; i <= numPoints; i++) {
-          const fpr = i / numPoints;
-          // Generate TPR with some randomness but maintaining AUC
-          let tpr = fpr + (baseAUC - 0.5) * 2 * (1 - fpr);
-          tpr = Math.min(1, Math.max(0, tpr + (Math.random() - 0.5) * 0.05));
-
-          points.push({
-            fpr: parseFloat(fpr.toFixed(3)),
-            tpr: parseFloat(tpr.toFixed(3)),
-            threshold: parseFloat((1 - i / numPoints).toFixed(3)),
-          });
-        }
-
-        return {
-          experimentId: id,
-          experimentName: `Experiment ${index + 1}`,
-          auc: parseFloat(baseAUC.toFixed(3)),
-          points,
-        };
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setData(mockData);
+      const responses = await Promise.all(
+        experimentIds.map(async (id) => {
+          const { data: response } = await api.get<ROCData>(
+            `/experiments/${id}/roc-curve`,
+          );
+          return response;
+        }),
+      );
+      setData(responses);
     } catch (error) {
       console.error("Failed to fetch ROC data:", error);
+      setData([]);
     } finally {
       setLoading(false);
     }

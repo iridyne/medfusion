@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, Spin, Empty, Tooltip } from "antd";
+import api from "../../api";
 
 interface ConfusionMatrixProps {
   experimentId: string;
@@ -16,28 +17,23 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({ experimentId }) => {
   const [data, setData] = useState<MatrixData | null>(null);
 
   useEffect(() => {
-    fetchConfusionMatrix();
+    void fetchConfusionMatrix();
   }, [experimentId]);
 
   const fetchConfusionMatrix = async () => {
+    if (!experimentId) {
+      setData(null);
+      return;
+    }
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockData: MatrixData = {
-        classes: ["Class 0", "Class 1", "Class 2", "Class 3"],
-        matrix: [
-          [145, 8, 3, 2],
-          [5, 132, 7, 4],
-          [2, 6, 128, 5],
-          [3, 4, 8, 138],
-        ],
-        total: 600,
-      };
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setData(mockData);
+      const { data: response } = await api.get<MatrixData>(
+        `/experiments/${experimentId}/confusion-matrix`,
+      );
+      setData(response);
     } catch (error) {
       console.error("Failed to fetch confusion matrix:", error);
+      setData(null);
     } finally {
       setLoading(false);
     }
