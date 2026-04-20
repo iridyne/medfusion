@@ -16,16 +16,18 @@
 
 - [x] Phase 3.3：新增统一 smoke 执行脚本 `scripts/release_smoke.py`（本机 + Docker）
 - [ ] Phase 3.1：安装/启动文档进一步统一到同一口径
+- [x] Phase 3.1：Windows 启动兼容性修复（GBK 控制台编码 + `/start` 路由回退）
 - [x] Phase 3.2：Web API 文档与实现字段首轮对齐（含结果可视化字段与 experimental 边界）
 - [ ] Phase 3.3：沉淀 Windows 与 Docker 两条路径的可复现执行证据（命令 + 结果记录）
 - [x] Phase 3.4：新增全平台安装/部署/卸载完整规划（Windows 优先）
-- [x] Phase 3.4：落地 Windows install/uninstall 脚本首版与双模式卸载（keep-data / purge-data）
-- [ ] Phase 3.4：补 Windows 安装实录（install -> start -> smoke -> uninstall）并沉淀证据
+- [x] Phase 3.4：安装策略收口为 Windows 手工命令路径（不推荐脚本安装）
+- [x] Phase 3.4：补 Windows 手工安装实录首轮证据（install -> start 可达）
+- [ ] Phase 3.4：补 Windows 完整实录（install -> start -> smoke -> uninstall）并沉淀证据
 - [ ] Phase 3.4（后置）：补 Linux 对等 install/uninstall 脚本并与 Windows 语义对齐
 - [ ] Phase 3.4（后置）：补 Docker 安装/卸载口径与 CI smoke 对齐
 
 ## 下一步建议（按最小可落地顺序）
 
-1. 先在 Windows 本机完成一次 `install -> start -> smoke -> uninstall` 实录并沉淀证据。
-2. 把 Windows install/uninstall 命令接入安装文档主入口。
+1. 先补 Windows 完整主链实录中的 `smoke + uninstall` 两段证据。
+2. 把 Windows 手工安装/卸载命令继续收口到安装文档单一入口。
 3. Linux 与 Docker 脚本放到后置里程碑，不阻塞当前 Windows 主线。

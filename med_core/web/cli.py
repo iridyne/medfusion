@@ -8,7 +8,6 @@ from pathlib import Path
 import click
 import uvicorn
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import settings
 from .static_assets import StaticAssetLocation, resolve_static_asset_location
@@ -46,28 +45,19 @@ def check_web_ui_exists() -> bool:
 
 def initialize_web_server() -> None:
     """初始化 Web 服务器"""
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        # 1. 初始化目录
-        task1 = progress.add_task("⏳ 初始化数据目录...", total=None)
-        settings.initialize_directories()
-        progress.update(task1, completed=True)
-        console.print("✅ 数据目录初始化完成")
+    console.print("初始化数据目录...")
+    settings.initialize_directories()
+    console.print("数据目录初始化完成")
 
-        # 2. 检查前端资源
-        task2 = progress.add_task("⏳ 检查前端资源...", total=None)
-        location = get_web_ui_location()
-        if location is None:
-            console.print("⚠️  前端资源未安装")
-            console.print("💡 首次运行时会自动下载前端资源（功能开发中）")
-            # TODO: 实现自动下载前端资源
-        else:
-            source_label = "内置资源" if location.source == "bundled" else "下载资源"
-            console.print(f"✅ 前端资源就绪（{source_label}）")
-        progress.update(task2, completed=True)
+    console.print("检查前端资源...")
+    location = get_web_ui_location()
+    if location is None:
+        console.print("前端资源未安装")
+        console.print("首次运行时会自动下载前端资源（功能开发中）")
+        # TODO: 实现自动下载前端资源
+    else:
+        source_label = "内置资源" if location.source == "bundled" else "下载资源"
+        console.print(f"前端资源就绪（{source_label}）")
 
 
 @click.group()
@@ -94,22 +84,22 @@ def start(host: str, port: int | None, auth: bool, token: str | None, no_browser
     if port is None:
         port = find_free_port()
         if port != 8000:
-            console.print(f"⚠️  端口 8000 已被占用，使用端口 {port}")
+            console.print(f"端口 8000 已被占用，使用端口 {port}")
 
     # 认证配置
     if auth:
         # TODO: 实现认证
-        console.print("🔒 认证已启用")
+        console.print("认证已启用")
         if token:
-            console.print(f"🔑 Token: {token}")
+            console.print(f"Token: {token}")
 
     # 警告
     if host != "127.0.0.1":
-        console.print(f"⚠️  监听所有网络接口 ({host})，建议启用认证: --auth")
+        console.print(f"监听所有网络接口 ({host})，建议启用认证: --auth")
 
     # 启动信息
-    console.print("\n✅ 启动成功！")
-    console.print(f"🌐 访问地址: [link]http://{host}:{port}[/link]")
+    console.print("\n启动成功")
+    console.print(f"访问地址: [link]http://{host}:{port}[/link]")
     console.print("按 Ctrl+C 停止服务器\n")
 
     # 自动打开浏览器
@@ -127,9 +117,9 @@ def start(host: str, port: int | None, auth: bool, token: str | None, no_browser
             log_level="info",
         )
     except KeyboardInterrupt:
-        console.print("\n👋 MedFusion Web UI 已停止")
+        console.print("\nMedFusion Web UI 已停止")
     except Exception as e:
-        console.print(f"\n❌ 启动失败: {e}")
+        console.print(f"\n启动失败: {e}")
         raise
 
 
@@ -145,10 +135,10 @@ def info() -> None:
     location = get_web_ui_location()
     if location is not None:
         source_label = "内置资源" if location.source == "bundled" else "下载资源"
-        console.print(f"前端资源: ✅ 已安装（{source_label}）")
+        console.print(f"前端资源: 已安装（{source_label}）")
         console.print(f"静态目录: {location.directory}")
     else:
-        console.print("前端资源: ❌ 未安装")
+        console.print("前端资源: 未安装")
 
 
 @click.group()
@@ -172,8 +162,8 @@ def data_info() -> None:
             pass
         return total / 1024**3
 
-    console.print(f"📁 数据目录: {data_dir}")
-    console.print(f"💾 总大小: {get_dir_size(data_dir):.2f} GB")
+    console.print(f"数据目录: {data_dir}")
+    console.print(f"总大小: {get_dir_size(data_dir):.2f} GB")
 
     # 子目录大小
     subdirs = ["models", "experiments", "datasets", "logs"]
@@ -190,12 +180,12 @@ def backup(output: str) -> None:
     """备份数据"""
     import shutil
 
-    console.print(f"⏳ 正在备份到 {output}...")
+    console.print(f"正在备份到 {output}...")
     try:
         shutil.make_archive(output, "gztar", settings.data_dir)
-        console.print(f"✅ 备份完成: {output}.tar.gz")
+        console.print(f"备份完成: {output}.tar.gz")
     except Exception as e:
-        console.print(f"❌ 备份失败: {e}")
+        console.print(f"备份失败: {e}")
 
 
 @data.command()
@@ -205,21 +195,21 @@ def clean(keep_models: bool) -> None:
     """清理旧数据"""
     import shutil
 
-    console.print("⏳ 正在清理数据...")
+    console.print("正在清理数据...")
 
     # 清理日志
     logs_dir = settings.data_dir / "logs"
     if logs_dir.exists():
         shutil.rmtree(logs_dir)
         logs_dir.mkdir()
-        console.print("✅ 日志已清理")
+        console.print("日志已清理")
 
     # 清理上传文件
     uploads_dir = settings.data_dir / "uploads"
     if uploads_dir.exists():
         shutil.rmtree(uploads_dir)
         uploads_dir.mkdir()
-        console.print("✅ 上传文件已清理")
+        console.print("上传文件已清理")
 
     # 清理模型（可选）
     if not keep_models:
@@ -227,6 +217,6 @@ def clean(keep_models: bool) -> None:
         if models_dir.exists():
             shutil.rmtree(models_dir)
             models_dir.mkdir()
-            console.print("✅ 模型文件已清理")
+            console.print("模型文件已清理")
 
-    console.print("✅ 清理完成")
+    console.print("清理完成")

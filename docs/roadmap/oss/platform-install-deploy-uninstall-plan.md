@@ -10,6 +10,7 @@
 ### 当前执行焦点（2026-04-20 起）
 
 - 只优先推进 Windows 安装与卸载闭环。
+- Windows 当前不采用“脚本安装”作为推荐路径，优先走手工命令流程的标准化与可复现。
 - Linux 与 Docker 的安装/卸载落地放到后续里程碑，不作为当前实现阻塞。
 
 ### P0（本轮发布阻塞项）
@@ -43,11 +44,12 @@
 
 ### 3.1 交付件
 
-- `scripts/install/windows/install-medfusion.ps1`
-- `scripts/uninstall/windows/uninstall-medfusion.ps1`
 - `docs/contents/getting-started/installation.md`（Windows 主入口）
 - `docs/contents/getting-started/web-ui.md`（Windows 启动与验证）
-- `scripts/release_smoke.py`（可调用 Windows 路径）
+- `docs/contents/playbooks/windows-manual-install-validation.md`（Windows 实录证据）
+- Windows 手工安装/卸载命令清单（可直接复制执行）
+- Windows 安装验证实录（命令 + 结果 + 时间）
+- `scripts/release_smoke.py`（用于 smoke 校验，不作为安装入口）
 
 ### 3.2 安装合同
 
@@ -106,10 +108,10 @@
 
 ## 6. 验收矩阵（发布前必须打勾）
 
-- [ ] Windows 安装脚本可重复执行（幂等）
-- [ ] Windows 卸载脚本支持 `--keep-data` / `--purge-data`
+- [ ] Windows 手工安装流程可重复执行
+- [ ] Windows 手工卸载流程覆盖保留数据与彻底清理两种模式
 - [ ] Windows 能跑通 `release_smoke.py --mode local`
-- [ ] 文档中安装、部署、卸载命令与脚本入口一致
+- [ ] 文档中安装、部署、卸载命令与当前推荐路径一致
 - [ ] CI 至少有一条 Windows smoke 任务
 
 后置阶段验收项：
@@ -123,7 +125,7 @@
 
 ### M1：Windows 闭环（发布阻塞）
 
-- 落地 Windows install/uninstall 脚本
+- 固化 Windows 手工安装/卸载命令路径
 - 补 Windows smoke 证据（命令 + 输出）
 
 ### M2：Linux 与 Docker 对齐
@@ -139,8 +141,8 @@
 ## 8. 风险与缓解
 
 - 风险：Windows 环境碎片化（PATH、权限、杀软）
-  - 缓解：脚本内置前置检查、失败分级提示、可重入执行
+  - 缓解：命令链前置检查 + 明确失败分级提示 + 可重入执行顺序
 - 风险：卸载误删用户训练结果
   - 缓解：默认 `--keep-data`，`--purge-data` 需要明确确认
 - 风险：文档与脚本漂移
-  - 缓解：所有文档只引用脚本入口，不维护多套手工命令版本
+  - 缓解：所有文档只引用同一组手工命令，不维护多套互相冲突的安装口径

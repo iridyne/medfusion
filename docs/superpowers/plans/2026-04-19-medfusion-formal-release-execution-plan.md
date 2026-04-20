@@ -184,17 +184,16 @@
 
 - 动作：
   - 定义 Windows 的发布级最小合同：`install -> start -> smoke -> uninstall`
+  - 当前 Windows 主线不采用脚本安装作为推荐路径，优先手工命令流程
   - 把 Linux / Docker 的对等合同放入后置里程碑，不阻塞当前 Windows 主线
   - 明确“卸载”不是删除程序文件就结束，而是要区分保留数据与彻底清理两种模式
-  - 将安装、部署、卸载步骤沉淀为脚本入口 + 文档入口 + smoke 验收入口三位一体
+  - 将安装、部署、卸载步骤沉淀为命令入口 + 文档入口 + smoke 验收入口三位一体
 - 主要文件：
   - `docs/roadmap/oss/platform-install-deploy-uninstall-plan.md`
   - `docs/contents/getting-started/installation.md`
   - `docs/contents/getting-started/web-ui.md`
   - `docs/contents/tutorials/deployment/docker.md`
   - `scripts/release_smoke.py`
-  - `scripts/install/*`（后续新增）
-  - `scripts/uninstall/*`（后续新增）
 - 验收：
   - 当前阶段：Windows 路径能稳定完成安装、启动、一次最小 smoke、可选保留数据卸载、彻底清理卸载
   - 后置阶段：Linux / Docker 再补同语义的可复现安装与卸载路径
@@ -236,3 +235,4 @@
 - [x] 下一步继续把结果详情与 artifact 展示口径同步到文档入口
 - [x] 下一步把高级模式的训练结果回流做成更强的结果详情与文档演示路径
 - [x] 下一步把全平台安装 / 部署 / 卸载（Windows 优先）纳入正式路线图并形成完整规划
+- [x] 下一步修复 Windows `medfusion start` 启动兼容问题（非 UTF-8 控制台 + SPA 路由回退）

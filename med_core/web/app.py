@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
 from .api import advanced_builder, datasets, models, system, training
@@ -24,6 +25,28 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+class SPAStaticFiles(StaticFiles):
+    """Serve SPA routes by falling back to index.html on non-file 404 paths."""
+
+    @staticmethod
+    def _should_fallback(path: str) -> bool:
+        normalized = path.strip("/")
+        if not normalized:
+            return True
+        if normalized.startswith("api/"):
+            return False
+        filename = Path(normalized).name
+        return "." not in filename
+
+    async def get_response(self, path: str, scope: dict[str, Any]) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404 or not self._should_fallback(path):
+                raise
+            return await super().get_response("index.html", scope)
 
 
 @asynccontextmanager
@@ -129,7 +152,7 @@ static_location = resolve_static_asset_location(
 if static_location is not None:
     app.mount(
         "/",
-        StaticFiles(directory=str(static_location.directory), html=True),
+        SPAStaticFiles(directory=str(static_location.directory), html=True),
         name="static",
     )
     logger.info(

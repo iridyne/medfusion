@@ -14,33 +14,39 @@
 
 ## 安装步骤
 
-### Windows（当前优先，推荐脚本入口）
+### Windows（当前优先，推荐手工命令安装）
 
 在仓库根目录执行：
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/install/windows/install-medfusion.ps1 -VerifyStart
+# 1) 安装依赖
+uv sync --extra dev --extra web
+
+# 2) 验证 CLI
+uv run medfusion --version
+
+# 3) 启动 Web（首次建议不自动开浏览器）
+uv run medfusion start --host 127.0.0.1 --port 8000 --no-browser
 ```
 
-如果你还要同时跑本机 release smoke：
+Windows 卸载（保留数据）：
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/install/windows/install-medfusion.ps1 -VerifyStart -RunSmoke
-```
-
-Windows 卸载（默认保留数据）：
-
-```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/uninstall/windows/uninstall-medfusion.ps1
+# 删除项目运行环境（保留 outputs 与用户数据）
+Remove-Item -LiteralPath .venv -Recurse -Force
 ```
 
 Windows 彻底清理卸载（删除数据）：
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/uninstall/windows/uninstall-medfusion.ps1 -PurgeData
+# 删除项目运行环境与本地产物
+Remove-Item -LiteralPath .venv, outputs, logs, checkpoints -Recurse -Force
+
+# 删除默认用户数据目录（如存在）
+Remove-Item -LiteralPath "$env:USERPROFILE\.medfusion" -Recurse -Force
 ```
 
-> 说明：当前路线图先推进 Windows 安装/卸载闭环；Linux 和 Docker 的安装脚本在后置阶段补齐。
+> 说明：当前路线图优先推进 Windows 主线，Linux 与 Docker 安装落地在后置阶段。
 
 ### 1. 克隆仓库
 
