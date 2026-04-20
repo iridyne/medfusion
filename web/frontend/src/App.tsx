@@ -29,6 +29,7 @@ const SystemMonitor = lazy(() => import("./pages/SystemMonitor"));
 const RunWizard = lazy(() => import("./pages/RunWizard"));
 const AdvancedBuilder = lazy(() => import("./pages/AdvancedBuilder"));
 const AdvancedBuilderCanvas = lazy(() => import("./pages/AdvancedBuilderCanvas"));
+const ComfyUIBridge = lazy(() => import("./pages/ComfyUIBridge"));
 
 function getDocumentTitle(pathname: string, translate: (key: string) => string) {
   if (pathname === "/quickstart-run") {
@@ -118,6 +119,7 @@ function App() {
             <Route path="/config" element={<RunWizard />} />
             <Route path="/config/advanced" element={<AdvancedBuilder />} />
             <Route path="/config/advanced/canvas" element={<AdvancedBuilderCanvas />} />
+            <Route path="/config/comfyui" element={<ComfyUIBridge />} />
             <Route path="/models" element={<ModelLibrary />} />
             <Route path="/system" element={<SystemMonitor />} />
             <Route

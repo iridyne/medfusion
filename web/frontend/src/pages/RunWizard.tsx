@@ -22,6 +22,7 @@ import {
   CopyOutlined,
   DownloadOutlined,
   ExperimentOutlined,
+  LinkOutlined,
   ReloadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
@@ -1098,6 +1099,9 @@ export default function RunWizard() {
           <Button onClick={() => navigate("/config/advanced")}>
             打开高级模式
           </Button>
+          <Button icon={<LinkOutlined />} onClick={() => navigate("/config/comfyui")}>
+            打开 ComfyUI 入口
+          </Button>
           <Button
             icon={<CopyOutlined />}
             onClick={() => void copyText(trainCommand, "训练命令已复制")}
@@ -1250,6 +1254,9 @@ export default function RunWizard() {
               </Text>
               <Button onClick={() => navigate("/config/advanced")}>
                 查看高级模式的组件注册表
+              </Button>
+              <Button onClick={() => navigate("/config/comfyui")}>
+                打开 ComfyUI 上线入口
               </Button>
             </Space>
           </Card>

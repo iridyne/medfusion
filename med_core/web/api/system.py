@@ -86,6 +86,17 @@ async def get_feature_status() -> dict[str, Any]:
                 "training_strategy",
             ],
         },
+        "comfyui_bridge": {
+            "route": "/config/comfyui",
+            "status": "preview",
+            "ui_exposed": True,
+            "default_entry": False,
+            "base_url": settings.comfyui_base_url,
+            "message": (
+                "ComfyUI bridge provides connectivity check and handoff guidance. "
+                "It does not replace MedFusion runtime as the execution source of truth."
+            ),
+        },
         "workflow": {
             "enabled": settings.enable_experimental_workflow,
             "status": (

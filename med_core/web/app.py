@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from .api import advanced_builder, datasets, models, system, training
+from .api import advanced_builder, comfyui, datasets, models, system, training
 from .config import settings
 from .database import close_db, init_db
 from .routers import experiments, workflow_router
@@ -139,6 +139,7 @@ app.include_router(training.router, prefix="/api/training", tags=["训练"])
 app.include_router(models.router, prefix="/api/models", tags=["模型"])
 app.include_router(datasets.router, prefix="/api/datasets", tags=["数据集"])
 app.include_router(advanced_builder.router, prefix="/api/advanced-builder", tags=["高级建模"])
+app.include_router(comfyui.router, prefix="/api/comfyui", tags=["ComfyUI"])
 app.include_router(experiments.router)
 app.include_router(workflow_router)
 

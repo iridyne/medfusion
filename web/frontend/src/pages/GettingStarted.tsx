@@ -5,6 +5,7 @@ import {
   ControlOutlined,
   ExperimentOutlined,
   FileSearchOutlined,
+  LinkOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
 
@@ -52,6 +53,13 @@ export default function GettingStarted() {
             onClick={() => navigate("/workbench")}
           >
             打开工作台总览
+          </Button>
+          <Button
+            size="large"
+            icon={<LinkOutlined />}
+            onClick={() => navigate("/config/comfyui")}
+          >
+            打开 ComfyUI 入口
           </Button>
         </>
       }

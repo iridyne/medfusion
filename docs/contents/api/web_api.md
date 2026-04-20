@@ -160,7 +160,16 @@ WebSocket 推送关键类型：
 - `start-training` 会先做图编译和 contract 校验，校验通过后直接创建真实训练任务。
 - `compile` 的 `issues[]` 采用结构化字段：`level`、`code`、`message`、`path`、`context`、`suggestion`，用于前端定位与修复提示。
 
-## 6. 实验态 API（experimental）
+## 6. ComfyUI 集成 API（preview）
+
+- `GET /api/comfyui/health`
+
+说明：
+
+- 用于探测 ComfyUI 服务连通性并返回最小上线提示（打开地址、推荐启动命令、回流提示）。
+- 支持查询参数 `base_url`（可选），用于覆盖默认探测地址。
+
+## 7. 实验态 API（experimental）
 
 ### Workflow（默认关闭）
 
@@ -173,7 +182,7 @@ WebSocket 推送关键类型：
 - 前缀：`/api/experiments/*`
 - 主要用于实验比较与报告演示，不是当前正式版主链阻塞项。
 
-## 7. 错误响应约定
+## 8. 错误响应约定
 
 常见错误响应体：
 

@@ -42,6 +42,8 @@ class Settings(BaseSettings):
 
     # 实验功能开关
     enable_experimental_workflow: bool = False
+    comfyui_base_url: str = "http://127.0.0.1:8188"
+    comfyui_probe_timeout_sec: float = 3.0
 
     # 文件上传配置
     max_upload_size: int = 500 * 1024 * 1024  # 500MB

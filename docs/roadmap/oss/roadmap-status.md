@@ -12,6 +12,7 @@
 - [x] Phase 2：高级模式图编译、contract 校验、真实训练任务创建与结果回流
 - [x] Phase 2：结果详情页补齐三期解释 artifact 摘要展示（phase importance / case explanations / heatmap manifest）
 - [x] Phase 2.2：高级模式编译问题结构化增强（`code/path/context/suggestion` + 画布定位）
+- [x] Phase 2.2：ComfyUI 上线入口最小落地（`/config/comfyui` + `/api/comfyui/health`）
 
 ## 进行中（最小发布补齐）
 

@@ -20,6 +20,7 @@
 - [公开数据集快速验证](contents/getting-started/public-datasets.md)
 - [任务手册（按目标执行）](contents/playbooks/README.md)
 - [高级模式结果回流演示路径](contents/playbooks/external-demo-path.md)
+- [前端易用性落地手册](contents/guides/development/frontend-usability-playbook.md)
 - [结果解读与交付检查](contents/playbooks/result-interpretation-checklist.md)
 - [FAQ 和故障排除](contents/guides/core/faq.md)
 
@@ -158,6 +159,7 @@ npm run docs:preview
 - 核心指南：
   - [Why MedFusion OSS（定位对比）](contents/guides/core/why-medfusion-oss.md)
   - [文档写作与一致性规范](contents/guides/development/docs-style-guide.md)
+  - [前端易用性落地手册](contents/guides/development/frontend-usability-playbook.md)
 
 - 参考：
   - [错误代码](contents/reference/error_codes.md)
