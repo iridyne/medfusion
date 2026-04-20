@@ -126,6 +126,24 @@ async def test_advanced_builder_compile_rejects_missing_required_links(api_clien
     assert any(issue["level"] == "error" for issue in payload["issues"])
 
 
+async def test_advanced_builder_compile_rejects_dangling_edges(api_client) -> None:
+    graph = _quickstart_graph()
+    graph["edges"].append({"source": "n-missing", "target": "n6"})
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_spec"] is None
+    assert payload["contract_validation"] is None
+    assert any(
+        "悬空连接" in issue["message"] for issue in payload["issues"]
+    )
+
+
 async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) -> None:
     from med_core.web.api import training as training_api
     captured_source_context: dict[str, object] = {}

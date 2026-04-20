@@ -24,7 +24,6 @@ from med_core.configs.base_config import (
 from med_core.configs.validation import ValidationError, validate_config
 from med_core.output_layout import RunOutputLayout, format_oss_display_path
 
-
 AdvancedBuilderFamily = Literal[
     "data_input",
     "vision_backbone",
@@ -975,9 +974,26 @@ def compile_graph_to_runspec(
 
     present_connections: set[tuple[AdvancedBuilderFamily, AdvancedBuilderFamily]] = set()
     for edge in edges:
-        source_family = family_by_node_id.get(str(edge.get("source") or ""))
-        target_family = family_by_node_id.get(str(edge.get("target") or ""))
+        source_node_id = str(edge.get("source") or "")
+        target_node_id = str(edge.get("target") or "")
+        source_family = family_by_node_id.get(source_node_id)
+        target_family = family_by_node_id.get(target_node_id)
         if not source_family or not target_family:
+            missing_endpoints: list[str] = []
+            if source_node_id not in family_by_node_id:
+                missing_endpoints.append(f"source={source_node_id or '<empty>'}")
+            if target_node_id not in family_by_node_id:
+                missing_endpoints.append(f"target={target_node_id or '<empty>'}")
+            if missing_endpoints:
+                issues.append(
+                    {
+                        "level": "error",
+                        "message": (
+                            "发现悬空连接，当前连接引用了不存在的节点："
+                            f"{', '.join(missing_endpoints)}。"
+                        ),
+                    }
+                )
             continue
         rule = rules.get((source_family, target_family))
         if rule is None:
