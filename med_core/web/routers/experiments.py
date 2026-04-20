@@ -621,6 +621,50 @@ def _parse_roc_points(raw_points: Any) -> list[ROCPoint]:
     return parsed
 
 
+def _build_comparison_payload(
+    selected: list[Experiment],
+) -> tuple[list[ComparisonMetric], dict[str, Any]]:
+    metrics: list[ComparisonMetric] = []
+    metric_names = ["accuracy", "precision", "recall", "f1_score", "auc", "loss"]
+
+    for metric_name in metric_names:
+        values: dict[str, float] = {}
+        for exp in selected:
+            value = getattr(exp.metrics, metric_name)
+            if value is not None:
+                values[exp.name] = value
+
+        if not values:
+            continue
+
+        is_lower_better = metric_name == "loss"
+        sorted_items = sorted(
+            values.items(), key=itemgetter(1), reverse=not is_lower_better,
+        )
+        best = sorted_items[0][0]
+        worst = sorted_items[-1][0]
+
+        metrics.append(
+            ComparisonMetric(
+                metric=metric_name.replace("_", " ").title(),
+                experiments=values,
+                best_experiment=best,
+                worst_experiment=worst,
+            ),
+        )
+
+    best_overall = max(selected, key=attrgetter("metrics.accuracy"))
+    summary = {
+        "best_experiment": best_overall.name,
+        "best_accuracy": best_overall.metrics.accuracy,
+        "avg_accuracy": sum(exp.metrics.accuracy for exp in selected)
+        / len(selected),
+        "avg_training_time": sum(exp.training_time for exp in selected)
+        / len(selected),
+    }
+    return metrics, summary
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -717,47 +761,7 @@ async def compare_experiments(
         if len(selected) != len(experiment_ids):
             raise HTTPException(status_code=404, detail="Some experiments not found")
 
-        # Build comparison metrics
-        metrics = []
-        metric_names = ["accuracy", "precision", "recall", "f1_score", "auc", "loss"]
-
-        for metric_name in metric_names:
-            values = {}
-            for exp in selected:
-                value = getattr(exp.metrics, metric_name)
-                if value is not None:
-                    values[exp.name] = value
-
-            if not values:
-                continue
-
-            # Find best and worst
-            is_lower_better = metric_name == "loss"
-            sorted_items = sorted(
-                values.items(), key=itemgetter(1), reverse=not is_lower_better,
-            )
-            best = sorted_items[0][0]
-            worst = sorted_items[-1][0]
-
-            metrics.append(
-                ComparisonMetric(
-                    metric=metric_name.replace("_", " ").title(),
-                    experiments=values,
-                    best_experiment=best,
-                    worst_experiment=worst,
-                ),
-            )
-
-        # Build summary
-        best_overall = max(selected, key=attrgetter("metrics.accuracy"))
-        summary = {
-            "best_experiment": best_overall.name,
-            "best_accuracy": best_overall.metrics.accuracy,
-            "avg_accuracy": sum(exp.metrics.accuracy for exp in selected)
-            / len(selected),
-            "avg_training_time": sum(exp.training_time for exp in selected)
-            / len(selected),
-        }
+        metrics, summary = _build_comparison_payload(selected)
 
         return ComparisonResponse(
             experiments=selected,
@@ -994,13 +998,12 @@ async def generate_report(
 
         # Prepare data for report generation
         experiments_data = [exp.model_dump() for exp in selected]
-
-        # Mock comparison data (in real implementation, compute from actual data)
+        metrics, summary = _build_comparison_payload(selected)
         comparison_data = {
-            "statistical_tests": {
-                "t_test": {"p_value": 0.032, "statistic": 2.45},
-                "wilcoxon": {"p_value": 0.028, "statistic": 15.0},
-            },
+            "summary": summary,
+            "metrics": [item.model_dump() for item in metrics],
+            # Keep tests empty unless there is a validated statistical routine.
+            "statistical_tests": {},
         }
 
         # Generate report using ReportGenerator

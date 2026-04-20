@@ -22,6 +22,7 @@ from med_core.web.config import settings
 from med_core.web.database import SessionLocal, init_db
 from med_core.web.models import Experiment as ExperimentRecord
 from med_core.web.models import ModelInfo
+from med_core.web.routers import experiments as experiments_router
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -44,12 +45,21 @@ def _create_model(
     name: str,
     tags: list[str] | None = None,
     artifact_paths: dict[str, str] | None = None,
+    metrics_override: dict[str, float] | None = None,
 ) -> int:
     db = SessionLocal()
     try:
         config: dict[str, object] | None = None
         if artifact_paths:
             config = {"artifact_paths": artifact_paths}
+        metrics = metrics_override or {
+            "accuracy": 0.88,
+            "precision": 0.84,
+            "recall": 0.82,
+            "f1_score": 0.83,
+            "auc_roc": 0.91,
+            "loss": 0.2,
+        }
 
         row = ModelInfo(
             name=name,
@@ -58,16 +68,9 @@ def _create_model(
             architecture="resnet18",
             checkpoint_path=f"/tmp/{name}.pth",
             config=config,
-            metrics={
-                "accuracy": 0.88,
-                "precision": 0.84,
-                "recall": 0.82,
-                "f1_score": 0.83,
-                "auc_roc": 0.91,
-                "loss": 0.2,
-            },
-            accuracy=0.88,
-            loss=0.2,
+            metrics=metrics,
+            accuracy=float(metrics.get("accuracy", 0.0)),
+            loss=float(metrics.get("loss", 0.0)),
             training_time=180.0,
             trained_epochs=5,
             tags=tags,
@@ -397,3 +400,76 @@ async def test_run_experiment_charts_use_experiment_artifact_paths_when_model_mi
         assert roc_payload["points"][1]["tpr"] == pytest.approx(0.9)
     finally:
         _delete_experiment_record(run_id)
+
+
+@pytest.mark.asyncio
+async def test_report_uses_real_comparison_data_without_mock_stats(api_client) -> None:
+    model_low = _create_model(
+        f"exp-api-report-low-{uuid.uuid4().hex[:8]}",
+        metrics_override={
+            "accuracy": 0.73,
+            "precision": 0.72,
+            "recall": 0.71,
+            "f1_score": 0.715,
+            "auc_roc": 0.79,
+            "loss": 0.39,
+        },
+    )
+    model_high = _create_model(
+        f"exp-api-report-high-{uuid.uuid4().hex[:8]}",
+        metrics_override={
+            "accuracy": 0.91,
+            "precision": 0.9,
+            "recall": 0.89,
+            "f1_score": 0.895,
+            "auc_roc": 0.95,
+            "loss": 0.17,
+        },
+    )
+
+    captured: dict[str, object] = {}
+
+    class _FakeReportGenerator:
+        def __init__(self, output_dir: Path) -> None:
+            self.output_dir = output_dir
+
+        def generate_word_report(
+            self,
+            experiments: list[dict[str, object]],
+            comparison_data: dict[str, object],
+            output_filename: str,
+        ) -> Path:
+            captured["experiments"] = experiments
+            captured["comparison_data"] = comparison_data
+            output_path = self.output_dir / output_filename
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("fake docx", encoding="utf-8")
+            return output_path
+
+    original = experiments_router.ReportGenerator
+    experiments_router.ReportGenerator = _FakeReportGenerator
+    try:
+        response = await api_client.post(
+            "/api/experiments/report",
+            json={
+                "experiment_ids": [f"model-{model_low}", f"model-{model_high}"],
+                "format": "word",
+                "include_charts": True,
+                "include_config": True,
+                "include_metrics": True,
+            },
+        )
+        assert response.status_code == 200
+
+        comparison_data = captured["comparison_data"]
+        assert isinstance(comparison_data, dict)
+        assert comparison_data["summary"]["best_accuracy"] == pytest.approx(0.91)
+        assert comparison_data["summary"]["best_experiment"].startswith(
+            "exp-api-report-high-"
+        )
+        assert comparison_data["statistical_tests"] == {}
+        assert len(comparison_data["metrics"]) >= 5
+    finally:
+        experiments_router.ReportGenerator = original
+        _delete_model(model_low)
+        _delete_model(model_high)
