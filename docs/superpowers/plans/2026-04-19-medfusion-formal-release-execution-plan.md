@@ -180,6 +180,25 @@
 - 验收：
   - 至少 Windows 和 Docker 各有一条可复现主链
 
+### Step 3.4 全平台安装 / 部署 / 卸载闭环（Windows 优先）
+
+- 动作：
+  - 定义 Windows 的发布级最小合同：`install -> start -> smoke -> uninstall`
+  - 固定 Linux / Docker 的对等合同，保证主链语义一致
+  - 明确“卸载”不是删除程序文件就结束，而是要区分保留数据与彻底清理两种模式
+  - 将安装、部署、卸载步骤沉淀为脚本入口 + 文档入口 + smoke 验收入口三位一体
+- 主要文件：
+  - `docs/roadmap/oss/platform-install-deploy-uninstall-plan.md`
+  - `docs/contents/getting-started/installation.md`
+  - `docs/contents/getting-started/web-ui.md`
+  - `docs/contents/tutorials/deployment/docker.md`
+  - `scripts/release_smoke.py`
+  - `scripts/install/*`（后续新增）
+  - `scripts/uninstall/*`（后续新增）
+- 验收：
+  - Windows 路径能稳定完成安装、启动、一次最小 smoke、可选保留数据卸载、彻底清理卸载
+  - Linux / Docker 至少各有一条同语义的可复现安装与卸载路径
+
 ## Phase 4：市场与演示包装
 
 ### Step 4.1 README 首屏收口
@@ -216,3 +235,4 @@
 - [x] 用前端测试把新叙事钉住
 - [x] 下一步继续把结果详情与 artifact 展示口径同步到文档入口
 - [x] 下一步把高级模式的训练结果回流做成更强的结果详情与文档演示路径
+- [x] 下一步把全平台安装 / 部署 / 卸载（Windows 优先）纳入正式路线图并形成完整规划
