@@ -183,6 +183,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 - `/config/advanced`：正式版高级模式的组件注册表与连接约束页，不作为默认首页，但用于承接后续节点式结构编辑
 - `/config/advanced/canvas`：高级模式节点图入口，当前允许在正式版组件边界内做结构编辑、编译检查，并在 contract 校验通过后直接创建真实训练任务
 - `/config/comfyui`：ComfyUI 集成入口（preview），提供连通性检查、快速打开和主链回流提示
+  - 入口方式：可直接从 `/start` 首页按钮进入，无需手动输入 URL
 
 当前进展：
 

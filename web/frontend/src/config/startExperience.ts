@@ -37,6 +37,13 @@ export const START_COMPONENTS: StartComponentItem[] = [
     route: "/workbench",
     accent: "blue",
   },
+  {
+    key: "comfyui-bridge",
+    title: "ComfyUI 集成入口",
+    description: "先检查 ComfyUI 连通性，再把 config/checkpoint 预填回流到结果后台导入弹窗。",
+    route: "/config/comfyui",
+    accent: "teal",
+  },
 ];
 
 export const START_PRIMARY_FLOW = [

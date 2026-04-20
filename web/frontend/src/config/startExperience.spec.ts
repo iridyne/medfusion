@@ -7,7 +7,12 @@ describe("start experience contract", () => {
     );
 
     expect(startExperience?.DEFAULT_START_ROUTE).toBe("/start");
-    expect(startExperience?.START_COMPONENTS).toHaveLength(4);
+    expect(startExperience?.START_COMPONENTS).toHaveLength(5);
+    expect(
+      startExperience?.START_COMPONENTS?.some(
+        (item) => item.route === "/config/comfyui",
+      ),
+    ).toBe(true);
     expect(startExperience?.START_PRIMARY_FLOW).toEqual([
       "组件介绍",
       "问题定义",

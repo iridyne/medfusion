@@ -14,9 +14,10 @@ describe("GettingStarted", () => {
 
     expect(markup).toContain("先理解正式版组件");
     expect(markup).toContain("开始问题向导");
-    expect(markup).toContain("四个正式版组件");
+    expect(markup).toContain("正式版组件与集成入口");
     expect(markup).toContain("问题向导");
     expect(markup).toContain("结果后台");
     expect(markup).toContain("高级模式");
+    expect(markup).toContain("ComfyUI 集成");
   });
 });

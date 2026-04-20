@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Tag } from "antd";
+import { Alert, Button, Card, Space, Tag } from "antd";
 import {
   ArrowRightOutlined,
   ControlOutlined,
@@ -105,13 +105,27 @@ export default function GettingStarted() {
         message="正式版当前边界"
         description="当前默认前台围绕 GUI 模型搭建主链展开：先介绍组件，再进入问题向导和骨架推荐；训练与结果仍然严格复用 runtime 主链，不承诺凭空组合出仓库里还不存在的新能力。"
       />
+      <Alert
+        type="success"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="ComfyUI 已有主页入口，不需要手动输入地址"
+        description={
+          <Space>
+            <span>可以直接从首页进入 ComfyUI 集成页，并把回流导入参数一键带到结果后台。</span>
+            <Button size="small" icon={<LinkOutlined />} onClick={() => navigate("/config/comfyui")}>
+              进入 ComfyUI 集成
+            </Button>
+          </Space>
+        }
+      />
 
       <div className="split-grid">
         <Card className="surface-card surface-card--accent">
           <div className="section-heading">
             <div>
               <div className="section-heading__eyebrow">Product shell</div>
-              <h2 className="section-heading__title">四个正式版组件</h2>
+              <h2 className="section-heading__title">正式版组件与集成入口</h2>
               <p className="section-heading__description">
                 入口页先把当前真正可用的组件讲清楚，避免用户误把实验页和历史页面当成默认主链。
               </p>
