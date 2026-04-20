@@ -982,7 +982,10 @@ def compile_graph_to_runspec(
                     code="ABG-E003",
                     path="nodes[].data.componentId",
                     message=f"当前图包含仅草稿组件：{component.label}。这些组件还不能编译进正式版主链。",
-                    context={"component_id": component.id},
+                    context={
+                        "component_id": component.id,
+                        "node_id": node_id or "<unknown>",
+                    },
                 )
             )
 
@@ -1041,8 +1044,8 @@ def compile_graph_to_runspec(
                             f"{', '.join(missing_endpoints)}。"
                         ),
                         context={
-                            "source": source_node_id or "<empty>",
-                            "target": target_node_id or "<empty>",
+                            "source_node_id": source_node_id or "<empty>",
+                            "target_node_id": target_node_id or "<empty>",
                         },
                     )
                 )
@@ -1058,6 +1061,8 @@ def compile_graph_to_runspec(
                     context={
                         "from_family": source_family,
                         "to_family": target_family,
+                        "source_node_id": source_node_id or "<empty>",
+                        "target_node_id": target_node_id or "<empty>",
                     },
                 )
             )
@@ -1072,6 +1077,8 @@ def compile_graph_to_runspec(
                     context={
                         "from_family": source_family,
                         "to_family": target_family,
+                        "source_node_id": source_node_id or "<empty>",
+                        "target_node_id": target_node_id or "<empty>",
                     },
                 )
             )

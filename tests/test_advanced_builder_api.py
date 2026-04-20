@@ -143,7 +143,34 @@ async def test_advanced_builder_compile_rejects_dangling_edges(api_client) -> No
     assert any(
         "悬空连接" in issue["message"] for issue in payload["issues"]
     )
-    assert any(issue.get("code") == "ABG-E006" for issue in payload["issues"])
+    dangling_issue = next(
+        issue for issue in payload["issues"] if issue.get("code") == "ABG-E006"
+    )
+    assert dangling_issue["path"] == "edges"
+    assert dangling_issue["context"]["source_node_id"] == "n-missing"
+    assert dangling_issue["context"]["target_node_id"] == "n6"
+
+
+async def test_advanced_builder_compile_emits_structured_draft_component_issue(
+    api_client,
+) -> None:
+    graph = _quickstart_graph()
+    graph["nodes"][0]["data"]["componentId"] = "three_phase_ct_dataset"
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_spec"] is None
+    draft_issue = next(
+        issue for issue in payload["issues"] if issue.get("code") == "ABG-E003"
+    )
+    assert draft_issue["path"] == "nodes[].data.componentId"
+    assert draft_issue["context"]["component_id"] == "three_phase_ct_dataset"
+    assert draft_issue["context"]["node_id"] == "n1"
 
 
 async def test_advanced_builder_can_start_training_job(monkeypatch, api_client) -> None:

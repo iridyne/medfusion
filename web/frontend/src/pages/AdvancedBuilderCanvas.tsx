@@ -45,6 +45,7 @@ import {
   ADVANCED_BUILDER_BLUEPRINTS,
   ADVANCED_BUILDER_FAMILY_LABELS,
   ADVANCED_BUILDER_STATUS_LABELS,
+  type AdvancedBuilderFamily,
 } from "@/config/advancedBuilderCatalog";
 import {
   buildBlueprintGraph,
@@ -83,6 +84,14 @@ function toConfigFileName(experimentName: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "advanced-builder-graph"}.yaml`;
+}
+
+function pickContextString(
+  issue: AdvancedBuilderCompileIssue,
+  key: string,
+): string | null {
+  const value = issue.context?.[key];
+  return typeof value === "string" ? value : null;
 }
 
 export default function AdvancedBuilderCanvas() {
@@ -155,6 +164,72 @@ export default function AdvancedBuilderCanvas() {
 
   const selectedNodes = nodes.filter((node) => node.selected);
   const selectedEdges = edges.filter((edge) => edge.selected);
+
+  const locateIssueOnCanvas = (issue: AdvancedBuilderCompileIssue) => {
+    const nodeIdSet = new Set<string>();
+    const sourceNodeId = pickContextString(issue, "source_node_id");
+    const targetNodeId = pickContextString(issue, "target_node_id");
+    const nodeId = pickContextString(issue, "node_id");
+    const fromFamily = pickContextString(issue, "from_family");
+    const toFamily = pickContextString(issue, "to_family");
+
+    if (nodeId && !nodeId.startsWith("<")) {
+      nodeIdSet.add(nodeId);
+    }
+    if (sourceNodeId && !sourceNodeId.startsWith("<")) {
+      nodeIdSet.add(sourceNodeId);
+    }
+    if (targetNodeId && !targetNodeId.startsWith("<")) {
+      nodeIdSet.add(targetNodeId);
+    }
+
+    const resolveNodeIdByFamily = (family: string | null): string | null => {
+      if (!family) {
+        return null;
+      }
+      const matched = nodes.find(
+        (item) => item.data.family === (family as AdvancedBuilderFamily),
+      );
+      return matched?.id || null;
+    };
+
+    const fromFamilyNodeId = resolveNodeIdByFamily(fromFamily);
+    const toFamilyNodeId = resolveNodeIdByFamily(toFamily);
+    if (fromFamilyNodeId) {
+      nodeIdSet.add(fromFamilyNodeId);
+    }
+    if (toFamilyNodeId) {
+      nodeIdSet.add(toFamilyNodeId);
+    }
+
+    const resolvedSource = sourceNodeId || fromFamilyNodeId;
+    const resolvedTarget = targetNodeId || toFamilyNodeId;
+    const matchedEdgeId =
+      resolvedSource && resolvedTarget
+        ? edges.find(
+            (edge) =>
+              edge.source === resolvedSource && edge.target === resolvedTarget,
+          )?.id || null
+        : null;
+
+    if (!nodeIdSet.size && !matchedEdgeId) {
+      message.info("该问题当前没有可定位的节点或连线");
+      return;
+    }
+
+    setNodes((current) =>
+      current.map((node) => ({
+        ...node,
+        selected: nodeIdSet.has(node.id),
+      })),
+    );
+    setEdges((current) =>
+      current.map((edge) => ({
+        ...edge,
+        selected: matchedEdgeId ? edge.id === matchedEdgeId : false,
+      })),
+    );
+  };
 
   const loadBlueprint = (blueprintId: string) => {
     const graph = buildBlueprintGraph(blueprintId);
@@ -560,6 +635,16 @@ export default function AdvancedBuilderCanvas() {
                     description={[issue.code, issue.path]
                       .filter(Boolean)
                       .join(" · ") || undefined}
+                    action={
+                      issue.context ? (
+                        <Button
+                          size="small"
+                          onClick={() => locateIssueOnCanvas(issue)}
+                        >
+                          定位到画布
+                        </Button>
+                      ) : undefined
+                    }
                   />
                 ))
               ) : (
