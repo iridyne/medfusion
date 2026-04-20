@@ -1,277 +1,195 @@
 # Web API Reference
 
-MedFusion provides a RESTful API and WebSocket interface for training management, model operations, and system monitoring.
+> 文档状态：**Beta**
+>
+> 这页只记录当前仓库里真实存在、且与正式版主链直接相关的 API。
 
 ## Base URL
 
-```
-http://localhost:8000
-```
-
-## Authentication
-
-Currently, the API does not require authentication. This may change in future versions.
-
-## Training API
-
-### Start Training Job
-
-**POST** `/api/training/start`
-
-Start a new training job with the specified configuration.
-
-**Request Body:**
-```json
-{
-  "config": {
-    "data": {
-      "train_csv": "data/train.csv",
-      "val_csv": "data/val.csv"
-    },
-    "model": {
-      "vision_backbone": "resnet50",
-      "fusion_type": "attention"
-    },
-    "training": {
-      "epochs": 50,
-      "batch_size": 32
-    }
-  },
-  "job_name": "experiment_001"
-}
+```text
+http://127.0.0.1:8000
 ```
 
-**Response:**
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "started",
-  "message": "Training job started successfully"
-}
-```
+## 0. 健康检查
 
-### Get Training Status
+- `GET /health`
 
-**GET** `/api/training/{job_id}/status`
+示例响应：
 
-Get the current status of a training job.
-
-**Response:**
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "running",
-  "epoch": 15,
-  "total_epochs": 50,
-  "metrics": {
-    "train_loss": 0.234,
-    "val_loss": 0.267,
-    "val_accuracy": 0.892
-  }
-}
-```
-
-### Stop Training Job
-
-**POST** `/api/training/{job_id}/stop`
-
-Stop a running training job.
-
-**Response:**
-```json
-{
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "stopped",
-  "message": "Training job stopped successfully"
-}
-```
-
-## Model API
-
-### List Models
-
-**GET** `/api/models`
-
-List all registered models and checkpoints.
-
-**Response:**
-```json
-{
-  "models": [
-    {
-      "model_id": "resnet50_attention_001",
-      "architecture": "resnet50",
-      "fusion_type": "attention",
-      "created_at": "2026-03-15T10:30:00Z",
-      "metrics": {
-        "val_accuracy": 0.892,
-        "val_auc": 0.945
-      }
-    }
-  ]
-}
-```
-
-### Evaluate Model
-
-**POST** `/api/models/{model_id}/evaluate`
-
-Evaluate a model on a specified dataset.
-
-**Request Body:**
-```json
-{
-  "checkpoint_path": "outputs/checkpoints/best.pth",
-  "test_csv": "data/test.csv",
-  "split": "test"
-}
-```
-
-**Response:**
-```json
-{
-  "model_id": "resnet50_attention_001",
-  "metrics": {
-    "accuracy": 0.887,
-    "auc": 0.941,
-    "f1_score": 0.865
-  },
-  "report_path": "outputs/reports/evaluation_report.html"
-}
-```
-
-## Dataset API
-
-### List Datasets
-
-**GET** `/api/datasets`
-
-List all available datasets.
-
-**Status:** ⚠️ TODO - Not yet implemented
-
-## System API
-
-### Get System Info
-
-**GET** `/api/system/info`
-
-Get system information including GPU availability and disk usage.
-
-**Response:**
-```json
-{
-  "gpu": {
-    "available": true,
-    "count": 2,
-    "devices": [
-      {
-        "id": 0,
-        "name": "NVIDIA RTX 3090",
-        "memory_total": "24GB",
-        "memory_used": "8GB"
-      }
-    ]
-  },
-  "disk": {
-    "total": "1TB",
-    "used": "450GB",
-    "free": "550GB"
-  },
-  "python_version": "3.11.5",
-  "pytorch_version": "2.1.0"
-}
-```
-
-### Health Check
-
-**GET** `/api/system/health`
-
-Check if the API server is running.
-
-**Response:**
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-03-15T10:30:00Z"
+  "version": "0.3.0",
+  "data_dir": "C:/Users/Administrator/.medfusion"
 }
 ```
 
-## WebSocket API
+## 1. 系统 API（稳定）
 
-### Training Progress Stream
+- `GET /api/system/features`
+- `GET /api/system/info`
+- `GET /api/system/version`
+- `GET /api/system/resources`
+- `GET /api/system/storage`
 
-**WebSocket** `ws://localhost:8000/ws/training/{job_id}`
+其中 `GET /api/system/features` 是正式版边界总入口，包含：
 
-Connect to receive real-time training progress updates.
+- 稳定主链页面
+- 部署形态口径（local_browser / private_server / managed_cloud）
+- 高级模式（preview）说明
+- workflow 实验态开关状态（`MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW`）
 
-**Message Format:**
+## 2. 训练 API（稳定）
+
+- `POST /api/training/start`
+- `GET /api/training/jobs`
+- `GET /api/training/{job_id}/status`
+- `GET /api/training/{job_id}/history`
+- `POST /api/training/{job_id}/pause`
+- `POST /api/training/{job_id}/resume`
+- `POST /api/training/{job_id}/stop`
+- `WS /api/training/ws/{job_id}`
+
+`POST /api/training/start` 请求体（核心字段）：
+
 ```json
 {
-  "type": "progress",
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "epoch": 15,
-  "batch": 120,
-  "total_batches": 200,
-  "metrics": {
-    "loss": 0.234,
-    "accuracy": 0.892
+  "experiment_name": "my-run",
+  "training_model_config": {
+    "backbone": "resnet18",
+    "num_classes": 2
+  },
+  "dataset_config": {
+    "dataset_id": "1",
+    "data_path": "data/public/medmnist/breastmnist-demo"
+  },
+  "training_config": {
+    "epochs": 1,
+    "batch_size": 16,
+    "learning_rate": 0.001
   }
 }
 ```
 
-**Event Types:**
-- `progress` - Training progress update
-- `epoch_end` - Epoch completed
-- `validation` - Validation metrics
-- `completed` - Training completed
-- `error` - Error occurred
-
-## Error Responses
-
-All endpoints return standard error responses:
+响应示例：
 
 ```json
 {
-  "error": "Error message",
-  "code": "ERROR_CODE",
-  "details": "Additional error details"
+  "job_id": "6e6a46f8-9ed5-4f46-a2c1-6d2c2f11f2b5",
+  "status": "running",
+  "message": "训练任务已启动"
 }
 ```
 
-**Common HTTP Status Codes:**
-- `200` - Success
-- `400` - Bad Request
-- `404` - Not Found
-- `500` - Internal Server Error
+WebSocket 推送关键类型：
 
-## Rate Limiting
+- `status_update`
+- `training_complete`
+- `error`
 
-Currently, no rate limiting is enforced. This may change in production deployments.
+## 3. 模型库 API（稳定）
 
-## Examples
+- `GET /api/models/`
+- `GET /api/models/search`
+- `GET /api/models/statistics`
+- `GET /api/models/backbones`
+- `GET /api/models/formats`
+- `GET /api/models/{model_id}`
+- `POST /api/models/`
+- `PUT /api/models/{model_id}`
+- `DELETE /api/models/{model_id}`
+- `POST /api/models/{model_id}/upload`
+- `GET /api/models/{model_id}/download`
+- `GET /api/models/{model_id}/artifacts/{artifact_key}`
+- `POST /api/models/import-run`
 
-### Start Training with cURL
+`GET /api/models/{model_id}` 返回的核心结构：
 
-```bash
-curl -X POST http://localhost:8000/api/training/start \
-  -H "Content-Type: application/json" \
-  -d @config.json
+- 基础信息：`id/name/architecture/accuracy/loss/...`
+- `result_files`：可下载产物索引（含 `artifact_key` 和下载 URL）
+- `training_history`
+- `validation`
+- `visualizations`
+
+`visualizations` 当前已对齐到结果页展示能力，包含但不限于：
+
+- `roc_curve`
+- `confusion_matrix`
+- `attention_maps`
+- `feature_importance_bar`
+- `feature_importance_beeswarm`
+- `phase_importance`
+- `case_explanations`
+- `three_phase_heatmaps`
+
+`three_phase_heatmaps` 示例：
+
+```json
+{
+  "method": "gradcam",
+  "phase_labels": ["arterial", "portal", "noncontrast"],
+  "artifact_key": "heatmap_manifest",
+  "artifact_url": "/api/models/12/artifacts/heatmap_manifest",
+  "case_count": 8,
+  "heatmap_count": 24,
+  "cases": []
+}
 ```
 
-### Monitor Training with WebSocket (Python)
+## 4. 数据集 API（稳定）
 
-```python
-import asyncio
-import websockets
-import json
+- `GET /api/datasets/`
+- `GET /api/datasets/search`
+- `GET /api/datasets/statistics`
+- `GET /api/datasets/class-counts`
+- `GET /api/datasets/{dataset_id}`
+- `POST /api/datasets/`
+- `PUT /api/datasets/{dataset_id}`
+- `DELETE /api/datasets/{dataset_id}`
+- `POST /api/datasets/{dataset_id}/analyze`
 
-async def monitor_training(job_id):
-    uri = f"ws://localhost:8000/ws/training/{job_id}"
-    async with websockets.connect(uri) as websocket:
-        async for message in websocket:
-            data = json.loads(message)
-            print(f"Epoch {data['epoch']}: Loss={data['metrics']['loss']:.4f}")
+## 5. 高级模式 API（preview，正式版可见）
 
-asyncio.run(monitor_training("550e8400-e29b-41d4-a716-446655440000"))
+- `GET /api/advanced-builder/catalog`
+- `POST /api/advanced-builder/compile`
+- `POST /api/advanced-builder/start-training`
+
+说明：
+
+- 这是正式版高级模式预览能力，不是默认入口。
+- `start-training` 会先做图编译和 contract 校验，校验通过后直接创建真实训练任务。
+
+## 6. 实验态 API（experimental）
+
+### Workflow（默认关闭）
+
+- 前缀：`/api/workflows/*`
+- 开关：`MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW=true`
+- 默认行为：返回 `workflow_experimental_disabled`
+
+### Experiments（当前为示例/演示口径）
+
+- 前缀：`/api/experiments/*`
+- 主要用于实验比较与报告演示，不是当前正式版主链阻塞项。
+
+## 7. 错误响应约定
+
+常见错误响应体：
+
+```json
+{
+  "detail": "错误描述"
+}
+```
+
+`workflow` 关闭时示例：
+
+```json
+{
+  "detail": {
+    "code": "workflow_experimental_disabled",
+    "message": "Workflow editor is experimental and disabled by default in the current MVP.",
+    "enable_env": "MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW=true"
+  }
+}
 ```

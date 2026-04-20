@@ -16,7 +16,7 @@
 
 - [x] Phase 3.3：新增统一 smoke 执行脚本 `scripts/release_smoke.py`（本机 + Docker）
 - [ ] Phase 3.1：安装/启动文档进一步统一到同一口径
-- [ ] Phase 3.2：Web API 文档与实现字段继续对齐（含结果可视化字段）
+- [x] Phase 3.2：Web API 文档与实现字段首轮对齐（含结果可视化字段与 experimental 边界）
 - [ ] Phase 3.3：沉淀 Windows 与 Docker 两条路径的可复现执行证据（命令 + 结果记录）
 
 ## 下一步建议（按最小可落地顺序）
