@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import tempfile
 import uuid
 from datetime import datetime
@@ -95,8 +96,8 @@ async def test_pause_and_resume_training_api(monkeypatch, api_client) -> None:
     assert resumed_job.status == "running"
 
     assert signals == [
-        (job_id, 19),  # SIGSTOP
-        (job_id, 18),  # SIGCONT
+        (job_id, int(signal.SIGSTOP)),
+        (job_id, int(signal.SIGCONT)),
     ]
 
 
@@ -121,8 +122,8 @@ async def test_stop_training_api_sets_completion_time(monkeypatch, api_client) -
     assert stopped_job.status == "stopped"
     assert isinstance(stopped_job.completed_at, datetime)
     assert signals == [
-        (job_id, 18),  # SIGCONT
-        (job_id, 15),  # SIGTERM
+        (job_id, int(signal.SIGCONT)),
+        (job_id, int(signal.SIGTERM)),
     ]
 
 

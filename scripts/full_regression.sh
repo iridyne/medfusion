@@ -192,6 +192,7 @@ uv() {
 
 print_ci_pytest_notice() {
   echo
+  echo "pytest 已迁移到 GitHub Actions CI"
   echo "pytest now runs in GitHub Actions CI: .github/workflows/ci.yml"
   echo "Inspect recent failed logs with: bash scripts/inspect_ci_failure.sh"
 }
