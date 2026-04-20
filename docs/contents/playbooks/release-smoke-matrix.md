@@ -58,6 +58,24 @@
 
 ## 当前推荐验证顺序
 
+### 0. 统一执行入口（推荐）
+
+优先使用仓库内统一脚本，减少手工遗漏：
+
+```bash
+# 本机浏览器模式 + YAML 主链
+uv run python scripts/release_smoke.py --mode local
+
+# Docker 私有部署模式
+uv run python scripts/release_smoke.py --mode docker
+```
+
+如果你需要一次跑完两条路径：
+
+```bash
+uv run python scripts/release_smoke.py --mode all
+```
+
 ### 1. 本机浏览器模式
 
 目标：验证“正式版默认主链”。
@@ -116,13 +134,22 @@ bash test/smoke.sh
 
 ## 当前仓库里已经存在的 smoke 入口
 
+### Release smoke（统一入口）
+
+```bash
+uv run python scripts/release_smoke.py --mode local
+uv run python scripts/release_smoke.py --mode docker
+```
+
+它会把本机 Web 启动检查和主链 smoke 串起来，并补上 Docker 形态的最小可运行检查。
+
 ### Shell smoke
 
 ```bash
 bash test/smoke.sh
 ```
 
-这条脚本当前已经固定为官方 smoke 入口。
+这条脚本继续作为 YAML 主链 smoke 的底层入口（`prepare -> validate-config -> train -> build-results`）。
 
 ### Web/API 最小闭环测试
 

@@ -57,6 +57,12 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 5. 继续到训练监控页启动一次带默认参数的推荐训练
 6. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
 
+如果你是发布前自检，建议直接跑统一脚本：
+
+```bash
+uv run python scripts/release_smoke.py --mode local
+```
+
 ### Web 入口与 YAML 主链的关系
 
 这里需要把边界说清楚：
