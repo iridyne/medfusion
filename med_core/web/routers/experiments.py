@@ -3,6 +3,7 @@ Experiments Router - API endpoints for experiment comparison and reporting
 """
 
 import logging
+import json
 from datetime import datetime
 from operator import attrgetter, itemgetter
 from pathlib import Path
@@ -478,6 +479,108 @@ def _resolve_experiments(db: Session) -> list[Experiment]:
     return get_mock_experiments()
 
 
+def _load_json_payload(path: str | None) -> dict[str, Any] | list[Any] | None:
+    if not path:
+        return None
+    payload_path = Path(path)
+    if not payload_path.exists():
+        return None
+    try:
+        return json.loads(payload_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        logger.warning("Invalid JSON payload at %s", payload_path)
+        return None
+
+
+def _artifact_paths_from_model(model: ModelInfo | None) -> dict[str, Any]:
+    if model is None or not isinstance(model.config, dict):
+        return {}
+    artifact_paths = model.config.get("artifact_paths")
+    return artifact_paths if isinstance(artifact_paths, dict) else {}
+
+
+def _resolve_model_for_experiment_id(
+    db: Session,
+    experiment_id: str,
+) -> ModelInfo | None:
+    numeric_id = _parse_numeric_experiment_id(experiment_id)
+
+    if experiment_id.startswith("model-") and numeric_id is not None:
+        return db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+
+    if experiment_id.startswith("run-") and numeric_id is not None:
+        record = (
+            db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+        )
+        if record is not None and record.checkpoint_path:
+            matched = (
+                db.query(ModelInfo)
+                .filter(ModelInfo.checkpoint_path == record.checkpoint_path)
+                .order_by(ModelInfo.id.desc())
+                .first()
+            )
+            if matched is not None:
+                return matched
+        return None
+
+    if numeric_id is not None:
+        return db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+
+    return None
+
+
+def _parse_history_entries(payload: dict[str, Any] | list[Any] | None) -> list[dict[str, Any]]:
+    if payload is None:
+        return []
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    entries = payload.get("entries")
+    if isinstance(entries, list):
+        return [item for item in entries if isinstance(item, dict)]
+    return []
+
+
+def _parse_roc_points(raw_points: Any) -> list[ROCPoint]:
+    if not isinstance(raw_points, list):
+        return []
+
+    parsed: list[ROCPoint] = []
+    for index, point in enumerate(raw_points):
+        if isinstance(point, dict):
+            fpr = point.get("fpr")
+            tpr = point.get("tpr")
+            threshold = point.get("threshold")
+        elif (
+            isinstance(point, list) or isinstance(point, tuple)
+        ) and len(point) >= 2:
+            fpr = point[0]
+            tpr = point[1]
+            threshold = point[2] if len(point) >= 3 else (1.0 - float(fpr))
+        else:
+            continue
+
+        try:
+            fpr_value = float(fpr)
+            tpr_value = float(tpr)
+            threshold_value = float(threshold) if threshold is not None else 1.0 - fpr_value
+        except (TypeError, ValueError):
+            continue
+
+        parsed.append(
+            ROCPoint(
+                fpr=round(fpr_value, 3),
+                tpr=round(tpr_value, 3),
+                threshold=round(threshold_value, 3),
+            )
+        )
+
+        # Prevent runaway payloads; frontend chart does not need huge point counts.
+        if index >= 2048:
+            break
+
+    return parsed
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -644,31 +747,57 @@ async def get_metrics_history(
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
-        # Generate mock training history
-        history = []
-        epochs = experiment.config.epochs
-        final_loss = experiment.metrics.loss
-        final_acc = experiment.metrics.accuracy
+        history: list[TrainingHistory] = []
+        model = _resolve_model_for_experiment_id(db, experiment_id)
+        artifact_paths = _artifact_paths_from_model(model)
+        history_payload = _load_json_payload(artifact_paths.get("history_path"))
+        entries = _parse_history_entries(history_payload)
 
-        for epoch in range(1, epochs + 1):
-            progress = epoch / epochs
-            # Simulate learning curve
-            train_loss = final_loss + (1.0 - final_loss) * (1 - progress) ** 2
-            val_loss = final_loss + (1.2 - final_loss) * (1 - progress) ** 2
-            train_acc = final_acc * (0.5 + 0.5 * progress)
-            val_acc = final_acc * (0.4 + 0.6 * progress)
-            lr = experiment.config.learning_rate * (0.1 ** (epoch // 20))
+        if entries:
+            for index, entry in enumerate(entries):
+                epoch_value = entry.get("epoch")
+                try:
+                    epoch = int(epoch_value) if epoch_value is not None else index + 1
+                except (TypeError, ValueError):
+                    epoch = index + 1
 
-            history.append(
-                TrainingHistory(
-                    epoch=epoch,
-                    train_loss=round(train_loss, 4),
-                    val_loss=round(val_loss, 4),
-                    train_accuracy=round(train_acc, 4),
-                    val_accuracy=round(val_acc, 4),
-                    learning_rate=lr,
-                ),
-            )
+                history.append(
+                    TrainingHistory(
+                        epoch=epoch,
+                        train_loss=round(_safe_float(entry.get("train_loss")), 4),
+                        val_loss=round(_safe_float(entry.get("val_loss")), 4),
+                        train_accuracy=round(_safe_float(entry.get("train_accuracy")), 4),
+                        val_accuracy=round(_safe_float(entry.get("val_accuracy")), 4),
+                        learning_rate=_safe_float(
+                            entry.get("learning_rate", experiment.config.learning_rate),
+                            default=experiment.config.learning_rate,
+                        ),
+                    )
+                )
+        else:
+            # Fallback synthetic curve only when no real history artifact is available.
+            epochs = experiment.config.epochs
+            final_loss = experiment.metrics.loss
+            final_acc = experiment.metrics.accuracy
+
+            for epoch in range(1, epochs + 1):
+                progress = epoch / epochs
+                train_loss = final_loss + (1.0 - final_loss) * (1 - progress) ** 2
+                val_loss = final_loss + (1.2 - final_loss) * (1 - progress) ** 2
+                train_acc = final_acc * (0.5 + 0.5 * progress)
+                val_acc = final_acc * (0.4 + 0.6 * progress)
+                lr = experiment.config.learning_rate * (0.1 ** (epoch // 20))
+
+                history.append(
+                    TrainingHistory(
+                        epoch=epoch,
+                        train_loss=round(train_loss, 4),
+                        val_loss=round(val_loss, 4),
+                        train_accuracy=round(train_acc, 4),
+                        val_accuracy=round(val_acc, 4),
+                        learning_rate=lr,
+                    ),
+                )
 
         return MetricsHistoryResponse(
             experiment_id=experiment.id,
@@ -698,18 +827,47 @@ async def get_confusion_matrix(
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
-        # Generate mock confusion matrix
-        classes = ["Class 0", "Class 1", "Class 2", "Class 3"]
-        accuracy = experiment.metrics.accuracy
+        model = _resolve_model_for_experiment_id(db, experiment_id)
+        artifact_paths = _artifact_paths_from_model(model)
+        confusion_payload = _load_json_payload(
+            artifact_paths.get("confusion_matrix_json_path")
+        )
+        classes: list[str] | None = None
+        matrix: list[list[int]] | None = None
 
-        # Generate realistic confusion matrix based on accuracy
-        matrix = [
-            [
-                int(150 * accuracy) if i == j else int(150 * (1 - accuracy) / (len(classes) - 1))
-                for j in range(len(classes))
+        if isinstance(confusion_payload, dict):
+            raw_labels = confusion_payload.get("labels") or confusion_payload.get("classes")
+            raw_matrix = confusion_payload.get("matrix")
+            if isinstance(raw_labels, list) and isinstance(raw_matrix, list):
+                parsed_matrix: list[list[int]] = []
+                for row in raw_matrix:
+                    if not isinstance(row, list):
+                        continue
+                    parsed_row: list[int] = []
+                    for cell in row:
+                        try:
+                            parsed_row.append(int(cell))
+                        except (TypeError, ValueError):
+                            parsed_row.append(0)
+                    parsed_matrix.append(parsed_row)
+
+                if parsed_matrix and all(len(row) == len(parsed_matrix[0]) for row in parsed_matrix):
+                    classes = [str(item) for item in raw_labels]
+                    matrix = parsed_matrix
+
+        if classes is None or matrix is None:
+            classes = ["Class 0", "Class 1", "Class 2", "Class 3"]
+            accuracy = experiment.metrics.accuracy
+            matrix = [
+                [
+                    int(150 * accuracy)
+                    if i == j
+                    else int(150 * (1 - accuracy) / (len(classes) - 1))
+                    for j in range(len(classes))
+                ]
+                for i in range(len(classes))
             ]
-            for i in range(len(classes))
-        ]
+
         total = sum(sum(row) for row in matrix)
 
         return ConfusionMatrixData(
@@ -740,25 +898,31 @@ async def get_roc_curve(
         if not experiment:
             raise HTTPException(status_code=404, detail="Experiment not found")
 
+        model = _resolve_model_for_experiment_id(db, experiment_id)
+        artifact_paths = _artifact_paths_from_model(model)
+        roc_payload = _load_json_payload(artifact_paths.get("roc_curve_json_path"))
+
         auc = experiment.metrics.auc or 0.85
+        points: list[ROCPoint] = []
+        if isinstance(roc_payload, dict):
+            auc_value = roc_payload.get("auc", roc_payload.get("auc_roc"))
+            if auc_value is not None:
+                auc = _safe_float(auc_value, default=auc)
+            points = _parse_roc_points(roc_payload.get("points"))
 
-        # Generate ROC curve points
-        points = []
-        num_points = 50
-
-        for i in range(num_points + 1):
-            fpr = i / num_points
-            # Generate TPR based on AUC
-            tpr = min(1.0, fpr + (auc - 0.5) * 2 * (1 - fpr))
-            threshold = 1.0 - i / num_points
-
-            points.append(
-                ROCPoint(
-                    fpr=round(fpr, 3),
-                    tpr=round(tpr, 3),
-                    threshold=round(threshold, 3),
-                ),
-            )
+        if not points:
+            num_points = 50
+            for i in range(num_points + 1):
+                fpr = i / num_points
+                tpr = min(1.0, fpr + (auc - 0.5) * 2 * (1 - fpr))
+                threshold = 1.0 - i / num_points
+                points.append(
+                    ROCPoint(
+                        fpr=round(fpr, 3),
+                        tpr=round(tpr, 3),
+                        threshold=round(threshold, 3),
+                    ),
+                )
 
         return ROCCurveData(
             experiment_id=experiment.id,
