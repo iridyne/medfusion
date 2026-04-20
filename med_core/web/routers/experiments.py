@@ -9,11 +9,16 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from med_core.web.report_generator import ReportGenerator
+
+from ..database import get_db_session
+from ..models import Experiment as ExperimentRecord
+from ..models import ModelInfo
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +276,208 @@ def get_mock_experiments() -> list[Experiment]:
     ]
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _extract_status(raw_status: str | None) -> str:
+    status = (raw_status or "").lower()
+    status_map = {
+        "created": "pending",
+        "queued": "pending",
+        "running": "running",
+        "paused": "running",
+        "completed": "completed",
+        "failed": "failed",
+        "stopped": "failed",
+    }
+    return status_map.get(status, "pending")
+
+
+def _parse_numeric_experiment_id(experiment_id: str) -> int | None:
+    if experiment_id.startswith("model-"):
+        suffix = experiment_id.removeprefix("model-")
+        return int(suffix) if suffix.isdigit() else None
+    if experiment_id.startswith("run-"):
+        suffix = experiment_id.removeprefix("run-")
+        return int(suffix) if suffix.isdigit() else None
+    return int(experiment_id) if experiment_id.isdigit() else None
+
+
+def _experiment_from_model(model: ModelInfo) -> Experiment:
+    metrics_payload = model.metrics or {}
+    validation_overview = (
+        ((model.config or {}).get("validation") or {}).get("overview", {})
+        if isinstance(model.config, dict)
+        else {}
+    )
+
+    accuracy = _safe_float(
+        model.accuracy
+        if model.accuracy is not None
+        else metrics_payload.get("accuracy", validation_overview.get("accuracy")),
+    )
+    precision = _safe_float(
+        metrics_payload.get("precision", validation_overview.get("precision_macro", accuracy)),
+        default=accuracy,
+    )
+    recall = _safe_float(
+        metrics_payload.get("recall", validation_overview.get("recall_macro", accuracy)),
+        default=accuracy,
+    )
+    f1_score = _safe_float(
+        metrics_payload.get("f1_score", validation_overview.get("macro_f1", accuracy)),
+        default=accuracy,
+    )
+    auc = metrics_payload.get("auc")
+    if auc is None:
+        auc = metrics_payload.get("auc_roc", validation_overview.get("auc"))
+    loss = _safe_float(
+        model.loss
+        if model.loss is not None
+        else metrics_payload.get("loss", metrics_payload.get("best_loss", 0.0)),
+    )
+
+    tags = model.tags if isinstance(model.tags, list) else []
+    created_at = model.created_at.isoformat() if model.created_at else datetime.now().isoformat()
+    updated_at = (
+        model.updated_at.isoformat()
+        if model.updated_at is not None
+        else created_at
+    )
+
+    return Experiment(
+        id=f"model-{model.id}",
+        name=model.name,
+        status="completed",
+        config=ExperimentConfig(
+            backbone=model.architecture or "unknown",
+            fusion="concatenate",
+            aggregator=None,
+            learning_rate=0.001,
+            batch_size=16,
+            epochs=model.trained_epochs or 1,
+            optimizer="adam",
+            scheduler=None,
+        ),
+        metrics=ExperimentMetrics(
+            accuracy=accuracy,
+            precision=precision,
+            recall=recall,
+            f1_score=f1_score,
+            auc=_safe_float(auc) if auc is not None else None,
+            loss=loss,
+        ),
+        training_time=int(model.training_time or 0),
+        created_at=created_at,
+        updated_at=updated_at,
+        is_favorite="favorite" in tags,
+        description=model.description,
+    )
+
+
+def _experiment_from_record(record: ExperimentRecord) -> Experiment:
+    config_payload = record.config if isinstance(record.config, dict) else {}
+    model_payload = config_payload.get("model", {})
+    training_payload = config_payload.get("training", {})
+    optimizer_payload = training_payload.get("optimizer", {})
+    scheduler_payload = training_payload.get("scheduler", {})
+    data_payload = config_payload.get("data", {})
+
+    metrics_payload = record.metrics if isinstance(record.metrics, dict) else {}
+    accuracy = _safe_float(metrics_payload.get("accuracy"))
+    precision = _safe_float(metrics_payload.get("precision"), default=accuracy)
+    recall = _safe_float(metrics_payload.get("recall"), default=accuracy)
+    f1_score = _safe_float(
+        metrics_payload.get("f1_score", metrics_payload.get("macro_f1", accuracy)),
+        default=accuracy,
+    )
+    auc = metrics_payload.get("auc")
+    if auc is None:
+        auc = metrics_payload.get("auc_roc")
+    loss = _safe_float(
+        metrics_payload.get("loss", metrics_payload.get("best_loss", 0.0)),
+    )
+
+    created_at = record.created_at.isoformat() if record.created_at else datetime.now().isoformat()
+    updated_reference = record.completed_at or record.started_at or record.created_at
+    updated_at = updated_reference.isoformat() if updated_reference else created_at
+    training_time = 0
+    if record.started_at and record.completed_at:
+        training_time = int((record.completed_at - record.started_at).total_seconds())
+
+    tags = record.tags if isinstance(record.tags, list) else []
+
+    return Experiment(
+        id=f"run-{record.id}",
+        name=record.name,
+        status=_extract_status(record.status),
+        config=ExperimentConfig(
+            backbone=(
+                model_payload.get("vision", {}).get("backbone")
+                if isinstance(model_payload.get("vision"), dict)
+                else model_payload.get("backbone", "unknown")
+            )
+            or "unknown",
+            fusion=(
+                model_payload.get("fusion", {}).get("fusion_type")
+                if isinstance(model_payload.get("fusion"), dict)
+                else model_payload.get("fusion_type", "concatenate")
+            )
+            or "concatenate",
+            aggregator=model_payload.get("aggregator"),
+            learning_rate=_safe_float(
+                optimizer_payload.get("learning_rate", config_payload.get("learning_rate", 0.001)),
+                default=0.001,
+            ),
+            batch_size=int(data_payload.get("batch_size", config_payload.get("batch_size", 16))),
+            epochs=int(training_payload.get("num_epochs", config_payload.get("epochs", 1))),
+            optimizer=str(optimizer_payload.get("optimizer", "adam")),
+            scheduler=(
+                str(scheduler_payload.get("scheduler"))
+                if scheduler_payload.get("scheduler") is not None
+                else None
+            ),
+        ),
+        metrics=ExperimentMetrics(
+            accuracy=accuracy,
+            precision=precision,
+            recall=recall,
+            f1_score=f1_score,
+            auc=_safe_float(auc) if auc is not None else None,
+            loss=loss,
+        ),
+        training_time=training_time,
+        created_at=created_at,
+        updated_at=updated_at,
+        is_favorite="favorite" in tags,
+        description=record.description,
+    )
+
+
+def _load_real_experiments(db: Session) -> list[Experiment]:
+    experiment_rows = (
+        db.query(ExperimentRecord).order_by(ExperimentRecord.created_at.desc()).all()
+    )
+    if experiment_rows:
+        return [_experiment_from_record(item) for item in experiment_rows]
+
+    model_rows = db.query(ModelInfo).order_by(ModelInfo.created_at.desc()).all()
+    return [_experiment_from_model(item) for item in model_rows]
+
+
+def _resolve_experiments(db: Session) -> list[Experiment]:
+    real = _load_real_experiments(db)
+    if real:
+        return real
+    return get_mock_experiments()
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -283,12 +490,13 @@ async def list_experiments(
     status: str | None = Query(None, pattern="^(completed|running|failed|pending)$"),
     sort_by: str | None = Query("created_at", pattern="^(created_at|accuracy|name)$"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
+    db: Session = Depends(get_db_session),
 ) -> ExperimentListResponse:
     """
     List all experiments with pagination and filtering
     """
     try:
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
 
         # Filter by status
         if status:
@@ -322,12 +530,16 @@ async def list_experiments(
 
 
 @router.get("/{experiment_id}", response_model=Experiment)
-async def get_experiment(experiment_id: str) -> Experiment:
+async def get_experiment(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> Experiment:
     """
     Get details of a specific experiment
     """
     try:
-        experiments = get_mock_experiments()
+        # Keep compatibility for both legacy mock IDs and real DB-backed IDs.
+        experiments = _resolve_experiments(db)
         experiment = next((exp for exp in experiments if exp.id == experiment_id), None)
 
         if not experiment:
@@ -343,7 +555,10 @@ async def get_experiment(experiment_id: str) -> Experiment:
 
 
 @router.post("/compare", response_model=ComparisonResponse)
-async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
+async def compare_experiments(
+    experiment_ids: list[str],
+    db: Session = Depends(get_db_session),
+) -> ComparisonResponse:
     """
     Compare multiple experiments
     """
@@ -353,7 +568,7 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
                 status_code=400, detail="At least 2 experiments required for comparison",
             )
 
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
         selected = [exp for exp in experiments if exp.id in experiment_ids]
 
         if len(selected) != len(experiment_ids):
@@ -415,12 +630,15 @@ async def compare_experiments(experiment_ids: list[str]) -> ComparisonResponse:
 
 
 @router.get("/{experiment_id}/metrics", response_model=MetricsHistoryResponse)
-async def get_metrics_history(experiment_id: str) -> MetricsHistoryResponse:
+async def get_metrics_history(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> MetricsHistoryResponse:
     """
     Get training metrics history for an experiment
     """
     try:
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
         experiment = next((exp for exp in experiments if exp.id == experiment_id), None)
 
         if not experiment:
@@ -466,12 +684,15 @@ async def get_metrics_history(experiment_id: str) -> MetricsHistoryResponse:
 
 
 @router.get("/{experiment_id}/confusion-matrix", response_model=ConfusionMatrixData)
-async def get_confusion_matrix(experiment_id: str) -> ConfusionMatrixData:
+async def get_confusion_matrix(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> ConfusionMatrixData:
     """
     Get confusion matrix for an experiment
     """
     try:
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
         experiment = next((exp for exp in experiments if exp.id == experiment_id), None)
 
         if not experiment:
@@ -505,12 +726,15 @@ async def get_confusion_matrix(experiment_id: str) -> ConfusionMatrixData:
 
 
 @router.get("/{experiment_id}/roc-curve", response_model=ROCCurveData)
-async def get_roc_curve(experiment_id: str) -> ROCCurveData:
+async def get_roc_curve(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> ROCCurveData:
     """
     Get ROC curve data for an experiment
     """
     try:
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
         experiment = next((exp for exp in experiments if exp.id == experiment_id), None)
 
         if not experiment:
@@ -551,12 +775,15 @@ async def get_roc_curve(experiment_id: str) -> ROCCurveData:
 
 
 @router.post("/report", response_model=ReportResponse)
-async def generate_report(request: ReportRequest) -> ReportResponse:
+async def generate_report(
+    request: ReportRequest,
+    db: Session = Depends(get_db_session),
+) -> ReportResponse:
     """
     Generate comparison report (Word or PDF)
     """
     try:
-        experiments = get_mock_experiments()
+        experiments = _resolve_experiments(db)
         selected = [exp for exp in experiments if exp.id in request.experiment_ids]
 
         if not selected:
@@ -650,13 +877,69 @@ async def download_report(filename: str) -> FileResponse:
 
 
 @router.patch("/{experiment_id}/favorite")
-async def toggle_favorite(experiment_id: str) -> dict[str, Any]:
+async def toggle_favorite(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
     """
     Toggle favorite status of an experiment
     """
     try:
-        # In real implementation, update database
-        return {"success": True, "experiment_id": experiment_id}
+        numeric_id = _parse_numeric_experiment_id(experiment_id)
+
+        model_record: ModelInfo | None = None
+        experiment_record: ExperimentRecord | None = None
+        if experiment_id.startswith("model-") and numeric_id is not None:
+            model_record = db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+        elif experiment_id.startswith("run-") and numeric_id is not None:
+            experiment_record = (
+                db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+            )
+        elif numeric_id is not None:
+            experiment_record = (
+                db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+            )
+            if experiment_record is None:
+                model_record = db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+        elif experiment_id.startswith("exp-"):
+            # Legacy mock ids: keep backward-compatible no-op success.
+            return {"success": True, "experiment_id": experiment_id, "is_favorite": False}
+
+        if model_record is None and experiment_record is None:
+            raise HTTPException(status_code=404, detail="Experiment not found")
+
+        if model_record is not None:
+            tags = model_record.tags if isinstance(model_record.tags, list) else []
+            is_favorite = "favorite" in tags
+            if is_favorite:
+                tags = [tag for tag in tags if tag != "favorite"]
+            else:
+                tags = [*tags, "favorite"]
+            model_record.tags = tags
+            db.commit()
+            return {
+                "success": True,
+                "experiment_id": experiment_id,
+                "is_favorite": not is_favorite,
+            }
+
+        tags = (
+            experiment_record.tags
+            if isinstance(experiment_record.tags, list)
+            else []
+        )
+        is_favorite = "favorite" in tags
+        if is_favorite:
+            tags = [tag for tag in tags if tag != "favorite"]
+        else:
+            tags = [*tags, "favorite"]
+        experiment_record.tags = tags
+        db.commit()
+        return {
+            "success": True,
+            "experiment_id": experiment_id,
+            "is_favorite": not is_favorite,
+        }
 
     except Exception as e:
         logger.error(f"Failed to toggle favorite: {e}")
@@ -664,13 +947,52 @@ async def toggle_favorite(experiment_id: str) -> dict[str, Any]:
 
 
 @router.delete("/{experiment_id}")
-async def delete_experiment(experiment_id: str) -> dict[str, Any]:
+async def delete_experiment(
+    experiment_id: str,
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
     """
     Delete an experiment
     """
     try:
-        # In real implementation, delete from database
-        return {"success": True, "experiment_id": experiment_id}
+        numeric_id = _parse_numeric_experiment_id(experiment_id)
+        if experiment_id.startswith("exp-"):
+            # Legacy mock ids: keep backward-compatible no-op success.
+            return {"success": True, "experiment_id": experiment_id}
+
+        if experiment_id.startswith("model-") and numeric_id is not None:
+            record = db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+            if record is None:
+                raise HTTPException(status_code=404, detail="Experiment not found")
+            db.delete(record)
+            db.commit()
+            return {"success": True, "experiment_id": experiment_id}
+
+        if experiment_id.startswith("run-") and numeric_id is not None:
+            record = (
+                db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+            )
+            if record is None:
+                raise HTTPException(status_code=404, detail="Experiment not found")
+            db.delete(record)
+            db.commit()
+            return {"success": True, "experiment_id": experiment_id}
+
+        if numeric_id is not None:
+            exp_record = (
+                db.query(ExperimentRecord).filter(ExperimentRecord.id == numeric_id).first()
+            )
+            if exp_record is not None:
+                db.delete(exp_record)
+                db.commit()
+                return {"success": True, "experiment_id": experiment_id}
+            model_record = db.query(ModelInfo).filter(ModelInfo.id == numeric_id).first()
+            if model_record is not None:
+                db.delete(model_record)
+                db.commit()
+                return {"success": True, "experiment_id": experiment_id}
+
+        raise HTTPException(status_code=404, detail="Experiment not found")
 
     except Exception as e:
         logger.error(f"Failed to delete experiment: {e}")
