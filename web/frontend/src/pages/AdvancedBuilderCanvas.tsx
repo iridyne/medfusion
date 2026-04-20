@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Button,
@@ -120,9 +120,19 @@ function renderIssueDescription(issue: AdvancedBuilderCompileIssue) {
 
 export default function AdvancedBuilderCanvas() {
   const navigate = useNavigate();
-  const [selectedBlueprintId, setSelectedBlueprintId] = useState(
-    "quickstart_multimodal",
-  );
+  const [searchParams] = useSearchParams();
+  const requestedBlueprintId = searchParams.get("blueprint");
+  const initialBlueprintId = useMemo(() => {
+    if (!requestedBlueprintId) {
+      return "quickstart_multimodal";
+    }
+    return ADVANCED_BUILDER_BLUEPRINTS.some(
+      (blueprint) => blueprint.id === requestedBlueprintId,
+    )
+      ? requestedBlueprintId
+      : "quickstart_multimodal";
+  }, [requestedBlueprintId]);
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState(initialBlueprintId);
   const initialGraph = useMemo(
     () => buildBlueprintGraph(selectedBlueprintId),
     [selectedBlueprintId],

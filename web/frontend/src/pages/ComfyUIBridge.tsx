@@ -8,12 +8,14 @@ import {
   Input,
   Row,
   Select,
+  Skeleton,
   Space,
   Tag,
   Typography,
   message,
 } from "antd";
 import {
+  AppstoreOutlined,
   ArrowLeftOutlined,
   CopyOutlined,
   ImportOutlined,
@@ -21,7 +23,12 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 
-import { getComfyUIHealth, type ComfyUIHealthResponse } from "@/api/comfyui";
+import {
+  getComfyUIAdapterProfiles,
+  getComfyUIHealth,
+  type ComfyUIAdapterProfile,
+  type ComfyUIHealthResponse,
+} from "@/api/comfyui";
 import PageScaffold from "@/components/layout/PageScaffold";
 
 const { Paragraph, Text } = Typography;
@@ -52,6 +59,9 @@ export default function ComfyUIBridge() {
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState<ComfyUIHealthResponse | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [adapterLoading, setAdapterLoading] = useState(false);
+  const [adapterProfiles, setAdapterProfiles] = useState<ComfyUIAdapterProfile[]>([]);
+  const [selectedAdapterProfileId, setSelectedAdapterProfileId] = useState<string>("");
   const [importPrefill, setImportPrefill] = useState<ModelImportPrefill>({
     config_path: "configs/starter/quickstart.yaml",
     checkpoint_path: "outputs/quickstart/checkpoints/best.pth",
@@ -73,6 +83,12 @@ export default function ComfyUIBridge() {
     }
     return { color: "error", text: "未连通" };
   }, [health]);
+
+  const selectedAdapterProfile = useMemo(
+    () =>
+      adapterProfiles.find((item) => item.id === selectedAdapterProfileId) || null,
+    [adapterProfiles, selectedAdapterProfileId],
+  );
 
   const checkConnection = async (targetBaseUrl?: string) => {
     const nextBaseUrl = (targetBaseUrl || baseUrl).trim();
@@ -107,6 +123,32 @@ export default function ComfyUIBridge() {
 
   useEffect(() => {
     void checkConnection(baseUrl);
+  }, []);
+
+  const loadAdapterProfiles = async () => {
+    setAdapterLoading(true);
+    try {
+      const payload = await getComfyUIAdapterProfiles();
+      setAdapterProfiles(payload.profiles);
+      if (!payload.profiles.length) {
+        return;
+      }
+      const initial = payload.profiles[0];
+      setSelectedAdapterProfileId((current) => current || initial.id);
+      setImportPrefill((current) => ({
+        ...current,
+        ...initial.default_import_prefill,
+      }));
+    } catch (error) {
+      console.error("Failed to load ComfyUI adapter profiles:", error);
+      message.error("加载 ComfyUI 适配档案失败");
+    } finally {
+      setAdapterLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAdapterProfiles();
   }, []);
 
   const handleOpenComfyUI = () => {
@@ -146,6 +188,26 @@ export default function ComfyUIBridge() {
         },
       },
     });
+  };
+
+  const handleSelectAdapterProfile = (profileId: string) => {
+    setSelectedAdapterProfileId(profileId);
+    const profile = adapterProfiles.find((item) => item.id === profileId);
+    if (!profile) {
+      return;
+    }
+    setImportPrefill((current) => ({
+      ...current,
+      ...profile.default_import_prefill,
+    }));
+  };
+
+  const handleOpenAdapterCanvas = () => {
+    if (!selectedAdapterProfile) {
+      message.warning("请先选择一个适配档案");
+      return;
+    }
+    navigate(selectedAdapterProfile.target_canvas_route);
   };
 
   return (
@@ -285,6 +347,65 @@ export default function ComfyUIBridge() {
           </Space>
         </Card>
       </div>
+
+      <Card className="surface-card" title="MedFusion 组件适配档案">
+        {adapterLoading ? (
+          <Skeleton active paragraph={{ rows: 3 }} />
+        ) : (
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Alert
+              type="info"
+              showIcon
+              message="ComfyUI 不是直接替代 MedFusion 训练层，而是接入适配档案后协同工作"
+              description="先选适配档案，再进入对应的 MedFusion 组件骨架画布，这样 ComfyUI 流程和我们主链组件语义是一致的。"
+            />
+            <Select
+              value={selectedAdapterProfileId || undefined}
+              onChange={handleSelectAdapterProfile}
+              placeholder="选择一个适配档案"
+              options={adapterProfiles.map((profile) => ({
+                label: profile.label,
+                value: profile.id,
+              }))}
+            />
+            {selectedAdapterProfile ? (
+              <div className="surface-note surface-note--dense">
+                <strong>{selectedAdapterProfile.label}</strong>
+                <Paragraph style={{ marginBottom: 0 }}>
+                  {selectedAdapterProfile.description}
+                </Paragraph>
+                <Space wrap style={{ marginTop: 8 }}>
+                  {selectedAdapterProfile.family_chain.map((family) => (
+                    <Tag key={family.family}>{family.label}</Tag>
+                  ))}
+                </Space>
+              </div>
+            ) : null}
+            <Space>
+              <Button
+                type="primary"
+                icon={<AppstoreOutlined />}
+                onClick={handleOpenAdapterCanvas}
+                disabled={!selectedAdapterProfile}
+              >
+                打开适配化组件画布
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedAdapterProfile) {
+                    return;
+                  }
+                  handleSelectAdapterProfile(selectedAdapterProfile.id);
+                  message.success("已按适配档案更新回流预填参数");
+                }}
+                disabled={!selectedAdapterProfile}
+              >
+                同步档案到回流预填
+              </Button>
+            </Space>
+          </Space>
+        )}
+      </Card>
 
       <Card className="surface-card" title="ComfyUI -> 结果后台预填回流">
         <Space direction="vertical" size={12} style={{ width: "100%" }}>

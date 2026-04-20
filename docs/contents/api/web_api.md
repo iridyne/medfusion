@@ -163,11 +163,13 @@ WebSocket 推送关键类型：
 ## 6. ComfyUI 集成 API（preview）
 
 - `GET /api/comfyui/health`
+- `GET /api/comfyui/adapter-profiles`
 
 说明：
 
 - 用于探测 ComfyUI 服务连通性并返回最小上线提示（打开地址、推荐启动命令、回流提示）。
 - 支持查询参数 `base_url`（可选），用于覆盖默认探测地址。
+- `adapter-profiles` 返回 MedFusion 侧的适配档案（compile-ready blueprint、family chain、默认回流预填），用于把 ComfyUI 流程映射到正式版组件语义。
 
 ## 7. 实验态 API（experimental）
 

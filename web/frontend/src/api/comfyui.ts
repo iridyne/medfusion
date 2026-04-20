@@ -15,11 +15,50 @@ export interface ComfyUIHealthResponse {
   };
 }
 
+export interface ComfyUIAdapterProfile {
+  id: string;
+  label: string;
+  description: string;
+  blueprint_id: string;
+  target_canvas_route: string;
+  components: Array<{
+    component_id: string;
+    label: string;
+    family: string;
+    family_label: string;
+    status: "compile_ready" | "conditional" | "draft_only";
+  }>;
+  family_chain: Array<{
+    family: string;
+    label: string;
+  }>;
+  default_import_prefill: {
+    config_path: string;
+    checkpoint_path: string;
+    output_dir?: string;
+    split: "train" | "val" | "test";
+    attention_samples: number;
+    importance_sample_limit: number;
+  };
+}
+
+export interface ComfyUIAdapterProfilesResponse {
+  mode: string;
+  source_boundary: string;
+  recommended_steps: string[];
+  profiles: ComfyUIAdapterProfile[];
+}
+
 export const getComfyUIHealth = async (
   baseUrl?: string,
 ): Promise<ComfyUIHealthResponse> => {
   const response = await api.get("/comfyui/health", {
     params: baseUrl ? { base_url: baseUrl } : undefined,
   });
+  return response.data;
+};
+
+export const getComfyUIAdapterProfiles = async (): Promise<ComfyUIAdapterProfilesResponse> => {
+  const response = await api.get("/comfyui/adapter-profiles");
   return response.data;
 };

@@ -193,6 +193,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 4. 训练完成后，任务状态会附带结果 handoff 信息，并可继续跳到模型库查看结果
 5. ComfyUI 已有独立上线入口页，可先检查连通性再进入外部画布联调
 6. ComfyUI 入口页支持把 `config/checkpoint/output` 参数预填后，一键跳到结果后台导入弹窗
+7. ComfyUI 入口页支持选择“适配档案”，并一键跳到对应的 MedFusion 高级模式组件骨架画布
 
 结果详情页的推荐解读顺序也已固定：
 

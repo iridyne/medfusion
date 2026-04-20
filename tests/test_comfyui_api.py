@@ -70,3 +70,28 @@ async def test_comfyui_health_rejects_invalid_base_url(api_client) -> None:
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["code"] == "invalid_comfyui_base_url"
+
+
+async def test_comfyui_adapter_profiles_expose_compile_ready_blueprints(
+    api_client,
+) -> None:
+    response = await api_client.get("/api/comfyui/adapter-profiles")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["mode"] == "adapter_preview"
+    assert "source_boundary" in payload
+    assert len(payload["profiles"]) >= 1
+
+    quickstart_profile = next(
+        item for item in payload["profiles"] if item["id"] == "quickstart_multimodal"
+    )
+    assert quickstart_profile["target_canvas_route"].startswith(
+        "/config/advanced/canvas?blueprint="
+    )
+    assert any(
+        component["family"] == "vision_backbone"
+        for component in quickstart_profile["components"]
+    )
+    assert quickstart_profile["default_import_prefill"]["config_path"] == (
+        "configs/starter/quickstart.yaml"
+    )

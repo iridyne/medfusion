@@ -88,6 +88,7 @@ async def get_feature_status() -> dict[str, Any]:
         },
         "comfyui_bridge": {
             "route": "/config/comfyui",
+            "adapter_profiles_api": "/api/comfyui/adapter-profiles",
             "status": "preview",
             "ui_exposed": True,
             "default_entry": False,
