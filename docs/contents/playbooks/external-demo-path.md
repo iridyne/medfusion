@@ -56,6 +56,8 @@
 - `source_type=advanced_builder`
 - `entrypoint=advanced-builder-canvas`
 - `blueprint_id=<当前蓝图>`
+- `recommended_preset=<当前蓝图对应正式 preset>`
+- `compile_boundary=<当前蓝图所在编译边界>`
 
 ## 演示最小证据点
 

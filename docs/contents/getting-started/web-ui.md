@@ -220,7 +220,7 @@ uv run medfusion web --host 0.0.0.0 --port 8080 --reload
 3. 可视化层：再看 ROC / 混淆矩阵 / 注意力等图示 artifact
 4. 文件层：最后回到可下载文件用于复盘与交付
 
-如果是高级模式发起的 run，结果详情会补充来源链（`source_type`、`entrypoint`、`blueprint_id`），用于对外演示和内部复核。
+如果是高级模式发起的 run，结果详情会补充来源链（`source_type`、`entrypoint`、`blueprint_id`），并补充该 blueprint 对应的 `recommended_preset` 与 `compile_boundary`，用于对外演示和内部复核。
 
 非主链路径（如 `/preprocessing`）仍保持实验或降级状态，不作为 OSS 默认入口叙事；`/workflow` 已升级为受限 preview，`/evaluation` 已升级为正式单次评估入口。
 

@@ -125,7 +125,7 @@ MedFusion OSS 优先保证主链闭环：
 - 文件层：可下载、可复核、可交付的落盘文件
 
 如果 run 来自高级模式，结果详情还应明确来源链：
-`source_type`、`entrypoint`、`blueprint_id`。
+`source_type`、`entrypoint`、`blueprint_id`，以及该 blueprint 对应的 `recommended_preset` 与 `compile_boundary`。
 
 ---
 

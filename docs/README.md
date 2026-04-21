@@ -59,7 +59,7 @@ uv run medfusion build-results --config configs/starter/quickstart.yaml --checkp
 - 可视化层（ROC / 混淆矩阵 / 注意力等图示 artifact）
 - 文件层（可下载、可复核的落盘文件）
 
-如果 run 来自高级模式，结果详情还应标注来源链：`source_type`、`entrypoint`、`blueprint_id`。
+如果 run 来自高级模式，结果详情还应标注来源链：`source_type`、`entrypoint`、`blueprint_id`，以及该 blueprint 对应的 `recommended_preset` 与 `compile_boundary`。
 
 ---
 

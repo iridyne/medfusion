@@ -141,6 +141,8 @@ uv run medfusion build-results \
    - `source_type=advanced_builder`
    - `entrypoint=advanced-builder-canvas`
    - `blueprint_id`
+   - `recommended_preset`
+   - `compile_boundary`
 
 这条链如果走不通，就不能对外讲“高级模式已经进入正式版 preview”。
 
