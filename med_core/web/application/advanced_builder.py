@@ -757,15 +757,6 @@ def _component_prefill_map() -> dict[str, dict[str, Any]]:
             mapping[str(advanced_component_id)] = dict(wizard_prefill)
     return mapping
 
-
-# Compatibility aliases for modules that still import the old names directly.
-ADVANCED_BUILDER_FAMILY_LABELS: dict[AdvancedBuilderFamily, str] = _family_labels()
-ADVANCED_BUILDER_COMPONENTS: tuple[AdvancedBuilderComponent, ...] = _projected_components()
-ADVANCED_BUILDER_BLUEPRINTS: tuple[AdvancedBuilderBlueprint, ...] = _projected_blueprints()
-ADVANCED_BUILDER_CONNECTION_RULES: tuple[AdvancedBuilderConnectionRule, ...] = _connection_rules()
-REQUIRED_FAMILIES: tuple[AdvancedBuilderFamily, ...] = _required_families()
-
-
 def export_catalog() -> dict[str, Any]:
     components = _projected_components()
     blueprints = _projected_blueprints()
@@ -905,7 +896,7 @@ def compile_graph_to_runspec(
 
     if duplicate_families:
         family_labels = " / ".join(
-            ADVANCED_BUILDER_FAMILY_LABELS[family] for family in duplicate_families
+            _family_labels()[family] for family in duplicate_families
         )
         duplicate_node_ids = list(
             dict.fromkeys(
@@ -1057,7 +1048,7 @@ def compile_graph_to_runspec(
         f"outputs/{_slugify(spec['projectName'])}/{_slugify(spec['experimentName'])}"
     )
 
-    for family in REQUIRED_FAMILIES:
+    for family in _required_families():
         component_id = chosen_components.get(family)
         if component_id:
             _apply_component_to_spec(spec, component_id, issues)

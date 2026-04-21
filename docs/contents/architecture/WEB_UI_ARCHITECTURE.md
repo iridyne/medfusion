@@ -495,6 +495,7 @@ web/stop-webui.sh                # 旧的停止脚本
 - [x] 把 compile-ready / draft-only 的阻断说明统一到模型数据库 contract
 - [x] 让 `/config/model`、`/config/advanced`、结果页来源说明共享同一套 rule metadata
 - [x] 把 patch target hints 收入模型数据库 contract
+- [x] 让 patch target hints 贯通到模型数据库页、高级模式画布和结果页
 - [ ] 把 contract 说明继续贯通到更多使用面与对外文档
 
 **Phase C：编译器变薄，但不空心化**  
@@ -507,7 +508,8 @@ web/stop-webui.sh                # 旧的停止脚本
   - preset 落地
   - contract 校验调用
 - [x] 清理前端静态高级模式目录与本地编译逻辑
-- [ ] 清理剩余只为历史兼容保留的高级模式静态常量
+- [x] 清理后端对旧高级模式静态常量的直接依赖（例如 ComfyUI 适配档案）
+- [x] 清理剩余只为历史兼容保留的高级模式静态常量
 
 **Phase D：有节制地逼近方案 2**  
 状态：后置，不是当前阻塞项
