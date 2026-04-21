@@ -238,6 +238,36 @@ export default function ModelCatalog() {
         </Card>
       ) : null}
 
+      {catalog?.advanced_builder ? (
+        <Card className="surface-card" style={{ marginBottom: 16 }}>
+          <div className="section-heading">
+            <div>
+              <div className="section-heading__eyebrow">Advanced builder contract</div>
+              <h2 className="section-heading__title">高级模式结构规则正在收回模型数据库真源</h2>
+              <p className="section-heading__description">
+                当前模型数据库不只记录“有什么组件”，也开始记录高级模式的结构语义，例如必需家族、默认 preset 和连接规则。编译器仍然保留代码实现，但规则说明已经开始统一。
+              </p>
+            </div>
+            <Tag color="processing">Default preset: {catalog.advanced_builder.default_preset}</Tag>
+          </div>
+
+          <div className="editorial-grid">
+            <div className="surface-note surface-note--dense">
+              <strong>必需家族</strong>
+              <p>{catalog.advanced_builder.required_families.join(" / ")}</p>
+            </div>
+            <div className="surface-note surface-note--dense">
+              <strong>Preset 规则</strong>
+              <p>
+                {catalog.advanced_builder.preset_rules
+                  .map((rule) => `${rule.preset}: ${rule.match_any_components.join(" / ")}`)
+                  .join(" | ")}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="surface-card" style={{ marginBottom: 16 }}>
         <div className="section-heading">
           <div>
@@ -277,6 +307,20 @@ export default function ModelCatalog() {
                       <strong>组件链</strong>
                       <p>{template.component_ids.join(" -> ")}</p>
                     </div>
+                    {template.advanced_builder_contract ? (
+                      <div className="surface-note surface-note--dense">
+                        <strong>高级模式提示</strong>
+                        <p>
+                          preset: {template.advanced_builder_contract.recommended_preset} | boundary:{" "}
+                          {template.advanced_builder_contract.compile_boundary}
+                        </p>
+                        {template.advanced_builder_contract.compile_notes.map((item) => (
+                          <p key={item} style={{ marginBottom: 0 }}>
+                            {item}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
                     <Space wrap>
                       {template.wizard_prefill ? (
                         <Button
@@ -373,6 +417,20 @@ export default function ModelCatalog() {
                         {component.outputs.join(" / ") || "-"}
                       </p>
                     </div>
+                    {component.advanced_builder_contract ? (
+                      <div className="surface-note surface-note--dense">
+                        <strong>高级模式提示</strong>
+                        <p>
+                          preset hint: {component.advanced_builder_contract.preset_hints.join(" / ") || "-"} | boundary:{" "}
+                          {component.advanced_builder_contract.compile_boundary}
+                        </p>
+                        {component.advanced_builder_contract.compile_notes.map((item) => (
+                          <p key={item} style={{ marginBottom: 0 }}>
+                            {item}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
                     <Space wrap>
                       {component.wizard_prefill ? (
                         <Button

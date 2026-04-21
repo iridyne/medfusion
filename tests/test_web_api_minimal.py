@@ -166,6 +166,28 @@ async def test_web_basic_routes(api_client) -> None:
         item["id"] == "quickstart_multimodal"
         for item in model_catalog_payload["templates"]
     )
+    quickstart_template = next(
+        item
+        for item in model_catalog_payload["templates"]
+        if item["id"] == "quickstart_multimodal"
+    )
+    assert (
+        quickstart_template["advanced_builder_contract"]["recommended_preset"]
+        == "quickstart"
+    )
+    attention_component = next(
+        item
+        for item in model_catalog_payload["components"]
+        if item["id"] == "attention_cbam_encoder_bundle"
+    )
+    assert (
+        attention_component["advanced_builder_contract"]["compile_boundary"]
+        == "conditional_attention_path"
+    )
+    assert (
+        attention_component["advanced_builder_contract"]["warning_metadata"][0]["code"]
+        == "ABG-W001"
+    )
     assert any(
         item["id"] == "resnet18_encoder_bundle"
         for item in model_catalog_payload["components"]

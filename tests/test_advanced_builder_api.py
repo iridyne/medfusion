@@ -115,6 +115,26 @@ async def test_advanced_builder_compile_returns_runspec_draft(api_client) -> Non
     assert payload["issues"] == []
 
 
+async def test_advanced_builder_compile_infers_preset_from_catalog_contract(
+    api_client,
+) -> None:
+    graph = _quickstart_graph()
+    graph["nodes"][1]["data"]["componentId"] = "efficientnet_b0_backbone"
+    graph["nodes"][3]["data"]["componentId"] = "gated_fusion"
+    graph["nodes"][5]["data"]["componentId"] = "progressive_training"
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["preset"] == "clinical"
+    assert payload["run_spec"]["model"]["vision"]["backbone"] == "efficientnet_b0"
+    assert payload["run_spec"]["model"]["fusion"]["fusionType"] == "gated"
+
+
 async def test_advanced_builder_compile_rejects_missing_required_links(api_client) -> None:
     graph = _quickstart_graph()
     graph["edges"] = graph["edges"][:-1]

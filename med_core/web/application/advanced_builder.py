@@ -513,19 +513,38 @@ def build_training_payload_from_runspec(run_spec: dict[str, Any]) -> dict[str, A
 
 
 def _infer_preset(chosen_components: dict[AdvancedBuilderFamily, str]) -> str:
-    vision_component = chosen_components.get("vision_backbone", "")
-    fusion_component = chosen_components.get("fusion", "")
-    training_component = chosen_components.get("training_strategy", "")
+    contract = _advanced_builder_contract()
+    chosen_component_ids = set(chosen_components.values())
+    ranked_rules = sorted(
+        contract.get("preset_rules", []),
+        key=lambda item: item.get("priority", 0),
+        reverse=True,
+    )
+    for rule in ranked_rules:
+        if chosen_component_ids.intersection(set(rule.get("match_any_components", []))):
+            return str(rule["preset"])
+    return str(contract.get("default_preset", "quickstart"))
 
-    if vision_component == "attention_backbone_bundle" or fusion_component == "attention_fusion":
-        return "showcase"
-    if (
-        vision_component == "efficientnet_b0_backbone"
-        or fusion_component == "gated_fusion"
-        or training_component == "progressive_training"
-    ):
-        return "clinical"
-    return "quickstart"
+
+def _component_contract_map() -> dict[str, dict[str, Any]]:
+    catalog = export_model_catalog()
+    mapping: dict[str, dict[str, Any]] = {}
+    for unit in catalog["units"]:
+        advanced_component_id = unit.get("advanced_builder_component_id")
+        if advanced_component_id:
+            mapping[str(advanced_component_id)] = dict(
+                unit.get("advanced_builder_contract") or {}
+            )
+    return mapping
+
+
+def _catalog_units_by_advanced_component() -> dict[str, dict[str, Any]]:
+    catalog = export_model_catalog()
+    return {
+        str(unit["advanced_builder_component_id"]): unit
+        for unit in catalog["units"]
+        if unit.get("advanced_builder_component_id")
+    }
 
 
 def _apply_component_to_spec(
@@ -589,32 +608,23 @@ def _apply_component_to_spec(
             spec["training"]["stage2Epochs"] = prefill["stage2Epochs"]
         if "stage3Epochs" in prefill:
             spec["training"]["stage3Epochs"] = prefill["stage3Epochs"]
-    if component_id == "attention_backbone_bundle":
+    for warning in _component_contract_map().get(component_id, {}).get(
+        "warning_metadata",
+        [],
+    ):
         issues.append(
             _issue(
                 level="warning",
-                code="ABG-W001",
-                path="model.vision",
-                message="当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
-                suggestion="确认这是预期路径；如需更稳妥的默认链，改用 ResNet18 或 EfficientNet-B0 backbone。",
+                code=warning["code"],
+                path=warning.get("path"),
+                message=warning["message"],
+                suggestion=warning.get("suggestion"),
             )
         )
-        return
     if component_id == "concatenate_fusion":
         spec["model"]["fusion"]["hiddenDim"] = (
             spec["model"]["vision"]["featureDim"] + spec["model"]["tabular"]["outputDim"]
         )
-    if component_id == "attention_fusion":
-        issues.append(
-            _issue(
-                level="warning",
-                code="ABG-W002",
-                path="model.fusion",
-                message="当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
-                suggestion="如果只需要最稳主链，可改用 concatenate fusion 或 gated fusion。",
-            )
-        )
-        return
     if prefill:
         return
 
@@ -770,6 +780,12 @@ def export_catalog() -> dict[str, Any]:
                 "status": component.status,
                 "description": component.description,
                 "schema_path": component.schema_path,
+                "notes": (
+                    _catalog_units_by_advanced_component()
+                    .get(component.id, {})
+                    .get("advanced_builder_contract", {})
+                    .get("compile_notes", [])
+                ),
             }
             for component in components
         ],
@@ -791,6 +807,18 @@ def export_catalog() -> dict[str, Any]:
                 "components": list(blueprint.components),
                 "compiles_to": blueprint.compiles_to,
                 "blockers": list(blueprint.blockers),
+                "recommended_preset": (
+                    next(
+                        (
+                            model.get("advanced_builder_contract", {}).get(
+                                "recommended_preset"
+                            )
+                            for model in export_model_catalog()["models"]
+                            if model.get("advanced_builder_blueprint_id") == blueprint.id
+                        ),
+                        None,
+                    )
+                ),
             }
             for blueprint in blueprints
         ],

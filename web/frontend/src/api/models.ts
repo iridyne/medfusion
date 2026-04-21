@@ -105,6 +105,17 @@ export interface ModelCatalogComponent {
   upstream: string[];
   outputs: string[];
   advanced_builder_component_id?: string;
+  advanced_builder_contract?: {
+    preset_hints: string[];
+    compile_boundary: string;
+    compile_notes: string[];
+    warning_metadata: Array<{
+      code: string;
+      path?: string;
+      message: string;
+      suggestion?: string;
+    }>;
+  };
   wizard_prefill?: Record<string, any>;
 }
 
@@ -124,6 +135,11 @@ export interface ModelCatalogTemplate {
     notes: string;
   };
   advanced_builder_blueprint_id?: string;
+  advanced_builder_contract?: {
+    recommended_preset: string;
+    compile_boundary: string;
+    compile_notes: string[];
+  };
   wizard_prefill?: Record<string, any>;
 }
 
@@ -143,6 +159,25 @@ export interface ModelCatalogResponse {
     };
   };
   principles: string[];
+  advanced_builder: {
+    family_projection: Record<string, { advanced_family: string; label: string }>;
+    family_labels: Record<string, string>;
+    status_labels: Record<string, string>;
+    required_families: string[];
+    default_preset: string;
+    preset_rules: Array<{
+      preset: string;
+      priority: number;
+      match_any_components: string[];
+      description: string;
+    }>;
+    connection_rules: Array<{
+      from_family: string;
+      to_family: string;
+      status: string;
+      description: string;
+    }>;
+  };
   units: ModelCatalogComponent[];
   models: ModelCatalogTemplate[];
   components: ModelCatalogComponent[];

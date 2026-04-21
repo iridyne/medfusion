@@ -38,6 +38,7 @@ export interface AdvancedBuilderBlueprint {
   components: string[];
   compilesTo?: string;
   blockers?: string[];
+  recommendedPreset?: string;
 }
 
 export const ADVANCED_BUILDER_FAMILY_LABELS: Record<

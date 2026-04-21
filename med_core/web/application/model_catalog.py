@@ -38,6 +38,30 @@ MODEL_CATALOG_ADVANCED_BUILDER_STATUS_LABELS: dict[str, str] = {
     "draft_only": "仅草稿",
 }
 
+MODEL_CATALOG_ADVANCED_BUILDER_DEFAULT_PRESET = "quickstart"
+
+MODEL_CATALOG_ADVANCED_BUILDER_PRESET_RULES: list[dict[str, Any]] = [
+    {
+        "preset": "showcase",
+        "priority": 20,
+        "match_any_components": [
+            "attention_backbone_bundle",
+            "attention_fusion",
+        ],
+        "description": "包含 attention 路径时，默认更接近结果审查 / 可解释性路线。",
+    },
+    {
+        "preset": "clinical",
+        "priority": 10,
+        "match_any_components": [
+            "efficientnet_b0_backbone",
+            "gated_fusion",
+            "progressive_training",
+        ],
+        "description": "包含更稳健 backbone / fusion / 分阶段训练时，默认更接近临床基线路线。",
+    },
+]
+
 MODEL_CATALOG_ADVANCED_BUILDER_REQUIRED_FAMILIES: list[str] = [
     "data_input",
     "vision_backbone",
@@ -97,6 +121,135 @@ MODEL_CATALOG_ADVANCED_BUILDER_CONNECTION_RULES: list[dict[str, str]] = [
         "description": "不允许跳过融合层和任务头直接进入训练策略。",
     },
 ]
+
+MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
+    "image_tabular_dataset": {
+        "preset_hints": ["quickstart", "clinical", "showcase"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "这是当前正式版默认数据输入单元，会直接映射到 image_tabular 主链。",
+        ],
+        "warning_metadata": [],
+    },
+    "resnet18_backbone": {
+        "preset_hints": ["quickstart", "showcase"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "更适合作为 quickstart 或 attention 审查路径的轻量 backbone。",
+        ],
+        "warning_metadata": [],
+    },
+    "efficientnet_b0_backbone": {
+        "preset_hints": ["clinical"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "更适合作为稳健研究基线，而不是最低门槛 smoke 路径。",
+        ],
+        "warning_metadata": [],
+    },
+    "attention_backbone_bundle": {
+        "preset_hints": ["showcase"],
+        "compile_boundary": "conditional_attention_path",
+        "compile_notes": [
+            "会默认走 CBAM + attention supervision 条件路径。",
+        ],
+        "warning_metadata": [
+            {
+                "code": "ABG-W001",
+                "path": "model.vision",
+                "message": "当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
+                "suggestion": "确认这是预期路径；如需更稳妥的默认链，改用 ResNet18 或 EfficientNet-B0 backbone。",
+            }
+        ],
+    },
+    "mlp_tabular_encoder": {
+        "preset_hints": ["quickstart", "clinical", "showcase"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "当前正式版默认表格编码分支。",
+        ],
+        "warning_metadata": [],
+    },
+    "concatenate_fusion": {
+        "preset_hints": ["quickstart"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "编译时会把 fusion hidden dim 对齐到 vision feature dim + tabular output dim。",
+        ],
+        "warning_metadata": [],
+    },
+    "gated_fusion": {
+        "preset_hints": ["clinical"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "更接近稳健研究基线，而不是最轻量起步路径。",
+        ],
+        "warning_metadata": [],
+    },
+    "attention_fusion": {
+        "preset_hints": ["showcase"],
+        "compile_boundary": "conditional_attention_path",
+        "compile_notes": [
+            "会保留 attention 路径，但仍受正式版当前 fusion schema 约束。",
+        ],
+        "warning_metadata": [
+            {
+                "code": "ABG-W002",
+                "path": "model.fusion",
+                "message": "当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
+                "suggestion": "如果只需要最稳主链，可改用 concatenate fusion 或 gated fusion。",
+            }
+        ],
+    },
+    "classification_head": {
+        "preset_hints": ["quickstart", "clinical", "showcase"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "当前正式版默认任务头，只承诺分类主链。",
+        ],
+        "warning_metadata": [],
+    },
+    "standard_training": {
+        "preset_hints": ["quickstart", "showcase"],
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "当前最稳的正式版训练路径。",
+        ],
+        "warning_metadata": [],
+    },
+    "progressive_training": {
+        "preset_hints": ["clinical"],
+        "compile_boundary": "conditional_stage_sum",
+        "compile_notes": [
+            "要求 stage1 + stage2 + stage3 == num_epochs。",
+        ],
+        "warning_metadata": [],
+    },
+}
+
+MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
+    "quickstart_multimodal": {
+        "recommended_preset": "quickstart",
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "当前最适合作为正式版默认起步骨架。",
+        ],
+    },
+    "clinical_gated_baseline": {
+        "recommended_preset": "clinical",
+        "compile_boundary": "default_mainline",
+        "compile_notes": [
+            "更适合真实数据集上的稳健研究基线。",
+        ],
+    },
+    "attention_audit_path": {
+        "recommended_preset": "showcase",
+        "compile_boundary": "conditional_attention_path",
+        "compile_notes": [
+            "更偏结果审查和可解释性路径，不建议替代默认起步模板。",
+        ],
+    },
+}
 
 
 MODEL_CATALOG_COMPONENTS: list[dict[str, Any]] = [
@@ -670,13 +823,58 @@ def export_advanced_builder_contract() -> dict[str, Any]:
         "family_labels": family_labels,
         "status_labels": dict(MODEL_CATALOG_ADVANCED_BUILDER_STATUS_LABELS),
         "required_families": list(MODEL_CATALOG_ADVANCED_BUILDER_REQUIRED_FAMILIES),
+        "default_preset": MODEL_CATALOG_ADVANCED_BUILDER_DEFAULT_PRESET,
+        "preset_rules": [
+            dict(rule) for rule in MODEL_CATALOG_ADVANCED_BUILDER_PRESET_RULES
+        ],
         "connection_rules": [
             dict(rule) for rule in MODEL_CATALOG_ADVANCED_BUILDER_CONNECTION_RULES
         ],
     }
 
 
+def _unit_with_advanced_builder_contract(unit: dict[str, Any]) -> dict[str, Any]:
+    advanced_component_id = unit.get("advanced_builder_component_id")
+    if not advanced_component_id:
+        return dict(unit)
+    return {
+        **unit,
+        "advanced_builder_contract": dict(
+            MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS.get(
+                str(advanced_component_id),
+                {
+                    "preset_hints": [],
+                    "compile_boundary": "unspecified",
+                    "compile_notes": [],
+                    "warning_metadata": [],
+                },
+            )
+        ),
+    }
+
+
+def _model_with_advanced_builder_contract(model: dict[str, Any]) -> dict[str, Any]:
+    advanced_blueprint_id = model.get("advanced_builder_blueprint_id")
+    if not advanced_blueprint_id:
+        return dict(model)
+    return {
+        **model,
+        "advanced_builder_contract": dict(
+            MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS.get(
+                str(advanced_blueprint_id),
+                {
+                    "recommended_preset": MODEL_CATALOG_ADVANCED_BUILDER_DEFAULT_PRESET,
+                    "compile_boundary": "unspecified",
+                    "compile_notes": [],
+                },
+            )
+        ),
+    }
+
+
 def export_model_catalog() -> dict[str, Any]:
+    units = [_unit_with_advanced_builder_contract(unit) for unit in MODEL_CATALOG_COMPONENTS]
+    models = [_model_with_advanced_builder_contract(model) for model in MODEL_CATALOG_TEMPLATES]
     return {
         "sources": {
             "official": {
@@ -699,8 +897,8 @@ def export_model_catalog() -> dict[str, Any]:
             "模板优先服务正式版主链，而不是任意 builder 幻觉",
         ],
         "advanced_builder": export_advanced_builder_contract(),
-        "units": MODEL_CATALOG_COMPONENTS,
-        "models": MODEL_CATALOG_TEMPLATES,
-        "components": MODEL_CATALOG_COMPONENTS,
-        "templates": MODEL_CATALOG_TEMPLATES,
+        "units": units,
+        "models": models,
+        "components": units,
+        "templates": models,
     }

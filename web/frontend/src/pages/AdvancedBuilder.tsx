@@ -320,6 +320,11 @@ export default function AdvancedBuilder() {
                     <Text type="secondary">
                       components: {blueprint.components.join(" -> ")}
                     </Text>
+                    {(blueprint as typeof blueprint & { recommended_preset?: string }).recommended_preset ? (
+                      <Text type="secondary">
+                        preset hint: {(blueprint as typeof blueprint & { recommended_preset?: string }).recommended_preset}
+                      </Text>
+                    ) : null}
                     <Text type="secondary">
                       compiles to: {blueprint.compilesTo || "-"}
                     </Text>

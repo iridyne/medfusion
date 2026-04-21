@@ -110,6 +110,7 @@ export const getAdvancedBuilderCatalog = async () => {
       components: item.components,
       compilesTo: item.compiles_to,
       blockers: item.blockers,
+      recommendedPreset: item.recommended_preset,
     })),
   } satisfies AdvancedBuilderCatalogResponse;
 };
