@@ -111,11 +111,28 @@ interface ModelPrefillState {
 
 const DEFAULT_MODEL_TEMPLATE_ID = "quickstart_multimodal";
 
-const TEMPLATE_BASE_PRESET: Record<string, RunPresetId> = {
-  quickstart_multimodal: "quickstart",
-  clinical_gated_baseline: "clinical",
-  attention_audit_path: "showcase",
-};
+function resolveTemplatePreset(
+  templateId: string,
+  templates: ModelCatalogTemplate[],
+): RunPresetId {
+  const fromCatalog = templates.find((item) => item.id === templateId)
+    ?.advanced_builder_contract?.recommended_preset;
+  if (
+    fromCatalog === "quickstart" ||
+    fromCatalog === "clinical" ||
+    fromCatalog === "showcase"
+  ) {
+    return fromCatalog;
+  }
+
+  if (templateId === "clinical_gated_baseline") {
+    return "clinical";
+  }
+  if (templateId === "attention_audit_path") {
+    return "showcase";
+  }
+  return "quickstart";
+}
 
 function applyModelPrefillToSpec(prev: RunSpec, modelPrefill: ModelPrefillState): RunSpec {
   const nextBackbone = modelPrefill.backbone;
@@ -215,7 +232,7 @@ export default function RunWizard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [preset, setPreset] = useState<RunPresetId>(TEMPLATE_BASE_PRESET[DEFAULT_MODEL_TEMPLATE_ID]);
+  const [preset, setPreset] = useState<RunPresetId>("quickstart");
   const [selectedModelTemplateId, setSelectedModelTemplateId] = useState<string>(
     DEFAULT_MODEL_TEMPLATE_ID,
   );
@@ -224,7 +241,7 @@ export default function RunWizard() {
     null,
   );
   const [spec, setSpec] = useState<RunSpec>(() =>
-    createRunSpecPreset(TEMPLATE_BASE_PRESET[DEFAULT_MODEL_TEMPLATE_ID]),
+    createRunSpecPreset("quickstart"),
   );
   const [compiledImportSource, setCompiledImportSource] = useState<string | null>(
     null,
@@ -264,12 +281,17 @@ export default function RunWizard() {
     if (!selectedTemplate?.wizard_prefill) {
       return;
     }
+    const nextPreset = resolveTemplatePreset(
+      selectedTemplate.id,
+      officialModelTemplates,
+    );
+    setPreset(nextPreset);
     setSelectedTemplateDisplayLabel(selectedTemplate.label);
-    setSpec((prev) => applyModelPrefillToSpec(createRunSpecPreset(preset), {
+    setSpec((prev) => applyModelPrefillToSpec(createRunSpecPreset(nextPreset), {
       modelTemplateId: selectedTemplate.id,
       ...(selectedTemplate.wizard_prefill as ModelPrefillState),
     }));
-  }, [officialModelTemplates, selectedModelTemplateId, preset]);
+  }, [officialModelTemplates, selectedModelTemplateId]);
 
   const issues = useMemo(() => validateRunSpec(spec), [spec]);
   const yamlPreview = useMemo(() => buildYamlFromRunSpec(spec), [spec]);
@@ -357,7 +379,7 @@ export default function RunWizard() {
     modelPrefill?: ModelPrefillState,
     displayLabel?: string | null,
   ) => {
-    const nextPreset = TEMPLATE_BASE_PRESET[templateId] || "quickstart";
+    const nextPreset = resolveTemplatePreset(templateId, officialModelTemplates);
     setPreset(nextPreset);
     setSelectedModelTemplateId(templateId);
     setSelectedTemplateDisplayLabel(displayLabel || null);
