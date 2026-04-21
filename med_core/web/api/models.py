@@ -607,6 +607,65 @@ def _load_validation(model: ModelInfo) -> dict[str, Any] | None:
     return validation_payload or None
 
 
+def _build_source_contract(model: ModelInfo) -> dict[str, Any] | None:
+    config = model.config or {}
+    source_context = config.get("source_context", {})
+    if not isinstance(source_context, dict):
+        return None
+
+    source_type = source_context.get("source_type")
+    if source_type == "advanced_builder":
+        blueprint_id = source_context.get("blueprint_id")
+        catalog = export_model_catalog()
+        template = next(
+            (
+                item
+                for item in catalog["models"]
+                if item.get("advanced_builder_blueprint_id") == blueprint_id
+            ),
+            None,
+        )
+        if not template:
+            return {
+                "source_type": "advanced_builder",
+                "entrypoint": source_context.get("entrypoint"),
+                "blueprint_id": blueprint_id,
+            }
+        return {
+            "source_type": "advanced_builder",
+            "entrypoint": source_context.get("entrypoint"),
+            "blueprint_id": blueprint_id,
+            "template_id": template.get("id"),
+            "template_label": template.get("label"),
+            "recommended_preset": (
+                template.get("advanced_builder_contract", {}) or {}
+            ).get("recommended_preset"),
+            "compile_boundary": (
+                template.get("advanced_builder_contract", {}) or {}
+            ).get("compile_boundary"),
+            "compile_notes": (
+                template.get("advanced_builder_contract", {}) or {}
+            ).get("compile_notes", []),
+        }
+
+    if source_type == "evaluation":
+        return {
+            "source_type": "evaluation",
+            "entrypoint": source_context.get("entrypoint"),
+            "split": source_context.get("split"),
+            "message": "这是从独立评估模块补跑得到的结果，不代表重新执行过训练。",
+        }
+
+    if source_type == "workflow":
+        return {
+            "source_type": "workflow",
+            "entrypoint": source_context.get("entrypoint"),
+            "message": "这是从受限 workflow preview 发起并回流到结果后台的结果。",
+        }
+
+    return None
+
+
 def _to_payload(model: ModelInfo) -> dict[str, Any]:
     checkpoint_path = model.checkpoint_path
     file_size = Path(checkpoint_path).stat().st_size if checkpoint_path and Path(checkpoint_path).exists() else None
@@ -643,6 +702,7 @@ def _to_payload(model: ModelInfo) -> dict[str, Any]:
         "training_history": training_history,
         "visualizations": visualizations,
         "validation": validation,
+        "source_contract": _build_source_contract(model),
         "format": model_format,
         "created_at": model.created_at.isoformat(),
         "updated_at": model.updated_at.isoformat() if model.updated_at else None,

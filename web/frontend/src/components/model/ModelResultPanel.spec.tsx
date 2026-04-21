@@ -30,6 +30,16 @@ const mockModel = {
       best_accuracy: 0.91,
     },
   },
+  source_contract: {
+    source_type: "advanced_builder",
+    entrypoint: "advanced-builder-canvas",
+    blueprint_id: "quickstart_multimodal",
+    template_id: "quickstart_multimodal",
+    template_label: "Quickstart 多模态模板",
+    recommended_preset: "quickstart",
+    compile_boundary: "default_mainline",
+    compile_notes: ["当前最适合作为正式版默认起步骨架。"],
+  },
   validation: {
     overview: {
       sample_count: 32,
@@ -103,5 +113,8 @@ describe("ModelResultPanel", () => {
     expect(markup).toContain("advanced_builder");
     expect(markup).toContain("advanced-builder-canvas");
     expect(markup).toContain("quickstart_multimodal");
+    expect(markup).toContain("Quickstart 多模态模板");
+    expect(markup).toContain("quickstart");
+    expect(markup).toContain("default_mainline");
   });
 });

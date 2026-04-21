@@ -559,6 +559,15 @@ export default function AdvancedBuilderCanvas() {
               {catalog?.blueprints.find((item) => item.id === selectedBlueprintId)?.label || "-"}
             </strong>
           </div>
+          {catalog?.blueprints.find((item) => item.id === selectedBlueprintId)?.recommendedPreset ? (
+            <div className="surface-note">
+              推荐 preset：
+              <strong>
+                {" "}
+                {catalog?.blueprints.find((item) => item.id === selectedBlueprintId)?.recommendedPreset}
+              </strong>
+            </div>
+          ) : null}
         </div>
       }
       metrics={[
@@ -768,6 +777,17 @@ export default function AdvancedBuilderCanvas() {
                     <strong>当前预设</strong>
                     <p>{compileResult.preset}</p>
                   </div>
+                  {catalog?.blueprints.find((item) => item.id === selectedBlueprintId)?.recommendedPreset ? (
+                    <div className="surface-note surface-note--dense">
+                      <strong>模板推荐 preset</strong>
+                      <p>
+                        {
+                          catalog?.blueprints.find((item) => item.id === selectedBlueprintId)
+                            ?.recommendedPreset
+                        }
+                      </p>
+                    </div>
+                  ) : null}
                   {compileResult.mainlineContract ? (
                     <div className="surface-note surface-note--dense">
                       <strong>正式 contract</strong>
@@ -902,6 +922,11 @@ export default function AdvancedBuilderCanvas() {
                         <Text type="secondary">
                           schema: {node.data.schemaPath}
                         </Text>
+                      ) : null}
+                      {node.data.notes?.length ? (
+                        <div className="surface-note surface-note--dense">
+                          {node.data.notes.join(" ")}
+                        </div>
                       ) : null}
                     </Space>
                   </Card>

@@ -136,6 +136,7 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
   const importanceTopFeatures = globalFeatureImportance?.top_features || [];
   const summary = (model.config?.result_summary || {}) as Record<string, any>;
   const sourceContext = (model.config?.source_context || {}) as Record<string, any>;
+  const sourceContract = model.source_contract;
   const importSource = model.config?.import_source as string | undefined;
   const trainingHistory = model.training_history?.entries || [];
   const resultFiles = model.result_files || [];
@@ -337,6 +338,18 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                   <Descriptions.Item label="Blueprint">
                     {sourceContext.blueprint_id || "-"}
                   </Descriptions.Item>
+                  <Descriptions.Item label="来源模板">
+                    {sourceContract?.template_label || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="来源说明">
+                    {sourceContract?.message || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="推荐 preset">
+                    {sourceContract?.recommended_preset || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="编译边界">
+                    {sourceContract?.compile_boundary || "-"}
+                  </Descriptions.Item>
                   <Descriptions.Item label="数据集">
                     {model.dataset_name || validationDataset?.name || "-"}
                   </Descriptions.Item>
@@ -366,6 +379,20 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                           <Tag key={item.label} color="blue">
                             {item.label}: {item.count} / {formatPercent(item.rate)}
                           </Tag>
+                        ))}
+                      </Space>
+                    </div>
+                  </div>
+                ) : null}
+                {sourceContract?.compile_notes?.length ? (
+                  <div style={{ marginTop: 12 }}>
+                    <Text type="secondary">来源 contract 说明</Text>
+                    <div style={{ marginTop: 8 }}>
+                      <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                        {sourceContract.compile_notes.map((item) => (
+                          <div key={item} className="surface-note surface-note--dense">
+                            {item}
+                          </div>
                         ))}
                       </Space>
                     </div>

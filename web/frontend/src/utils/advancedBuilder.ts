@@ -26,6 +26,7 @@ export interface AdvancedBuilderNodeData {
   statusLabel?: string;
   description: string;
   schemaPath?: string;
+  notes?: string[];
 }
 
 export interface AdvancedBuilderEvaluation {
@@ -158,6 +159,7 @@ export function createBuilderNode(
       statusLabel: statusLabels[component.status],
       description: component.description,
       schemaPath: component.schemaPath,
+      notes: component.notes || [],
     },
   };
 }

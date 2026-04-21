@@ -43,6 +43,11 @@ function AdvancedComponentNode({
           {data.schemaPath ? (
             <Text type="secondary">schema: {data.schemaPath}</Text>
           ) : null}
+          {data.notes?.length ? (
+            <div className="surface-note surface-note--dense">
+              {data.notes.join(" ")}
+            </div>
+          ) : null}
         </Space>
       </Card>
       <Handle

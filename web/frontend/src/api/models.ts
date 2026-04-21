@@ -377,6 +377,18 @@ export interface Model {
       }>;
     } | null;
   } | null;
+  source_contract?: {
+    source_type: string;
+    entrypoint?: string;
+    blueprint_id?: string;
+    template_id?: string;
+    template_label?: string;
+    recommended_preset?: string;
+    compile_boundary?: string;
+    compile_notes?: string[];
+    split?: string;
+    message?: string;
+  } | null;
   visualizations?: {
     roc_curve?: {
       auc?: number | null;

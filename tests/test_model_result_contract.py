@@ -206,6 +206,11 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
                 "heatmap_manifest_path": str(heatmap_manifest_path),
             },
             "result_summary": {"best_accuracy": 0.71},
+            "source_context": {
+                "source_type": "advanced_builder",
+                "entrypoint": "advanced-builder-canvas",
+                "blueprint_id": "quickstart_multimodal",
+            },
         },
         metrics={"auc": 0.81, "balanced_accuracy": 0.7},
         accuracy=0.71,
@@ -241,6 +246,10 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
     assert payload["visualizations"]["three_phase_heatmaps"]["heatmap_count"] == 1
     assert payload["visualizations"]["three_phase_heatmaps"]["artifact_key"] == "heatmap_manifest"
     assert payload["visualizations"]["three_phase_heatmaps"]["cases"][0]["case_id"] == "001"
+    assert payload["source_contract"]["source_type"] == "advanced_builder"
+    assert payload["source_contract"]["recommended_preset"] == "quickstart"
+    assert payload["source_contract"]["compile_boundary"] == "default_mainline"
+    assert payload["source_contract"]["template_label"] == "Quickstart 多模态模板"
     result_file_keys = {item["key"] for item in payload["result_files"]}
     assert {
         "summary",
