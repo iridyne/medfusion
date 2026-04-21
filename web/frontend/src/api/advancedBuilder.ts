@@ -95,6 +95,7 @@ export const getAdvancedBuilderCatalog = async () => {
       inputs: item.inputs || [],
       outputs: item.outputs || [],
       notes: item.notes || [],
+      advancedBuilderContract: item.advanced_builder_contract,
     })),
     connectionRules: data.connection_rules.map((item: any) => ({
       fromFamily: item.from_family,

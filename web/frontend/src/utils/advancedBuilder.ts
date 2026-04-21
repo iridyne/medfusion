@@ -1,10 +1,6 @@
 import type { Edge, Node } from "reactflow";
 
 import {
-  ADVANCED_BUILDER_BLUEPRINTS,
-  ADVANCED_BUILDER_COMPONENTS,
-  ADVANCED_BUILDER_CONNECTION_RULES,
-  ADVANCED_BUILDER_FAMILY_LABELS,
   type AdvancedBuilderBlueprint,
   type AdvancedBuilderComponent,
   type AdvancedBuilderFamily,
@@ -21,6 +17,11 @@ export interface AdvancedBuilderNodeData {
   description: string;
   schemaPath?: string;
   notes?: string[];
+  patchTargetHints?: Array<{
+    path: string;
+    mode: string;
+    description: string;
+  }>;
 }
 
 export interface AdvancedBuilderEvaluation {
@@ -54,16 +55,6 @@ const FAMILY_POSITIONS: Record<AdvancedBuilderFamily, { x: number; y: number }> 
   training_strategy: { x: 1040, y: 160 },
 };
 
-function getComponentOrThrow(componentId: string): AdvancedBuilderComponent {
-  const component = ADVANCED_BUILDER_COMPONENTS.find(
-    (item) => item.id === componentId,
-  );
-  if (!component) {
-    throw new Error(`Unknown advanced builder component: ${componentId}`);
-  }
-  return component;
-}
-
 function getComponentOrThrowFromCatalog(
   componentId: string,
   components: AdvancedBuilderComponent[],
@@ -73,16 +64,6 @@ function getComponentOrThrowFromCatalog(
     throw new Error(`Unknown advanced builder component: ${componentId}`);
   }
   return component;
-}
-
-function getBlueprintOrThrow(blueprintId: string): AdvancedBuilderBlueprint {
-  const blueprint = ADVANCED_BUILDER_BLUEPRINTS.find(
-    (item) => item.id === blueprintId,
-  );
-  if (!blueprint) {
-    throw new Error(`Unknown advanced builder blueprint: ${blueprintId}`);
-  }
-  return blueprint;
 }
 
 function getBlueprintOrThrowFromCatalog(
@@ -107,8 +88,8 @@ function createEdgeId(source: string, target: string): string {
 export function createBuilderNode(
   componentId: string,
   index = 0,
-  components: AdvancedBuilderComponent[] = ADVANCED_BUILDER_COMPONENTS,
-  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
+  components: AdvancedBuilderComponent[],
+  familyLabels: Record<AdvancedBuilderFamily, string>,
   statusLabels: Record<string, string> = {
     compile_ready: "可编译",
     conditional: "有条件开放",
@@ -135,16 +116,26 @@ export function createBuilderNode(
       description: component.description,
       schemaPath: component.schemaPath,
       notes: component.notes || [],
+      patchTargetHints:
+        ((component as AdvancedBuilderComponent & {
+          advancedBuilderContract?: {
+            patch_target_hints?: Array<{
+              path: string;
+              mode: string;
+              description: string;
+            }>;
+          };
+        }).advancedBuilderContract?.patch_target_hints || []),
     },
   };
 }
 
 export function buildBlueprintGraph(
   blueprintId: string,
-  blueprints: AdvancedBuilderBlueprint[] = ADVANCED_BUILDER_BLUEPRINTS,
-  components: AdvancedBuilderComponent[] = ADVANCED_BUILDER_COMPONENTS,
-  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
-  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
+  blueprints: AdvancedBuilderBlueprint[],
+  components: AdvancedBuilderComponent[],
+  connectionRules: AdvancedBuilderConnectionRule[],
+  familyLabels: Record<AdvancedBuilderFamily, string>,
   statusLabels: Record<string, string> = {
     compile_ready: "可编译",
     conditional: "有条件开放",
@@ -202,8 +193,8 @@ export function buildBlueprintGraph(
 export function canConnectFamilies(
   fromFamily: AdvancedBuilderFamily,
   toFamily: AdvancedBuilderFamily,
-  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
-  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
+  connectionRules: AdvancedBuilderConnectionRule[],
+  familyLabels: Record<AdvancedBuilderFamily, string>,
 ): {
   allowed: boolean;
   status: "required" | "conditional" | "blocked" | "unsupported";
@@ -231,7 +222,7 @@ export function canConnectFamilies(
 export function evaluateAdvancedBuilderGraph(
   nodes: Array<Node<AdvancedBuilderNodeData>>,
   edges: Edge[],
-  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
+  connectionRules: AdvancedBuilderConnectionRule[],
   requiredFamilies: AdvancedBuilderFamily[] = REQUIRED_FAMILIES,
 ): AdvancedBuilderEvaluation {
   const familyCounts = new Map<AdvancedBuilderFamily, number>();

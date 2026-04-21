@@ -398,6 +398,23 @@ export default function ModelResultPanel({ model }: ModelResultPanelProps) {
                     </div>
                   </div>
                 ) : null}
+                {sourceContract?.patch_target_hints?.length ? (
+                  <div style={{ marginTop: 12 }}>
+                    <Text type="secondary">来源 patch target hints</Text>
+                    <div style={{ marginTop: 8 }}>
+                      <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                        {sourceContract.patch_target_hints.map((item) => (
+                          <div
+                            key={`${item.path}-${item.mode}`}
+                            className="surface-note surface-note--dense"
+                          >
+                            {item.mode}: {item.path} · {item.description}
+                          </div>
+                        ))}
+                      </Space>
+                    </div>
+                  </div>
+                ) : null}
               </Card>
             </Col>
 

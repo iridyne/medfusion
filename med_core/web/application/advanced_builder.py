@@ -786,6 +786,11 @@ def export_catalog() -> dict[str, Any]:
                     .get("advanced_builder_contract", {})
                     .get("compile_notes", [])
                 ),
+                "advanced_builder_contract": (
+                    _catalog_units_by_advanced_component()
+                    .get(component.id, {})
+                    .get("advanced_builder_contract", {})
+                ),
             }
             for component in components
         ],

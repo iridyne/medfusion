@@ -319,6 +319,11 @@ export default function ModelCatalog() {
                             {item}
                           </p>
                         ))}
+                        {template.advanced_builder_contract.patch_target_hints.map((item) => (
+                          <p key={`${item.path}-${item.mode}`} style={{ marginBottom: 0 }}>
+                            {item.mode}: {item.path} · {item.description}
+                          </p>
+                        ))}
                       </div>
                     ) : null}
                     <Space wrap>
@@ -427,6 +432,11 @@ export default function ModelCatalog() {
                         {component.advanced_builder_contract.compile_notes.map((item) => (
                           <p key={item} style={{ marginBottom: 0 }}>
                             {item}
+                          </p>
+                        ))}
+                        {component.advanced_builder_contract.patch_target_hints.map((item) => (
+                          <p key={`${item.path}-${item.mode}`} style={{ marginBottom: 0 }}>
+                            {item.mode}: {item.path} · {item.description}
                           </p>
                         ))}
                       </div>

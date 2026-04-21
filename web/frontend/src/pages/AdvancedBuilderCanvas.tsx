@@ -169,7 +169,7 @@ export default function AdvancedBuilderCanvas() {
       evaluateAdvancedBuilderGraph(
         nodes,
         edges,
-        catalog?.connectionRules,
+        catalog?.connectionRules || [],
       ),
     [nodes, edges, catalog?.connectionRules],
   );
@@ -331,8 +331,8 @@ export default function AdvancedBuilderCanvas() {
       createBuilderNode(
         componentId,
         current.length,
-        catalog?.components,
-        catalog?.familyLabels,
+        catalog?.components || [],
+        catalog?.familyLabels || familyLabels,
         catalog?.statusLabels,
       ),
     ]);
@@ -351,8 +351,8 @@ export default function AdvancedBuilderCanvas() {
     const rule = canConnectFamilies(
       sourceNode.data.family,
       targetNode.data.family,
-      catalog?.connectionRules,
-      catalog?.familyLabels,
+      catalog?.connectionRules || [],
+      catalog?.familyLabels || familyLabels,
     );
     if (!rule.allowed) {
       message.error(rule.description);
@@ -945,6 +945,16 @@ export default function AdvancedBuilderCanvas() {
                           {node.data.notes.join(" ")}
                         </div>
                       ) : null}
+                      {node.data.patchTargetHints?.length ? (
+                        <div className="surface-note surface-note--dense">
+                          <strong>patch target hints</strong>
+                          {node.data.patchTargetHints.map((item) => (
+                            <p key={`${item.path}-${item.mode}`} style={{ marginBottom: 0 }}>
+                              {item.mode}: {item.path} · {item.description}
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
                     </Space>
                   </Card>
                 ))}
@@ -959,7 +969,7 @@ export default function AdvancedBuilderCanvas() {
                       ? canConnectFamilies(
                           sourceNode.data.family,
                           targetNode.data.family,
-                          catalog?.connectionRules,
+                          catalog?.connectionRules || [],
                           familyLabels,
                         )
                       : null;

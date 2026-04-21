@@ -95,6 +95,10 @@ async def test_advanced_builder_catalog_exposes_registry(api_client) -> None:
     assert "connection_rules" in payload
     assert "blueprints" in payload
     assert any(component["id"] == "resnet18_backbone" for component in payload["components"])
+    resnet_component = next(
+        component for component in payload["components"] if component["id"] == "resnet18_backbone"
+    )
+    assert resnet_component["advanced_builder_contract"]["patch_target_hints"][0]["path"] == "model.vision.backbone"
     assert all(component["id"] != "resnet18_encoder_bundle" for component in payload["components"])
 
 

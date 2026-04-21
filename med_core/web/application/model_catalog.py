@@ -129,6 +129,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "这是当前正式版默认数据输入单元，会直接映射到 image_tabular 主链。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "data.*",
+                "mode": "set",
+                "description": "会设置 csv/image_dir/列名与特征列等数据输入字段。",
+            }
+        ],
         "warning_metadata": [],
     },
     "resnet18_backbone": {
@@ -136,6 +143,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "default_mainline",
         "compile_notes": [
             "更适合作为 quickstart 或 attention 审查路径的轻量 backbone。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "model.vision.backbone",
+                "mode": "set",
+                "description": "直接决定视觉 backbone。",
+            },
+            {
+                "path": "model.vision.featureDim",
+                "mode": "set",
+                "description": "会同步设置默认视觉特征维度。",
+            },
         ],
         "warning_metadata": [],
     },
@@ -145,6 +164,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "更适合作为稳健研究基线，而不是最低门槛 smoke 路径。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "model.vision.backbone",
+                "mode": "set",
+                "description": "直接决定视觉 backbone。",
+            },
+            {
+                "path": "model.vision.featureDim",
+                "mode": "set",
+                "description": "会同步设置更高的默认视觉特征维度。",
+            },
+        ],
         "warning_metadata": [],
     },
     "attention_backbone_bundle": {
@@ -152,6 +183,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_attention_path",
         "compile_notes": [
             "会默认走 CBAM + attention supervision 条件路径。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "model.vision.attentionType",
+                "mode": "set",
+                "description": "会把注意力路径固定到 CBAM。",
+            },
+            {
+                "path": "training.useAttentionSupervision",
+                "mode": "toggle",
+                "description": "会打开 attention supervision 路径。",
+            },
         ],
         "warning_metadata": [
             {
@@ -168,6 +211,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前正式版默认表格编码分支。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "model.tabular.*",
+                "mode": "set",
+                "description": "会设置 hidden_dims / output_dim / dropout 等表格编码字段。",
+            }
+        ],
         "warning_metadata": [],
     },
     "concatenate_fusion": {
@@ -175,6 +225,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "default_mainline",
         "compile_notes": [
             "编译时会把 fusion hidden dim 对齐到 vision feature dim + tabular output dim。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "model.fusion.fusionType",
+                "mode": "set",
+                "description": "会把 fusion 类型设为 concatenate。",
+            },
+            {
+                "path": "model.fusion.hiddenDim",
+                "mode": "derived",
+                "description": "会根据 vision feature dim + tabular output dim 派生 hidden dim。",
+            },
         ],
         "warning_metadata": [],
     },
@@ -184,6 +246,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "更接近稳健研究基线，而不是最轻量起步路径。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "model.fusion.*",
+                "mode": "set",
+                "description": "会设置 gated fusion 的类型、hidden dim 与 dropout。",
+            }
+        ],
         "warning_metadata": [],
     },
     "attention_fusion": {
@@ -191,6 +260,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_attention_path",
         "compile_notes": [
             "会保留 attention 路径，但仍受正式版当前 fusion schema 约束。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "model.fusion.*",
+                "mode": "set",
+                "description": "会设置 attention fusion 的类型、hidden dim、num_heads 与 dropout。",
+            }
         ],
         "warning_metadata": [
             {
@@ -207,6 +283,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前正式版默认任务头，只承诺分类主链。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "model.numClasses",
+                "mode": "set",
+                "description": "会决定分类任务的输出类别数。",
+            },
+            {
+                "path": "model.useAuxiliaryHeads",
+                "mode": "toggle",
+                "description": "会决定是否启用辅助头。",
+            },
+        ],
         "warning_metadata": [],
     },
     "standard_training": {
@@ -215,6 +303,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前最稳的正式版训练路径。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "training.useProgressiveTraining",
+                "mode": "toggle",
+                "description": "会关闭 progressive training。",
+            }
+        ],
         "warning_metadata": [],
     },
     "progressive_training": {
@@ -222,6 +317,18 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_stage_sum",
         "compile_notes": [
             "要求 stage1 + stage2 + stage3 == num_epochs。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "training.useProgressiveTraining",
+                "mode": "toggle",
+                "description": "会打开 progressive training。",
+            },
+            {
+                "path": "training.stage*",
+                "mode": "set",
+                "description": "会设置 stage1/stage2/stage3 的默认轮次。",
+            },
         ],
         "warning_metadata": [],
     },
@@ -234,6 +341,13 @@ MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前最适合作为正式版默认起步骨架。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "data.* / model.* / training.*",
+                "mode": "seed",
+                "description": "会以 quickstart 路线初始化整套默认配置。",
+            }
+        ],
     },
     "clinical_gated_baseline": {
         "recommended_preset": "clinical",
@@ -241,12 +355,26 @@ MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "更适合真实数据集上的稳健研究基线。",
         ],
+        "patch_target_hints": [
+            {
+                "path": "model.vision.* / model.fusion.* / training.stage*",
+                "mode": "seed",
+                "description": "会以 clinical 路线初始化 backbone、fusion 和训练节奏。",
+            }
+        ],
     },
     "attention_audit_path": {
         "recommended_preset": "showcase",
         "compile_boundary": "conditional_attention_path",
         "compile_notes": [
             "更偏结果审查和可解释性路径，不建议替代默认起步模板。",
+        ],
+        "patch_target_hints": [
+            {
+                "path": "model.vision.attentionType / training.useAttentionSupervision / model.fusion.*",
+                "mode": "seed",
+                "description": "会以 showcase 路线初始化注意力相关配置。",
+            }
         ],
     },
 }
@@ -846,6 +974,7 @@ def _unit_with_advanced_builder_contract(unit: dict[str, Any]) -> dict[str, Any]
                     "preset_hints": [],
                     "compile_boundary": "unspecified",
                     "compile_notes": [],
+                    "patch_target_hints": [],
                     "warning_metadata": [],
                 },
             )
@@ -866,6 +995,7 @@ def _model_with_advanced_builder_contract(model: dict[str, Any]) -> dict[str, An
                     "recommended_preset": MODEL_CATALOG_ADVANCED_BUILDER_DEFAULT_PRESET,
                     "compile_boundary": "unspecified",
                     "compile_notes": [],
+                    "patch_target_hints": [],
                 },
             )
         ),

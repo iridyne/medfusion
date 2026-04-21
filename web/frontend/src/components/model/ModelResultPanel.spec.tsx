@@ -39,6 +39,13 @@ const mockModel = {
     recommended_preset: "quickstart",
     compile_boundary: "default_mainline",
     compile_notes: ["当前最适合作为正式版默认起步骨架。"],
+    patch_target_hints: [
+      {
+        path: "data.* / model.* / training.*",
+        mode: "seed",
+        description: "会以 quickstart 路线初始化整套默认配置。",
+      },
+    ],
   },
   validation: {
     overview: {
@@ -116,5 +123,7 @@ describe("ModelResultPanel", () => {
     expect(markup).toContain("Quickstart 多模态模板");
     expect(markup).toContain("quickstart");
     expect(markup).toContain("default_mainline");
+    expect(markup).toContain("seed");
+    expect(markup).toContain("data.* / model.* / training.*");
   });
 });

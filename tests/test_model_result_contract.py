@@ -250,6 +250,7 @@ def test_model_payload_keeps_result_panel_contract(tmp_path: Path) -> None:
     assert payload["source_contract"]["recommended_preset"] == "quickstart"
     assert payload["source_contract"]["compile_boundary"] == "default_mainline"
     assert payload["source_contract"]["template_label"] == "Quickstart 多模态模板"
+    assert payload["source_contract"]["patch_target_hints"][0]["mode"] == "seed"
     result_file_keys = {item["key"] for item in payload["result_files"]}
     assert {
         "summary",

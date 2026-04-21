@@ -646,6 +646,9 @@ def _build_source_contract(model: ModelInfo) -> dict[str, Any] | None:
             "compile_notes": (
                 template.get("advanced_builder_contract", {}) or {}
             ).get("compile_notes", []),
+            "patch_target_hints": (
+                template.get("advanced_builder_contract", {}) or {}
+            ).get("patch_target_hints", []),
         }
 
     if source_type == "evaluation":

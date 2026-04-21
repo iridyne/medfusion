@@ -109,6 +109,11 @@ export interface ModelCatalogComponent {
     preset_hints: string[];
     compile_boundary: string;
     compile_notes: string[];
+    patch_target_hints: Array<{
+      path: string;
+      mode: string;
+      description: string;
+    }>;
     warning_metadata: Array<{
       code: string;
       path?: string;
@@ -139,6 +144,11 @@ export interface ModelCatalogTemplate {
     recommended_preset: string;
     compile_boundary: string;
     compile_notes: string[];
+    patch_target_hints: Array<{
+      path: string;
+      mode: string;
+      description: string;
+    }>;
   };
   wizard_prefill?: Record<string, any>;
 }
@@ -386,6 +396,11 @@ export interface Model {
     recommended_preset?: string;
     compile_boundary?: string;
     compile_notes?: string[];
+    patch_target_hints?: Array<{
+      path: string;
+      mode: string;
+      description: string;
+    }>;
     split?: string;
     message?: string;
   } | null;
