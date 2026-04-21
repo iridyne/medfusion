@@ -9,21 +9,13 @@ from urllib.parse import urlparse
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
-from ..application.advanced_builder import (
-    ADVANCED_BUILDER_BLUEPRINTS,
-    ADVANCED_BUILDER_COMPONENTS,
-    ADVANCED_BUILDER_FAMILY_LABELS,
-)
+from ..application.advanced_builder import export_catalog as export_advanced_builder_catalog
 from ..config import settings
 
 router = APIRouter()
 
 _COMFYUI_HEALTH_PATH = "/system_stats"
 _COMFYUI_START_COMMAND = "python main.py --listen 127.0.0.1 --port 8188"
-_COMPONENTS_BY_ID = {
-    component.id: component
-    for component in ADVANCED_BUILDER_COMPONENTS
-}
 _DEFAULT_PREFILL_BY_BLUEPRINT: dict[str, dict[str, Any]] = {
     "quickstart_multimodal": {
         "config_path": "configs/starter/quickstart.yaml",
@@ -135,47 +127,53 @@ async def get_comfyui_health(
 @router.get("/adapter-profiles")
 async def get_comfyui_adapter_profiles() -> dict[str, Any]:
     """Return MedFusion-side adapter profiles for ComfyUI workflow alignment."""
+    catalog = export_advanced_builder_catalog()
+    family_labels = catalog["families"]
+    components_by_id = {
+        component["id"]: component
+        for component in catalog["components"]
+    }
     profiles: list[dict[str, Any]] = []
-    for blueprint in ADVANCED_BUILDER_BLUEPRINTS:
-        if blueprint.status != "compile_ready":
+    for blueprint in catalog["blueprints"]:
+        if blueprint["status"] != "compile_ready":
             continue
         components = []
         seen_families: set[str] = set()
         family_chain: list[dict[str, Any]] = []
 
-        for component_id in blueprint.components:
-            component = _COMPONENTS_BY_ID.get(component_id)
+        for component_id in blueprint["components"]:
+            component = components_by_id.get(component_id)
             if component is None:
                 continue
             components.append(
                 {
-                    "component_id": component.id,
-                    "label": component.label,
-                    "family": component.family,
-                    "family_label": ADVANCED_BUILDER_FAMILY_LABELS[component.family],
-                    "status": component.status,
+                    "component_id": component["id"],
+                    "label": component["label"],
+                    "family": component["family"],
+                    "family_label": family_labels[component["family"]],
+                    "status": component["status"],
                 }
             )
-            if component.family not in seen_families:
-                seen_families.add(component.family)
+            if component["family"] not in seen_families:
+                seen_families.add(component["family"])
                 family_chain.append(
                     {
-                        "family": component.family,
-                        "label": ADVANCED_BUILDER_FAMILY_LABELS[component.family],
+                        "family": component["family"],
+                        "label": family_labels[component["family"]],
                     }
                 )
 
         profiles.append(
             {
-                "id": blueprint.id,
-                "label": blueprint.label,
-                "description": blueprint.description,
-                "blueprint_id": blueprint.id,
-                "target_canvas_route": f"/config/advanced/canvas?blueprint={blueprint.id}",
+                "id": blueprint["id"],
+                "label": blueprint["label"],
+                "description": blueprint["description"],
+                "blueprint_id": blueprint["id"],
+                "target_canvas_route": f"/config/advanced/canvas?blueprint={blueprint['id']}",
                 "components": components,
                 "family_chain": family_chain,
                 "default_import_prefill": _DEFAULT_PREFILL_BY_BLUEPRINT.get(
-                    blueprint.id,
+                    blueprint["id"],
                     _DEFAULT_PREFILL_BY_BLUEPRINT["quickstart_multimodal"],
                 ),
             }

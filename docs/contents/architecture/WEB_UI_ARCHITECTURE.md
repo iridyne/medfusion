@@ -435,13 +435,14 @@ web/stop-webui.sh                # 旧的停止脚本
   - connection rules
 - 高级模式后端编译器开始从模型数据库读取这层结构语义，而不是继续持有独立结构真源
 
-**C. 下一步：继续做“增强版方案 1”**
+**C. 当前正在执行：增强版方案 1**
 
 接下来继续进入模型数据库 contract 的，只包括：
 
 - preset hint
 - warning metadata
 - compile boundary metadata
+- patch target hints
 - 组件条件约束说明
 
 也就是说，模型数据库继续更强地回答：
@@ -487,15 +488,17 @@ web/stop-webui.sh                # 旧的停止脚本
 - [x] 连接规则 / required families / family projection 进入模型数据库 contract
 
 **Phase B：规则与提示统一**  
-状态：下一轮继续推进
+状态：进行中，关键骨架已落地
 
-- [ ] 把 preset hint 收入模型数据库 contract
-- [ ] 把 conditional warning metadata 收入模型数据库 contract
-- [ ] 把 compile-ready / draft-only 的阻断说明统一到模型数据库 contract
-- [ ] 让 `/config/model`、`/config/advanced`、结果页来源说明共享同一套 rule metadata
+- [x] 把 preset hint 收入模型数据库 contract
+- [x] 把 conditional warning metadata 收入模型数据库 contract
+- [x] 把 compile-ready / draft-only 的阻断说明统一到模型数据库 contract
+- [x] 让 `/config/model`、`/config/advanced`、结果页来源说明共享同一套 rule metadata
+- [x] 把 patch target hints 收入模型数据库 contract
+- [ ] 把 contract 说明继续贯通到更多使用面与对外文档
 
 **Phase C：编译器变薄，但不空心化**  
-状态：后续阶段
+状态：已启动第一轮清理
 
 - [ ] 编译器继续保留 Python 实现
 - [ ] 编译器只保留：
@@ -503,6 +506,7 @@ web/stop-webui.sh                # 旧的停止脚本
   - 条件覆盖
   - preset 落地
   - contract 校验调用
+- [x] 清理前端静态高级模式目录与本地编译逻辑
 - [ ] 清理剩余只为历史兼容保留的高级模式静态常量
 
 **Phase D：有节制地逼近方案 2**  
