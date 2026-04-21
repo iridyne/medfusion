@@ -74,120 +74,6 @@ ADVANCED_BUILDER_FAMILY_LABELS: dict[AdvancedBuilderFamily, str] = {
     "training_strategy": "训练策略",
 }
 
-ADVANCED_BUILDER_COMPONENTS: tuple[AdvancedBuilderComponent, ...] = (
-    AdvancedBuilderComponent(
-        id="image_tabular_dataset",
-        family="data_input",
-        label="图像 + 表格输入",
-        status="compile_ready",
-        description="当前正式版默认主链，映射到 image_tabular 训练 schema。",
-        schema_path="data.dataset_type=image_tabular",
-    ),
-    AdvancedBuilderComponent(
-        id="three_phase_ct_dataset",
-        family="data_input",
-        label="三相 CT + 临床输入",
-        status="draft_only",
-        description="runtime 已有专项模型，但还没有进入正式版高级建模器的通用编译面。",
-        schema_path="data.dataset_type=three_phase_ct_tabular",
-    ),
-    AdvancedBuilderComponent(
-        id="resnet18_backbone",
-        family="vision_backbone",
-        label="ResNet18",
-        status="compile_ready",
-        description="默认轻量视觉 backbone，适合作为正式版起步骨架。",
-        schema_path="model.vision.backbone=resnet18",
-    ),
-    AdvancedBuilderComponent(
-        id="efficientnet_b0_backbone",
-        family="vision_backbone",
-        label="EfficientNet-B0",
-        status="compile_ready",
-        description="更稳健的常规研究基线，适合中等规模正式版模板。",
-        schema_path="model.vision.backbone=efficientnet_b0",
-    ),
-    AdvancedBuilderComponent(
-        id="attention_backbone_bundle",
-        family="vision_backbone",
-        label="Attention-supervised backbone",
-        status="conditional",
-        description="当前仅在 CBAM 注意力路径下可用，需要前台显式提示条件。",
-        schema_path="model.vision.attention_type=cbam",
-    ),
-    AdvancedBuilderComponent(
-        id="mlp_tabular_encoder",
-        family="tabular_encoder",
-        label="MLP 表格编码器",
-        status="compile_ready",
-        description="当前正式版默认的表格分支编码器。",
-        schema_path="model.tabular",
-    ),
-    AdvancedBuilderComponent(
-        id="concatenate_fusion",
-        family="fusion",
-        label="Concatenate Fusion",
-        status="compile_ready",
-        description="最稳的正式版起步融合层，默认 quickstart 使用此路径。",
-        schema_path="model.fusion.fusion_type=concatenate",
-    ),
-    AdvancedBuilderComponent(
-        id="gated_fusion",
-        family="fusion",
-        label="Gated Fusion",
-        status="compile_ready",
-        description="适合作为更稳健的研究基线融合策略。",
-        schema_path="model.fusion.fusion_type=gated",
-    ),
-    AdvancedBuilderComponent(
-        id="attention_fusion",
-        family="fusion",
-        label="Attention Fusion",
-        status="conditional",
-        description="适合结果强化和注意力审查，但正式版应在骨架推荐后再开放。",
-        schema_path="model.fusion.fusion_type=attention",
-    ),
-    AdvancedBuilderComponent(
-        id="cross_attention_fusion",
-        family="fusion",
-        label="Cross Attention Fusion",
-        status="draft_only",
-        description="runtime 有探索性空间，但当前还不进入正式版高级模式的可编译默认集。",
-        schema_path="model.fusion.fusion_type=cross_attention",
-    ),
-    AdvancedBuilderComponent(
-        id="classification_head",
-        family="head",
-        label="分类头",
-        status="compile_ready",
-        description="当前正式版主链默认任务头。",
-        schema_path="model.num_classes",
-    ),
-    AdvancedBuilderComponent(
-        id="survival_head",
-        family="head",
-        label="生存任务头",
-        status="draft_only",
-        description="仓库有相关能力，但还没有进入正式版高级建模器的主叙事。",
-    ),
-    AdvancedBuilderComponent(
-        id="standard_training",
-        family="training_strategy",
-        label="标准训练",
-        status="compile_ready",
-        description="当前最稳定的正式版训练策略。",
-        schema_path="training",
-    ),
-    AdvancedBuilderComponent(
-        id="progressive_training",
-        family="training_strategy",
-        label="分阶段训练",
-        status="conditional",
-        description="可以编译，但需要显式满足 stage epoch 总和约束。",
-        schema_path="training.use_progressive_training=true",
-    ),
-)
-
 ADVANCED_BUILDER_CONNECTION_RULES: tuple[AdvancedBuilderConnectionRule, ...] = (
     AdvancedBuilderConnectionRule(
         from_family="data_input",
@@ -236,82 +122,6 @@ ADVANCED_BUILDER_CONNECTION_RULES: tuple[AdvancedBuilderConnectionRule, ...] = (
         to_family="training_strategy",
         status="blocked",
         description="不允许跳过融合层和任务头直接进入训练策略。",
-    ),
-)
-
-ADVANCED_BUILDER_BLUEPRINTS: tuple[AdvancedBuilderBlueprint, ...] = (
-    AdvancedBuilderBlueprint(
-        id="quickstart_multimodal",
-        label="正式版 quickstart 多模态骨架",
-        status="compile_ready",
-        description="图像 + 表格输入，ResNet18 + MLP + Concatenate + 分类头 + 标准训练。",
-        components=(
-            "image_tabular_dataset",
-            "resnet18_backbone",
-            "mlp_tabular_encoder",
-            "concatenate_fusion",
-            "classification_head",
-            "standard_training",
-        ),
-        compiles_to="ExperimentConfig / configs/starter/quickstart.yaml",
-    ),
-    AdvancedBuilderBlueprint(
-        id="clinical_gated_baseline",
-        label="稳健研究基线骨架",
-        status="compile_ready",
-        description="图像 + 表格输入，EfficientNet-B0 + MLP + Gated Fusion + 分类头 + 分阶段训练。",
-        components=(
-            "image_tabular_dataset",
-            "efficientnet_b0_backbone",
-            "mlp_tabular_encoder",
-            "gated_fusion",
-            "classification_head",
-            "progressive_training",
-        ),
-        compiles_to="ExperimentConfig / formal release baseline preset",
-    ),
-    AdvancedBuilderBlueprint(
-        id="attention_audit_path",
-        label="结果审查 / 注意力增强骨架",
-        status="compile_ready",
-        description="用于结果交付和注意力可视化审查的正式版骨架。",
-        components=(
-            "image_tabular_dataset",
-            "attention_backbone_bundle",
-            "mlp_tabular_encoder",
-            "attention_fusion",
-            "classification_head",
-            "standard_training",
-        ),
-        compiles_to="ExperimentConfig / result-audit preset",
-    ),
-    AdvancedBuilderBlueprint(
-        id="three_phase_ct_builder",
-        label="三相 CT 通用高级建模骨架",
-        status="draft_only",
-        description="当前仍是专项 runtime 能力，还没有进入正式版高级建模器的通用编译层。",
-        components=(
-            "three_phase_ct_dataset",
-            "gated_fusion",
-            "classification_head",
-            "standard_training",
-        ),
-        blockers=("需要正式版图编译层先支持三相 CT 专项 schema。",),
-    ),
-    AdvancedBuilderBlueprint(
-        id="survival_builder",
-        label="生存分析建模骨架",
-        status="draft_only",
-        description="当前不作为正式版默认高级模式开放。",
-        components=(
-            "image_tabular_dataset",
-            "efficientnet_b0_backbone",
-            "mlp_tabular_encoder",
-            "gated_fusion",
-            "survival_head",
-            "standard_training",
-        ),
-        blockers=("正式版主叙事当前先围绕分类主链，不把 survival 作为默认承诺。",),
     ),
 )
 
@@ -902,6 +712,7 @@ def _rule_map() -> dict[tuple[AdvancedBuilderFamily, AdvancedBuilderFamily], Adv
 
 
 def _projected_components() -> tuple[AdvancedBuilderComponent, ...]:
+    """Project advanced-builder components from the official model catalog."""
     catalog = export_model_catalog()
     family_map: dict[str, AdvancedBuilderFamily] = {
         "data_bundle": "data_input",
@@ -936,6 +747,7 @@ def _projected_components() -> tuple[AdvancedBuilderComponent, ...]:
 
 
 def _projected_blueprints() -> tuple[AdvancedBuilderBlueprint, ...]:
+    """Project advanced-builder blueprints from the official model catalog."""
     catalog = export_model_catalog()
     unit_advanced_ids = {
         unit["id"]: unit.get("advanced_builder_component_id")
@@ -983,6 +795,11 @@ def _component_prefill_map() -> dict[str, dict[str, Any]]:
         if advanced_component_id and wizard_prefill:
             mapping[str(advanced_component_id)] = dict(wizard_prefill)
     return mapping
+
+
+# Compatibility aliases for modules that still import the old names directly.
+ADVANCED_BUILDER_COMPONENTS: tuple[AdvancedBuilderComponent, ...] = _projected_components()
+ADVANCED_BUILDER_BLUEPRINTS: tuple[AdvancedBuilderBlueprint, ...] = _projected_blueprints()
 
 
 def export_catalog() -> dict[str, Any]:

@@ -159,7 +159,7 @@ export default function ModelLibrary() {
       return;
     }
 
-    const focusModelId = searchParams.get("modelId");
+    const focusModelId = searchParams.get("modelId") || searchParams.get("model");
     if (focusModelId) {
       const parsedModelId = Number(focusModelId);
       if (!Number.isNaN(parsedModelId)) {
@@ -169,6 +169,7 @@ export default function ModelLibrary() {
           setDetailModalOpen(true);
           const next = new URLSearchParams(searchParams);
           next.delete("modelId");
+          next.delete("model");
           setSearchParams(next, { replace: true });
           return;
         }

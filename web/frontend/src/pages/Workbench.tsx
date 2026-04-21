@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Alert, Button, Card, Progress, Tag } from "antd";
 import {
   ArrowRightOutlined,
+  DotChartOutlined,
   ControlOutlined,
   DatabaseOutlined,
   ExperimentOutlined,
@@ -143,6 +144,15 @@ export default function Workbench() {
       onClick: () => navigate("/models?action=import"),
     },
     {
+      title: "独立评估",
+      description:
+        "对已有 config + checkpoint 单独补跑 validation、summary 和 report，并按需要导入结果后台。",
+      tag: "Post-run eval",
+      actionLabel: "打开独立评估",
+      icon: <DotChartOutlined />,
+      onClick: () => navigate("/evaluation"),
+    },
+    {
       title: "数据准备",
       description:
         "登记本地目录、观察处理状态，为真实训练和复现实验准备统一入口。",
@@ -186,6 +196,13 @@ export default function Workbench() {
             onClick={() => navigate("/models?action=import")}
           >
             导入真实结果
+          </Button>
+          <Button
+            size="large"
+            icon={<DotChartOutlined />}
+            onClick={() => navigate("/evaluation")}
+          >
+            独立评估
           </Button>
         </>
       }
@@ -298,6 +315,10 @@ export default function Workbench() {
             <div className="flow-step">
               <strong>3. 结果回流到结果库</strong>
               <p>训练输出、ROC、混淆矩阵、attention 热力图和日志继续在 Web 做检查。</p>
+            </div>
+            <div className="flow-step">
+              <strong>4. 需要时单独补评估</strong>
+              <p>如果已经有 checkpoint，不必重跑训练；直接进入独立评估模块补跑结果构建。</p>
             </div>
           </div>
         </Card>

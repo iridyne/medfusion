@@ -1,8 +1,107 @@
 # Evaluation API
 
-模型评估模块，提供全面的评估工具和报告生成。
+模型评估模块，提供独立评估入口、结果构建链路和底层评估工具。
 
 ## 概述
+
+当前对外最应该先理解的不是底层 Python 函数，而是 **独立评估入口**：
+
+- 页面入口：`/evaluation`
+- Web API：`POST /api/evaluation/run`
+- CLI 入口：`uv run medfusion evaluate`
+
+它的定位很明确：
+
+- 适用于 **已经有 `config + checkpoint`** 的情况
+- 适用于 **不想为了补评估结果再重跑训练**
+- 适用于 **单次、单 checkpoint 的独立结果构建**
+
+当前边界：
+
+1. 先只支持单次、单 checkpoint 评估
+2. 直接复用现有 `build-results` 结果构建链
+3. 可选把结果导入 `/models`
+4. 多模型对比、批量评估和评估模板中心后续再做
+
+## Web API
+
+### `POST /api/evaluation/run`
+
+基于现有 `config + checkpoint` 生成：
+
+- `metrics/validation.json`
+- `reports/summary.json`
+- `reports/report.md`
+- ROC / 混淆矩阵 / 注意力图 / survival / importance 等可视化与结构化产物
+
+并可选导入结果后台。
+
+**请求字段：**
+
+- `config_path`：训练配置 YAML 路径
+- `checkpoint_path`：模型权重路径
+- `output_dir`：可选，覆盖评估输出目录
+- `split`：`train | val | test | all`
+- `attention_samples`：注意力图导出样本数
+- `enable_survival`
+- `survival_time_column`
+- `survival_event_column`
+- `enable_importance`
+- `importance_sample_limit`
+- `import_to_model_library`
+- `name`
+- `description`
+- `tags`
+
+**当前返回重点：**
+
+- `status`
+- `mode`：`evaluate_only` / `evaluate_and_import`
+- `output_dir`
+- `artifact_paths`
+- `metrics`
+- `validation`
+- `summary`
+- `model_library_import`
+- `next_step`
+
+**示例：**
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/evaluation/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config_path": "configs/starter/quickstart.yaml",
+    "checkpoint_path": "outputs/quickstart/checkpoints/best.pth",
+    "split": "test",
+    "attention_samples": 4,
+    "importance_sample_limit": 128,
+    "import_to_model_library": true
+  }'
+```
+
+## CLI 入口
+
+### `uv run medfusion evaluate`
+
+这是独立评估模块对应的 CLI 入口：
+
+```bash
+uv run medfusion evaluate \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth \
+  --split test
+```
+
+如果你已经知道自己就是要直接生成全部正式版结果产物，也可以继续使用：
+
+```bash
+uv run medfusion build-results \
+  --config configs/starter/quickstart.yaml \
+  --checkpoint outputs/quickstart/checkpoints/best.pth
+```
+
+## 底层评估库
 
 Evaluation 模块提供了医学研究所需的完整评估工具链：
 

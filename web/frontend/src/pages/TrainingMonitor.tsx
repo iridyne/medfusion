@@ -25,6 +25,7 @@ import {
   CheckCircleOutlined,
   ControlOutlined,
   DisconnectOutlined,
+  DotChartOutlined,
   EyeOutlined,
   FileSearchOutlined,
   PauseCircleOutlined,
@@ -38,7 +39,7 @@ import type { ColumnsType } from "antd/es/table";
 import { EChartsOption } from "echarts";
 
 import { getDatasets } from "../api/datasets";
-import { getModels, type Model as ResultModel } from "../api/models";
+import { getModel, getModels, type Model as ResultModel } from "../api/models";
 import trainingApi, {
   buildTrainingResultLink,
   getTrainingResultState,
@@ -178,6 +179,29 @@ export default function TrainingMonitor() {
     }
 
     navigate(link);
+  };
+
+  const handleOpenEvaluation = async (job: TrainingJob) => {
+    if (!job.resultModelId) {
+      message.warning("当前任务还没有可复用的结果模型");
+      return;
+    }
+
+    try {
+      const model = await getModel(job.resultModelId);
+      navigate("/evaluation", {
+        state: {
+          configPath: model.config_path,
+          checkpointPath: model.checkpoint_path || model.model_path,
+          name: `${model.name}-eval`,
+          description: `基于训练任务 ${job.name} 的结果模型发起独立评估`,
+          source: "training-monitor",
+        },
+      });
+    } catch (error) {
+      console.error("Failed to prepare independent evaluation:", error);
+      message.error("无法打开独立评估，请先确认结果模型已经可用");
+    }
   };
 
   const handleLoopBackToConfig = () => {
@@ -880,6 +904,14 @@ export default function TrainingMonitor() {
                     查看结果详情
                   </Button>
                 ) : null}
+                {highlightedResultState === "ready" ? (
+                  <Button
+                    icon={<DotChartOutlined />}
+                    onClick={() => void handleOpenEvaluation(highlightedResultJob)}
+                  >
+                    独立评估
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => {
                     setSelectedJob(highlightedResultJob.id);
@@ -1056,6 +1088,12 @@ export default function TrainingMonitor() {
                                   查看结果详情
                                 </Button>
                                 <Button
+                                  icon={<DotChartOutlined />}
+                                  onClick={() => void handleOpenEvaluation(job)}
+                                >
+                                  独立评估
+                                </Button>
+                                <Button
                                   onClick={() => {
                                     setSelectedJob(job.id);
                                     setActiveTab("monitor");
@@ -1139,7 +1177,7 @@ export default function TrainingMonitor() {
                                   ? new Date(output.created_at).toLocaleString("zh-CN")
                                   : "-"}
                               </div>
-                              <Button onClick={() => navigate(`/models?model=${output.id}`)}>
+                              <Button onClick={() => navigate(`/models?modelId=${output.id}`)}>
                                 查看完整结果页
                               </Button>
                             </Space>
