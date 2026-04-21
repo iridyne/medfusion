@@ -348,6 +348,14 @@ MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
                 "description": "会以 quickstart 路线初始化整套默认配置。",
             }
         ],
+        "default_import_prefill": {
+            "config_path": "configs/starter/quickstart.yaml",
+            "checkpoint_path": "outputs/quickstart/checkpoints/best.pth",
+            "output_dir": "outputs/quickstart",
+            "split": "test",
+            "attention_samples": 4,
+            "importance_sample_limit": 128,
+        },
     },
     "clinical_gated_baseline": {
         "recommended_preset": "clinical",
@@ -362,6 +370,14 @@ MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
                 "description": "会以 clinical 路线初始化 backbone、fusion 和训练节奏。",
             }
         ],
+        "default_import_prefill": {
+            "config_path": "configs/starter/quickstart.yaml",
+            "checkpoint_path": "outputs/medfusion-formal/advanced-clinical-graph/checkpoints/best.pth",
+            "output_dir": "outputs/medfusion-formal/advanced-clinical-graph",
+            "split": "test",
+            "attention_samples": 4,
+            "importance_sample_limit": 128,
+        },
     },
     "attention_audit_path": {
         "recommended_preset": "showcase",
@@ -376,6 +392,14 @@ MODEL_CATALOG_ADVANCED_TEMPLATE_CONTRACTS: dict[str, dict[str, Any]] = {
                 "description": "会以 showcase 路线初始化注意力相关配置。",
             }
         ],
+        "default_import_prefill": {
+            "config_path": "configs/starter/quickstart.yaml",
+            "checkpoint_path": "outputs/medfusion-formal/advanced-showcase-graph/checkpoints/best.pth",
+            "output_dir": "outputs/medfusion-formal/advanced-showcase-graph",
+            "split": "test",
+            "attention_samples": 4,
+            "importance_sample_limit": 128,
+        },
     },
 }
 
@@ -996,6 +1020,7 @@ def _model_with_advanced_builder_contract(model: dict[str, Any]) -> dict[str, An
                     "compile_boundary": "unspecified",
                     "compile_notes": [],
                     "patch_target_hints": [],
+                    "default_import_prefill": {},
                 },
             )
         ),

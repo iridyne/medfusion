@@ -10,38 +10,13 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query
 
 from ..application.advanced_builder import export_catalog as export_advanced_builder_catalog
+from ..application.model_catalog import export_model_catalog
 from ..config import settings
 
 router = APIRouter()
 
 _COMFYUI_HEALTH_PATH = "/system_stats"
 _COMFYUI_START_COMMAND = "python main.py --listen 127.0.0.1 --port 8188"
-_DEFAULT_PREFILL_BY_BLUEPRINT: dict[str, dict[str, Any]] = {
-    "quickstart_multimodal": {
-        "config_path": "configs/starter/quickstart.yaml",
-        "checkpoint_path": "outputs/quickstart/checkpoints/best.pth",
-        "output_dir": "outputs/quickstart",
-        "split": "test",
-        "attention_samples": 4,
-        "importance_sample_limit": 128,
-    },
-    "clinical_gated_baseline": {
-        "config_path": "configs/starter/quickstart.yaml",
-        "checkpoint_path": "outputs/medfusion-formal/advanced-clinical-graph/checkpoints/best.pth",
-        "output_dir": "outputs/medfusion-formal/advanced-clinical-graph",
-        "split": "test",
-        "attention_samples": 4,
-        "importance_sample_limit": 128,
-    },
-    "attention_audit_path": {
-        "config_path": "configs/starter/quickstart.yaml",
-        "checkpoint_path": "outputs/medfusion-formal/advanced-showcase-graph/checkpoints/best.pth",
-        "output_dir": "outputs/medfusion-formal/advanced-showcase-graph",
-        "split": "test",
-        "attention_samples": 4,
-        "importance_sample_limit": 128,
-    },
-}
 
 
 def _normalize_base_url(raw: str) -> str:
@@ -128,6 +103,7 @@ async def get_comfyui_health(
 async def get_comfyui_adapter_profiles() -> dict[str, Any]:
     """Return MedFusion-side adapter profiles for ComfyUI workflow alignment."""
     catalog = export_advanced_builder_catalog()
+    model_catalog = export_model_catalog()
     family_labels = catalog["families"]
     components_by_id = {
         component["id"]: component
@@ -172,9 +148,13 @@ async def get_comfyui_adapter_profiles() -> dict[str, Any]:
                 "target_canvas_route": f"/config/advanced/canvas?blueprint={blueprint['id']}",
                 "components": components,
                 "family_chain": family_chain,
-                "default_import_prefill": _DEFAULT_PREFILL_BY_BLUEPRINT.get(
-                    blueprint["id"],
-                    _DEFAULT_PREFILL_BY_BLUEPRINT["quickstart_multimodal"],
+                "default_import_prefill": next(
+                    (
+                        model.get("advanced_builder_contract", {}).get("default_import_prefill", {})
+                        for model in model_catalog["models"]
+                        if model.get("advanced_builder_blueprint_id") == blueprint["id"]
+                    ),
+                    {},
                 ),
             }
         )
