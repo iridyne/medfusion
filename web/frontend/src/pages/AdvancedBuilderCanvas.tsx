@@ -601,6 +601,14 @@ export default function AdvancedBuilderCanvas() {
             : "No draft-only blockers",
           tone: evaluation.draftOnlyComponents.length ? "rose" : "teal",
         },
+        {
+          label: "Duplicate families",
+          value: evaluation.duplicateFamilies.length,
+          hint: evaluation.duplicateFamilies.length
+            ? evaluation.duplicateFamilies.map((family) => familyLabels[family]).join(" / ")
+            : "No duplicate family blockers",
+          tone: evaluation.duplicateFamilies.length ? "rose" : "teal",
+        },
       ]}
     >
       <Alert
@@ -686,6 +694,15 @@ export default function AdvancedBuilderCanvas() {
                   缺少组件家族：
                   {" "}
                   {evaluation.missingFamilies
+                    .map((family) => familyLabels[family])
+                    .join(" / ")}
+                </div>
+              ) : null}
+              {evaluation.duplicateFamilies.length ? (
+                <div className="surface-note surface-note--dense">
+                  重复组件家族：
+                  {" "}
+                  {evaluation.duplicateFamilies
                     .map((family) => familyLabels[family])
                     .join(" / ")}
                 </div>

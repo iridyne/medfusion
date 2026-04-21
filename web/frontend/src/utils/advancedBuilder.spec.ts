@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildBlueprintGraph,
   canConnectFamilies,
-  compileAdvancedBuilderGraphToRunSpec,
   createBuilderNode,
   evaluateAdvancedBuilderGraph,
 } from "@/utils/advancedBuilder";
@@ -34,29 +33,14 @@ describe("advancedBuilder utils", () => {
     expect(evaluation.draftOnlyComponents).toContain("三相 CT + 临床输入");
   });
 
-  it("compiles the quickstart blueprint into a real RunSpec draft", () => {
-    const graph = buildBlueprintGraph("quickstart_multimodal");
-    const result = compileAdvancedBuilderGraphToRunSpec(
-      graph.nodes,
-      graph.edges,
-    );
-
-    expect(result.spec).not.toBeNull();
-    expect(result.preset).toBe("quickstart");
-    expect(result.spec?.model.vision.backbone).toBe("resnet18");
-    expect(result.spec?.model.fusion.fusionType).toBe("concatenate");
-    expect(result.spec?.training.useProgressiveTraining).toBe(false);
-  });
-
-  it("rejects graphs with duplicate required families", () => {
+  it("marks graphs with duplicate required families as not compile-ready", () => {
     const graph = buildBlueprintGraph("quickstart_multimodal");
     const duplicateBackbone = createBuilderNode("efficientnet_b0_backbone", 99);
-    const result = compileAdvancedBuilderGraphToRunSpec(
+    const evaluation = evaluateAdvancedBuilderGraph(
       [...graph.nodes, duplicateBackbone],
       graph.edges,
     );
 
-    expect(result.spec).toBeNull();
-    expect(result.issues.some((issue) => issue.level === "error")).toBe(true);
+    expect(evaluation.compileReady).toBe(false);
   });
 });

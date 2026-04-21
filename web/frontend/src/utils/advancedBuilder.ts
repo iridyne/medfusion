@@ -10,12 +10,6 @@ import {
   type AdvancedBuilderFamily,
   type AdvancedBuilderConnectionRule,
 } from "@/config/advancedBuilderCatalog";
-import {
-  createRunSpecPreset,
-  inferOutputDir,
-  type RunPresetId,
-  type RunSpec,
-} from "@/utils/runSpec";
 
 export interface AdvancedBuilderNodeData {
   componentId: string;
@@ -32,6 +26,7 @@ export interface AdvancedBuilderNodeData {
 export interface AdvancedBuilderEvaluation {
   compileReady: boolean;
   missingFamilies: AdvancedBuilderFamily[];
+  duplicateFamilies: AdvancedBuilderFamily[];
   missingRequiredConnections: Array<{
     fromFamily: AdvancedBuilderFamily;
     toFamily: AdvancedBuilderFamily;
@@ -39,18 +34,6 @@ export interface AdvancedBuilderEvaluation {
   }>;
   conditionalComponents: string[];
   draftOnlyComponents: string[];
-}
-
-export interface AdvancedBuilderCompileIssue {
-  level: "error" | "warning";
-  message: string;
-}
-
-export interface AdvancedBuilderCompileResult {
-  preset: RunPresetId;
-  spec: RunSpec | null;
-  issues: AdvancedBuilderCompileIssue[];
-  chosenComponents: Partial<Record<AdvancedBuilderFamily, string>>;
 }
 
 const REQUIRED_FAMILIES: AdvancedBuilderFamily[] = [
@@ -111,14 +94,6 @@ function getBlueprintOrThrowFromCatalog(
     throw new Error(`Unknown advanced builder blueprint: ${blueprintId}`);
   }
   return blueprint;
-}
-
-function slugify(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function createNodeId(componentId: string, index: number): string {
@@ -259,8 +234,15 @@ export function evaluateAdvancedBuilderGraph(
   connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
   requiredFamilies: AdvancedBuilderFamily[] = REQUIRED_FAMILIES,
 ): AdvancedBuilderEvaluation {
+  const familyCounts = new Map<AdvancedBuilderFamily, number>();
+  for (const node of nodes) {
+    familyCounts.set(node.data.family, (familyCounts.get(node.data.family) || 0) + 1);
+  }
   const familySet = new Set(nodes.map((node) => node.data.family));
   const missingFamilies = requiredFamilies.filter((family) => !familySet.has(family));
+  const duplicateFamilies = Array.from(familyCounts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([family]) => family);
 
   const missingRequiredConnections = connectionRules.filter(
     (rule) => rule.status === "required",
@@ -292,135 +274,15 @@ export function evaluateAdvancedBuilderGraph(
   return {
     compileReady:
       missingFamilies.length === 0 &&
+      duplicateFamilies.length === 0 &&
       missingRequiredConnections.length === 0 &&
       draftOnlyComponents.length === 0,
     missingFamilies,
+    duplicateFamilies,
     missingRequiredConnections,
     conditionalComponents,
     draftOnlyComponents,
   };
-}
-
-function inferPresetFromChosenComponents(
-  chosenComponents: Partial<Record<AdvancedBuilderFamily, string>>,
-): RunPresetId {
-  const visionComponent = chosenComponents.vision_backbone || "";
-  const fusionComponent = chosenComponents.fusion || "";
-  const trainingComponent = chosenComponents.training_strategy || "";
-
-  if (
-    visionComponent === "attention_backbone_bundle" ||
-    fusionComponent === "attention_fusion"
-  ) {
-    return "showcase";
-  }
-
-  if (
-    visionComponent === "efficientnet_b0_backbone" ||
-    fusionComponent === "gated_fusion" ||
-    trainingComponent === "progressive_training"
-  ) {
-    return "clinical";
-  }
-
-  return "quickstart";
-}
-
-function createCompileBaseSpec(preset: RunPresetId): RunSpec {
-  const spec = createRunSpecPreset(preset);
-  spec.projectName = "medfusion-formal";
-  spec.experimentName = `advanced-${preset}-graph`;
-  spec.description =
-    "Compiled from the formal-release advanced builder graph prototype.";
-  spec.tags = Array.from(new Set([...spec.tags, "advanced-builder", "compiled"]));
-  spec.logging.outputDir = inferOutputDir(spec.projectName, spec.experimentName);
-  return spec;
-}
-
-function applyComponentToSpec(
-  spec: RunSpec,
-  componentId: string,
-  issues: AdvancedBuilderCompileIssue[],
-): void {
-  switch (componentId) {
-    case "image_tabular_dataset":
-      spec.data.csvPath = "data/mock/metadata.csv";
-      spec.data.imageDir = "data/mock";
-      spec.data.imagePathColumn = "image_path";
-      spec.data.targetColumn = "diagnosis";
-      spec.data.numericalFeatures = ["age"];
-      spec.data.categoricalFeatures = ["gender"];
-      return;
-    case "resnet18_backbone":
-      spec.model.vision.backbone = "resnet18";
-      spec.model.vision.featureDim = 128;
-      spec.model.vision.attentionType = "cbam";
-      return;
-    case "efficientnet_b0_backbone":
-      spec.model.vision.backbone = "efficientnet_b0";
-      spec.model.vision.featureDim = 192;
-      spec.model.vision.attentionType = "cbam";
-      return;
-    case "attention_backbone_bundle":
-      spec.model.vision.backbone = "resnet50";
-      spec.model.vision.featureDim = 256;
-      spec.model.vision.attentionType = "cbam";
-      spec.training.useAttentionSupervision = true;
-      issues.push({
-        level: "warning",
-        message:
-          "当前图使用了 attention-supervised backbone，编译结果会默认走 CBAM + attention supervision 条件路径。",
-      });
-      return;
-    case "mlp_tabular_encoder":
-      spec.model.tabular.hiddenDims = [32];
-      spec.model.tabular.outputDim = 16;
-      spec.model.tabular.dropout = 0.2;
-      return;
-    case "concatenate_fusion":
-      spec.model.fusion.fusionType = "concatenate";
-      spec.model.fusion.hiddenDim =
-        spec.model.vision.featureDim + spec.model.tabular.outputDim;
-      spec.model.fusion.dropout = 0.3;
-      return;
-    case "gated_fusion":
-      spec.model.fusion.fusionType = "gated";
-      spec.model.fusion.hiddenDim = 160;
-      spec.model.fusion.dropout = 0.3;
-      return;
-    case "attention_fusion":
-      spec.model.fusion.fusionType = "attention";
-      spec.model.fusion.hiddenDim = 192;
-      spec.model.fusion.numHeads = 4;
-      spec.model.fusion.dropout = 0.25;
-      issues.push({
-        level: "warning",
-        message:
-          "当前图使用了 attention fusion，编译结果会保留注意力路径，但仍受正式版主链的现有 fusion schema 约束。",
-      });
-      return;
-    case "classification_head":
-      spec.model.numClasses = 2;
-      spec.model.useAuxiliaryHeads = true;
-      return;
-    case "standard_training":
-      spec.training.useProgressiveTraining = false;
-      spec.training.useAttentionSupervision =
-        spec.training.useAttentionSupervision && spec.model.vision.attentionType === "cbam";
-      return;
-    case "progressive_training":
-      spec.training.useProgressiveTraining = true;
-      spec.training.numEpochs = 18;
-      spec.training.stage1Epochs = 6;
-      spec.training.stage2Epochs = 8;
-      spec.training.stage3Epochs = 4;
-      return;
-    default:
-      issues.push({
-        level: "error",
-        message: `当前编译器还不能把组件 ${componentId} 降级映射到正式版 RunSpec。`,
-      });
-  }
 }
 
 function collectChosenComponents(
@@ -447,89 +309,4 @@ function collectChosenComponents(
   }
 
   return { chosenComponents, duplicateFamilies };
-}
-
-export function compileAdvancedBuilderGraphToRunSpec(
-  nodes: Array<Node<AdvancedBuilderNodeData>>,
-  edges: Edge[],
-): AdvancedBuilderCompileResult {
-  const issues: AdvancedBuilderCompileIssue[] = [];
-  const evaluation = evaluateAdvancedBuilderGraph(nodes, edges);
-  const { chosenComponents, duplicateFamilies } = collectChosenComponents(nodes);
-
-  if (!nodes.length) {
-    issues.push({
-      level: "error",
-      message: "当前画布为空，无法生成配置草案。",
-    });
-  }
-
-  if (duplicateFamilies.length) {
-    issues.push({
-      level: "error",
-      message: `当前图存在重复组件家族：${duplicateFamilies
-        .map((family) => ADVANCED_BUILDER_FAMILY_LABELS[family])
-        .join(" / ")}。正式版编译层当前要求每个核心家族最多一个组件。`,
-    });
-  }
-
-  if (evaluation.missingFamilies.length) {
-    issues.push({
-      level: "error",
-      message: `缺少必需组件家族：${evaluation.missingFamilies
-        .map((family) => ADVANCED_BUILDER_FAMILY_LABELS[family])
-        .join(" / ")}。`,
-    });
-  }
-
-  if (evaluation.missingRequiredConnections.length) {
-    issues.push({
-      level: "error",
-      message: `缺少必需连接：${evaluation.missingRequiredConnections
-        .map(
-          (rule) =>
-            `${ADVANCED_BUILDER_FAMILY_LABELS[rule.fromFamily]} -> ${ADVANCED_BUILDER_FAMILY_LABELS[rule.toFamily]}`,
-        )
-        .join(" / ")}。`,
-    });
-  }
-
-  if (evaluation.draftOnlyComponents.length) {
-    issues.push({
-      level: "error",
-      message: `当前图包含仅草稿组件：${evaluation.draftOnlyComponents.join(
-        " / ",
-      )}。这些组件还不能编译进正式版主链。`,
-    });
-  }
-
-  const preset = inferPresetFromChosenComponents(chosenComponents);
-  if (issues.some((issue) => issue.level === "error")) {
-    return {
-      preset,
-      spec: null,
-      issues,
-      chosenComponents,
-    };
-  }
-
-  const spec = createCompileBaseSpec(preset);
-  spec.projectName = "medfusion-formal";
-  spec.experimentName = `advanced-${slugify(preset)}-graph`;
-  spec.logging.outputDir = inferOutputDir(spec.projectName, spec.experimentName);
-
-  for (const family of REQUIRED_FAMILIES) {
-    const componentId = chosenComponents[family];
-    if (!componentId) {
-      continue;
-    }
-    applyComponentToSpec(spec, componentId, issues);
-  }
-
-  return {
-    preset,
-    spec,
-    issues,
-    chosenComponents,
-  };
 }
