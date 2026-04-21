@@ -151,6 +151,17 @@ async def test_web_basic_routes(api_client) -> None:
     model_catalog_payload = model_catalog.json()
     assert model_catalog_payload["sources"]["official"]["enabled"] is True
     assert model_catalog_payload["sources"]["custom"]["enabled"] is True
+    assert (
+        model_catalog_payload["advanced_builder"]["family_projection"]["data_bundle"][
+            "advanced_family"
+        ]
+        == "data_input"
+    )
+    assert "training_strategy" in model_catalog_payload["advanced_builder"]["required_families"]
+    assert any(
+        rule["from_family"] == "fusion" and rule["to_family"] == "head"
+        for rule in model_catalog_payload["advanced_builder"]["connection_rules"]
+    )
     assert any(
         item["id"] == "quickstart_multimodal"
         for item in model_catalog_payload["templates"]

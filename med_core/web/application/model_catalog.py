@@ -5,6 +5,100 @@ from __future__ import annotations
 from typing import Any
 
 
+MODEL_CATALOG_ADVANCED_BUILDER_FAMILY_PROJECTION: dict[str, dict[str, str]] = {
+    "data_bundle": {
+        "advanced_family": "data_input",
+        "label": "数据输入",
+    },
+    "vision_encoder": {
+        "advanced_family": "vision_backbone",
+        "label": "视觉 backbone",
+    },
+    "tabular_encoder": {
+        "advanced_family": "tabular_encoder",
+        "label": "表格编码器",
+    },
+    "fusion_bundle": {
+        "advanced_family": "fusion",
+        "label": "融合层",
+    },
+    "task_head": {
+        "advanced_family": "head",
+        "label": "任务头",
+    },
+    "training_strategy": {
+        "advanced_family": "training_strategy",
+        "label": "训练策略",
+    },
+}
+
+MODEL_CATALOG_ADVANCED_BUILDER_STATUS_LABELS: dict[str, str] = {
+    "compile_ready": "可编译",
+    "conditional": "有条件开放",
+    "draft_only": "仅草稿",
+}
+
+MODEL_CATALOG_ADVANCED_BUILDER_REQUIRED_FAMILIES: list[str] = [
+    "data_input",
+    "vision_backbone",
+    "tabular_encoder",
+    "fusion",
+    "head",
+    "training_strategy",
+]
+
+MODEL_CATALOG_ADVANCED_BUILDER_CONNECTION_RULES: list[dict[str, str]] = [
+    {
+        "from_family": "data_input",
+        "to_family": "vision_backbone",
+        "status": "required",
+        "description": "只要选择图像模态，必须先接一个视觉 backbone 才能继续编译。",
+    },
+    {
+        "from_family": "data_input",
+        "to_family": "tabular_encoder",
+        "status": "required",
+        "description": "图像 + 表格主链要求至少一条表格编码分支。",
+    },
+    {
+        "from_family": "vision_backbone",
+        "to_family": "fusion",
+        "status": "required",
+        "description": "视觉特征必须经过正式版支持的融合层才能进入任务头。",
+    },
+    {
+        "from_family": "tabular_encoder",
+        "to_family": "fusion",
+        "status": "required",
+        "description": "当前正式版多模态主链要求把表格特征也接入融合层。",
+    },
+    {
+        "from_family": "fusion",
+        "to_family": "head",
+        "status": "required",
+        "description": "融合层输出必须进入任务头，才能定义最终训练目标。",
+    },
+    {
+        "from_family": "head",
+        "to_family": "training_strategy",
+        "status": "required",
+        "description": "任务头之后必须接训练策略，图才进入可执行主链。",
+    },
+    {
+        "from_family": "data_input",
+        "to_family": "head",
+        "status": "blocked",
+        "description": "不允许跳过 backbone / fusion 直接把原始输入接到任务头。",
+    },
+    {
+        "from_family": "vision_backbone",
+        "to_family": "training_strategy",
+        "status": "blocked",
+        "description": "不允许跳过融合层和任务头直接进入训练策略。",
+    },
+]
+
+
 MODEL_CATALOG_COMPONENTS: list[dict[str, Any]] = [
     {
         "id": "image_tabular_input_bundle",
@@ -561,6 +655,27 @@ MODEL_CATALOG_TEMPLATES: list[dict[str, Any]] = [
 ]
 
 
+def export_advanced_builder_contract() -> dict[str, Any]:
+    family_projection = {
+        family: dict(metadata)
+        for family, metadata in MODEL_CATALOG_ADVANCED_BUILDER_FAMILY_PROJECTION.items()
+    }
+    family_labels = {
+        metadata["advanced_family"]: metadata["label"]
+        for metadata in family_projection.values()
+    }
+
+    return {
+        "family_projection": family_projection,
+        "family_labels": family_labels,
+        "status_labels": dict(MODEL_CATALOG_ADVANCED_BUILDER_STATUS_LABELS),
+        "required_families": list(MODEL_CATALOG_ADVANCED_BUILDER_REQUIRED_FAMILIES),
+        "connection_rules": [
+            dict(rule) for rule in MODEL_CATALOG_ADVANCED_BUILDER_CONNECTION_RULES
+        ],
+    }
+
+
 def export_model_catalog() -> dict[str, Any]:
     return {
         "sources": {
@@ -583,6 +698,7 @@ def export_model_catalog() -> dict[str, Any]:
             "每个组件都必须说明数据要求、配置要求和算力要求",
             "模板优先服务正式版主链，而不是任意 builder 幻觉",
         ],
+        "advanced_builder": export_advanced_builder_contract(),
         "units": MODEL_CATALOG_COMPONENTS,
         "models": MODEL_CATALOG_TEMPLATES,
         "components": MODEL_CATALOG_COMPONENTS,

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from .model_catalog import export_model_catalog
+from .model_catalog import export_advanced_builder_contract, export_model_catalog
 from med_core.configs.base_config import (
     DataConfig,
     ExperimentConfig,
@@ -63,76 +63,6 @@ class AdvancedBuilderBlueprint:
     components: tuple[str, ...]
     compiles_to: str | None = None
     blockers: tuple[str, ...] = ()
-
-
-ADVANCED_BUILDER_FAMILY_LABELS: dict[AdvancedBuilderFamily, str] = {
-    "data_input": "数据输入",
-    "vision_backbone": "视觉 backbone",
-    "tabular_encoder": "表格编码器",
-    "fusion": "融合层",
-    "head": "任务头",
-    "training_strategy": "训练策略",
-}
-
-ADVANCED_BUILDER_CONNECTION_RULES: tuple[AdvancedBuilderConnectionRule, ...] = (
-    AdvancedBuilderConnectionRule(
-        from_family="data_input",
-        to_family="vision_backbone",
-        status="required",
-        description="只要选择图像模态，必须先接一个视觉 backbone 才能继续编译。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="data_input",
-        to_family="tabular_encoder",
-        status="required",
-        description="图像 + 表格主链要求至少一条表格编码分支。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="vision_backbone",
-        to_family="fusion",
-        status="required",
-        description="视觉特征必须经过正式版支持的融合层才能进入任务头。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="tabular_encoder",
-        to_family="fusion",
-        status="required",
-        description="当前正式版多模态主链要求把表格特征也接入融合层。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="fusion",
-        to_family="head",
-        status="required",
-        description="融合层输出必须进入任务头，才能定义最终训练目标。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="head",
-        to_family="training_strategy",
-        status="required",
-        description="任务头之后必须接训练策略，图才进入可执行主链。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="data_input",
-        to_family="head",
-        status="blocked",
-        description="不允许跳过 backbone / fusion 直接把原始输入接到任务头。",
-    ),
-    AdvancedBuilderConnectionRule(
-        from_family="vision_backbone",
-        to_family="training_strategy",
-        status="blocked",
-        description="不允许跳过融合层和任务头直接进入训练策略。",
-    ),
-)
-
-REQUIRED_FAMILIES: tuple[AdvancedBuilderFamily, ...] = (
-    "data_input",
-    "vision_backbone",
-    "tabular_encoder",
-    "fusion",
-    "head",
-    "training_strategy",
-)
 
 
 def _display_path(path: str | Path) -> str:
@@ -704,10 +634,35 @@ def _component_map() -> dict[str, AdvancedBuilderComponent]:
     return {component.id: component for component in _projected_components()}
 
 
+def _advanced_builder_contract() -> dict[str, Any]:
+    return export_advanced_builder_contract()
+
+
+def _family_labels() -> dict[AdvancedBuilderFamily, str]:
+    labels = _advanced_builder_contract()["family_labels"]
+    return {key: value for key, value in labels.items()}
+
+
+def _required_families() -> tuple[AdvancedBuilderFamily, ...]:
+    return tuple(_advanced_builder_contract()["required_families"])
+
+
+def _connection_rules() -> tuple[AdvancedBuilderConnectionRule, ...]:
+    return tuple(
+        AdvancedBuilderConnectionRule(
+            from_family=rule["from_family"],
+            to_family=rule["to_family"],
+            status=rule["status"],
+            description=rule["description"],
+        )
+        for rule in _advanced_builder_contract()["connection_rules"]
+    )
+
+
 def _rule_map() -> dict[tuple[AdvancedBuilderFamily, AdvancedBuilderFamily], AdvancedBuilderConnectionRule]:
     return {
         (rule.from_family, rule.to_family): rule
-        for rule in ADVANCED_BUILDER_CONNECTION_RULES
+        for rule in _connection_rules()
     }
 
 
@@ -715,12 +670,8 @@ def _projected_components() -> tuple[AdvancedBuilderComponent, ...]:
     """Project advanced-builder components from the official model catalog."""
     catalog = export_model_catalog()
     family_map: dict[str, AdvancedBuilderFamily] = {
-        "data_bundle": "data_input",
-        "vision_encoder": "vision_backbone",
-        "tabular_encoder": "tabular_encoder",
-        "fusion_bundle": "fusion",
-        "task_head": "head",
-        "training_strategy": "training_strategy",
+        family: metadata["advanced_family"]
+        for family, metadata in catalog["advanced_builder"]["family_projection"].items()
     }
 
     projected: list[AdvancedBuilderComponent] = []
@@ -798,20 +749,19 @@ def _component_prefill_map() -> dict[str, dict[str, Any]]:
 
 
 # Compatibility aliases for modules that still import the old names directly.
+ADVANCED_BUILDER_FAMILY_LABELS: dict[AdvancedBuilderFamily, str] = _family_labels()
 ADVANCED_BUILDER_COMPONENTS: tuple[AdvancedBuilderComponent, ...] = _projected_components()
 ADVANCED_BUILDER_BLUEPRINTS: tuple[AdvancedBuilderBlueprint, ...] = _projected_blueprints()
+ADVANCED_BUILDER_CONNECTION_RULES: tuple[AdvancedBuilderConnectionRule, ...] = _connection_rules()
+REQUIRED_FAMILIES: tuple[AdvancedBuilderFamily, ...] = _required_families()
 
 
 def export_catalog() -> dict[str, Any]:
     components = _projected_components()
     blueprints = _projected_blueprints()
     return {
-        "families": ADVANCED_BUILDER_FAMILY_LABELS,
-        "status_labels": {
-            "compile_ready": "可编译",
-            "conditional": "有条件开放",
-            "draft_only": "仅草稿",
-        },
+        "families": _family_labels(),
+        "status_labels": _advanced_builder_contract()["status_labels"],
         "components": [
             {
                 "id": component.id,
@@ -830,7 +780,7 @@ def export_catalog() -> dict[str, Any]:
                 "status": rule.status,
                 "description": rule.description,
             }
-            for rule in ADVANCED_BUILDER_CONNECTION_RULES
+            for rule in _connection_rules()
         ],
         "blueprints": [
             {
@@ -946,14 +896,16 @@ def compile_graph_to_runspec(
             )
         )
 
-    missing_families = [family for family in REQUIRED_FAMILIES if family not in chosen_components]
+    family_labels = _family_labels()
+
+    missing_families = [family for family in _required_families() if family not in chosen_components]
     if missing_families:
         issues.append(
             _issue(
                 level="error",
                 code="ABG-E005",
                 path="nodes",
-                message=f"缺少必需组件家族：{' / '.join(ADVANCED_BUILDER_FAMILY_LABELS[f] for f in missing_families)}。",
+                message=f"缺少必需组件家族：{' / '.join(family_labels[f] for f in missing_families)}。",
                 context={"families": missing_families},
                 suggestion="补齐缺失家族对应的组件节点，再重新编译。",
             )
@@ -1002,7 +954,7 @@ def compile_graph_to_runspec(
                     level="error",
                     code="ABG-E007",
                     path="edges",
-                    message=f"当前没有定义 {ADVANCED_BUILDER_FAMILY_LABELS[source_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[target_family]} 的正式版连接规则。",
+                    message=f"当前没有定义 {family_labels[source_family]} -> {family_labels[target_family]} 的正式版连接规则。",
                     context={
                         "from_family": source_family,
                         "to_family": target_family,
@@ -1032,7 +984,7 @@ def compile_graph_to_runspec(
             continue
         present_connections.add((source_family, target_family))
 
-    for rule in ADVANCED_BUILDER_CONNECTION_RULES:
+    for rule in _connection_rules():
         if rule.status != "required":
             continue
         if rule.from_family in chosen_components and rule.to_family in chosen_components:
@@ -1042,7 +994,7 @@ def compile_graph_to_runspec(
                         level="error",
                         code="ABG-E009",
                         path="edges",
-                        message=f"缺少必需连接：{ADVANCED_BUILDER_FAMILY_LABELS[rule.from_family]} -> {ADVANCED_BUILDER_FAMILY_LABELS[rule.to_family]}。",
+                        message=f"缺少必需连接：{family_labels[rule.from_family]} -> {family_labels[rule.to_family]}。",
                         context={
                             "from_family": rule.from_family,
                             "to_family": rule.to_family,
