@@ -129,6 +129,15 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "这是当前正式版默认数据输入单元，会直接映射到 image_tabular 主链。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "data.csvPath", "value": "data/mock/metadata.csv"},
+            {"op": "set", "path": "data.imageDir", "value": "data/mock"},
+            {"op": "set", "path": "data.imagePathColumn", "value": "image_path"},
+            {"op": "set", "path": "data.targetColumn", "value": "diagnosis"},
+            {"op": "set", "path": "data.patientIdColumn", "value": ""},
+            {"op": "set", "path": "data.numericalFeatures", "value": ["age"]},
+            {"op": "set", "path": "data.categoricalFeatures", "value": ["gender"]},
+        ],
         "patch_target_hints": [
             {
                 "path": "data.*",
@@ -143,6 +152,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "default_mainline",
         "compile_notes": [
             "更适合作为 quickstart 或 attention 审查路径的轻量 backbone。",
+        ],
+        "patch_contract": [
+            {"op": "set", "path": "model.vision.backbone", "value": "resnet18"},
+            {"op": "set", "path": "model.vision.featureDim", "value": 128},
+            {"op": "set", "path": "model.vision.attentionType", "value": "cbam"},
+            {"op": "set", "path": "model.vision.pretrained", "value": True},
+            {"op": "set", "path": "model.vision.freezeBackbone", "value": False},
         ],
         "patch_target_hints": [
             {
@@ -164,6 +180,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "更适合作为稳健研究基线，而不是最低门槛 smoke 路径。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "model.vision.backbone", "value": "efficientnet_b0"},
+            {"op": "set", "path": "model.vision.featureDim", "value": 192},
+            {"op": "set", "path": "model.vision.attentionType", "value": "cbam"},
+            {"op": "set", "path": "model.vision.pretrained", "value": True},
+            {"op": "set", "path": "model.vision.freezeBackbone", "value": False},
+        ],
         "patch_target_hints": [
             {
                 "path": "model.vision.backbone",
@@ -183,6 +206,14 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_attention_path",
         "compile_notes": [
             "会默认走 CBAM + attention supervision 条件路径。",
+        ],
+        "patch_contract": [
+            {"op": "set", "path": "model.vision.backbone", "value": "resnet18"},
+            {"op": "set", "path": "model.vision.featureDim", "value": 128},
+            {"op": "set", "path": "model.vision.attentionType", "value": "cbam"},
+            {"op": "set", "path": "model.vision.pretrained", "value": True},
+            {"op": "set", "path": "model.vision.freezeBackbone", "value": False},
+            {"op": "set", "path": "training.useAttentionSupervision", "value": True},
         ],
         "patch_target_hints": [
             {
@@ -211,6 +242,11 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前正式版默认表格编码分支。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "model.tabular.hiddenDims", "value": [32]},
+            {"op": "set", "path": "model.tabular.outputDim", "value": 16},
+            {"op": "set", "path": "model.tabular.dropout", "value": 0.2},
+        ],
         "patch_target_hints": [
             {
                 "path": "model.tabular.*",
@@ -225,6 +261,16 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "default_mainline",
         "compile_notes": [
             "编译时会把 fusion hidden dim 对齐到 vision feature dim + tabular output dim。",
+        ],
+        "patch_contract": [
+            {"op": "set", "path": "model.fusion.fusionType", "value": "concatenate"},
+            {"op": "set", "path": "model.fusion.dropout", "value": 0.3},
+            {"op": "set", "path": "model.fusion.numHeads", "value": 4},
+            {
+                "op": "derive_sum",
+                "path": "model.fusion.hiddenDim",
+                "sources": ["model.vision.featureDim", "model.tabular.outputDim"],
+            },
         ],
         "patch_target_hints": [
             {
@@ -246,6 +292,12 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "更接近稳健研究基线，而不是最轻量起步路径。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "model.fusion.fusionType", "value": "gated"},
+            {"op": "set", "path": "model.fusion.hiddenDim", "value": 160},
+            {"op": "set", "path": "model.fusion.dropout", "value": 0.3},
+            {"op": "set", "path": "model.fusion.numHeads", "value": 4},
+        ],
         "patch_target_hints": [
             {
                 "path": "model.fusion.*",
@@ -260,6 +312,12 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_attention_path",
         "compile_notes": [
             "会保留 attention 路径，但仍受正式版当前 fusion schema 约束。",
+        ],
+        "patch_contract": [
+            {"op": "set", "path": "model.fusion.fusionType", "value": "attention"},
+            {"op": "set", "path": "model.fusion.hiddenDim", "value": 144},
+            {"op": "set", "path": "model.fusion.dropout", "value": 0.3},
+            {"op": "set", "path": "model.fusion.numHeads", "value": 4},
         ],
         "patch_target_hints": [
             {
@@ -283,6 +341,10 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前正式版默认任务头，只承诺分类主链。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "model.numClasses", "value": 2},
+            {"op": "set", "path": "model.useAuxiliaryHeads", "value": True},
+        ],
         "patch_target_hints": [
             {
                 "path": "model.numClasses",
@@ -303,6 +365,10 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_notes": [
             "当前最稳的正式版训练路径。",
         ],
+        "patch_contract": [
+            {"op": "set", "path": "training.useProgressiveTraining", "value": False},
+            {"op": "set", "path": "training.useAttentionSupervision", "value": False},
+        ],
         "patch_target_hints": [
             {
                 "path": "training.useProgressiveTraining",
@@ -317,6 +383,13 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_stage_sum",
         "compile_notes": [
             "要求 stage1 + stage2 + stage3 == num_epochs。",
+        ],
+        "patch_contract": [
+            {"op": "set", "path": "training.useProgressiveTraining", "value": True},
+            {"op": "set", "path": "training.numEpochs", "value": 18},
+            {"op": "set", "path": "training.stage1Epochs", "value": 6},
+            {"op": "set", "path": "training.stage2Epochs", "value": 8},
+            {"op": "set", "path": "training.stage3Epochs", "value": 4},
         ],
         "patch_target_hints": [
             {
@@ -998,6 +1071,7 @@ def _unit_with_advanced_builder_contract(unit: dict[str, Any]) -> dict[str, Any]
                     "preset_hints": [],
                     "compile_boundary": "unspecified",
                     "compile_notes": [],
+                    "patch_contract": [],
                     "patch_target_hints": [],
                     "warning_metadata": [],
                 },

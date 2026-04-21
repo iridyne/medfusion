@@ -547,13 +547,58 @@ def _catalog_units_by_advanced_component() -> dict[str, dict[str, Any]]:
     }
 
 
+def _get_value_by_path(payload: dict[str, Any], path: str) -> Any:
+    current: Any = payload
+    for segment in path.split("."):
+        if not isinstance(current, dict):
+            raise KeyError(path)
+        current = current[segment]
+    return current
+
+
+def _set_value_by_path(payload: dict[str, Any], path: str, value: Any) -> None:
+    current = payload
+    segments = path.split(".")
+    for segment in segments[:-1]:
+        next_value = current.get(segment)
+        if not isinstance(next_value, dict):
+            next_value = {}
+            current[segment] = next_value
+        current = next_value
+    current[segments[-1]] = value
+
+
+def _apply_patch_contract_to_spec(spec: dict[str, Any], component_id: str) -> bool:
+    patch_contract = (
+        _component_contract_map().get(component_id, {}).get("patch_contract") or []
+    )
+    if not patch_contract:
+        return False
+
+    for operation in patch_contract:
+        op = operation["op"]
+        if op == "set":
+            _set_value_by_path(spec, operation["path"], operation["value"])
+            continue
+        if op == "derive_sum":
+            derived_value = sum(
+                int(_get_value_by_path(spec, source_path))
+                for source_path in operation["sources"]
+            )
+            _set_value_by_path(spec, operation["path"], derived_value)
+            continue
+        raise ValueError(f"Unsupported patch contract op: {op}")
+    return True
+
+
 def _apply_component_to_spec(
     spec: dict[str, Any],
     component_id: str,
     issues: list[dict[str, Any]],
 ) -> None:
+    used_patch_contract = _apply_patch_contract_to_spec(spec, component_id)
     prefill = _component_prefill_map().get(component_id)
-    if prefill:
+    if prefill and not used_patch_contract:
         if "csvPath" in prefill:
             spec["data"]["csvPath"] = prefill["csvPath"]
         if "imageDir" in prefill:
@@ -621,11 +666,7 @@ def _apply_component_to_spec(
                 suggestion=warning.get("suggestion"),
             )
         )
-    if component_id == "concatenate_fusion":
-        spec["model"]["fusion"]["hiddenDim"] = (
-            spec["model"]["vision"]["featureDim"] + spec["model"]["tabular"]["outputDim"]
-        )
-    if prefill:
+    if used_patch_contract or prefill:
         return
 
     issues.append(
