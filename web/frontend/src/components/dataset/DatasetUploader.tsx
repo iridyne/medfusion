@@ -10,15 +10,24 @@ import {
   Space,
   Typography,
   message,
+  Tag,
 } from "antd";
 import {
+  CheckCircleOutlined,
   DatabaseOutlined,
+  ExclamationCircleOutlined,
   FileImageOutlined,
   FileTextOutlined,
   FolderOpenOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 
-import { analyzeDataset, createDataset } from "@/api/datasets";
+import {
+  analyzeDataset,
+  createDataset,
+  inspectDatasetPath,
+  type DatasetInspection,
+} from "@/api/datasets";
 
 const { TextArea } = Input;
 const { Paragraph, Text } = Typography;
@@ -45,19 +54,56 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
 }) => {
   const [form] = Form.useForm<DatasetRegisterValues>();
   const [submitting, setSubmitting] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspection, setInspection] = useState<DatasetInspection | null>(null);
+
+  const handleInspect = async () => {
+    try {
+      const values = await form.validateFields(["dataPath", "type"]);
+      setInspecting(true);
+      const result = await inspectDatasetPath({
+        data_path: values.dataPath,
+        dataset_type: values.type,
+      });
+      setInspection(result);
+      if (result.readiness.can_enter_training) {
+        message.success("路径检查通过，可以进入训练主线");
+      } else {
+        message.warning("路径检查未通过，请先修复数据问题");
+      }
+    } catch (error: any) {
+      if (error?.errorFields) {
+        return;
+      }
+      console.error("Failed to inspect dataset path:", error);
+      message.error(error?.response?.data?.detail || "路径检查失败");
+    } finally {
+      setInspecting(false);
+    }
+  };
 
   const handleRegister = async () => {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
 
+      const inspectResult =
+        inspection ??
+        (await inspectDatasetPath({
+          data_path: values.dataPath,
+          dataset_type: values.type,
+        }));
+      setInspection(inspectResult);
+
       const created = await createDataset({
         name: values.name,
         description: values.description,
         data_path: values.dataPath,
         dataset_type: values.type,
-        num_samples: values.numSamples,
-        num_classes: values.numClasses,
+        status: inspectResult.readiness.can_enter_training ? "ready" : "error",
+        num_samples: values.numSamples ?? inspectResult.csv.row_count ?? undefined,
+        num_classes:
+          values.numClasses ?? inspectResult.schema.num_classes ?? undefined,
         tags: values.tags,
         created_by: values.createdBy,
       });
@@ -165,6 +211,60 @@ const DatasetUploader: React.FC<DatasetUploaderProps> = ({
             placeholder="例如：/data/chest-xray"
           />
         </Form.Item>
+
+        <Space style={{ marginBottom: 16 }}>
+          <Button
+            icon={<SearchOutlined />}
+            onClick={handleInspect}
+            loading={inspecting}
+          >
+            先检查路径
+          </Button>
+          {inspection ? (
+            <Tag
+              color={
+                inspection.readiness.status === "ready"
+                  ? "success"
+                  : inspection.readiness.status === "warning"
+                    ? "warning"
+                    : "error"
+              }
+              icon={
+                inspection.readiness.can_enter_training ? (
+                  <CheckCircleOutlined />
+                ) : (
+                  <ExclamationCircleOutlined />
+                )
+              }
+            >
+              {inspection.readiness.can_enter_training ? "可进入训练" : "暂不可进入训练"}
+            </Tag>
+          ) : null}
+        </Space>
+
+        {inspection ? (
+          <Alert
+            type={inspection.readiness.can_enter_training ? "success" : "warning"}
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={inspection.readiness.next_step}
+            description={
+              <div>
+                <div>
+                  CSV: {inspection.csv.path || "未识别"}；类别数:{" "}
+                  {inspection.schema.num_classes ?? "-"}；预览行数:{" "}
+                  {inspection.csv.preview_rows.length}
+                </div>
+                {inspection.readiness.errors.length ? (
+                  <div>错误：{inspection.readiness.errors.join("；")}</div>
+                ) : null}
+                {inspection.readiness.warnings.length ? (
+                  <div>提醒：{inspection.readiness.warnings.join("；")}</div>
+                ) : null}
+              </div>
+            }
+          />
+        ) : null}
 
         <Form.Item label="描述" name="description">
           <TextArea

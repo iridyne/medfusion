@@ -19,6 +19,7 @@ import {
 } from "antd";
 import {
   CheckCircleOutlined,
+  ControlOutlined,
   CopyOutlined,
   DownloadOutlined,
   ExperimentOutlined,
@@ -26,6 +27,12 @@ import {
   ReloadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import {
+  getModelCatalog,
+  inspectModelConfig,
+  type ModelCatalogTemplate,
+  type ModelInspectResponse,
+} from "@/api/models";
 
 import {
   ATTENTION_TYPE_OPTIONS,
@@ -38,7 +45,6 @@ import {
   FUSION_TYPE_OPTIONS,
   inferOutputDir,
   OPTIMIZER_OPTIONS,
-  RUN_PRESET_OPTIONS,
   SCHEDULER_OPTIONS,
   type RunPresetId,
   type RunSpec,
@@ -63,14 +69,6 @@ function toConfigFileName(experimentName: string): string {
   return `${normalized || "generated-run"}.yaml`;
 }
 
-interface BuilderPathOption {
-  label: string;
-  problem: string;
-  runtimeShape: string;
-  editorMode: string;
-  preset: RunPresetId;
-}
-
 interface WizardPrefillState {
   projectName?: string;
   experimentName?: string;
@@ -80,26 +78,198 @@ interface WizardPrefillState {
   numClasses?: number;
 }
 
-const DEFAULT_BUILDER_PATH: BuilderPathOption = {
-  label: "ComfyUI 默认适配配置（推荐）",
-  problem: "以 ComfyUI 适配语义作为默认配置起点，再回到 MedFusion 主链执行训练与结果回流。",
-  runtimeShape: "image + tabular / classification / quickstart (comfy-adapted)",
-  editorMode: "默认模式：问题向导 + ComfyUI 适配入口",
-  preset: "quickstart",
+interface DatasetPrefillState {
+  csvPath?: string;
+  imageDir?: string;
+  imagePathColumn?: string;
+  targetColumn?: string;
+  patientIdColumn?: string;
+  numericalFeatures?: string[];
+  categoricalFeatures?: string[];
+  numClasses?: number;
+}
+
+interface ModelPrefillState {
+  modelTemplateId?: string;
+  customModelLabel?: string;
+  numClasses?: number;
+  useAuxiliaryHeads?: boolean;
+  backbone?: string;
+  attentionType?: string;
+  featureDim?: number;
+  pretrained?: boolean;
+  freezeBackbone?: boolean;
+  tabularHiddenDims?: number[];
+  tabularOutputDim?: number;
+  tabularDropout?: number;
+  fusionType?: string;
+  fusionHiddenDim?: number;
+  fusionDropout?: number;
+  fusionNumHeads?: number;
+  useAttentionSupervision?: boolean;
+}
+
+const DEFAULT_MODEL_TEMPLATE_ID = "quickstart_multimodal";
+
+const TEMPLATE_BASE_PRESET: Record<string, RunPresetId> = {
+  quickstart_multimodal: "quickstart",
+  clinical_gated_baseline: "clinical",
+  attention_audit_path: "showcase",
 };
+
+function applyModelPrefillToSpec(prev: RunSpec, modelPrefill: ModelPrefillState): RunSpec {
+  const nextBackbone = modelPrefill.backbone;
+  const supportedBackbone =
+    typeof nextBackbone === "string" &&
+    VISION_BACKBONE_OPTIONS.includes(nextBackbone as (typeof VISION_BACKBONE_OPTIONS)[number])
+      ? (nextBackbone as (typeof VISION_BACKBONE_OPTIONS)[number])
+      : null;
+  const nextAttention = modelPrefill.attentionType;
+  const supportedAttention =
+    typeof nextAttention === "string" &&
+    ATTENTION_TYPE_OPTIONS.includes(nextAttention as (typeof ATTENTION_TYPE_OPTIONS)[number])
+      ? (nextAttention as (typeof ATTENTION_TYPE_OPTIONS)[number])
+      : null;
+  const nextFusion = modelPrefill.fusionType;
+  const supportedFusion =
+    typeof nextFusion === "string" &&
+    FUSION_TYPE_OPTIONS.includes(nextFusion as (typeof FUSION_TYPE_OPTIONS)[number])
+      ? (nextFusion as (typeof FUSION_TYPE_OPTIONS)[number])
+      : null;
+
+  return {
+    ...prev,
+    model: {
+      ...prev.model,
+      numClasses:
+        typeof modelPrefill?.numClasses === "number" && modelPrefill.numClasses > 0
+          ? modelPrefill.numClasses
+          : prev.model.numClasses,
+      useAuxiliaryHeads:
+        typeof modelPrefill?.useAuxiliaryHeads === "boolean"
+          ? modelPrefill.useAuxiliaryHeads
+          : prev.model.useAuxiliaryHeads,
+      vision: {
+        ...prev.model.vision,
+        backbone: supportedBackbone || prev.model.vision.backbone,
+        attentionType: supportedAttention || prev.model.vision.attentionType,
+        featureDim:
+          typeof modelPrefill?.featureDim === "number" && modelPrefill.featureDim > 0
+            ? modelPrefill.featureDim
+            : prev.model.vision.featureDim,
+        pretrained:
+          typeof modelPrefill?.pretrained === "boolean"
+            ? modelPrefill.pretrained
+            : prev.model.vision.pretrained,
+        freezeBackbone:
+          typeof modelPrefill?.freezeBackbone === "boolean"
+            ? modelPrefill.freezeBackbone
+            : prev.model.vision.freezeBackbone,
+      },
+      tabular: {
+        ...prev.model.tabular,
+        hiddenDims:
+          modelPrefill?.tabularHiddenDims?.length
+            ? modelPrefill.tabularHiddenDims
+            : prev.model.tabular.hiddenDims,
+        outputDim:
+          typeof modelPrefill?.tabularOutputDim === "number" &&
+          modelPrefill.tabularOutputDim > 0
+            ? modelPrefill.tabularOutputDim
+            : prev.model.tabular.outputDim,
+        dropout:
+          typeof modelPrefill?.tabularDropout === "number"
+            ? modelPrefill.tabularDropout
+            : prev.model.tabular.dropout,
+      },
+      fusion: {
+        ...prev.model.fusion,
+        fusionType: supportedFusion || prev.model.fusion.fusionType,
+        hiddenDim:
+          typeof modelPrefill?.fusionHiddenDim === "number" &&
+          modelPrefill.fusionHiddenDim > 0
+            ? modelPrefill.fusionHiddenDim
+            : prev.model.fusion.hiddenDim,
+        dropout:
+          typeof modelPrefill?.fusionDropout === "number"
+            ? modelPrefill.fusionDropout
+            : prev.model.fusion.dropout,
+        numHeads:
+          typeof modelPrefill?.fusionNumHeads === "number" &&
+          modelPrefill.fusionNumHeads > 0
+            ? modelPrefill.fusionNumHeads
+            : prev.model.fusion.numHeads,
+      },
+    },
+    training: {
+      ...prev.training,
+      useAttentionSupervision:
+        typeof modelPrefill?.useAttentionSupervision === "boolean"
+          ? modelPrefill.useAttentionSupervision
+          : prev.training.useAttentionSupervision,
+    },
+  };
+}
 
 export default function RunWizard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
-  const [preset, setPreset] = useState<RunPresetId>(DEFAULT_BUILDER_PATH.preset);
-  const [spec, setSpec] = useState<RunSpec>(() => createRunSpecPreset(DEFAULT_BUILDER_PATH.preset));
+  const [preset, setPreset] = useState<RunPresetId>(TEMPLATE_BASE_PRESET[DEFAULT_MODEL_TEMPLATE_ID]);
+  const [selectedModelTemplateId, setSelectedModelTemplateId] = useState<string>(
+    DEFAULT_MODEL_TEMPLATE_ID,
+  );
+  const [officialModelTemplates, setOfficialModelTemplates] = useState<ModelCatalogTemplate[]>([]);
+  const [selectedTemplateDisplayLabel, setSelectedTemplateDisplayLabel] = useState<string | null>(
+    null,
+  );
+  const [spec, setSpec] = useState<RunSpec>(() =>
+    createRunSpecPreset(TEMPLATE_BASE_PRESET[DEFAULT_MODEL_TEMPLATE_ID]),
+  );
   const [compiledImportSource, setCompiledImportSource] = useState<string | null>(
     null,
   );
   const [compiledImportMode, setCompiledImportMode] = useState<"compiled" | "prefill">(
     "compiled",
   );
+  const [modelInspection, setModelInspection] = useState<ModelInspectResponse | null>(
+    null,
+  );
+  const [modelInspectionLoading, setModelInspectionLoading] = useState(false);
+  const [modelInspectionError, setModelInspectionError] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const payload = await getModelCatalog();
+        const templates = payload.templates.filter((item) => item.source === "official");
+        setOfficialModelTemplates(templates);
+      } catch (error) {
+        console.error("Failed to load official model templates:", error);
+      }
+    };
+
+    void loadTemplates();
+  }, []);
+
+  useEffect(() => {
+    if (!officialModelTemplates.length) {
+      return;
+    }
+    const selectedTemplate = officialModelTemplates.find(
+      (item) => item.id === selectedModelTemplateId,
+    );
+    if (!selectedTemplate?.wizard_prefill) {
+      return;
+    }
+    setSelectedTemplateDisplayLabel(selectedTemplate.label);
+    setSpec((prev) => applyModelPrefillToSpec(createRunSpecPreset(preset), {
+      modelTemplateId: selectedTemplate.id,
+      ...(selectedTemplate.wizard_prefill as ModelPrefillState),
+    }));
+  }, [officialModelTemplates, selectedModelTemplateId, preset]);
 
   const issues = useMemo(() => validateRunSpec(spec), [spec]);
   const yamlPreview = useMemo(() => buildYamlFromRunSpec(spec), [spec]);
@@ -182,9 +352,17 @@ export default function RunWizard() {
     setSpec((prev) => ({ ...prev, logging: { ...prev.logging, ...patch } }));
   };
 
-  const applyPreset = (nextPreset: RunPresetId) => {
+  const applyModelTemplate = (
+    templateId: string,
+    modelPrefill?: ModelPrefillState,
+    displayLabel?: string | null,
+  ) => {
+    const nextPreset = TEMPLATE_BASE_PRESET[templateId] || "quickstart";
     setPreset(nextPreset);
-    setSpec(createRunSpecPreset(nextPreset));
+    setSelectedModelTemplateId(templateId);
+    setSelectedTemplateDisplayLabel(displayLabel || null);
+    const baseSpec = createRunSpecPreset(nextPreset);
+    setSpec(modelPrefill ? applyModelPrefillToSpec(baseSpec, modelPrefill) : baseSpec);
     setCurrentStep(0);
   };
 
@@ -221,9 +399,23 @@ export default function RunWizard() {
     { title: "训练策略", description: "epoch、optimizer、scheduler" },
     { title: "导出与执行", description: "YAML 与 CLI 命令" },
   ];
+  const selectedModelTemplate =
+    officialModelTemplates.find((item) => item.id === selectedModelTemplateId) || null;
   const selectedPresetLabel =
-    RUN_PRESET_OPTIONS.find((item) => item.id === preset)?.label ?? preset;
-  const selectedBuilderPath = DEFAULT_BUILDER_PATH;
+    selectedTemplateDisplayLabel ||
+    selectedModelTemplate?.label ||
+    {
+      quickstart: "快速验证",
+      clinical: "稳健研究基线",
+      showcase: "注意力审查",
+    }[preset];
+  const selectedTemplateDescription =
+    selectedModelTemplate?.description ||
+    "当前会通过官方模型模板，把问题路径映射到正式版支持的模型骨架。";
+  const selectedTemplateCompute =
+    selectedModelTemplate?.compute_profile
+      ? `${selectedModelTemplate.compute_profile.gpu_vram_hint} · ${selectedModelTemplate.compute_profile.notes}`
+      : "image + tabular / classification / quickstart";
   const trainingPrefillQuery = useMemo(() => {
     return buildTrainingPrefillQuery({
       experimentName: spec.experimentName,
@@ -262,6 +454,8 @@ export default function RunWizard() {
           compiledRunSpec?: RunSpec;
           compiledPreset?: RunPresetId;
           wizardPrefill?: WizardPrefillState;
+          datasetPrefill?: DatasetPrefillState;
+          modelPrefill?: ModelPrefillState;
           source?: string;
         }
       | undefined;
@@ -311,8 +505,133 @@ export default function RunWizard() {
       setCurrentStep(0);
       setCompiledImportMode("prefill");
       setCompiledImportSource(state.source || "comfyui-bridge");
+      return;
+    }
+
+    if (state.datasetPrefill) {
+      setSpec((prev) => ({
+        ...prev,
+        data: {
+          ...prev.data,
+          csvPath: state.datasetPrefill?.csvPath || prev.data.csvPath,
+          imageDir: state.datasetPrefill?.imageDir || prev.data.imageDir,
+          imagePathColumn:
+            state.datasetPrefill?.imagePathColumn || prev.data.imagePathColumn,
+          targetColumn:
+            state.datasetPrefill?.targetColumn || prev.data.targetColumn,
+          patientIdColumn:
+            state.datasetPrefill?.patientIdColumn || prev.data.patientIdColumn,
+          numericalFeatures:
+            state.datasetPrefill?.numericalFeatures || prev.data.numericalFeatures,
+          categoricalFeatures:
+            state.datasetPrefill?.categoricalFeatures ||
+            prev.data.categoricalFeatures,
+        },
+        model: {
+          ...prev.model,
+          numClasses:
+            typeof state.datasetPrefill?.numClasses === "number" &&
+            state.datasetPrefill.numClasses > 0
+              ? state.datasetPrefill.numClasses
+              : prev.model.numClasses,
+        },
+      }));
+      setCurrentStep(1);
+      setCompiledImportMode("prefill");
+      setCompiledImportSource(state.source || "dataset-manager");
+      return;
+    }
+
+    if (state.modelPrefill) {
+      const templateId = state.modelPrefill.modelTemplateId || DEFAULT_MODEL_TEMPLATE_ID;
+      applyModelTemplate(
+        templateId,
+        state.modelPrefill,
+        state.modelPrefill.customModelLabel || null,
+      );
+      setCurrentStep(2);
+      setCompiledImportMode("prefill");
+      setCompiledImportSource(state.source || "model-catalog");
     }
   }, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setModelInspectionLoading(true);
+      setModelInspectionError(null);
+      try {
+        const inspection = await inspectModelConfig({
+          num_classes: spec.model.numClasses,
+          use_auxiliary_heads: spec.model.useAuxiliaryHeads,
+          vision: {
+            backbone: spec.model.vision.backbone,
+            pretrained: spec.model.vision.pretrained,
+            freeze_backbone: spec.model.vision.freezeBackbone,
+            feature_dim: spec.model.vision.featureDim,
+            dropout: spec.model.vision.dropout,
+            attention_type: spec.model.vision.attentionType,
+          },
+          tabular: {
+            hidden_dims: spec.model.tabular.hiddenDims,
+            output_dim: spec.model.tabular.outputDim,
+            dropout: spec.model.tabular.dropout,
+          },
+          fusion: {
+            fusion_type: spec.model.fusion.fusionType,
+            hidden_dim: spec.model.fusion.hiddenDim,
+            dropout: spec.model.fusion.dropout,
+            num_heads: spec.model.fusion.numHeads,
+          },
+          numerical_features: spec.data.numericalFeatures,
+          categorical_features: spec.data.categoricalFeatures,
+          image_size: spec.data.imageSize,
+          use_attention_supervision: spec.training.useAttentionSupervision,
+          num_epochs: spec.training.numEpochs,
+        });
+        if (!cancelled) {
+          setModelInspection(inspection);
+        }
+      } catch (error: any) {
+        console.error("Failed to inspect model config:", error);
+        if (!cancelled) {
+          setModelInspectionError(
+            error?.response?.data?.detail || error?.message || "模型检查失败",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setModelInspectionLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    spec.model.numClasses,
+    spec.model.useAuxiliaryHeads,
+    spec.model.vision.backbone,
+    spec.model.vision.pretrained,
+    spec.model.vision.freezeBackbone,
+    spec.model.vision.featureDim,
+    spec.model.vision.dropout,
+    spec.model.vision.attentionType,
+    spec.model.tabular.hiddenDims,
+    spec.model.tabular.outputDim,
+    spec.model.tabular.dropout,
+    spec.model.fusion.fusionType,
+    spec.model.fusion.hiddenDim,
+    spec.model.fusion.dropout,
+    spec.model.fusion.numHeads,
+    spec.data.numericalFeatures,
+    spec.data.categoricalFeatures,
+    spec.data.imageSize,
+    spec.training.useAttentionSupervision,
+    spec.training.numEpochs,
+  ]);
 
   const renderBasicsStep = () => (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -337,12 +656,35 @@ export default function RunWizard() {
       <Card size="small" title="先说你现在要解决什么问题">
         <Space direction="vertical" size={6} style={{ width: "100%" }}>
           <Space>
-            <Text strong>{selectedBuilderPath.label}</Text>
+            <Text strong>{selectedPresetLabel}</Text>
             <Tag color="processing">当前主线默认路径</Tag>
           </Space>
-          <Text type="secondary">{selectedBuilderPath.problem}</Text>
-          <Text>当前会映射到：{selectedBuilderPath.runtimeShape}</Text>
-          <Text type="secondary">{selectedBuilderPath.editorMode}</Text>
+          <Text type="secondary">
+            官方模型模板现在来自模型数据库，而不是前端硬编码 preset。
+          </Text>
+          <Text>{selectedTemplateDescription}</Text>
+          <Text type="secondary">算力建议：{selectedTemplateCompute}</Text>
+          {officialModelTemplates.length ? (
+            <Select
+              value={selectedModelTemplateId}
+              style={{ width: 360, maxWidth: "100%" }}
+              options={officialModelTemplates.map((item) => ({
+                label: `${item.label} · ${item.status}`,
+                value: item.id,
+              }))}
+              onChange={(value) => {
+                const template = officialModelTemplates.find((item) => item.id === value);
+                applyModelTemplate(
+                  value,
+                  template?.wizard_prefill as ModelPrefillState | undefined,
+                  template?.label || null,
+                );
+              }}
+            />
+          ) : null}
+          <Button icon={<ControlOutlined />} onClick={() => navigate("/config/model")}>
+            去官方模型数据库选模板
+          </Button>
         </Space>
       </Card>
 
@@ -803,6 +1145,136 @@ export default function RunWizard() {
           </Row>
         </Form>
       </Card>
+
+      <Card size="small" title="模型骨架检查">
+        <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <Space wrap>
+            <Button icon={<ControlOutlined />} onClick={() => navigate("/config/model")}>
+              打开模型数据库
+            </Button>
+            <Button icon={<ExperimentOutlined />} onClick={() => navigate("/config/advanced")}>
+              看高级模式组件注册表
+            </Button>
+          </Space>
+
+          {modelInspectionError ? (
+            <Alert type="error" showIcon message={modelInspectionError} />
+          ) : null}
+          {modelInspection ? (
+            <Alert
+              type={
+                modelInspection.can_enter_training
+                  ? modelInspection.status === "warning"
+                    ? "warning"
+                    : "success"
+                  : "error"
+              }
+              showIcon
+              message={modelInspection.next_step}
+              description={
+                <Space wrap>
+                  <Tag
+                    color={
+                      modelInspection.status === "ready"
+                        ? "success"
+                        : modelInspection.status === "warning"
+                          ? "warning"
+                          : "error"
+                    }
+                  >
+                    {modelInspection.status}
+                  </Tag>
+                  <span>backbone: {modelInspection.summary.backbone}</span>
+                  <span>fusion: {modelInspection.summary.fusion_type}</span>
+                  <span>tabular features: {modelInspection.summary.tabular_feature_count}</span>
+                </Space>
+              }
+            />
+          ) : (
+            <Alert
+              type="info"
+              showIcon
+              message={modelInspectionLoading ? "正在检查模型骨架..." : "等待模型检查结果"}
+            />
+          )}
+
+          {modelInspection?.runtime ? (
+            <Row gutter={16}>
+              <Col xs={24} md={8}>
+                <Card size="small">
+                  <Text type="secondary">总参数量</Text>
+                  <Title level={4} style={{ margin: 0 }}>
+                    {modelInspection.runtime.total_params.toLocaleString()}
+                  </Title>
+                </Card>
+              </Col>
+              <Col xs={24} md={8}>
+                <Card size="small">
+                  <Text type="secondary">可训练参数</Text>
+                  <Title level={4} style={{ margin: 0 }}>
+                    {modelInspection.runtime.trainable_params.toLocaleString()}
+                  </Title>
+                </Card>
+              </Col>
+              <Col xs={24} md={8}>
+                <Card size="small">
+                  <Text type="secondary">fusion 输出维度</Text>
+                  <Title level={4} style={{ margin: 0 }}>
+                    {modelInspection.runtime.fusion_output_dim}
+                  </Title>
+                </Card>
+              </Col>
+            </Row>
+          ) : null}
+
+          {modelInspection ? (
+            <div className="editorial-grid">
+              {modelInspection.checks.map((check) => (
+                <div key={check.key} className="surface-note surface-note--dense">
+                  <Space wrap>
+                    <Tag
+                      color={
+                        check.status === "pass"
+                          ? "success"
+                          : check.status === "warning"
+                            ? "warning"
+                            : "error"
+                      }
+                    >
+                      {check.status}
+                    </Tag>
+                    <strong>{check.label}</strong>
+                  </Space>
+                  <p>{check.detail}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {modelInspection?.issues.errors.length ? (
+            modelInspection.issues.errors.map((issue) => (
+              <Alert
+                key={`${issue.error_code}-${issue.path}`}
+                type="error"
+                showIcon
+                message={`${issue.path}: ${issue.message}`}
+                description={issue.suggestion || undefined}
+              />
+            ))
+          ) : null}
+          {modelInspection?.issues.warnings.length ? (
+            modelInspection.issues.warnings.map((issue) => (
+              <Alert
+                key={`${issue.error_code}-${issue.path}`}
+                type="warning"
+                showIcon
+                message={`${issue.path}: ${issue.message}`}
+                description={issue.suggestion || undefined}
+              />
+            ))
+          ) : null}
+        </Space>
+      </Card>
     </Space>
   );
 
@@ -1136,21 +1608,21 @@ export default function RunWizard() {
       aside={
         <div className="hero-aside-panel">
           <span className="hero-aside-panel__label">Current recommendation</span>
-          <div className="hero-aside-panel__value">{selectedBuilderPath.label}</div>
+          <div className="hero-aside-panel__value">{selectedPresetLabel}</div>
           <div className="hero-aside-panel__copy">
-            当前问题路径会映射到 <strong>{selectedPresetLabel}</strong> preset，
-            并继续通过当前 runtime 支持的配置空间导出真实 YAML。
+            当前问题路径会映射到官方模型数据库里的 <strong>{selectedPresetLabel}</strong>
+            ，并继续通过当前 runtime 支持的配置空间导出真实 YAML。
           </div>
           <div className="surface-note">
-            当前支持：<strong>{selectedBuilderPath.runtimeShape}</strong>
+            算力建议：<strong>{selectedTemplateCompute}</strong>
           </div>
         </div>
       }
       metrics={[
         {
-          label: "Problem path",
+          label: "Official template",
           value: selectedPresetLabel,
-          hint: selectedBuilderPath.label,
+          hint: selectedModelTemplate?.id || preset,
           tone: "amber",
         },
         {
@@ -1160,8 +1632,8 @@ export default function RunWizard() {
           tone: "blue",
         },
         {
-          label: "Edit mode",
-          value: "guided by default",
+          label: "Template source",
+          value: "official catalog",
           hint: "Node editing remains an advanced mode",
           tone: "teal",
         },

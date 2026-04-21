@@ -336,8 +336,12 @@ class WorkflowEngine:
             errors.append(f"未知节点类型: {node.type}")
             return errors
 
-        if node.type == "dataLoader" and not node.data.get("datasetId"):
-            errors.append(f"数据加载节点 {node.id} 缺少 datasetId 配置")
+        if node.type == "dataLoader" and not any(
+            node.data.get(field) for field in ("datasetId", "dataPath", "csvPath")
+        ):
+            errors.append(
+                f"数据加载节点 {node.id} 缺少数据源配置（datasetId / dataPath / csvPath）"
+            )
 
         if node.type == "model":
             num_classes = node.data.get("numClasses")

@@ -40,6 +40,7 @@
     "start": "开始引导",
     "workbench": "研究工作台",
     "datasets": "数据登记",
+    "evaluation": "独立评估",
     "config": "RunSpec 向导",
     "workflow": "工作流编辑器",
     "training": "训练监控",
@@ -52,28 +53,37 @@
     "start": "开始",
     "workbench": "工作台",
     "datasets": "数据集",
+    "evaluation": "评估",
     "training": "训练",
     "config": "向导",
+    "workflow": "工作流",
     "models": "模型",
-    "system": "系统"
+    "system": "系统",
+    "settings": "设置"
   },
   "navEyebrow": {
     "start": "首次运行",
     "workbench": "研究控制台",
     "datasets": "数据入口",
+    "evaluation": "结果构建",
     "training": "执行监控",
     "config": "RunSpec 组合器",
+    "workflow": "节点编排预览",
     "models": "结果归档",
-    "system": "资源观测"
+    "system": "资源观测",
+    "settings": "偏好设置"
   },
   "navDescription": {
     "start": "先检查环境、确认 quickstart 路径，再完成第一次成功闭环。",
     "workbench": "总览数据、训练状态、RunSpec 入口与最近研究产物。",
     "datasets": "登记本地目录、检查处理状态，并维护研究数据资产。",
+    "evaluation": "基于现有 config 和 checkpoint 独立生成评估产物，并可选择导入结果后台。",
     "training": "启动训练任务、观察实时曲线，并跟踪运行中的实验。",
     "config": "从表单生成真实训练配置，让 CLI 和 Web 使用同一语义。",
+    "workflow": "用受限节点图编排一条 data -> model -> training 主线，并把真实执行交给稳定训练 runtime。",
     "models": "查看训练产物、导入真实运行结果，并深入检查 artifact。",
-    "system": "观察 CPU、内存和 GPU 负载，评估本地工作站健康度。"
+    "system": "观察 CPU、内存和 GPU 负载，评估本地工作站健康度。",
+    "settings": "调整界面偏好和部分高级显示方式，例如版本历史的展示语义。"
   },
   "app": {
     "routeFallback": {

@@ -34,7 +34,9 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 
 import {
+  getAdvancedBuilderCatalog,
   type AdvancedBuilderCompileIssue,
+  type AdvancedBuilderCatalogResponse,
   compileAdvancedBuilder,
   startTrainingFromAdvancedBuilder,
 } from "@/api/advancedBuilder";
@@ -42,9 +44,6 @@ import AdvancedComponentNode from "@/components/advanced/AdvancedComponentNode";
 import AdvancedComponentPalette from "@/components/advanced/AdvancedComponentPalette";
 import PageScaffold from "@/components/layout/PageScaffold";
 import {
-  ADVANCED_BUILDER_BLUEPRINTS,
-  ADVANCED_BUILDER_FAMILY_LABELS,
-  ADVANCED_BUILDER_STATUS_LABELS,
   type AdvancedBuilderFamily,
 } from "@/config/advancedBuilderCatalog";
 import {
@@ -69,13 +68,14 @@ const nodeTypes = {
 };
 
 function formatConnectionLabel(
+  familyLabels: Record<AdvancedBuilderFamily, string>,
   sourceNode?: Node<AdvancedBuilderNodeData>,
   targetNode?: Node<AdvancedBuilderNodeData>,
 ) {
   if (!sourceNode || !targetNode) {
     return "-";
   }
-  return `${ADVANCED_BUILDER_FAMILY_LABELS[sourceNode.data.family]} -> ${ADVANCED_BUILDER_FAMILY_LABELS[targetNode.data.family]}`;
+  return `${familyLabels[sourceNode.data.family]} -> ${familyLabels[targetNode.data.family]}`;
 }
 
 function toConfigFileName(experimentName: string): string {
@@ -121,28 +121,57 @@ function renderIssueDescription(issue: AdvancedBuilderCompileIssue) {
 export default function AdvancedBuilderCanvas() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [catalog, setCatalog] = useState<AdvancedBuilderCatalogResponse | null>(null);
+  const familyLabels =
+    catalog?.familyLabels || ({} as Record<AdvancedBuilderFamily, string>);
+  const statusLabels =
+    catalog?.statusLabels ||
+    ({} as Record<"compile_ready" | "conditional" | "draft_only", string>);
   const requestedBlueprintId = searchParams.get("blueprint");
-  const initialBlueprintId = useMemo(() => {
-    if (!requestedBlueprintId) {
-      return "quickstart_multimodal";
-    }
-    return ADVANCED_BUILDER_BLUEPRINTS.some(
-      (blueprint) => blueprint.id === requestedBlueprintId,
-    )
-      ? requestedBlueprintId
-      : "quickstart_multimodal";
-  }, [requestedBlueprintId]);
-  const [selectedBlueprintId, setSelectedBlueprintId] = useState(initialBlueprintId);
-  const initialGraph = useMemo(
-    () => buildBlueprintGraph(selectedBlueprintId),
-    [selectedBlueprintId],
-  );
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialGraph.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState("quickstart_multimodal");
+  const [nodes, setNodes, onNodesChange] = useNodesState<AdvancedBuilderNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const payload = await getAdvancedBuilderCatalog();
+        setCatalog(payload);
+        const nextBlueprintId =
+          requestedBlueprintId &&
+          payload.blueprints.some(
+            (blueprint: { id: string }) => blueprint.id === requestedBlueprintId,
+          )
+            ? requestedBlueprintId
+            : "quickstart_multimodal";
+        const graph = buildBlueprintGraph(
+          nextBlueprintId,
+          payload.blueprints,
+          payload.components,
+          payload.connectionRules,
+          payload.familyLabels,
+          payload.statusLabels,
+        );
+        setSelectedBlueprintId(nextBlueprintId);
+        setNodes(graph.nodes);
+        setEdges(graph.edges);
+      } catch (error) {
+        console.error("Failed to load advanced builder catalog:", error);
+        message.error("加载高级模式目录失败");
+      }
+    };
+
+    void load();
+  }, [requestedBlueprintId, setEdges, setNodes]);
 
   const evaluation = useMemo(
-    () => evaluateAdvancedBuilderGraph(nodes, edges),
-    [nodes, edges],
+    () =>
+      evaluateAdvancedBuilderGraph(
+        nodes,
+        edges,
+        catalog?.connectionRules,
+      ),
+    [nodes, edges, catalog?.connectionRules],
   );
   const [compileResult, setCompileResult] = useState<{
     preset: RunPresetId;
@@ -280,14 +309,33 @@ export default function AdvancedBuilderCanvas() {
   };
 
   const loadBlueprint = (blueprintId: string) => {
-    const graph = buildBlueprintGraph(blueprintId);
+    if (!catalog) {
+      return;
+    }
+    const graph = buildBlueprintGraph(
+      blueprintId,
+      catalog.blueprints,
+      catalog.components,
+      catalog.connectionRules,
+      catalog.familyLabels,
+      catalog.statusLabels,
+    );
     setSelectedBlueprintId(blueprintId);
     setNodes(graph.nodes);
     setEdges(graph.edges);
   };
 
   const handleAddComponent = (componentId: string) => {
-    setNodes((current) => [...current, createBuilderNode(componentId, current.length)]);
+    setNodes((current) => [
+      ...current,
+      createBuilderNode(
+        componentId,
+        current.length,
+        catalog?.components,
+        catalog?.familyLabels,
+        catalog?.statusLabels,
+      ),
+    ]);
     message.success("组件已加入画布");
   };
 
@@ -303,6 +351,8 @@ export default function AdvancedBuilderCanvas() {
     const rule = canConnectFamilies(
       sourceNode.data.family,
       targetNode.data.family,
+      catalog?.connectionRules,
+      catalog?.familyLabels,
     );
     if (!rule.allowed) {
       message.error(rule.description);
@@ -504,11 +554,9 @@ export default function AdvancedBuilderCanvas() {
           </div>
           <div className="surface-note">
             当前蓝图：
-            <strong>
-              {" "}
-              {ADVANCED_BUILDER_BLUEPRINTS.find(
-                (item) => item.id === selectedBlueprintId,
-              )?.label || "-"}
+              <strong>
+                {" "}
+              {catalog?.blueprints.find((item) => item.id === selectedBlueprintId)?.label || "-"}
             </strong>
           </div>
         </div>
@@ -531,7 +579,7 @@ export default function AdvancedBuilderCanvas() {
           value: evaluation.missingFamilies.length,
           hint: evaluation.missingFamilies.length
             ? evaluation.missingFamilies
-                .map((family) => ADVANCED_BUILDER_FAMILY_LABELS[family])
+                .map((family) => familyLabels[family])
                 .join(" / ")
             : "All required families present",
           tone: evaluation.missingFamilies.length ? "rose" : "teal",
@@ -553,6 +601,13 @@ export default function AdvancedBuilderCanvas() {
         message="当前原型的边界"
         description="当前允许你编辑节点图，但还不把这张图直接交给后端执行。真正的目标是先把高级模式的前台语义收紧成一张可解释、可校验、可编译的模型图，再决定如何把它降级编译回正式版主链配置。"
       />
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="官方来源专用"
+        description="这张画布当前只服务官方模型来源。用户自定义模型仍然通过模型数据库里的本地自定义模板进行维护，不直接进入图编辑器。"
+      />
 
       <div className="split-grid">
         <Card className="surface-card" style={{ minHeight: 760 }}>
@@ -571,8 +626,8 @@ export default function AdvancedBuilderCanvas() {
             <Select
               value={selectedBlueprintId}
               onChange={loadBlueprint}
-              options={ADVANCED_BUILDER_BLUEPRINTS.map((blueprint) => ({
-                label: `${blueprint.label} · ${ADVANCED_BUILDER_STATUS_LABELS[blueprint.status]}`,
+              options={(catalog?.blueprints || []).map((blueprint) => ({
+                label: `${blueprint.label} · ${statusLabels[blueprint.status] || blueprint.status}`,
                 value: blueprint.id,
               }))}
             />
@@ -589,7 +644,12 @@ export default function AdvancedBuilderCanvas() {
                   "linear-gradient(180deg, rgba(249,250,251,0.9), rgba(241,245,249,0.9))",
               }}
             >
-              <AdvancedComponentPalette onAddComponent={handleAddComponent} />
+              <AdvancedComponentPalette
+                onAddComponent={handleAddComponent}
+                components={catalog?.components || []}
+                familyLabels={familyLabels}
+                statusLabels={statusLabels}
+              />
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -617,7 +677,7 @@ export default function AdvancedBuilderCanvas() {
                   缺少组件家族：
                   {" "}
                   {evaluation.missingFamilies
-                    .map((family) => ADVANCED_BUILDER_FAMILY_LABELS[family])
+                    .map((family) => familyLabels[family])
                     .join(" / ")}
                 </div>
               ) : null}
@@ -628,7 +688,7 @@ export default function AdvancedBuilderCanvas() {
                   {evaluation.missingRequiredConnections
                     .map(
                       (rule) =>
-                        `${ADVANCED_BUILDER_FAMILY_LABELS[rule.fromFamily]} -> ${ADVANCED_BUILDER_FAMILY_LABELS[rule.toFamily]}`,
+                        `${familyLabels[rule.fromFamily]} -> ${familyLabels[rule.toFamily]}`,
                     )
                     .join(" / ")}
                 </div>
@@ -830,10 +890,10 @@ export default function AdvancedBuilderCanvas() {
                     <Space direction="vertical" size={6} style={{ width: "100%" }}>
                       <Text strong>{node.data.label}</Text>
                       <Text type="secondary">
-                        family: {ADVANCED_BUILDER_FAMILY_LABELS[node.data.family]}
+                        family: {familyLabels[node.data.family] || node.data.family}
                       </Text>
                       <Text type="secondary">
-                        status: {ADVANCED_BUILDER_STATUS_LABELS[node.data.status]}
+                        status: {statusLabels[node.data.status] || node.data.status}
                       </Text>
                       <Paragraph style={{ marginBottom: 0 }}>
                         {node.data.description}
@@ -857,13 +917,15 @@ export default function AdvancedBuilderCanvas() {
                       ? canConnectFamilies(
                           sourceNode.data.family,
                           targetNode.data.family,
+                          catalog?.connectionRules,
+                          familyLabels,
                         )
                       : null;
                   return (
                     <Card key={edge.id} size="small">
                       <Space direction="vertical" size={6} style={{ width: "100%" }}>
                         <Text strong>
-                          {formatConnectionLabel(sourceNode, targetNode)}
+                          {formatConnectionLabel(familyLabels, sourceNode, targetNode)}
                         </Text>
                         {rule ? (
                           <>

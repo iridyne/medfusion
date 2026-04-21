@@ -18,6 +18,10 @@ from ..database import get_db_session
 from ..model_registry import import_model_run
 from ..models import ModelInfo
 from ..time_utils import utcnow
+from ..application.model_inspector import ModelInspectPayload, inspect_model_skeleton
+from ..application.model_catalog import export_model_catalog
+from ..application.custom_model_store import CustomModelStore
+from ..application.custom_model_store import CUSTOM_MODEL_SCHEMA_VERSION
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -65,6 +69,52 @@ class ModelImportRequest(BaseModel):
     tags: list[str] | None = None
 
 
+class ModelInspectRequest(BaseModel):
+    num_classes: int
+    use_auxiliary_heads: bool = True
+    vision: dict[str, Any]
+    tabular: dict[str, Any]
+    fusion: dict[str, Any]
+    numerical_features: list[str] | None = None
+    categorical_features: list[str] | None = None
+    image_size: int = 224
+    use_attention_supervision: bool = False
+    num_epochs: int = 3
+
+
+class CustomModelEntryRequest(BaseModel):
+    schema_version: str = CUSTOM_MODEL_SCHEMA_VERSION
+    id: str
+    source: Literal["custom"] = "custom"
+    label: str
+    description: str = ""
+    status: Literal["local_custom"] = "local_custom"
+    based_on_model_id: str
+    unit_map: dict[str, str]
+    editable_slots: list[str]
+    component_ids: list[str]
+    data_requirements: list[str]
+    compute_profile: dict[str, Any]
+    wizard_prefill: dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+class CustomModelRestoreRequest(BaseModel):
+    revision: str
+
+
+class CustomModelRetentionPolicyRequest(BaseModel):
+    mode: Literal["count", "time"] = "count"
+    max_count: int = 40
+    max_age_days: int = 90
+    min_count_per_model: int = 3
+
+
+def _custom_model_store() -> CustomModelStore:
+    return CustomModelStore(settings.data_dir / "model-catalog" / "custom-models")
+
+
 def _infer_format(path: str | None) -> str:
     if not path:
         return "pytorch"
@@ -74,6 +124,127 @@ def _infer_format(path: str | None) -> str:
     if suffix in {".ts", ".pt", ".pth"}:
         return "pytorch"
     return "pytorch"
+
+
+@router.post("/inspect-config")
+async def inspect_model_config(request: ModelInspectRequest) -> dict[str, Any]:
+    """Inspect a model skeleton before entering the training step."""
+    payload = ModelInspectPayload(
+        num_classes=request.num_classes,
+        use_auxiliary_heads=request.use_auxiliary_heads,
+        vision=request.vision,
+        tabular=request.tabular,
+        fusion=request.fusion,
+        numerical_features=request.numerical_features or [],
+        categorical_features=request.categorical_features or [],
+        image_size=request.image_size,
+        use_attention_supervision=request.use_attention_supervision,
+        num_epochs=request.num_epochs,
+    )
+    return inspect_model_skeleton(payload)
+
+
+@router.get("/catalog")
+async def get_model_catalog() -> dict[str, Any]:
+    """Return the packaged model-building module catalog."""
+    return export_model_catalog()
+
+
+@router.get("/custom")
+async def list_custom_models() -> dict[str, Any]:
+    retention_policy = _custom_model_store().get_retention_policy()
+    return {
+        "items": _custom_model_store().list_entries(),
+        "trash_items": _custom_model_store().list_deleted_entries(),
+        "storage": "filesystem",
+        "root_dir": str(settings.data_dir / "model-catalog" / "custom-models"),
+        "schema_version": CUSTOM_MODEL_SCHEMA_VERSION,
+        "format_contract": "internal_state_file",
+        "history_backend": _custom_model_store().history_backend,
+        "supports_export_import": False,
+        "retention_scope": "global_store",
+        "retention_floor_scope": "active_models_only",
+        "retention_policy": retention_policy,
+    }
+
+
+@router.post("/custom")
+async def save_custom_model(entry: CustomModelEntryRequest) -> dict[str, Any]:
+    saved = _custom_model_store().save_entry(entry.model_dump())
+    return {
+        "item": saved,
+        "storage": "filesystem",
+        "schema_version": CUSTOM_MODEL_SCHEMA_VERSION,
+        "history_backend": _custom_model_store().history_backend,
+    }
+
+
+@router.delete("/custom/{entry_id}")
+async def delete_custom_model(entry_id: str) -> dict[str, Any]:
+    _custom_model_store().delete_entry(entry_id)
+    return {
+        "deleted": True,
+        "recycled": True,
+        "id": entry_id,
+        "storage": "filesystem",
+        "history_backend": _custom_model_store().history_backend,
+    }
+
+
+@router.post("/custom/{entry_id}/undelete")
+async def undelete_custom_model(entry_id: str) -> dict[str, Any]:
+    restored = _custom_model_store().restore_deleted_entry(entry_id)
+    return {
+        "item": restored,
+        "history_backend": _custom_model_store().history_backend,
+        "restore_behavior": "overwrite_current",
+    }
+
+
+@router.get("/custom/{entry_id}/history")
+async def get_custom_model_history(entry_id: str) -> dict[str, Any]:
+    return {
+        "id": entry_id,
+        "items": _custom_model_store().list_history(entry_id),
+        "history_backend": _custom_model_store().history_backend,
+    }
+
+
+@router.post("/custom/{entry_id}/restore")
+async def restore_custom_model(
+    entry_id: str,
+    request: CustomModelRestoreRequest,
+) -> dict[str, Any]:
+    restored = _custom_model_store().restore_entry(entry_id, request.revision)
+    return {
+        "item": restored,
+        "history_backend": _custom_model_store().history_backend,
+        "restore_behavior": "overwrite_current",
+    }
+
+
+@router.get("/custom/policy")
+async def get_custom_model_retention_policy() -> dict[str, Any]:
+    return {
+        "policy": _custom_model_store().get_retention_policy(),
+        "history_backend": _custom_model_store().history_backend,
+        "supports_export_import": False,
+        "retention_scope": "global_store",
+        "retention_floor_scope": "active_models_only",
+    }
+
+
+@router.put("/custom/policy")
+async def update_custom_model_retention_policy(
+    request: CustomModelRetentionPolicyRequest,
+) -> dict[str, Any]:
+    policy = _custom_model_store().save_retention_policy(request.model_dump())
+    return {
+        "policy": policy,
+        "history_backend": _custom_model_store().history_backend,
+        "retention_scope": "global_store",
+        "retention_floor_scope": "active_models_only",
+    }
 
 
 def _artifact_download_url(model_id: int, artifact_key: str) -> str:

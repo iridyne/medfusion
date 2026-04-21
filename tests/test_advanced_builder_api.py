@@ -90,9 +90,12 @@ async def test_advanced_builder_catalog_exposes_registry(api_client) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert "families" in payload
+    assert "status_labels" in payload
     assert "components" in payload
     assert "connection_rules" in payload
+    assert "blueprints" in payload
     assert any(component["id"] == "resnet18_backbone" for component in payload["components"])
+    assert all(component["id"] != "resnet18_encoder_bundle" for component in payload["components"])
 
 
 async def test_advanced_builder_compile_returns_runspec_draft(api_client) -> None:

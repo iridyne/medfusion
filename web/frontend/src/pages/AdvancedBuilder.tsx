@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Col, Row, Space, Table, Tag, Typography } from "antd";
+import { Alert, Button, Card, Col, Empty, Row, Space, Table, Tag, Typography, message } from "antd";
 import {
   ApartmentOutlined,
   ArrowLeftOutlined,
@@ -9,12 +9,8 @@ import {
 } from "@ant-design/icons";
 
 import PageScaffold from "@/components/layout/PageScaffold";
+import { getAdvancedBuilderCatalog, type AdvancedBuilderCatalogResponse } from "@/api/advancedBuilder";
 import {
-  ADVANCED_BUILDER_BLUEPRINTS,
-  ADVANCED_BUILDER_COMPONENTS,
-  ADVANCED_BUILDER_CONNECTION_RULES,
-  ADVANCED_BUILDER_FAMILY_LABELS,
-  ADVANCED_BUILDER_STATUS_LABELS,
   type AdvancedBuilderFamily,
   type AdvancedBuilderStatus,
 } from "@/config/advancedBuilderCatalog";
@@ -29,16 +25,32 @@ const STATUS_COLORS: Record<AdvancedBuilderStatus, string> = {
 
 export default function AdvancedBuilder() {
   const navigate = useNavigate();
-  const familyEntries = useMemo(() => {
-    return Object.entries(ADVANCED_BUILDER_FAMILY_LABELS) as Array<
-      [AdvancedBuilderFamily, string]
-    >;
+  const [catalog, setCatalog] = useState<AdvancedBuilderCatalogResponse | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const payload = await getAdvancedBuilderCatalog();
+        setCatalog(payload);
+      } catch (error) {
+        console.error("Failed to load advanced builder catalog:", error);
+        message.error("加载高级模式目录失败");
+      }
+    };
+
+    void load();
   }, []);
 
-  const compileReadyBlueprints = ADVANCED_BUILDER_BLUEPRINTS.filter(
+  const familyEntries = useMemo(() => {
+    return Object.entries(catalog?.familyLabels || {}) as Array<
+      [AdvancedBuilderFamily, string]
+    >;
+  }, [catalog]);
+
+  const compileReadyBlueprints = (catalog?.blueprints || []).filter(
     (item) => item.status === "compile_ready",
   );
-  const draftBlueprints = ADVANCED_BUILDER_BLUEPRINTS.filter(
+  const draftBlueprints = (catalog?.blueprints || []).filter(
     (item) => item.status === "draft_only",
   );
 
@@ -96,7 +108,7 @@ export default function AdvancedBuilder() {
         },
         {
           label: "Compile-ready components",
-          value: ADVANCED_BUILDER_COMPONENTS.filter(
+          value: (catalog?.components || []).filter(
             (item) => item.status === "compile_ready",
           ).length,
           hint: "Safe to compile into the current formal release path",
@@ -110,7 +122,7 @@ export default function AdvancedBuilder() {
         },
         {
           label: "Blocked rules",
-          value: ADVANCED_BUILDER_CONNECTION_RULES.filter(
+          value: (catalog?.connectionRules || []).filter(
             (rule) => rule.status === "blocked",
           ).length,
           hint: "Human-readable rules that prevent fake builder freedom",
@@ -124,6 +136,13 @@ export default function AdvancedBuilder() {
         style={{ marginBottom: 16 }}
         message="为什么先做注册表和约束，而不是先给空白画布"
         description="因为正式版高级模式不能只是“能画图”。在进入节点编辑之前，必须先说明哪些组件真的存在、哪些连接真的合法、哪些骨架真的能编译回 runtime 主链。否则前台只会把用户带到一个仓库实际上跑不起来的假交互里。"
+      />
+      <Alert
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="当前高级模式只编辑官方来源"
+        description="本地自定义模型当前通过模型数据库页和槽位替换来完成，不直接进入高级图编辑器。这是为了把学习成本和结构复杂度控制在当前产品阶段可接受的范围内。"
       />
 
       <Card className="surface-card surface-card--accent" style={{ marginBottom: 16 }}>
@@ -156,15 +175,16 @@ export default function AdvancedBuilder() {
             <div className="section-heading__eyebrow">Component registry</div>
             <h2 className="section-heading__title">正式版高级模式当前能看到哪些组件家族</h2>
             <p className="section-heading__description">
-              组件不是按“想象中的通用建模自由度”开放，而是按当前 runtime 已支持的主链空间分批暴露。
+              组件现在直接从官方模型真源投影过来，不再维护第二套前端本地清单。
             </p>
           </div>
-          <Tag color="processing">{ADVANCED_BUILDER_COMPONENTS.length} components</Tag>
+          <Tag color="processing">{catalog?.components.length ?? 0} components</Tag>
         </div>
 
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {catalog?.components.length ? (
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
           {familyEntries.map(([familyKey, familyLabel]) => {
-            const components = ADVANCED_BUILDER_COMPONENTS.filter(
+            const components = (catalog?.components || []).filter(
               (item) => item.family === familyKey,
             );
             return (
@@ -177,7 +197,7 @@ export default function AdvancedBuilder() {
                           <Space wrap>
                             <Text strong>{component.label}</Text>
                             <Tag color={STATUS_COLORS[component.status]}>
-                              {ADVANCED_BUILDER_STATUS_LABELS[component.status]}
+                              {catalog?.statusLabels?.[component.status] || component.status}
                             </Tag>
                           </Space>
                           <Paragraph style={{ marginBottom: 0 }}>
@@ -211,7 +231,10 @@ export default function AdvancedBuilder() {
               </Card>
             );
           })}
-        </Space>
+          </Space>
+        ) : (
+          <Empty description="暂无高级模式组件目录" />
+        )}
       </Card>
 
       <Card className="surface-card" style={{ marginBottom: 16 }}>
@@ -230,21 +253,21 @@ export default function AdvancedBuilder() {
           size="small"
           pagination={false}
           rowKey={(record) => `${record.fromFamily}-${record.toFamily}`}
-          dataSource={ADVANCED_BUILDER_CONNECTION_RULES}
+          dataSource={catalog?.connectionRules || []}
           columns={[
             {
               title: "From",
               dataIndex: "fromFamily",
               key: "fromFamily",
               render: (value: AdvancedBuilderFamily) =>
-                ADVANCED_BUILDER_FAMILY_LABELS[value],
+                catalog?.familyLabels?.[value] || value,
             },
             {
               title: "To",
               dataIndex: "toFamily",
               key: "toFamily",
               render: (value: AdvancedBuilderFamily) =>
-                ADVANCED_BUILDER_FAMILY_LABELS[value],
+                catalog?.familyLabels?.[value] || value,
             },
             {
               title: "状态",

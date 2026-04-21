@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from .model_catalog import export_model_catalog
 from med_core.configs.base_config import (
     DataConfig,
     ExperimentConfig,
@@ -792,23 +793,63 @@ def _apply_component_to_spec(
     component_id: str,
     issues: list[dict[str, Any]],
 ) -> None:
-    if component_id == "image_tabular_dataset":
-        return
-    if component_id == "resnet18_backbone":
-        spec["model"]["vision"]["backbone"] = "resnet18"
-        spec["model"]["vision"]["featureDim"] = 128
-        spec["model"]["vision"]["attentionType"] = "cbam"
-        return
-    if component_id == "efficientnet_b0_backbone":
-        spec["model"]["vision"]["backbone"] = "efficientnet_b0"
-        spec["model"]["vision"]["featureDim"] = 192
-        spec["model"]["vision"]["attentionType"] = "cbam"
-        return
+    prefill = _component_prefill_map().get(component_id)
+    if prefill:
+        if "csvPath" in prefill:
+            spec["data"]["csvPath"] = prefill["csvPath"]
+        if "imageDir" in prefill:
+            spec["data"]["imageDir"] = prefill["imageDir"]
+        if "imagePathColumn" in prefill:
+            spec["data"]["imagePathColumn"] = prefill["imagePathColumn"]
+        if "targetColumn" in prefill:
+            spec["data"]["targetColumn"] = prefill["targetColumn"]
+        if "patientIdColumn" in prefill:
+            spec["data"]["patientIdColumn"] = prefill["patientIdColumn"]
+        if "numericalFeatures" in prefill:
+            spec["data"]["numericalFeatures"] = list(prefill["numericalFeatures"])
+        if "categoricalFeatures" in prefill:
+            spec["data"]["categoricalFeatures"] = list(prefill["categoricalFeatures"])
+        if "backbone" in prefill:
+            spec["model"]["vision"]["backbone"] = prefill["backbone"]
+        if "featureDim" in prefill:
+            spec["model"]["vision"]["featureDim"] = prefill["featureDim"]
+        if "attentionType" in prefill:
+            spec["model"]["vision"]["attentionType"] = prefill["attentionType"]
+        if "pretrained" in prefill:
+            spec["model"]["vision"]["pretrained"] = prefill["pretrained"]
+        if "freezeBackbone" in prefill:
+            spec["model"]["vision"]["freezeBackbone"] = prefill["freezeBackbone"]
+        if "tabularHiddenDims" in prefill:
+            spec["model"]["tabular"]["hiddenDims"] = list(prefill["tabularHiddenDims"])
+        if "tabularOutputDim" in prefill:
+            spec["model"]["tabular"]["outputDim"] = prefill["tabularOutputDim"]
+        if "tabularDropout" in prefill:
+            spec["model"]["tabular"]["dropout"] = prefill["tabularDropout"]
+        if "fusionType" in prefill:
+            spec["model"]["fusion"]["fusionType"] = prefill["fusionType"]
+        if "fusionHiddenDim" in prefill:
+            spec["model"]["fusion"]["hiddenDim"] = prefill["fusionHiddenDim"]
+        if "fusionDropout" in prefill:
+            spec["model"]["fusion"]["dropout"] = prefill["fusionDropout"]
+        if "fusionNumHeads" in prefill:
+            spec["model"]["fusion"]["numHeads"] = prefill["fusionNumHeads"]
+        if "numClasses" in prefill:
+            spec["model"]["numClasses"] = prefill["numClasses"]
+        if "useAuxiliaryHeads" in prefill:
+            spec["model"]["useAuxiliaryHeads"] = prefill["useAuxiliaryHeads"]
+        if "useAttentionSupervision" in prefill:
+            spec["training"]["useAttentionSupervision"] = prefill["useAttentionSupervision"]
+        if "useProgressiveTraining" in prefill:
+            spec["training"]["useProgressiveTraining"] = prefill["useProgressiveTraining"]
+        if "numEpochs" in prefill:
+            spec["training"]["numEpochs"] = prefill["numEpochs"]
+        if "stage1Epochs" in prefill:
+            spec["training"]["stage1Epochs"] = prefill["stage1Epochs"]
+        if "stage2Epochs" in prefill:
+            spec["training"]["stage2Epochs"] = prefill["stage2Epochs"]
+        if "stage3Epochs" in prefill:
+            spec["training"]["stage3Epochs"] = prefill["stage3Epochs"]
     if component_id == "attention_backbone_bundle":
-        spec["model"]["vision"]["backbone"] = "resnet50"
-        spec["model"]["vision"]["featureDim"] = 256
-        spec["model"]["vision"]["attentionType"] = "cbam"
-        spec["training"]["useAttentionSupervision"] = True
         issues.append(
             _issue(
                 level="warning",
@@ -819,28 +860,11 @@ def _apply_component_to_spec(
             )
         )
         return
-    if component_id == "mlp_tabular_encoder":
-        spec["model"]["tabular"]["hiddenDims"] = [32]
-        spec["model"]["tabular"]["outputDim"] = 16
-        spec["model"]["tabular"]["dropout"] = 0.2
-        return
     if component_id == "concatenate_fusion":
-        spec["model"]["fusion"]["fusionType"] = "concatenate"
         spec["model"]["fusion"]["hiddenDim"] = (
             spec["model"]["vision"]["featureDim"] + spec["model"]["tabular"]["outputDim"]
         )
-        spec["model"]["fusion"]["dropout"] = 0.3
-        return
-    if component_id == "gated_fusion":
-        spec["model"]["fusion"]["fusionType"] = "gated"
-        spec["model"]["fusion"]["hiddenDim"] = 160
-        spec["model"]["fusion"]["dropout"] = 0.3
-        return
     if component_id == "attention_fusion":
-        spec["model"]["fusion"]["fusionType"] = "attention"
-        spec["model"]["fusion"]["hiddenDim"] = 192
-        spec["model"]["fusion"]["numHeads"] = 4
-        spec["model"]["fusion"]["dropout"] = 0.25
         issues.append(
             _issue(
                 level="warning",
@@ -851,19 +875,7 @@ def _apply_component_to_spec(
             )
         )
         return
-    if component_id == "classification_head":
-        spec["model"]["numClasses"] = 2
-        spec["model"]["useAuxiliaryHeads"] = True
-        return
-    if component_id == "standard_training":
-        spec["training"]["useProgressiveTraining"] = False
-        return
-    if component_id == "progressive_training":
-        spec["training"]["useProgressiveTraining"] = True
-        spec["training"]["numEpochs"] = 18
-        spec["training"]["stage1Epochs"] = 6
-        spec["training"]["stage2Epochs"] = 8
-        spec["training"]["stage3Epochs"] = 4
+    if prefill:
         return
 
     issues.append(
@@ -879,7 +891,7 @@ def _apply_component_to_spec(
 
 
 def _component_map() -> dict[str, AdvancedBuilderComponent]:
-    return {component.id: component for component in ADVANCED_BUILDER_COMPONENTS}
+    return {component.id: component for component in _projected_components()}
 
 
 def _rule_map() -> dict[tuple[AdvancedBuilderFamily, AdvancedBuilderFamily], AdvancedBuilderConnectionRule]:
@@ -889,9 +901,100 @@ def _rule_map() -> dict[tuple[AdvancedBuilderFamily, AdvancedBuilderFamily], Adv
     }
 
 
+def _projected_components() -> tuple[AdvancedBuilderComponent, ...]:
+    catalog = export_model_catalog()
+    family_map: dict[str, AdvancedBuilderFamily] = {
+        "data_bundle": "data_input",
+        "vision_encoder": "vision_backbone",
+        "tabular_encoder": "tabular_encoder",
+        "fusion_bundle": "fusion",
+        "task_head": "head",
+        "training_strategy": "training_strategy",
+    }
+
+    projected: list[AdvancedBuilderComponent] = []
+    for unit in catalog["units"]:
+        advanced_component_id = unit.get("advanced_builder_component_id")
+        family = family_map.get(unit.get("family"))
+        if not advanced_component_id or family is None:
+            continue
+        projected.append(
+            AdvancedBuilderComponent(
+                id=str(advanced_component_id),
+                family=family,
+                label=str(unit["label"]),
+                status=unit["status"],
+                description=str(unit["description"]),
+                schema_path=(
+                    unit.get("config_requirements", [None])[0]
+                    if unit.get("config_requirements")
+                    else None
+                ),
+            )
+        )
+    return tuple(projected)
+
+
+def _projected_blueprints() -> tuple[AdvancedBuilderBlueprint, ...]:
+    catalog = export_model_catalog()
+    unit_advanced_ids = {
+        unit["id"]: unit.get("advanced_builder_component_id")
+        for unit in catalog["units"]
+    }
+    projected: list[AdvancedBuilderBlueprint] = []
+    for model in catalog["models"]:
+        advanced_blueprint_id = model.get("advanced_builder_blueprint_id")
+        if not advanced_blueprint_id:
+            continue
+        projected_components = tuple(
+            advanced_id
+            for component_id in model.get("component_ids", [])
+            for advanced_id in [unit_advanced_ids.get(component_id)]
+            if advanced_id
+        )
+        projected.append(
+            AdvancedBuilderBlueprint(
+                id=str(advanced_blueprint_id),
+                label=str(model["label"]),
+                status=model["status"],
+                description=str(model["description"]),
+                components=projected_components,
+                compiles_to=(
+                    "ExperimentConfig / official model catalog projection"
+                    if model["status"] == "compile_ready"
+                    else None
+                ),
+                blockers=tuple(
+                    []
+                    if model["status"] != "draft_only"
+                    else ["当前模板仍处于草稿层，不能进入默认正式版主线。"]
+                ),
+            )
+        )
+    return tuple(projected)
+
+
+def _component_prefill_map() -> dict[str, dict[str, Any]]:
+    catalog = export_model_catalog()
+    mapping: dict[str, dict[str, Any]] = {}
+    for unit in catalog["units"]:
+        advanced_component_id = unit.get("advanced_builder_component_id")
+        wizard_prefill = unit.get("wizard_prefill") or {}
+        if advanced_component_id and wizard_prefill:
+            mapping[str(advanced_component_id)] = dict(wizard_prefill)
+    return mapping
+
+
 def export_catalog() -> dict[str, Any]:
+    components = _projected_components()
+    blueprints = _projected_blueprints()
     return {
         "families": ADVANCED_BUILDER_FAMILY_LABELS,
+        "status_labels": {
+            "compile_ready": "可编译",
+            "conditional": "有条件开放",
+            "draft_only": "仅草稿",
+        },
         "components": [
             {
                 "id": component.id,
@@ -901,7 +1004,7 @@ def export_catalog() -> dict[str, Any]:
                 "description": component.description,
                 "schema_path": component.schema_path,
             }
-            for component in ADVANCED_BUILDER_COMPONENTS
+            for component in components
         ],
         "connection_rules": [
             {
@@ -922,7 +1025,7 @@ def export_catalog() -> dict[str, Any]:
                 "compiles_to": blueprint.compiles_to,
                 "blockers": list(blueprint.blockers),
             }
-            for blueprint in ADVANCED_BUILDER_BLUEPRINTS
+            for blueprint in blueprints
         ],
     }
 

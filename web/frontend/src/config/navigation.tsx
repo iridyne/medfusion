@@ -2,11 +2,14 @@ import type { ReactNode } from "react";
 import {
   ControlOutlined,
   DatabaseOutlined,
+  DotChartOutlined,
   ExperimentOutlined,
   HomeOutlined,
   MonitorOutlined,
   PlayCircleOutlined,
   RadarChartOutlined,
+  SettingOutlined,
+  ShareAltOutlined,
 } from "@ant-design/icons";
 
 type TranslateFn = (key: string) => string;
@@ -72,6 +75,15 @@ export const NAVIGATION_ITEMS: NavigationMetaItem[] = [
     icon: <ExperimentOutlined />,
   },
   {
+    path: "/evaluation",
+    labelKey: "nav.evaluation",
+    shortLabelKey: "navShort.evaluation",
+    eyebrowKey: "navEyebrow.evaluation",
+    descriptionKey: "navDescription.evaluation",
+    accent: "var(--accent-teal)",
+    icon: <DotChartOutlined />,
+  },
+  {
     path: "/config",
     labelKey: "nav.config",
     shortLabelKey: "navShort.config",
@@ -79,6 +91,15 @@ export const NAVIGATION_ITEMS: NavigationMetaItem[] = [
     descriptionKey: "navDescription.config",
     accent: "var(--accent-amber)",
     icon: <ControlOutlined />,
+  },
+  {
+    path: "/workflow",
+    labelKey: "nav.workflow",
+    shortLabelKey: "navShort.workflow",
+    eyebrowKey: "navEyebrow.workflow",
+    descriptionKey: "navDescription.workflow",
+    accent: "var(--accent-rose)",
+    icon: <ShareAltOutlined />,
   },
   {
     path: "/models",
@@ -97,6 +118,15 @@ export const NAVIGATION_ITEMS: NavigationMetaItem[] = [
     descriptionKey: "navDescription.system",
     accent: "var(--accent-blue)",
     icon: <MonitorOutlined />,
+  },
+  {
+    path: "/settings",
+    labelKey: "nav.settings",
+    shortLabelKey: "navShort.settings",
+    eyebrowKey: "navEyebrow.settings",
+    descriptionKey: "navDescription.settings",
+    accent: "var(--accent-blue)",
+    icon: <SettingOutlined />,
   },
 ];
 

@@ -1,4 +1,11 @@
 import api from "./index";
+import type {
+  AdvancedBuilderBlueprint,
+  AdvancedBuilderComponent,
+  AdvancedBuilderConnectionRule,
+  AdvancedBuilderFamily,
+  AdvancedBuilderStatus,
+} from "@/config/advancedBuilderCatalog";
 
 export interface AdvancedBuilderCompileIssue {
   level: "error" | "warning";
@@ -46,6 +53,14 @@ export interface AdvancedBuilderCompileResponse {
   chosen_components: Record<string, string>;
 }
 
+export interface AdvancedBuilderCatalogResponse {
+  familyLabels: Record<AdvancedBuilderFamily, string>;
+  statusLabels: Record<AdvancedBuilderStatus, string>;
+  components: AdvancedBuilderComponent[];
+  connectionRules: AdvancedBuilderConnectionRule[];
+  blueprints: AdvancedBuilderBlueprint[];
+}
+
 export const compileAdvancedBuilder = async (payload: {
   nodes: Array<Record<string, unknown>>;
   edges: Array<Record<string, unknown>>;
@@ -66,5 +81,35 @@ export const startTrainingFromAdvancedBuilder = async (payload: {
 
 export const getAdvancedBuilderCatalog = async () => {
   const response = await api.get("/advanced-builder/catalog");
-  return response.data;
+  const data = response.data;
+  return {
+    familyLabels: data.families,
+    statusLabels: data.status_labels,
+    components: data.components.map((item: any) => ({
+      id: item.id,
+      family: item.family,
+      label: item.label,
+      status: item.status,
+      description: item.description,
+      schemaPath: item.schema_path,
+      inputs: item.inputs || [],
+      outputs: item.outputs || [],
+      notes: item.notes || [],
+    })),
+    connectionRules: data.connection_rules.map((item: any) => ({
+      fromFamily: item.from_family,
+      toFamily: item.to_family,
+      status: item.status,
+      description: item.description,
+    })),
+    blueprints: data.blueprints.map((item: any) => ({
+      id: item.id,
+      label: item.label,
+      status: item.status,
+      description: item.description,
+      components: item.components,
+      compilesTo: item.compiles_to,
+      blockers: item.blockers,
+    })),
+  } satisfies AdvancedBuilderCatalogResponse;
 };

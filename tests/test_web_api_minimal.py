@@ -45,6 +45,39 @@ async def test_web_basic_routes(api_client) -> None:
     assert health.status_code == 200
     assert health.json()["status"] == "healthy"
 
+    ui_preferences = await api_client.get("/api/system/preferences")
+    assert ui_preferences.status_code == 200
+    assert ui_preferences.json()["preferences"]["history_display_mode"] in {
+        "friendly",
+        "technical",
+    }
+    assert ui_preferences.json()["history_display_scope"] == "custom_model_history_only"
+    assert ui_preferences.json()["preferences"]["language"] in {"zh", "en"}
+    assert ui_preferences.json()["preferences"]["theme_mode"] in {"light", "dark", "auto"}
+    assert ui_preferences.json()["storage"] == "filesystem"
+    assert ui_preferences.json()["path"].endswith("settings\\ui-preferences.json")
+    update_ui_preferences = await api_client.put(
+        "/api/system/preferences",
+        json={
+            "history_display_mode": "technical",
+            "language": "en",
+            "theme_mode": "light",
+        },
+    )
+    assert update_ui_preferences.status_code == 200
+    assert (
+        update_ui_preferences.json()["preferences"]["history_display_mode"]
+        == "technical"
+    )
+    assert update_ui_preferences.json()["history_display_scope"] == "custom_model_history_only"
+    assert update_ui_preferences.json()["preferences"]["language"] == "en"
+    assert update_ui_preferences.json()["preferences"]["theme_mode"] == "light"
+    reset_ui_preferences = await api_client.delete("/api/system/preferences")
+    assert reset_ui_preferences.status_code == 200
+    assert reset_ui_preferences.json()["preferences"]["history_display_mode"] == "friendly"
+    assert reset_ui_preferences.json()["preferences"]["language"] == "zh"
+    assert reset_ui_preferences.json()["preferences"]["theme_mode"] == "auto"
+
     # Dataset CRUD + analyze
     created_dataset = await api_client.post(
         "/api/datasets/",
@@ -67,8 +100,30 @@ async def test_web_basic_routes(api_client) -> None:
     assert dataset_stats.status_code == 200
     assert "total_datasets" in dataset_stats.json()
 
+    dataset_inspect = await api_client.post(
+        "/api/datasets/inspect",
+        json={
+            "data_path": str(mock_dataset_path),
+            "dataset_type": "multimodal",
+        },
+    )
+    assert dataset_inspect.status_code == 200
+    inspect_payload = dataset_inspect.json()
+    assert inspect_payload["path"]["exists"] is True
+    assert inspect_payload["readiness"]["can_enter_training"] is True
+    assert inspect_payload["schema"]["target_column"] is not None
+
     dataset_analysis = await api_client.post(f"/api/datasets/{dataset_id}/analyze")
     assert dataset_analysis.status_code == 200
+    assert dataset_analysis.json()["analysis"]["readiness"]["can_enter_training"] is True
+
+    dataset_readiness = await api_client.get(f"/api/datasets/{dataset_id}/readiness")
+    assert dataset_readiness.status_code == 200
+    readiness_payload = dataset_readiness.json()
+    assert readiness_payload["dataset_name"] == "ci-dataset"
+    assert readiness_payload["readiness"]["status"] in {"ready", "warning"}
+    assert readiness_payload["csv"]["path"]
+    assert readiness_payload["schema"]["image_path_column"] is not None
 
     # Model CRUD
     created_model = await api_client.post(
@@ -90,6 +145,155 @@ async def test_web_basic_routes(api_client) -> None:
     model_stats = await api_client.get("/api/models/statistics")
     assert model_stats.status_code == 200
     assert "total_models" in model_stats.json()
+
+    model_catalog = await api_client.get("/api/models/catalog")
+    assert model_catalog.status_code == 200
+    model_catalog_payload = model_catalog.json()
+    assert model_catalog_payload["sources"]["official"]["enabled"] is True
+    assert model_catalog_payload["sources"]["custom"]["enabled"] is True
+    assert any(
+        item["id"] == "quickstart_multimodal"
+        for item in model_catalog_payload["templates"]
+    )
+    assert any(
+        item["id"] == "resnet18_encoder_bundle"
+        for item in model_catalog_payload["components"]
+    )
+
+    custom_model = {
+        "schema_version": "0.1",
+        "id": "custom-ci-model",
+        "source": "custom",
+        "label": "CI Custom Model",
+        "description": "filesystem-backed custom model",
+        "status": "local_custom",
+        "based_on_model_id": "quickstart_multimodal",
+        "unit_map": {
+            "vision_encoder": "resnet18_encoder_bundle",
+            "tabular_encoder": "mlp_tabular_encoder_bundle",
+            "fusion_bundle": "concatenate_fusion_bundle",
+            "task_head": "classification_head_bundle",
+            "training_strategy": "standard_training_bundle",
+        },
+        "editable_slots": [
+            "vision_encoder",
+            "tabular_encoder",
+            "fusion_bundle",
+            "task_head",
+            "training_strategy",
+        ],
+        "component_ids": [
+            "resnet18_encoder_bundle",
+            "mlp_tabular_encoder_bundle",
+            "concatenate_fusion_bundle",
+            "classification_head_bundle",
+            "standard_training_bundle",
+        ],
+        "data_requirements": ["CSV + image_dir", "至少 1 个表格特征"],
+        "compute_profile": {
+            "tier": "light",
+            "gpu_vram_hint": "8GB+",
+            "notes": "ci custom model",
+        },
+        "wizard_prefill": {
+            "modelTemplateId": "quickstart_multimodal",
+            "customModelLabel": "CI Custom Model",
+        },
+        "created_at": "2026-04-21T00:00:00",
+        "updated_at": "2026-04-21T00:00:00",
+    }
+    save_custom = await api_client.post("/api/models/custom", json=custom_model)
+    assert save_custom.status_code == 200
+    assert save_custom.json()["schema_version"] == "0.1"
+    assert save_custom.json()["history_backend"] in {"git", "none"}
+    listed_custom = await api_client.get("/api/models/custom")
+    assert listed_custom.status_code == 200
+    assert listed_custom.json()["schema_version"] == "0.1"
+    assert listed_custom.json()["format_contract"] == "internal_state_file"
+    assert listed_custom.json()["retention_policy"]["mode"] == "count"
+    assert listed_custom.json()["retention_policy"]["max_count"] == 40
+    assert listed_custom.json()["retention_policy"]["min_count_per_model"] == 3
+    assert listed_custom.json()["retention_floor_scope"] == "active_models_only"
+    assert any(item["id"] == "custom-ci-model" for item in listed_custom.json()["items"])
+
+    update_policy = await api_client.put(
+        "/api/models/custom/policy",
+        json={
+            "mode": "count",
+            "max_count": 40,
+            "max_age_days": 90,
+            "min_count_per_model": 3,
+        },
+    )
+    assert update_policy.status_code == 200
+    assert update_policy.json()["policy"]["max_count"] == 40
+    assert update_policy.json()["policy"]["min_count_per_model"] == 3
+    assert update_policy.json()["retention_floor_scope"] == "active_models_only"
+
+    updated_custom_model = {
+        **custom_model,
+        "label": "CI Custom Model v2",
+        "updated_at": "2026-04-21T00:10:00",
+    }
+    save_custom_v2 = await api_client.post("/api/models/custom", json=updated_custom_model)
+    assert save_custom_v2.status_code == 200
+
+    custom_history = await api_client.get("/api/models/custom/custom-ci-model/history")
+    assert custom_history.status_code == 200
+    assert len(custom_history.json()["items"]) >= 1
+
+    history_items = custom_history.json()["items"]
+    oldest_revision = history_items[-1]["commit"]
+    restore_custom = await api_client.post(
+        "/api/models/custom/custom-ci-model/restore",
+        json={"revision": oldest_revision},
+    )
+    assert restore_custom.status_code == 200
+    assert restore_custom.json()["restore_behavior"] == "overwrite_current"
+    restored_custom_list = await api_client.get("/api/models/custom")
+    assert restored_custom_list.status_code == 200
+    restored_entry = next(
+        item for item in restored_custom_list.json()["items"] if item["id"] == "custom-ci-model"
+    )
+    assert restored_entry["label"] == "CI Custom Model"
+
+    model_inspect = await api_client.post(
+        "/api/models/inspect-config",
+        json={
+            "num_classes": 2,
+            "use_auxiliary_heads": True,
+            "vision": {
+                "backbone": "resnet18",
+                "pretrained": True,
+                "freeze_backbone": False,
+                "feature_dim": 128,
+                "dropout": 0.3,
+                "attention_type": "cbam",
+            },
+            "tabular": {
+                "hidden_dims": [32],
+                "output_dim": 16,
+                "dropout": 0.2,
+            },
+            "fusion": {
+                "fusion_type": "concatenate",
+                "hidden_dim": 144,
+                "dropout": 0.3,
+                "num_heads": 4,
+            },
+            "numerical_features": ["age"],
+            "categorical_features": ["gender"],
+            "image_size": 64,
+            "use_attention_supervision": False,
+            "num_epochs": 3,
+        },
+    )
+    assert model_inspect.status_code == 200
+    model_inspect_payload = model_inspect.json()
+    assert model_inspect_payload["can_enter_training"] is True
+    assert model_inspect_payload["summary"]["backbone"] == "resnet18"
+    assert model_inspect_payload["runtime"]["total_params"] > 0
+    assert model_inspect_payload["runtime"]["tabular_input_dim"] == 2
 
     # Training lifecycle (start + status)
     started_job = await api_client.post(
@@ -170,6 +374,9 @@ async def test_web_basic_routes(api_client) -> None:
         f"/api/models/{generated_model['id']}"
     )
     assert deleted_generated_model.status_code == 200
+
+    deleted_custom = await api_client.delete("/api/models/custom/custom-ci-model")
+    assert deleted_custom.status_code == 200
 
     deleted_dataset = await api_client.delete(f"/api/datasets/{dataset_id}")
     assert deleted_dataset.status_code == 200

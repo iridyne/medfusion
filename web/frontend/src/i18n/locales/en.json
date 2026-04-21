@@ -40,6 +40,7 @@
     "start": "Getting Started",
     "workbench": "Research Workbench",
     "datasets": "Data Intake",
+    "evaluation": "Evaluation",
     "config": "RunSpec Wizard",
     "workflow": "Workflow Editor",
     "training": "Training Monitor",
@@ -52,28 +53,37 @@
     "start": "Start",
     "workbench": "Workbench",
     "datasets": "Datasets",
+    "evaluation": "Evaluate",
     "training": "Training",
     "config": "Wizard",
+    "workflow": "Workflow",
     "models": "Models",
-    "system": "System"
+    "system": "System",
+    "settings": "Settings"
   },
   "navEyebrow": {
     "start": "First Run",
     "workbench": "Research Console",
     "datasets": "Data Intake",
+    "evaluation": "Post-run Evaluation",
     "training": "Execution Monitor",
     "config": "RunSpec Composer",
+    "workflow": "Node Orchestration Preview",
     "models": "Result Archive",
-    "system": "Resource Telemetry"
+    "system": "Resource Telemetry",
+    "settings": "Preferences"
   },
   "navDescription": {
     "start": "Check readiness, confirm the quickstart path, and complete the first successful run.",
     "workbench": "Survey datasets, training state, RunSpec entry points, and recent research artifacts.",
     "datasets": "Register local directories, inspect processing state, and maintain research data assets.",
+    "evaluation": "Generate evaluation artifacts from an existing config and checkpoint, then optionally import them into the result backend.",
     "training": "Start training runs, watch live curves, and track active experiments.",
     "config": "Generate real training configs from forms so CLI and Web share the same semantics.",
+    "workflow": "Use a constrained node graph to orchestrate a data -> model -> training lane while handing execution back to the stable runtime.",
     "models": "Inspect training artifacts, import real runs, and drill into result archives.",
-    "system": "Observe CPU, memory, and GPU load to assess local workstation health."
+    "system": "Observe CPU, memory, and GPU load to assess local workstation health.",
+    "settings": "Adjust interface preferences and a few advanced display options, such as how version history is described."
   },
   "app": {
     "routeFallback": {

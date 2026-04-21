@@ -8,6 +8,7 @@ import {
   type AdvancedBuilderBlueprint,
   type AdvancedBuilderComponent,
   type AdvancedBuilderFamily,
+  type AdvancedBuilderConnectionRule,
 } from "@/config/advancedBuilderCatalog";
 import {
   createRunSpecPreset,
@@ -20,7 +21,9 @@ export interface AdvancedBuilderNodeData {
   componentId: string;
   label: string;
   family: AdvancedBuilderFamily;
+  familyLabel?: string;
   status: AdvancedBuilderComponent["status"];
+  statusLabel?: string;
   description: string;
   schemaPath?: string;
 }
@@ -77,10 +80,32 @@ function getComponentOrThrow(componentId: string): AdvancedBuilderComponent {
   return component;
 }
 
+function getComponentOrThrowFromCatalog(
+  componentId: string,
+  components: AdvancedBuilderComponent[],
+): AdvancedBuilderComponent {
+  const component = components.find((item) => item.id === componentId);
+  if (!component) {
+    throw new Error(`Unknown advanced builder component: ${componentId}`);
+  }
+  return component;
+}
+
 function getBlueprintOrThrow(blueprintId: string): AdvancedBuilderBlueprint {
   const blueprint = ADVANCED_BUILDER_BLUEPRINTS.find(
     (item) => item.id === blueprintId,
   );
+  if (!blueprint) {
+    throw new Error(`Unknown advanced builder blueprint: ${blueprintId}`);
+  }
+  return blueprint;
+}
+
+function getBlueprintOrThrowFromCatalog(
+  blueprintId: string,
+  blueprints: AdvancedBuilderBlueprint[],
+): AdvancedBuilderBlueprint {
+  const blueprint = blueprints.find((item) => item.id === blueprintId);
   if (!blueprint) {
     throw new Error(`Unknown advanced builder blueprint: ${blueprintId}`);
   }
@@ -106,8 +131,15 @@ function createEdgeId(source: string, target: string): string {
 export function createBuilderNode(
   componentId: string,
   index = 0,
+  components: AdvancedBuilderComponent[] = ADVANCED_BUILDER_COMPONENTS,
+  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
+  statusLabels: Record<string, string> = {
+    compile_ready: "可编译",
+    conditional: "有条件开放",
+    draft_only: "仅草稿",
+  },
 ): Node<AdvancedBuilderNodeData> {
-  const component = getComponentOrThrow(componentId);
+  const component = getComponentOrThrowFromCatalog(componentId, components);
   const position = FAMILY_POSITIONS[component.family];
 
   return {
@@ -121,21 +153,34 @@ export function createBuilderNode(
       componentId: component.id,
       label: component.label,
       family: component.family,
+      familyLabel: familyLabels[component.family],
       status: component.status,
+      statusLabel: statusLabels[component.status],
       description: component.description,
       schemaPath: component.schemaPath,
     },
   };
 }
 
-export function buildBlueprintGraph(blueprintId: string): {
+export function buildBlueprintGraph(
+  blueprintId: string,
+  blueprints: AdvancedBuilderBlueprint[] = ADVANCED_BUILDER_BLUEPRINTS,
+  components: AdvancedBuilderComponent[] = ADVANCED_BUILDER_COMPONENTS,
+  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
+  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
+  statusLabels: Record<string, string> = {
+    compile_ready: "可编译",
+    conditional: "有条件开放",
+    draft_only: "仅草稿",
+  },
+): {
   blueprint: AdvancedBuilderBlueprint;
   nodes: Array<Node<AdvancedBuilderNodeData>>;
   edges: Edge[];
 } {
-  const blueprint = getBlueprintOrThrow(blueprintId);
+  const blueprint = getBlueprintOrThrowFromCatalog(blueprintId, blueprints);
   const nodes = blueprint.components.map((componentId, index) =>
-    createBuilderNode(componentId, index),
+    createBuilderNode(componentId, index, components, familyLabels, statusLabels),
   );
 
   const familyToNode = new Map<AdvancedBuilderFamily, Node<AdvancedBuilderNodeData>>();
@@ -161,7 +206,7 @@ export function buildBlueprintGraph(blueprintId: string): {
       target: target.id,
       animated: fromFamily === "head" && toFamily === "training_strategy",
       label:
-        ADVANCED_BUILDER_CONNECTION_RULES.find(
+        connectionRules.find(
           (rule) => rule.fromFamily === fromFamily && rule.toFamily === toFamily,
         )?.status ?? "link",
     });
@@ -180,12 +225,14 @@ export function buildBlueprintGraph(blueprintId: string): {
 export function canConnectFamilies(
   fromFamily: AdvancedBuilderFamily,
   toFamily: AdvancedBuilderFamily,
+  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
+  familyLabels: Record<AdvancedBuilderFamily, string> = ADVANCED_BUILDER_FAMILY_LABELS,
 ): {
   allowed: boolean;
   status: "required" | "conditional" | "blocked" | "unsupported";
   description: string;
 } {
-  const rule = ADVANCED_BUILDER_CONNECTION_RULES.find(
+  const rule = connectionRules.find(
     (item) => item.fromFamily === fromFamily && item.toFamily === toFamily,
   );
 
@@ -193,7 +240,7 @@ export function canConnectFamilies(
     return {
       allowed: false,
       status: "unsupported",
-      description: `当前没有定义 ${ADVANCED_BUILDER_FAMILY_LABELS[fromFamily]} -> ${ADVANCED_BUILDER_FAMILY_LABELS[toFamily]} 的正式版连接规则。`,
+      description: `当前没有定义 ${familyLabels[fromFamily]} -> ${familyLabels[toFamily]} 的正式版连接规则。`,
     };
   }
 
@@ -207,11 +254,13 @@ export function canConnectFamilies(
 export function evaluateAdvancedBuilderGraph(
   nodes: Array<Node<AdvancedBuilderNodeData>>,
   edges: Edge[],
+  connectionRules: AdvancedBuilderConnectionRule[] = ADVANCED_BUILDER_CONNECTION_RULES,
+  requiredFamilies: AdvancedBuilderFamily[] = REQUIRED_FAMILIES,
 ): AdvancedBuilderEvaluation {
   const familySet = new Set(nodes.map((node) => node.data.family));
-  const missingFamilies = REQUIRED_FAMILIES.filter((family) => !familySet.has(family));
+  const missingFamilies = requiredFamilies.filter((family) => !familySet.has(family));
 
-  const missingRequiredConnections = ADVANCED_BUILDER_CONNECTION_RULES.filter(
+  const missingRequiredConnections = connectionRules.filter(
     (rule) => rule.status === "required",
   )
     .filter((rule) => familySet.has(rule.fromFamily) && familySet.has(rule.toFamily))

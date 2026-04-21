@@ -25,6 +25,7 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   EyeOutlined,
+  DotChartOutlined,
   ImportOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
@@ -156,6 +157,26 @@ export default function ModelLibrary() {
       next.delete("action");
       setSearchParams(next, { replace: true });
       return;
+    }
+
+    const focusModelId = searchParams.get("modelId");
+    if (focusModelId) {
+      const parsedModelId = Number(focusModelId);
+      if (!Number.isNaN(parsedModelId)) {
+        const matchedFocus = models.find((item) => item.id === parsedModelId) || null;
+        if (matchedFocus) {
+          setSelectedModel(matchedFocus);
+          setDetailModalOpen(true);
+          const next = new URLSearchParams(searchParams);
+          next.delete("modelId");
+          setSearchParams(next, { replace: true });
+          return;
+        }
+        if (!loading && attemptedHandoffModelId !== parsedModelId) {
+          setAttemptedHandoffModelId(parsedModelId);
+          void loadModels(parsedModelId);
+        }
+      }
     }
 
     const handoff = parseTrainingResultHandoff(searchParams);
@@ -418,6 +439,23 @@ export default function ModelLibrary() {
     navigate(`/training?source=model-library&${prefillQuery}`);
   };
 
+  const handleOpenEvaluation = (model?: Model | null) => {
+    const sourceModel = model || selectedModel || latestModel || null;
+    if (!sourceModel) {
+      navigate("/evaluation");
+      return;
+    }
+    navigate("/evaluation", {
+      state: {
+        configPath: sourceModel.config_path,
+        checkpointPath: sourceModel.checkpoint_path || sourceModel.model_path,
+        name: `${sourceModel.name}-eval`,
+        description: `基于结果后台模型 ${sourceModel.name} 发起独立评估`,
+        source: "model-library",
+      },
+    });
+  };
+
   return (
     <PageScaffold
       eyebrow="Result backend"
@@ -443,6 +481,9 @@ export default function ModelLibrary() {
             onClick={() => setImportModalOpen(true)}
           >
             导入训练结果
+          </Button>
+          <Button icon={<DotChartOutlined />} onClick={() => handleOpenEvaluation()}>
+            打开独立评估
           </Button>
         </>
       }
@@ -706,6 +747,13 @@ export default function ModelLibrary() {
                 <div className="library-row__actions">
                   <Button
                     size="small"
+                    icon={<DotChartOutlined />}
+                    onClick={() => handleOpenEvaluation(model)}
+                  >
+                    评估
+                  </Button>
+                  <Button
+                    size="small"
                     icon={<EyeOutlined />}
                     onClick={() => handleViewDetail(model)}
                   >
@@ -912,6 +960,18 @@ export default function ModelLibrary() {
           ) : null,
           <Button key="close" onClick={() => setDetailModalOpen(false)}>
             关闭
+          </Button>,
+          <Button
+            key="evaluate"
+            icon={<DotChartOutlined />}
+            onClick={() => {
+              if (selectedModel) {
+                handleOpenEvaluation(selectedModel);
+                setDetailModalOpen(false);
+              }
+            }}
+          >
+            独立评估
           </Button>,
           <Button
             key="download"

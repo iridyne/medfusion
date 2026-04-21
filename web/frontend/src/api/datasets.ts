@@ -10,6 +10,7 @@ export interface DatasetCreate {
   description?: string;
   data_path: string;
   dataset_type?: "image" | "tabular" | "multimodal";
+  status?: "uploading" | "processing" | "ready" | "error";
   num_samples?: number;
   num_classes?: number;
   train_samples?: number;
@@ -66,6 +67,77 @@ export interface DatasetStatistics {
   avg_samples: number;
 }
 
+export interface DatasetReadinessCheck {
+  key: string;
+  label: string;
+  status: "pass" | "warning" | "fail";
+  detail: string;
+}
+
+export interface DatasetInspection {
+  path: {
+    path: string;
+    exists: boolean;
+    kind: string;
+    size_bytes?: number | null;
+    estimated_size_mb?: number | null;
+  };
+  csv: {
+    path?: string | null;
+    error?: string | null;
+    headers: string[];
+    row_count?: number | null;
+    preview_rows: Record<string, any>[];
+  };
+  schema: {
+    image_path_column?: string | null;
+    target_column?: string | null;
+    patient_id_column?: string | null;
+    numerical_features?: string[];
+    categorical_features?: string[];
+    num_classes?: number | null;
+    image_dir?: string | null;
+  };
+  image_probe?: {
+    checked: number;
+    existing: number;
+    missing: number;
+    samples: Array<{
+      value: string;
+      resolved_path: string;
+      exists: boolean;
+    }>;
+  } | null;
+  readiness: {
+    status: "ready" | "warning" | "blocked";
+    can_enter_training: boolean;
+    errors: string[];
+    warnings: string[];
+    checks: DatasetReadinessCheck[];
+    summary: {
+      headers: number;
+      preview_rows: number;
+      num_classes?: number | null;
+      numerical_features: number;
+      categorical_features: number;
+    };
+    next_step: string;
+  };
+}
+
+export interface DatasetInspectRequest {
+  data_path: string;
+  dataset_type?: "image" | "tabular" | "multimodal";
+  csv_path?: string;
+  image_dir?: string;
+  image_path_column?: string;
+  target_column?: string;
+  patient_id_column?: string;
+  numerical_features?: string[];
+  categorical_features?: string[];
+  num_classes?: number;
+}
+
 /**
  * 获取数据集列表
  */
@@ -116,6 +188,13 @@ export const createDataset = async (data: DatasetCreate) => {
   return response.data
 }
 
+export const inspectDatasetPath = async (
+  data: DatasetInspectRequest,
+): Promise<DatasetInspection> => {
+  const response = await api.post('/datasets/inspect', data)
+  return response.data
+}
+
 /**
  * 更新数据集信息
  */
@@ -137,6 +216,13 @@ export const deleteDataset = async (id: number) => {
  */
 export const analyzeDataset = async (id: number) => {
   const response = await api.post(`/datasets/${id}/analyze`)
+  return response.data
+}
+
+export const getDatasetReadiness = async (
+  id: number,
+): Promise<DatasetInspection & { dataset_id: number; dataset_name: string }> => {
+  const response = await api.get(`/datasets/${id}/readiness`)
   return response.data
 }
 

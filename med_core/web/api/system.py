@@ -2,15 +2,27 @@
 
 import platform
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import psutil
 import torch
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from ..config import settings
+from ..application.ui_preferences import UIPreferencesStore
 
 router = APIRouter()
+
+
+class UIPreferencesRequest(BaseModel):
+    history_display_mode: Literal["friendly", "technical"] = "friendly"
+    language: Literal["zh", "en"] = "zh"
+    theme_mode: Literal["light", "dark", "auto"] = "auto"
+
+
+def _ui_preferences_store() -> UIPreferencesStore:
+    return UIPreferencesStore(settings.data_dir / "settings" / "ui-preferences.json")
 
 
 @router.get("/features")
@@ -101,16 +113,18 @@ async def get_feature_status() -> dict[str, Any]:
         "workflow": {
             "enabled": settings.enable_experimental_workflow,
             "status": (
-                "experimental" if settings.enable_experimental_workflow else "disabled"
+                "preview" if settings.enable_experimental_workflow else "disabled"
             ),
-            "ui_exposed": False,
+            "ui_exposed": settings.enable_experimental_workflow,
             "message": (
-                "Workflow editor is still experimental and is not part of the current MVP."
+                "Workflow editor is exposed as a constrained preview. "
+                "It currently supports single-mainline orchestration that "
+                "hands real execution back to the stable training runtime."
             ),
             "recommended_instead": [
-                "Use medfusion start -> Workbench",
-                "Generate config in Run Wizard",
-                "Run real training via /api/training or medfusion train",
+                "Use /workflow for constrained graph-to-training preview",
+                "Use Run Wizard for the most stable config authoring path",
+                "Use training monitor and model library for runtime and results",
             ],
         },
     }
@@ -125,6 +139,38 @@ async def get_system_info() -> dict[str, Any]:
         "python_version": platform.python_version(),
         "platform": platform.platform(),
         "data_dir": str(settings.data_dir),
+    }
+
+
+@router.get("/preferences")
+async def get_ui_preferences() -> dict[str, Any]:
+    return {
+        "preferences": _ui_preferences_store().load(),
+        "storage": "filesystem",
+        "path": str(settings.data_dir / "settings" / "ui-preferences.json"),
+        "history_display_scope": "custom_model_history_only",
+    }
+
+
+@router.put("/preferences")
+async def update_ui_preferences(request: UIPreferencesRequest) -> dict[str, Any]:
+    preferences = _ui_preferences_store().save(request.model_dump())
+    return {
+        "preferences": preferences,
+        "storage": "filesystem",
+        "path": str(settings.data_dir / "settings" / "ui-preferences.json"),
+        "history_display_scope": "custom_model_history_only",
+    }
+
+
+@router.delete("/preferences")
+async def reset_ui_preferences() -> dict[str, Any]:
+    preferences = _ui_preferences_store().reset()
+    return {
+        "preferences": preferences,
+        "storage": "filesystem",
+        "path": str(settings.data_dir / "settings" / "ui-preferences.json"),
+        "history_display_scope": "custom_model_history_only",
     }
 
 

@@ -1,43 +1,66 @@
-"""
-工作流 API 路由
+"""Workflow API routes for the constrained preview workflow editor."""
 
-提供工作流的验证、执行、状态查询等功能。
-"""
+from __future__ import annotations
 
 import asyncio
 import logging
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from ..config import settings
-from ..workflow_engine import (
-    NodeStatus,
-    WorkflowEngine,
-    WorkflowExecutionError,
-)
+from ..database import SessionLocal, get_db_session
+from ..workflow_engine import NodeStatus, WorkflowEngine
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
-# 存储正在执行的工作流
-active_workflows: dict[str, WorkflowEngine] = {}
+
+@dataclass
+class WorkflowRunState:
+    workflow_id: str
+    name: str | None
+    engine: WorkflowEngine
+    training_job_id: str
+    node_roles: dict[str, str]
+
+
+active_workflows: dict[str, WorkflowRunState] = {}
 
 
 def _workflow_disabled_detail() -> dict[str, Any]:
     return {
         "code": "workflow_experimental_disabled",
         "message": (
-            "Workflow editor is experimental and disabled by default in the current MVP."
+            "Workflow editor is disabled. Set "
+            "MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW=true to expose the preview."
         ),
         "enable_env": "MEDFUSION_ENABLE_EXPERIMENTAL_WORKFLOW=true",
         "recommended_primary_flow": [
-            "Open Workbench with `medfusion start`",
+            "Open Getting Started with `medfusion start`",
             "Create a real config in the Run Wizard",
-            "Use training monitor and model library for the current stable flow",
+            "Use training monitor and model library for the stable flow",
+        ],
+    }
+
+
+def _workflow_preview_unavailable_detail() -> dict[str, Any]:
+    return {
+        "code": "workflow_preview_scope_limited",
+        "message": (
+            "当前工作流 preview 只支持单条主线："
+            "dataLoader -> model -> training -> optional evaluation。"
+        ),
+        "recommended_graph": [
+            "一个数据节点",
+            "一个模型节点",
+            "一个训练节点",
+            "可选一个评估节点",
         ],
     }
 
@@ -47,179 +70,399 @@ def _ensure_workflow_enabled() -> None:
         raise HTTPException(status_code=503, detail=_workflow_disabled_detail())
 
 
-class WorkflowData(BaseModel):
-    """工作流数据模型"""
+def _node_ids_by_type(engine: WorkflowEngine, node_type: str) -> list[str]:
+    return [node.id for node in engine.nodes.values() if node.type == node_type]
 
+
+def _has_edge(
+    engine: WorkflowEngine,
+    *,
+    source: str,
+    target: str,
+    source_handle: str | None = None,
+    target_handle: str | None = None,
+) -> bool:
+    for edge in engine.edges:
+        if edge.source != source or edge.target != target:
+            continue
+        if source_handle is not None and edge.source_handle != source_handle:
+            continue
+        if target_handle is not None and edge.target_handle != target_handle:
+            continue
+        return True
+    return False
+
+
+def _validate_preview_graph(engine: WorkflowEngine) -> tuple[dict[str, str], list[str]]:
+    errors: list[str] = []
+    roles: dict[str, str] = {}
+
+    data_loader_ids = _node_ids_by_type(engine, "dataLoader")
+    model_ids = _node_ids_by_type(engine, "model")
+    training_ids = _node_ids_by_type(engine, "training")
+    evaluation_ids = _node_ids_by_type(engine, "evaluation")
+
+    if len(data_loader_ids) != 1:
+        errors.append("当前 preview 要求且只允许一个数据节点（dataLoader）")
+    else:
+        roles["data_loader"] = data_loader_ids[0]
+
+    if len(model_ids) != 1:
+        errors.append("当前 preview 要求且只允许一个模型节点（model）")
+    else:
+        roles["model"] = model_ids[0]
+
+    if len(training_ids) != 1:
+        errors.append("当前 preview 要求且只允许一个训练节点（training）")
+    else:
+        roles["training"] = training_ids[0]
+
+    if len(evaluation_ids) > 1:
+        errors.append("当前 preview 最多只允许一个评估节点（evaluation）")
+    elif evaluation_ids:
+        roles["evaluation"] = evaluation_ids[0]
+
+    if errors:
+        return roles, errors
+
+    if not _has_edge(
+        engine,
+        source=roles["model"],
+        target=roles["training"],
+        source_handle="model",
+        target_handle="model",
+    ):
+        errors.append("训练节点必须接收来自模型节点的 model 输出")
+
+    if not _has_edge(
+        engine,
+        source=roles["data_loader"],
+        target=roles["training"],
+        source_handle="dataset",
+        target_handle="train_data",
+    ):
+        errors.append("训练节点必须接收来自数据节点的 train_data 输入")
+
+    if "evaluation" in roles:
+        if not _has_edge(
+            engine,
+            source=roles["training"],
+            target=roles["evaluation"],
+            source_handle="trained_model",
+            target_handle="model",
+        ):
+            errors.append("评估节点必须接收来自训练节点的 trained_model 输出")
+        if not _has_edge(
+            engine,
+            source=roles["data_loader"],
+            target=roles["evaluation"],
+            source_handle="dataset",
+            target_handle="test_data",
+        ):
+            errors.append("评估节点必须接收来自数据节点的 test_data 输入")
+
+    return roles, errors
+
+
+def _build_training_payload(
+    *,
+    workflow_id: str,
+    workflow_name: str | None,
+    engine: WorkflowEngine,
+    node_roles: dict[str, str],
+) -> dict[str, Any]:
+    data_node = engine.nodes[node_roles["data_loader"]].data
+    model_node = engine.nodes[node_roles["model"]].data
+    training_node = engine.nodes[node_roles["training"]].data
+
+    experiment_name = (
+        str(workflow_name or training_node.get("experimentName") or "").strip()
+        or f"workflow-{workflow_id[:8]}"
+    )
+
+    dataset_name = (
+        data_node.get("datasetName")
+        or data_node.get("label")
+        or data_node.get("datasetId")
+        or "workflow-dataset"
+    )
+
+    dataset_config = {
+        "dataset": dataset_name,
+        "dataset_id": data_node.get("datasetId"),
+        "data_path": data_node.get("dataPath"),
+        "csv_path": data_node.get("csvPath"),
+        "image_dir": data_node.get("imageDir"),
+        "image_path_column": data_node.get("imagePathColumn"),
+        "target_column": data_node.get("targetColumn"),
+        "patient_id_column": data_node.get("patientIdColumn"),
+        "numerical_features": data_node.get("numericalFeatures"),
+        "categorical_features": data_node.get("categoricalFeatures"),
+        "num_classes": model_node.get("numClasses") or data_node.get("numClasses"),
+    }
+
+    training_model_config = {
+        "backbone": model_node.get("backbone"),
+        "num_classes": model_node.get("numClasses"),
+        "pretrained": model_node.get("pretrained", True),
+        "freeze_backbone": model_node.get("freezeBackbone", False),
+        "fusion_type": model_node.get("fusion"),
+        "feature_dim": model_node.get("featureDim"),
+        "tabular_output_dim": model_node.get("tabularOutputDim"),
+    }
+
+    training_config = {
+        "epochs": training_node.get("epochs"),
+        "batch_size": data_node.get("batchSize"),
+        "num_workers": data_node.get("numWorkers"),
+        "learning_rate": training_node.get("learningRate"),
+        "optimizer": training_node.get("optimizer"),
+        "mixed_precision": training_node.get("useAmp", False),
+        "use_progressive_training": training_node.get(
+            "useProgressiveTraining", False
+        ),
+        "image_size": data_node.get("imageSize"),
+        "monitor": training_node.get("monitor"),
+        "mode": training_node.get("mode"),
+    }
+
+    return {
+        "experiment_name": experiment_name,
+        "training_model_config": training_model_config,
+        "dataset_config": dataset_config,
+        "training_config": training_config,
+        "source_context": {
+            "source_type": "workflow",
+            "entrypoint": "workflow-editor",
+            "workflow_id": workflow_id,
+            "workflow_name": workflow_name,
+        },
+    }
+
+
+def _set_initial_preview_node_states(
+    state: WorkflowRunState,
+) -> None:
+    for node in state.engine.nodes.values():
+        node.status = NodeStatus.PENDING
+        node.error = None
+        node.result = None
+
+    state.engine.nodes[state.node_roles["data_loader"]].status = NodeStatus.COMPLETED
+    state.engine.nodes[state.node_roles["model"]].status = NodeStatus.COMPLETED
+    state.engine.nodes[state.node_roles["training"]].status = NodeStatus.RUNNING
+    if "evaluation" in state.node_roles:
+        state.engine.nodes[state.node_roles["evaluation"]].status = NodeStatus.PENDING
+
+
+def _sync_preview_state(
+    state: WorkflowRunState,
+    db: Session,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    from ..api import training as training_api
+
+    training_status = training_api._training_job_service().get_training_status(
+        db=db,
+        job_id=state.training_job_id,
+    )
+    training_node = state.engine.nodes[state.node_roles["training"]]
+    evaluation_node = (
+        state.engine.nodes[state.node_roles["evaluation"]]
+        if "evaluation" in state.node_roles
+        else None
+    )
+
+    raw_status = training_status["status"]
+    if raw_status in {"running", "paused"}:
+        training_node.status = NodeStatus.RUNNING
+        training_node.error = None
+        if evaluation_node is not None:
+            evaluation_node.status = NodeStatus.PENDING
+            evaluation_node.error = None
+    elif raw_status == "completed":
+        training_node.status = NodeStatus.COMPLETED
+        training_node.error = None
+        training_node.result = {
+            "job_id": state.training_job_id,
+            "result_model_id": training_status.get("result_model_id"),
+            "result_model_name": training_status.get("result_model_name"),
+        }
+        if evaluation_node is not None:
+            if training_status.get("result_model_id") is not None:
+                evaluation_node.status = NodeStatus.COMPLETED
+                evaluation_node.error = None
+                evaluation_node.result = {
+                    "result_model_id": training_status.get("result_model_id"),
+                    "result_model_name": training_status.get("result_model_name"),
+                }
+            else:
+                evaluation_node.status = NodeStatus.FAILED
+                evaluation_node.error = "训练已完成，但结果回流未生成 model handoff"
+    else:
+        training_node.status = NodeStatus.FAILED
+        training_node.error = training_status.get("error_message") or raw_status
+        if evaluation_node is not None:
+            evaluation_node.status = NodeStatus.FAILED
+            evaluation_node.error = training_node.error
+
+    results = None
+    if training_node.status == NodeStatus.COMPLETED:
+        results = {
+            "training_job_id": state.training_job_id,
+            "result_model_id": training_status.get("result_model_id"),
+            "result_model_name": training_status.get("result_model_name"),
+            "training_status": raw_status,
+        }
+
+    return training_status, results
+
+
+def _validate_preview_request(
+    workflow: dict[str, Any],
+) -> tuple[WorkflowEngine, dict[str, str], list[str]]:
+    engine = WorkflowEngine(data_dir=settings.data_dir, enable_monitoring=False)
+    engine.load_workflow(workflow)
+    is_valid, base_errors = engine.validate(include_runtime_readiness=False)
+    node_roles, preview_errors = _validate_preview_graph(engine)
+    errors = list(dict.fromkeys([*base_errors, *preview_errors]))
+    return engine, node_roles, ([] if is_valid and not preview_errors else errors)
+
+
+class WorkflowData(BaseModel):
     nodes: list[dict[str, Any]] = Field(..., description="节点列表")
     edges: list[dict[str, Any]] = Field(..., description="边列表")
 
 
 class WorkflowValidateRequest(BaseModel):
-    """工作流验证请求"""
-
     workflow: WorkflowData
 
 
 class WorkflowValidateResponse(BaseModel):
-    """工作流验证响应"""
-
     valid: bool
     errors: list[str] = []
 
 
 class WorkflowExecuteRequest(BaseModel):
-    """工作流执行请求"""
-
     workflow: WorkflowData
     name: str | None = None
 
 
 class WorkflowExecuteResponse(BaseModel):
-    """工作流执行响应"""
-
     workflow_id: str
     status: str
     message: str
+    training_job_id: str | None = None
 
 
 class WorkflowStatusResponse(BaseModel):
-    """工作流状态响应"""
-
     workflow_id: str
     status: dict[str, Any]
     results: dict[str, Any] | None = None
+    training_job_id: str | None = None
+    training_status: dict[str, Any] | None = None
 
 
 @router.post("/validate", response_model=WorkflowValidateResponse)
 async def validate_workflow(request: WorkflowValidateRequest) -> WorkflowValidateResponse:
-    """
-    验证工作流合法性
-
-    检查：
-    - 节点和边的完整性
-    - 循环依赖
-    - 端口类型匹配
-    - 必需输入
-    """
     _ensure_workflow_enabled()
     try:
-        engine = WorkflowEngine(data_dir=settings.data_dir)
-        engine.load_workflow(request.workflow.model_dump())
-
-        is_valid, errors = engine.validate(include_runtime_readiness=True)
-
-        return WorkflowValidateResponse(valid=is_valid, errors=errors)
-
-    except Exception as e:
-        logger.error(f"Workflow validation error: {e}")
-        return WorkflowValidateResponse(valid=False, errors=[str(e)])
+        _engine, _node_roles, errors = _validate_preview_request(
+            request.workflow.model_dump()
+        )
+        return WorkflowValidateResponse(valid=not errors, errors=errors)
+    except Exception as exc:
+        logger.error("Workflow validation error: %s", exc)
+        return WorkflowValidateResponse(valid=False, errors=[str(exc)])
 
 
 @router.post("/execute", response_model=WorkflowExecuteResponse)
-async def execute_workflow(request: WorkflowExecuteRequest) -> WorkflowExecuteResponse:
-    """
-    执行工作流
-
-    创建一个新的工作流执行实例，并在后台异步执行。
-    返回 workflow_id 用于查询执行状态。
-    """
+async def execute_workflow(
+    request: WorkflowExecuteRequest,
+    db: Session = Depends(get_db_session),
+) -> WorkflowExecuteResponse:
     _ensure_workflow_enabled()
+    workflow_id = str(uuid.uuid4())
+
     try:
-        # 生成唯一 ID
-        workflow_id = str(uuid.uuid4())
-
-        # 创建引擎
-        engine = WorkflowEngine(data_dir=settings.data_dir)
-        engine.load_workflow(request.workflow.model_dump())
-
-        # 验证工作流
-        is_valid, errors = engine.validate(include_runtime_readiness=True)
-        if not is_valid:
+        engine, node_roles, errors = _validate_preview_request(
+            request.workflow.model_dump()
+        )
+        if errors:
             raise HTTPException(
-                status_code=400, detail=f"工作流验证失败: {', '.join(errors)}",
+                status_code=400,
+                detail={
+                    **_workflow_preview_unavailable_detail(),
+                    "errors": errors,
+                },
             )
 
-        # 保存到活动工作流
-        active_workflows[workflow_id] = engine
+        from ..api import training as training_api
 
-        # 在后台执行
-        asyncio.create_task(_execute_workflow_background(workflow_id, engine))
+        payload = _build_training_payload(
+            workflow_id=workflow_id,
+            workflow_name=request.name,
+            engine=engine,
+            node_roles=node_roles,
+        )
+        training_response = await training_api.start_training(
+            training_api.TrainingConfig.model_validate(payload),
+            db,
+        )
+
+        state = WorkflowRunState(
+            workflow_id=workflow_id,
+            name=request.name,
+            engine=engine,
+            training_job_id=training_response["job_id"],
+            node_roles=node_roles,
+        )
+        _set_initial_preview_node_states(state)
+        active_workflows[workflow_id] = state
 
         return WorkflowExecuteResponse(
             workflow_id=workflow_id,
             status="started",
-            message=f"工作流 {request.name or workflow_id} 已开始执行",
+            message=f"工作流 {request.name or workflow_id} 已启动真实训练任务",
+            training_job_id=training_response["job_id"],
         )
-
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Failed to start workflow execution: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-
-async def _execute_workflow_background(workflow_id: str, engine: WorkflowEngine) -> None:
-    """后台执行工作流"""
-    try:
-        logger.info(f"Starting background execution for workflow {workflow_id}")
-        await engine.execute(workflow_id=workflow_id)
-        logger.info(f"Workflow {workflow_id} completed successfully")
-    except Exception as e:
-        logger.error(f"Workflow {workflow_id} execution failed: {e}")
+    except Exception as exc:
+        logger.error("Failed to start workflow execution: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/{workflow_id}/status", response_model=WorkflowStatusResponse)
-async def get_workflow_status(workflow_id: str) -> WorkflowStatusResponse:
-    """
-    查询工作流执行状态
-
-    返回：
-    - 各节点的执行状态
-    - 完成进度
-    - 执行结果（如果已完成）
-    """
+async def get_workflow_status(
+    workflow_id: str,
+    db: Session = Depends(get_db_session),
+) -> WorkflowStatusResponse:
     _ensure_workflow_enabled()
-    if workflow_id not in active_workflows:
+    state = active_workflows.get(workflow_id)
+    if state is None:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
 
-    engine = active_workflows[workflow_id]
-    status = engine.get_status()
-
-    # 收集结果
-    results = None
-    all_completed = all(
-        node.status == NodeStatus.COMPLETED for node in engine.nodes.values()
-    )
-    if all_completed:
-        results = {node_id: node.result for node_id, node in engine.nodes.items()}
-
+    training_status, results = _sync_preview_state(state, db)
     return WorkflowStatusResponse(
-        workflow_id=workflow_id, status=status, results=results,
+        workflow_id=workflow_id,
+        status=state.engine.get_status(),
+        results=results,
+        training_job_id=state.training_job_id,
+        training_status=training_status,
     )
 
 
 @router.delete("/{workflow_id}")
 async def delete_workflow(workflow_id: str) -> dict[str, str]:
-    """
-    删除工作流执行记录
-
-    清理已完成或失败的工作流。
-    """
     _ensure_workflow_enabled()
     if workflow_id not in active_workflows:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
-
     del active_workflows[workflow_id]
     return {"message": f"工作流 {workflow_id} 已删除"}
 
 
 @router.websocket("/{workflow_id}/progress")
 async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) -> None:
-    """
-    工作流执行进度 WebSocket
-
-    实时推送节点执行状态和进度。
-    """
     await websocket.accept()
 
     if not settings.enable_experimental_workflow:
@@ -227,206 +470,111 @@ async def workflow_progress_websocket(websocket: WebSocket, workflow_id: str) ->
         await websocket.close()
         return
 
-    if workflow_id not in active_workflows:
-        await websocket.send_json({"error": f"工作流 {workflow_id} 不存在"})
+    state = active_workflows.get(workflow_id)
+    if state is None:
+        await websocket.send_json({"type": "error", "error": f"工作流 {workflow_id} 不存在"})
         await websocket.close()
         return
 
-    engine = active_workflows[workflow_id]
-
+    db = SessionLocal()
     try:
-        # 定义进度回调
-        async def progress_callback(node_id: str, status: NodeStatus, progress: float) -> None:
+        while True:
+            training_status, results = _sync_preview_state(state, db)
+            status = state.engine.get_status()
             await websocket.send_json(
                 {
-                    "node_id": node_id,
-                    "status": status.value,
-                    "progress": progress,
-                    "timestamp": asyncio.get_event_loop().time(),
-                },
+                    "type": "status",
+                    "data": status,
+                    "training_job_id": state.training_job_id,
+                    "training_status": training_status,
+                    "results": results,
+                }
             )
-
-        # 发送初始状态
-        await websocket.send_json(
-            {"type": "status", "data": engine.get_status(), "message": "连接成功"},
-        )
-
-        # 执行工作流（如果还未执行）
-        if all(node.status == NodeStatus.PENDING for node in engine.nodes.values()):
-            try:
-                results = await engine.execute(progress_callback=progress_callback)
-                await websocket.send_json(
-                    {"type": "completed", "results": results, "message": "执行完成"},
-                )
-            except WorkflowExecutionError as e:
-                await websocket.send_json(
-                    {"type": "error", "error": str(e), "message": "执行失败"},
-                )
-        else:
-            # 工作流已在执行，只发送当前状态
-            while True:
-                status = engine.get_status()
-                await websocket.send_json({"type": "status", "data": status})
-
-                # 检查是否完成
-                if status["completed"] + status["failed"] == status["total"]:
-                    break
-
-                await asyncio.sleep(1)
-
+            if status["completed"] + status["failed"] == status["total"]:
+                break
+            await asyncio.sleep(1.0)
     except WebSocketDisconnect:
-        logger.info(f"WebSocket disconnected for workflow {workflow_id}")
-    except Exception as e:
-        logger.error(f"WebSocket error for workflow {workflow_id}: {e}")
+        logger.info("WebSocket disconnected for workflow %s", workflow_id)
+    except Exception as exc:
+        logger.error("WebSocket error for workflow %s: %s", workflow_id, exc)
         try:
-            await websocket.send_json({"type": "error", "error": str(e)})
-        except Exception as send_error:
-            logger.debug(f"Failed to send error message: {send_error}")
+            await websocket.send_json({"type": "error", "error": str(exc)})
+        except Exception:
+            logger.debug("Failed to send workflow websocket error", exc_info=True)
     finally:
+        db.close()
         try:
             await websocket.close()
-        except Exception as close_error:
-            logger.debug(f"Failed to close websocket: {close_error}")
+        except Exception:
+            logger.debug("Failed to close workflow websocket cleanly", exc_info=True)
 
 
 @router.get("/")
-async def list_workflows() -> dict[str, Any]:
-    """
-    列出所有活动的工作流
-
-    返回当前正在执行或已完成的工作流列表。
-    """
-    workflows = []
-    for workflow_id, engine in active_workflows.items():
-        status = engine.get_status()
+async def list_workflows(
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    _ensure_workflow_enabled()
+    workflows: list[dict[str, Any]] = []
+    for workflow_id, state in active_workflows.items():
+        training_status, _results = _sync_preview_state(state, db)
+        status = state.engine.get_status()
         workflows.append(
             {
                 "workflow_id": workflow_id,
+                "name": state.name,
+                "training_job_id": state.training_job_id,
+                "training_status": training_status["status"],
                 "total_nodes": status["total"],
                 "completed": status["completed"],
                 "failed": status["failed"],
                 "progress": status["completed"] / status["total"]
                 if status["total"] > 0
                 else 0,
-            },
+            }
         )
-
     return {"workflows": workflows, "total": len(workflows)}
 
 
 @router.get("/{workflow_id}/resources")
-async def get_workflow_resources(workflow_id: str, duration: int | None = None) -> dict[str, Any]:
-    """
-    获取工作流执行期间的资源使用统计
-
-    Args:
-        workflow_id: 工作流 ID
-        duration: 可选的时间范围（秒）
-
-    Returns:
-        资源统计信息
-    """
+async def get_workflow_resources(
+    workflow_id: str,
+    duration: int | None = None,
+) -> dict[str, Any]:
+    _ensure_workflow_enabled()
     if workflow_id not in active_workflows:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
-
-    engine = active_workflows[workflow_id]
-
-    # 获取当前状态
-    current_status = (
-        engine.resource_monitor.get_current_status() if engine.resource_monitor else {}
-    )
-
-    # 获取统计信息
-    statistics = engine.get_resource_statistics(duration)
-
-    # 获取历史记录
-    history = (
-        engine.resource_monitor.get_history(duration) if engine.resource_monitor else []
-    )
-
     return {
         "workflow_id": workflow_id,
-        "current": current_status,
-        "statistics": statistics,
-        "history": history,
+        "duration": duration,
+        "message": "当前 preview 不单独暴露 workflow 资源轨迹，请改看 /training 与 /system。",
     }
 
 
 @router.get("/{workflow_id}/checkpoints")
 async def list_workflow_checkpoints(workflow_id: str) -> dict[str, Any]:
-    """
-    列出工作流的所有检查点
-
-    Args:
-        workflow_id: 工作流 ID
-
-    Returns:
-        检查点列表
-    """
+    _ensure_workflow_enabled()
     if workflow_id not in active_workflows:
         raise HTTPException(status_code=404, detail=f"工作流 {workflow_id} 不存在")
-
-    engine = active_workflows[workflow_id]
-
-    if not engine.checkpoint_manager:
-        raise HTTPException(status_code=400, detail="检查点功能未启用")
-
-    checkpoints = engine.checkpoint_manager.list_checkpoints(workflow_id)
-
     return {
         "workflow_id": workflow_id,
-        "checkpoints": checkpoints,
-        "total": len(checkpoints),
+        "checkpoints": [],
+        "total": 0,
+        "message": "当前 preview 直接复用训练主链，检查点请查看对应 training job 的输出目录。",
     }
 
 
 @router.post("/{workflow_id}/resume")
-async def resume_workflow(workflow_id: str, checkpoint_path: str | None = None) -> dict[str, Any]:
-    """
-    从检查点恢复工作流执行
-
-    Args:
-        workflow_id: 工作流 ID
-        checkpoint_path: 可选的检查点路径，如果不提供则使用最新的
-
-    Returns:
-        恢复结果
-    """
-    # 检查工作流是否已存在
-    if workflow_id in active_workflows:
-        raise HTTPException(status_code=400, detail=f"工作流 {workflow_id} 已在运行中")
-
-    try:
-        # 创建新引擎
-        engine = WorkflowEngine(data_dir=settings.data_dir)
-
-        if not engine.checkpoint_manager:
-            raise HTTPException(status_code=400, detail="检查点功能未启用")
-
-        # 恢复工作流
-        from pathlib import Path
-
-        cp_path = Path(checkpoint_path) if checkpoint_path else None
-        restored_data = engine.checkpoint_manager.resume_workflow(workflow_id, cp_path)
-
-        # 加载工作流
-        engine.load_workflow(restored_data["workflow"])
-
-        # 保存到活动工作流
-        active_workflows[workflow_id] = engine
-
-        # 在后台继续执行
-        asyncio.create_task(_execute_workflow_background(workflow_id, engine))
-
-        return {
+async def resume_workflow(
+    workflow_id: str,
+    checkpoint_path: str | None = None,
+) -> dict[str, Any]:
+    _ensure_workflow_enabled()
+    raise HTTPException(
+        status_code=400,
+        detail={
+            "code": "workflow_preview_resume_unsupported",
+            "message": "当前 workflow preview 不支持从旧检查点恢复图执行，请直接重启对应训练任务。",
             "workflow_id": workflow_id,
-            "status": "resumed",
-            "message": f"工作流 {workflow_id} 已从检查点恢复并继续执行",
-            "checkpoint": str(cp_path) if cp_path else "latest",
-        }
-
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    except Exception as e:
-        logger.error(f"Failed to resume workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+            "checkpoint_path": checkpoint_path,
+        },
+    )

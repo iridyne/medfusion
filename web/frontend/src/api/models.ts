@@ -42,6 +42,135 @@ export interface ModelImportRequest {
   tags?: string[];
 }
 
+export interface ModelInspectResponse {
+  status: "ready" | "warning" | "blocked";
+  can_enter_training: boolean;
+  issues: {
+    errors: Array<{
+      path: string;
+      message: string;
+      error_code: string;
+      suggestion?: string | null;
+    }>;
+    warnings: Array<{
+      path: string;
+      message: string;
+      error_code: string;
+      suggestion?: string | null;
+    }>;
+  };
+  checks: Array<{
+    key: string;
+    label: string;
+    status: "pass" | "warning" | "fail";
+    detail: string;
+  }>;
+  summary: {
+    num_classes: number;
+    backbone: string;
+    attention_type: string;
+    fusion_type: string;
+    tabular_feature_count: number;
+    recommended_fusion_hidden_dim: number;
+  };
+  runtime?: {
+    vision_output_dim: number;
+    tabular_input_dim: number;
+    tabular_output_dim: number;
+    fusion_output_dim: number;
+    total_params: number;
+    trainable_params: number;
+    frozen_params: number;
+    pretrained_requested: boolean;
+    pretrained_materialized: boolean;
+    auxiliary_heads: boolean;
+  } | null;
+  next_step: string;
+}
+
+export interface ModelCatalogComponent {
+  id: string;
+  source: "official" | "custom";
+  label: string;
+  family: string;
+  status: string;
+  description: string;
+  data_requirements: string[];
+  config_requirements: string[];
+  compute_profile: {
+    tier: string;
+    gpu_vram_hint: string;
+    notes: string;
+  };
+  upstream: string[];
+  outputs: string[];
+  advanced_builder_component_id?: string;
+  wizard_prefill?: Record<string, any>;
+}
+
+export interface ModelCatalogTemplate {
+  id: string;
+  source: "official" | "custom";
+  label: string;
+  status: string;
+  description: string;
+  component_ids: string[];
+  unit_map?: Record<string, string>;
+  editable_slots?: string[];
+  data_requirements: string[];
+  compute_profile: {
+    tier: string;
+    gpu_vram_hint: string;
+    notes: string;
+  };
+  advanced_builder_blueprint_id?: string;
+  wizard_prefill?: Record<string, any>;
+}
+
+export interface ModelCatalogResponse {
+  sources: {
+    official: {
+      enabled: boolean;
+      label: string;
+      description: string;
+      entry_path: string;
+    };
+    custom: {
+      enabled: boolean;
+      label: string;
+      description: string;
+      entry_path: string;
+    };
+  };
+  principles: string[];
+  units: ModelCatalogComponent[];
+  models: ModelCatalogTemplate[];
+  components: ModelCatalogComponent[];
+  templates: ModelCatalogTemplate[];
+}
+
+export interface CustomModelEntry {
+  schema_version: string;
+  id: string;
+  source: "custom";
+  label: string;
+  description: string;
+  status: "local_custom";
+  based_on_model_id: string;
+  unit_map: Record<string, string>;
+  editable_slots: string[];
+  component_ids: string[];
+  data_requirements: string[];
+  compute_profile: {
+    tier: string;
+    gpu_vram_hint: string;
+    notes: string;
+  };
+  wizard_prefill: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Model {
   id: number;
   name: string;
@@ -329,6 +458,141 @@ export interface Model {
   created_at: string;
   updated_at?: string;
   created_by?: string;
+}
+
+export const inspectModelConfig = async (payload: {
+  num_classes: number;
+  use_auxiliary_heads: boolean;
+  vision: {
+    backbone: string;
+    pretrained: boolean;
+    freeze_backbone: boolean;
+    feature_dim: number;
+    dropout: number;
+    attention_type: string;
+  };
+  tabular: {
+    hidden_dims: number[];
+    output_dim: number;
+    dropout: number;
+  };
+  fusion: {
+    fusion_type: string;
+    hidden_dim: number;
+    dropout: number;
+    num_heads: number;
+  };
+  numerical_features: string[];
+  categorical_features: string[];
+  image_size: number;
+  use_attention_supervision: boolean;
+  num_epochs: number;
+}): Promise<ModelInspectResponse> => {
+  const response = await api.post("/models/inspect-config", payload)
+  return response.data
+}
+
+export const getModelCatalog = async (): Promise<ModelCatalogResponse> => {
+  const response = await api.get("/models/catalog")
+  return response.data
+}
+
+export const getCustomModels = async (): Promise<{
+  items: CustomModelEntry[];
+  trash_items: CustomModelEntry[];
+  storage: string;
+  root_dir: string;
+  schema_version: string;
+  format_contract: string;
+  history_backend: string;
+  supports_export_import: boolean;
+  retention_scope: string;
+  retention_floor_scope: string;
+  retention_policy: {
+    mode: "count" | "time";
+    max_count: number;
+    max_age_days: number;
+    min_count_per_model: number;
+  };
+}> => {
+  const response = await api.get("/models/custom")
+  return response.data
+}
+
+export const saveCustomModelEntry = async (
+  entry: CustomModelEntry,
+): Promise<{ item: CustomModelEntry; storage: string; schema_version: string; history_backend: string }> => {
+  const response = await api.post("/models/custom", entry)
+  return response.data
+}
+
+export const deleteCustomModelEntry = async (
+  id: string,
+): Promise<{ deleted: boolean; recycled: boolean; id: string; storage: string; history_backend: string }> => {
+  const response = await api.delete(`/models/custom/${id}`)
+  return response.data
+}
+
+export const undeleteCustomModelEntry = async (
+  id: string,
+): Promise<{ item: CustomModelEntry; history_backend: string; restore_behavior: string }> => {
+  const response = await api.post(`/models/custom/${id}/undelete`)
+  return response.data
+}
+
+export const getCustomModelHistory = async (
+  id: string,
+): Promise<{
+  id: string;
+  items: Array<{ commit: string; committed_at: string; subject: string }>;
+  history_backend: string;
+}> => {
+  const response = await api.get(`/models/custom/${id}/history`)
+  return response.data
+}
+
+export const restoreCustomModelEntry = async (
+  id: string,
+  revision: string,
+): Promise<{ item: CustomModelEntry; history_backend: string; restore_behavior: string }> => {
+  const response = await api.post(`/models/custom/${id}/restore`, { revision })
+  return response.data
+}
+
+export const getCustomModelRetentionPolicy = async (): Promise<{
+  policy: {
+    mode: "count" | "time";
+    max_count: number;
+    max_age_days: number;
+    min_count_per_model: number;
+  };
+  history_backend: string;
+  supports_export_import: boolean;
+  retention_scope: string;
+  retention_floor_scope: string;
+}> => {
+  const response = await api.get("/models/custom/policy")
+  return response.data
+}
+
+export const updateCustomModelRetentionPolicy = async (policy: {
+  mode: "count" | "time";
+  max_count: number;
+  max_age_days: number;
+  min_count_per_model: number;
+}): Promise<{
+  policy: {
+    mode: "count" | "time";
+    max_count: number;
+    max_age_days: number;
+    min_count_per_model: number;
+  };
+  history_backend: string;
+  retention_scope: string;
+  retention_floor_scope: string;
+}> => {
+  const response = await api.put("/models/custom/policy", policy)
+  return response.data
 }
 
 export interface ModelListParams {

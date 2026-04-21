@@ -27,6 +27,8 @@ export interface WorkflowStatus {
     failed: number;
   };
   results?: any;
+  training_job_id?: string;
+  training_status?: any;
 }
 
 export interface ExecuteRequest {
@@ -38,6 +40,7 @@ export interface ExecuteResponse {
   workflow_id: string;
   status: string;
   message: string;
+  training_job_id?: string | null;
 }
 
 export const getNodes = async () => {

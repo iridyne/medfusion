@@ -67,6 +67,8 @@ export const START_COMFYUI_DEFAULT_ADAPTER = [
   "完成编译与训练后继续回到 /models 做结果复盘",
 ] as const;
 
+export const START_COMFYUI_OPTIONAL_MODULE = START_COMFYUI_DEFAULT_ADAPTER;
+
 export const START_MODE_POSITIONING = {
   defaultMode: "问题向导 -> 模板骨架 -> 参数编辑",
   advancedMode: "节点式编辑保留为高级模式，不作为默认首页",

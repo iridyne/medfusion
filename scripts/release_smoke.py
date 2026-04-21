@@ -9,13 +9,14 @@ This script is intentionally minimal and focuses on two deployment shapes:
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = "configs/public_datasets/breastmnist_quickstart.yaml"
@@ -62,6 +63,95 @@ def _wait_http(url: str, timeout_seconds: int) -> None:
     raise RuntimeError(f"Timed out waiting for {url}. Last error: {last_error}")
 
 
+def _request_json(
+    method: str,
+    url: str,
+    payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    request = Request(
+        url,
+        data=(
+            json.dumps(payload).encode("utf-8")
+            if payload is not None
+            else None
+        ),
+        headers={"Content-Type": "application/json"},
+        method=method,
+    )
+    with urlopen(request, timeout=10) as response:  # noqa: S310
+        body = response.read().decode("utf-8")
+        return json.loads(body) if body else {}
+
+
+def _check_local_custom_model_capabilities(host: str, port: int) -> None:
+    _print_step("Check local custom model + preference APIs")
+    base_url = f"http://{host}:{port}/api"
+
+    preferences = _request_json("GET", f"{base_url}/system/preferences")
+    if preferences.get("storage") != "filesystem":
+        raise RuntimeError("UI preferences are not backed by filesystem storage.")
+
+    updated_preferences = _request_json(
+        "PUT",
+        f"{base_url}/system/preferences",
+        {"history_display_mode": "technical"},
+    )
+    if updated_preferences.get("preferences", {}).get("history_display_mode") != "technical":
+        raise RuntimeError("Failed to update machine-wide UI preferences.")
+
+    custom_model_payload = {
+        "schema_version": "0.1",
+        "id": "release-smoke-custom-model",
+        "source": "custom",
+        "label": "Release Smoke Custom Model",
+        "description": "filesystem smoke",
+        "status": "local_custom",
+        "based_on_model_id": "quickstart_multimodal",
+        "unit_map": {
+            "vision_encoder": "resnet18_encoder_bundle",
+            "tabular_encoder": "mlp_tabular_encoder_bundle",
+            "fusion_bundle": "concatenate_fusion_bundle",
+            "task_head": "classification_head_bundle",
+            "training_strategy": "standard_training_bundle",
+        },
+        "editable_slots": [
+            "vision_encoder",
+            "tabular_encoder",
+            "fusion_bundle",
+            "task_head",
+            "training_strategy",
+        ],
+        "component_ids": [
+            "resnet18_encoder_bundle",
+            "mlp_tabular_encoder_bundle",
+            "concatenate_fusion_bundle",
+            "classification_head_bundle",
+            "standard_training_bundle",
+        ],
+        "data_requirements": ["CSV + image_dir", "至少 1 个表格特征"],
+        "compute_profile": {
+            "tier": "light",
+            "gpu_vram_hint": "8GB+",
+            "notes": "release smoke",
+        },
+        "wizard_prefill": {
+            "modelTemplateId": "quickstart_multimodal",
+            "customModelLabel": "Release Smoke Custom Model",
+        },
+        "created_at": "2026-04-21T00:00:00",
+        "updated_at": "2026-04-21T00:00:00",
+    }
+    _request_json("POST", f"{base_url}/models/custom", custom_model_payload)
+    custom_list = _request_json("GET", f"{base_url}/models/custom")
+    if not any(item.get("id") == "release-smoke-custom-model" for item in custom_list.get("items", [])):
+        raise RuntimeError("Failed to persist custom model to local filesystem store.")
+
+    _request_json("DELETE", f"{base_url}/models/custom/release-smoke-custom-model")
+    custom_list_after_delete = _request_json("GET", f"{base_url}/models/custom")
+    if not any(item.get("id") == "release-smoke-custom-model" for item in custom_list_after_delete.get("trash_items", [])):
+        raise RuntimeError("Deleted custom model was not moved to recycle bin.")
+
+
 def _stop_process(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
@@ -100,6 +190,8 @@ def _check_local_web(host: str, port: int, timeout_seconds: int) -> None:
         try:
             _wait_http(f"http://{host}:{port}/health", timeout_seconds)
             _wait_http(f"http://{host}:{port}/start", timeout_seconds)
+            _wait_http(f"http://{host}:{port}/evaluation", timeout_seconds)
+            _check_local_custom_model_capabilities(host, port)
             print(f"Local Web endpoints reachable on http://{host}:{port}")
         except Exception as exc:  # pragma: no cover - runtime-facing
             raise RuntimeError(f"Local Web start check failed. See: {log_path}") from exc
@@ -216,6 +308,7 @@ def run_docker(*, port: int, image: str, timeout_seconds: int) -> None:
         _print_step("Check Docker Web endpoints")
         _wait_http(f"http://127.0.0.1:{port}/health", timeout_seconds)
         _wait_http(f"http://127.0.0.1:{port}/start", timeout_seconds)
+        _wait_http(f"http://127.0.0.1:{port}/evaluation", timeout_seconds)
         print(f"Docker Web endpoints reachable on http://127.0.0.1:{port}")
     finally:
         subprocess.run(

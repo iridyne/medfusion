@@ -8,6 +8,8 @@ import {
   ExperimentOutlined,
   ImportOutlined,
   PlayCircleOutlined,
+  ShareAltOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 
 import { getDatasetStatistics } from "@/api/datasets";
@@ -112,6 +114,24 @@ export default function Workbench() {
       actionLabel: "打开训练向导",
       icon: <ControlOutlined />,
       onClick: () => navigate("/config"),
+    },
+    {
+      title: "节点工作流",
+      description:
+        "用受限节点图组织数据、模型和训练语义，并直接回到真实 training runtime 执行。",
+      tag: "Preview",
+      actionLabel: "打开工作流编辑器",
+      icon: <ShareAltOutlined />,
+      onClick: () => navigate("/workflow"),
+    },
+    {
+      title: "模型数据库",
+      description:
+        "查看当前允许搭建的打包模型组件、模板、数据要求和算力需求，再带回主线配置。",
+      tag: "Model catalog",
+      actionLabel: "打开模型数据库",
+      icon: <AppstoreOutlined />,
+      onClick: () => navigate("/config/model"),
     },
     {
       title: "结果导入",
@@ -317,6 +337,10 @@ export default function Workbench() {
               <div className="surface-note surface-note--dense">
                 <strong>信息统一</strong>
                 <p>导航、主题、状态和命令提示集中到同一层壳，降低入口切换成本。</p>
+              </div>
+              <div className="surface-note surface-note--dense">
+                <strong>高级入口</strong>
+                <p>高级模式和节点工作流现在都以 preview 暴露，但真实执行仍回到统一训练主链。</p>
               </div>
             </div>
 

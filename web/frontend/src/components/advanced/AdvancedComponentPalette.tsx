@@ -1,15 +1,17 @@
 import { Card, Space, Tag, Typography } from "antd";
 
 import {
-  ADVANCED_BUILDER_COMPONENTS,
-  ADVANCED_BUILDER_FAMILY_LABELS,
-  ADVANCED_BUILDER_STATUS_LABELS,
+  type AdvancedBuilderComponent,
+  type AdvancedBuilderFamily,
 } from "@/config/advancedBuilderCatalog";
 
 const { Text } = Typography;
 
 interface AdvancedComponentPaletteProps {
   onAddComponent: (componentId: string) => void;
+  components: AdvancedBuilderComponent[];
+  familyLabels: Record<AdvancedBuilderFamily, string>;
+  statusLabels: Record<string, string>;
 }
 
 const STATUS_COLORS = {
@@ -20,12 +22,15 @@ const STATUS_COLORS = {
 
 export default function AdvancedComponentPalette({
   onAddComponent,
+  components,
+  familyLabels,
+  statusLabels,
 }: AdvancedComponentPaletteProps) {
-  const groupedComponents = Object.entries(ADVANCED_BUILDER_FAMILY_LABELS).map(
+  const groupedComponents = Object.entries(familyLabels).map(
     ([family, label]) => ({
       family,
       label,
-      components: ADVANCED_BUILDER_COMPONENTS.filter(
+      components: components.filter(
         (component) => component.family === family,
       ),
     }),
@@ -62,7 +67,7 @@ export default function AdvancedComponentPalette({
                     <Space wrap>
                       <Text strong>{component.label}</Text>
                       <Tag color={STATUS_COLORS[component.status]}>
-                        {ADVANCED_BUILDER_STATUS_LABELS[component.status]}
+                        {statusLabels[component.status]}
                       </Tag>
                     </Space>
                     <Text type="secondary">{component.description}</Text>

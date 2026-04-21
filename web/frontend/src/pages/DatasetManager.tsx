@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -15,6 +16,9 @@ import {
   Col,
   Progress,
   Tooltip,
+  Alert,
+  List,
+  Skeleton,
 } from "antd";
 import {
   PlusOutlined,
@@ -28,10 +32,17 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   SyncOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import DatasetUploader from "../components/dataset/DatasetUploader";
-import { deleteDataset, getDatasets } from "../api/datasets";
+import {
+  analyzeDataset,
+  deleteDataset,
+  getDatasetReadiness,
+  getDatasets,
+  type DatasetInspection,
+} from "../api/datasets";
 import PageScaffold from "@/components/layout/PageScaffold";
 
 interface Dataset {
@@ -53,9 +64,14 @@ interface Dataset {
 }
 
 const DatasetManager: React.FC = () => {
+  const navigate = useNavigate();
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
+  const [selectedReadiness, setSelectedReadiness] = useState<
+    (DatasetInspection & { dataset_id: number; dataset_name: string }) | null
+  >(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [registerModalVisible, setRegisterModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -111,9 +127,24 @@ const DatasetManager: React.FC = () => {
   };
 
   // 查看详情
+  const loadDatasetReadiness = async (datasetId: string) => {
+    setReadinessLoading(true);
+    try {
+      const readiness = await getDatasetReadiness(Number(datasetId));
+      setSelectedReadiness(readiness);
+    } catch (error) {
+      console.error("Failed to load dataset readiness:", error);
+      message.error("获取数据 readiness 失败");
+    } finally {
+      setReadinessLoading(false);
+    }
+  };
+
   const handleViewDetails = (dataset: Dataset) => {
     setSelectedDataset(dataset);
+    setSelectedReadiness(null);
     setDrawerVisible(true);
+    void loadDatasetReadiness(dataset.id);
   };
 
   // 格式化文件大小
@@ -282,6 +313,21 @@ const DatasetManager: React.FC = () => {
     totalSize: datasets.reduce((sum, d) => sum + d.size, 0),
   };
 
+  const getReadinessTag = (
+    readinessStatus?: "ready" | "warning" | "blocked",
+  ) => {
+    if (!readinessStatus) {
+      return <Tag>未检查</Tag>;
+    }
+    if (readinessStatus === "ready") {
+      return <Tag color="success">可进入训练</Tag>;
+    }
+    if (readinessStatus === "warning") {
+      return <Tag color="warning">有提醒但可进入训练</Tag>;
+    }
+    return <Tag color="error">暂不可进入训练</Tag>;
+  };
+
   return (
     <PageScaffold
       eyebrow="Data Intake Registry"
@@ -427,7 +473,7 @@ const DatasetManager: React.FC = () => {
             </div>
             <div className="surface-note">
               <strong>详情抽屉</strong>
-              <p>点击名称即可展开完整路径、标签和分析 JSON，不需要离开主表格。</p>
+              <p>点击名称即可展开 schema、readiness 和样本预览摘要，不需要离开主表格。</p>
             </div>
           </div>
         </Card>
@@ -459,73 +505,231 @@ const DatasetManager: React.FC = () => {
         onClose={() => setDrawerVisible(false)}
         destroyOnClose
         rootClassName="surface-drawer"
+        extra={
+          selectedDataset ? (
+            <Space>
+              <Button
+                icon={<SyncOutlined />}
+                loading={readinessLoading}
+                onClick={async () => {
+                  await analyzeDataset(Number(selectedDataset.id));
+                  await loadDatasetReadiness(selectedDataset.id);
+                  await fetchDatasets();
+                }}
+              >
+                重新检查
+              </Button>
+              <Button
+                type="primary"
+                icon={<ArrowRightOutlined />}
+                disabled={
+                  selectedReadiness
+                    ? !selectedReadiness.readiness.can_enter_training
+                    : selectedDataset.status !== "ready"
+                }
+                onClick={() => {
+                  setDrawerVisible(false);
+                  navigate("/config", {
+                    state: {
+                      datasetPrefill: selectedReadiness
+                        ? {
+                            csvPath: selectedReadiness.csv.path || undefined,
+                            imageDir:
+                              selectedReadiness.schema.image_dir || undefined,
+                            imagePathColumn:
+                              selectedReadiness.schema.image_path_column || undefined,
+                            targetColumn:
+                              selectedReadiness.schema.target_column || undefined,
+                            patientIdColumn:
+                              selectedReadiness.schema.patient_id_column || undefined,
+                            numericalFeatures:
+                              selectedReadiness.schema.numerical_features || [],
+                            categoricalFeatures:
+                              selectedReadiness.schema.categorical_features || [],
+                            numClasses:
+                              selectedReadiness.schema.num_classes || undefined,
+                          }
+                        : undefined,
+                      source: "dataset-manager",
+                    },
+                  });
+                }}
+              >
+                进入配置主线
+              </Button>
+            </Space>
+          ) : null
+        }
       >
         {selectedDataset && (
-          <Descriptions column={1} bordered size="small">
-            <Descriptions.Item label="数据集名称">
-              {selectedDataset.name}
-            </Descriptions.Item>
-            <Descriptions.Item label="数据类型">
-              {selectedDataset.type === "image"
-                ? "图像"
-                : selectedDataset.type === "tabular"
-                  ? "表格"
-                  : "多模态"}
-            </Descriptions.Item>
-            <Descriptions.Item label="状态">
-              {getStatusTag(selectedDataset.status, selectedDataset.progress)}
-            </Descriptions.Item>
-            <Descriptions.Item label="本地目录路径">
-              <span style={{ wordBreak: "break-all" }}>
-                {selectedDataset.data_path || "-"}
-              </span>
-            </Descriptions.Item>
-            <Descriptions.Item label="样本数">
-              {selectedDataset.samples.toLocaleString()}
-            </Descriptions.Item>
-            <Descriptions.Item label="类别数">
-              {selectedDataset.classes || "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label="数据集大小">
-              {formatSize(selectedDataset.size)}
-            </Descriptions.Item>
-            <Descriptions.Item label="创建时间">
-              {formatDate(selectedDataset.created_at)}
-            </Descriptions.Item>
-            <Descriptions.Item label="更新时间">
-              {formatDate(selectedDataset.updated_at)}
-            </Descriptions.Item>
-            <Descriptions.Item label="描述">
-              {selectedDataset.description || "暂无描述"}
-            </Descriptions.Item>
-            <Descriptions.Item label="标签">
-              {selectedDataset.tags && selectedDataset.tags.length > 0 ? (
-                <Space wrap>
-                  {selectedDataset.tags.map((tag) => (
-                    <Tag key={tag}>{tag}</Tag>
-                  ))}
-                </Space>
-              ) : (
-                "暂无标签"
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="分析结果">
-              {selectedDataset.analysis ? (
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {JSON.stringify(selectedDataset.analysis, null, 2)}
-                </pre>
-              ) : (
-                "暂无分析结果"
-              )}
-            </Descriptions.Item>
-          </Descriptions>
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="数据集名称">
+                {selectedDataset.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="数据类型">
+                {selectedDataset.type === "image"
+                  ? "图像"
+                  : selectedDataset.type === "tabular"
+                    ? "表格"
+                    : "多模态"}
+              </Descriptions.Item>
+              <Descriptions.Item label="登记状态">
+                {getStatusTag(selectedDataset.status, selectedDataset.progress)}
+              </Descriptions.Item>
+              <Descriptions.Item label="本地目录路径">
+                <span style={{ wordBreak: "break-all" }}>
+                  {selectedDataset.data_path || "-"}
+                </span>
+              </Descriptions.Item>
+              <Descriptions.Item label="样本数">
+                {selectedDataset.samples.toLocaleString()}
+              </Descriptions.Item>
+              <Descriptions.Item label="类别数">
+                {selectedDataset.classes || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="数据集大小">
+                {formatSize(selectedDataset.size)}
+              </Descriptions.Item>
+              <Descriptions.Item label="描述">
+                {selectedDataset.description || "暂无描述"}
+              </Descriptions.Item>
+              <Descriptions.Item label="标签">
+                {selectedDataset.tags && selectedDataset.tags.length > 0 ? (
+                  <Space wrap>
+                    {selectedDataset.tags.map((tag) => (
+                      <Tag key={tag}>{tag}</Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  "暂无标签"
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {readinessLoading ? (
+              <Skeleton active paragraph={{ rows: 6 }} />
+            ) : selectedReadiness ? (
+              <>
+                <Alert
+                  type={
+                    selectedReadiness.readiness.can_enter_training
+                      ? selectedReadiness.readiness.status === "warning"
+                        ? "warning"
+                        : "success"
+                      : "error"
+                  }
+                  showIcon
+                  message={selectedReadiness.readiness.next_step}
+                  description={
+                    <Space wrap>
+                      {getReadinessTag(selectedReadiness.readiness.status)}
+                      <span>
+                        CSV: {selectedReadiness.csv.path || "未识别"}
+                      </span>
+                      <span>
+                        类别数: {selectedReadiness.schema.num_classes ?? "-"}
+                      </span>
+                      <span>
+                        表头: {selectedReadiness.readiness.summary.headers}
+                      </span>
+                    </Space>
+                  }
+                />
+
+                <Card size="small" title="Readiness 检查项">
+                  <List
+                    dataSource={selectedReadiness.readiness.checks}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+                          <Space>
+                            <Tag
+                              color={
+                                item.status === "pass"
+                                  ? "success"
+                                  : item.status === "warning"
+                                    ? "warning"
+                                    : "error"
+                              }
+                            >
+                              {item.status}
+                            </Tag>
+                            <strong>{item.label}</strong>
+                          </Space>
+                          <span style={{ color: "var(--text-secondary, #666)" }}>
+                            {item.detail}
+                          </span>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </Card>
+
+                <Card size="small" title="Schema 摘要">
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="CSV 路径">
+                      <span style={{ wordBreak: "break-all" }}>
+                        {selectedReadiness.csv.path || "未识别"}
+                      </span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="图像目录">
+                      <span style={{ wordBreak: "break-all" }}>
+                        {selectedReadiness.schema.image_dir || "未识别"}
+                      </span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="图像列">
+                      {selectedReadiness.schema.image_path_column || "-"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="标签列">
+                      {selectedReadiness.schema.target_column || "-"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="patient_id 列">
+                      {selectedReadiness.schema.patient_id_column || "-"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="数值特征">
+                      {(selectedReadiness.schema.numerical_features || []).join(", ") || "-"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="类别特征">
+                      {(selectedReadiness.schema.categorical_features || []).join(", ") || "-"}
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+
+                {selectedReadiness.csv.preview_rows?.length ? (
+                  <Card size="small" title="CSV 预览样本">
+                    <pre
+                      style={{
+                        margin: 0,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      {JSON.stringify(selectedReadiness.csv.preview_rows, null, 2)}
+                    </pre>
+                  </Card>
+                ) : null}
+
+                {selectedReadiness.readiness.errors.length ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    message="阻塞问题"
+                    description={selectedReadiness.readiness.errors.join("；")}
+                  />
+                ) : null}
+                {selectedReadiness.readiness.warnings.length ? (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="提醒"
+                    description={selectedReadiness.readiness.warnings.join("；")}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </Space>
         )}
       </Drawer>
     </PageScaffold>

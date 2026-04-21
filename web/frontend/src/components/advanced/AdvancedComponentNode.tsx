@@ -2,10 +2,6 @@ import { memo } from "react";
 import { Card, Space, Tag, Typography } from "antd";
 import { Handle, Position, type NodeProps } from "reactflow";
 
-import {
-  ADVANCED_BUILDER_FAMILY_LABELS,
-  ADVANCED_BUILDER_STATUS_LABELS,
-} from "@/config/advancedBuilderCatalog";
 import type { AdvancedBuilderNodeData } from "@/utils/advancedBuilder";
 
 const { Text } = Typography;
@@ -38,9 +34,9 @@ function AdvancedComponentNode({
         <Space direction="vertical" size={6} style={{ width: "100%" }}>
           <Space wrap>
             <Text strong>{data.label}</Text>
-            <Tag>{ADVANCED_BUILDER_FAMILY_LABELS[data.family]}</Tag>
+            <Tag>{data.familyLabel || data.family}</Tag>
             <Tag color={STATUS_COLORS[data.status]}>
-              {ADVANCED_BUILDER_STATUS_LABELS[data.status]}
+              {data.statusLabel || data.status}
             </Tag>
           </Space>
           <Text type="secondary">{data.description}</Text>

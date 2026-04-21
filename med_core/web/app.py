@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from .api import advanced_builder, comfyui, datasets, models, system, training
+from .api import advanced_builder, comfyui, datasets, evaluation, models, system, training
 from .config import settings
 from .database import close_db, init_db
 from .routers import experiments, workflow_router
@@ -136,6 +136,7 @@ async def health_check() -> dict[str, Any]:
 # API 路由
 app.include_router(system.router, prefix="/api/system", tags=["系统"])
 app.include_router(training.router, prefix="/api/training", tags=["训练"])
+app.include_router(evaluation.router, prefix="/api/evaluation", tags=["评估"])
 app.include_router(models.router, prefix="/api/models", tags=["模型"])
 app.include_router(datasets.router, prefix="/api/datasets", tags=["数据集"])
 app.include_router(advanced_builder.router, prefix="/api/advanced-builder", tags=["高级建模"])

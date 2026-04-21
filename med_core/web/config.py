@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-in-production"
 
     # 实验功能开关
-    enable_experimental_workflow: bool = False
+    enable_experimental_workflow: bool = True
     comfyui_base_url: str = "http://127.0.0.1:8188"
     comfyui_probe_timeout_sec: float = 3.0
 
@@ -84,9 +84,13 @@ class Settings(BaseSettings):
         directories = [
             self.data_dir,
             self.data_dir / "models",
+            self.data_dir / "model-catalog",
+            self.data_dir / "model-catalog" / "custom-models",
+            self.data_dir / "model-catalog" / "custom-models" / ".trash",
             self.data_dir / "experiments",
             self.data_dir / "datasets",
             self.data_dir / "logs",
+            self.data_dir / "settings",
             self.data_dir / "uploads",
             self.data_dir / "web-ui",
         ]
