@@ -1608,8 +1608,8 @@ debugger;
 **v0.3.0（当前）：**
 - ✅ 集成架构实现
 - ✅ 基础 Web UI
-- [ ] CLI 命令完善
-- [ ] 文档完善
+- [x] CLI 命令完善（`medfusion version-check`、`medfusion start --check-only`、`medfusion data restore`）
+- [x] 文档完善（启动与部署口径、模型数据库主线、Web 目录治理同步）
 
 **v0.4.0（下一步）：**
 - [ ] Docker 支持
@@ -1633,6 +1633,6 @@ debugger;
 ---
 
 **文档版本**: v0.3.0  
-**最后更新**: 2026-02-20  
+**最后更新**: 2026-04-22  
 **维护者**: Medical AI Research Team  
 **反馈**: [GitHub Issues](https://github.com/your-org/medfusion/issues)
