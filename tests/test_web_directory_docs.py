@@ -26,6 +26,7 @@ def test_legacy_web_guides_are_removed() -> None:
         "web/CLI_GUIDE.md",
         "web/docs/README.md",
         "web/docs/CLI_VS_SHELL.md",
+        "web/docker-compose.yml",
         "web/test_backend.py",
         "web/test_optimizations.py",
     ]

@@ -26,9 +26,10 @@ web/
 │   ├── package.json       # 前端依赖与脚本
 │   ├── vite.config.ts     # Vite 开发与构建配置
 │   └── dist/              # 本地构建产物，不是源码
-├── docker-compose.yml     # Web 相关容器编排参考
 └── README.md              # 本文档
 ```
+
+Docker 编排以 `docker/docker-compose.yml` 为准，不再在 `web/` 目录维护第二份 compose 配置。
 
 ## 唯一推荐入口
 
