@@ -115,6 +115,7 @@ def test_start_help_matches_mvp_contract(capsys):
     assert "validate-config" in output
     assert "build-results" in output
     assert "uninstall" in output
+    assert "version-check" in output
     assert "YAML" in output
 
 
@@ -187,6 +188,41 @@ def test_main_dispatches_uninstall_command(monkeypatch):
         "argv": ["--purge-data", "--yes"],
         "prog": "medfusion uninstall",
     }
+
+
+def test_main_dispatches_version_check_command(monkeypatch):
+    import med_core.cli as cli_module
+
+    captured = {}
+
+    def _fake_version_check(argv=None, prog="medfusion version-check"):
+        captured["argv"] = list(argv or [])
+        captured["prog"] = prog
+
+    monkeypatch.setattr(cli_module, "version_check", _fake_version_check)
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["medfusion", "version-check", "--skip-server", "--json"]
+        cli_module.main()
+    finally:
+        sys.argv = original_argv
+
+    assert captured == {
+        "argv": ["--skip-server", "--json"],
+        "prog": "medfusion version-check",
+    }
+
+
+def test_version_check_cli_supports_local_only_json_output(capsys):
+    from med_core.cli.version_check import version_check
+
+    version_check(["--skip-server", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ok"] is True
+    assert payload["local"]["cli_version"] == payload["local"]["web_settings_version"]
+    assert payload["server"]["checked"] is False
+    assert payload["server"]["reason"] == "skip-server"
 
 
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):

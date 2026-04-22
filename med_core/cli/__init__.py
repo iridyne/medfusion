@@ -22,6 +22,7 @@ from .public_datasets import public_datasets
 from .run import run
 from .train import train
 from .uninstall import uninstall
+from .version_check import version_check
 
 __all__ = [
     "build_results",
@@ -35,6 +36,7 @@ __all__ = [
     "train",
     "uninstall",
     "validate_config",
+    "version_check",
 ]
 
 
@@ -56,6 +58,7 @@ def _print_help() -> None:
     print("  import-run      生成 artifact 并导入模型库，供 dashboard 直接展示")
     print("  public-datasets 公开数据集快速验证入口（list/show/prepare）")
     print("  uninstall   卸载本地运行环境（支持 keep-data / purge-data）")
+    print("  version-check  版本一致性检查（CLI / 本地 Web 资源 / 运行中服务）")
     print("  web         Web UI 管理命令")
     print("  data        Web UI 数据管理命令")
     print("")
@@ -82,6 +85,7 @@ def _print_help() -> None:
     print("  medfusion public-datasets prepare uci-heart-disease --overwrite")
     print("  medfusion uninstall")
     print("  medfusion uninstall --purge-data")
+    print("  medfusion version-check")
     print("  medfusion web")
     print("")
     print("YAML mainline:")
@@ -186,6 +190,10 @@ def main() -> None:
 
     if command == "uninstall":
         _run_legacy_command(uninstall, args, "medfusion uninstall")
+        return
+
+    if command == "version-check":
+        _run_legacy_command(version_check, args, "medfusion version-check")
         return
 
     if command in {"web", "data"}:
