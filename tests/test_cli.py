@@ -13,9 +13,10 @@ from pathlib import Path
 
 import pytest
 
-from test_build_results import _create_checkpoint_and_logs
-
 os.environ.setdefault("MEDFUSION_DATA_DIR", tempfile.mkdtemp(prefix="medfusion-cli-test-"))
+os.environ.setdefault("MPLBACKEND", "Agg")
+
+from test_build_results import _create_checkpoint_and_logs
 
 
 def _assert_path_equal(actual: str, expected: Path) -> None:
@@ -223,6 +224,21 @@ def test_version_check_cli_supports_local_only_json_output(capsys):
     assert payload["local"]["cli_version"] == payload["local"]["web_settings_version"]
     assert payload["server"]["checked"] is False
     assert payload["server"]["reason"] == "skip-server"
+
+
+def test_web_data_commands_include_restore() -> None:
+    from med_core.web.cli import data
+
+    assert "restore" in data.commands
+
+
+def test_start_entrypoint_hint_detects_legacy_web_start() -> None:
+    from med_core.web.cli import _start_entrypoint_hint
+
+    assert _start_entrypoint_hint("medfusion start") is None
+    hint = _start_entrypoint_hint("medfusion web start")
+    assert hint is not None
+    assert "medfusion start" in hint
 
 
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):

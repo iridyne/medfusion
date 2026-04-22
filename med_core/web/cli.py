@@ -2,6 +2,7 @@
 
 import contextlib
 import socket
+import tempfile
 import webbrowser
 from pathlib import Path
 
@@ -60,23 +61,42 @@ def initialize_web_server() -> None:
         console.print(f"前端资源就绪（{source_label}）")
 
 
+def _start_entrypoint_hint(command_path: str) -> str | None:
+    normalized = " ".join(command_path.strip().split()).lower()
+    if normalized.endswith("web start"):
+        return "提示: 推荐直接使用 `medfusion start`，`medfusion web start` 仅作为兼容入口。"
+    return None
+
+
 @click.group()
 def web() -> None:
     """Web UI 管理命令"""
 
 
 @web.command()
+@click.pass_context
 @click.option("--host", default="127.0.0.1", help="监听地址")
 @click.option("--port", default=None, type=int, help="端口")
 @click.option("--auth", is_flag=True, help="启用认证")
 @click.option("--token", default=None, help="自定义 Token")
 @click.option("--no-browser", is_flag=True, help="不自动打开浏览器")
 @click.option("--reload", is_flag=True, help="开发模式（自动重载）")
-def start(host: str, port: int | None, auth: bool, token: str | None, no_browser: bool, reload: bool) -> None:
+def start(
+    ctx: click.Context,
+    host: str,
+    port: int | None,
+    auth: bool,
+    token: str | None,
+    no_browser: bool,
+    reload: bool,
+) -> None:
     """启动 MedFusion Web UI"""
     # 初始化
     console.print("\n[bold blue]MedFusion Web UI[/bold blue]")
     console.print(f"版本: {settings.version}\n")
+    hint = _start_entrypoint_hint(ctx.command_path)
+    if hint:
+        console.print(hint)
 
     initialize_web_server()
 
@@ -186,6 +206,49 @@ def backup(output: str) -> None:
         console.print(f"备份完成: {output}.tar.gz")
     except Exception as e:
         console.print(f"备份失败: {e}")
+
+
+@data.command()
+@click.argument("archive", type=click.Path(exists=True, dir_okay=False))
+@click.option("--overwrite", is_flag=True, help="覆盖现有数据目录")
+@click.option("--dry-run", is_flag=True, help="仅检查备份结构，不写入文件")
+@click.confirmation_option(prompt="确定要从备份恢复数据吗？")
+def restore(archive: str, overwrite: bool, dry_run: bool) -> None:
+    """从备份恢复数据目录"""
+    import shutil
+
+    archive_path = Path(archive).resolve()
+    data_dir = settings.data_dir.resolve()
+    data_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    if data_dir.exists() and any(data_dir.iterdir()) and not overwrite:
+        raise click.ClickException("目标数据目录非空，请加 --overwrite 执行恢复。")
+
+    console.print(f"正在读取备份: {archive_path}")
+    with tempfile.TemporaryDirectory(prefix="medfusion-restore-") as temp_dir:
+        temp_root = Path(temp_dir)
+        try:
+            shutil.unpack_archive(str(archive_path), str(temp_root))
+        except Exception as exc:
+            raise click.ClickException(f"备份解压失败: {exc}") from exc
+
+        extracted_dirs = [item for item in temp_root.iterdir() if item.is_dir()]
+        extracted_files = [item for item in temp_root.iterdir() if item.is_file()]
+        if len(extracted_dirs) == 1 and not extracted_files:
+            extracted_root = extracted_dirs[0]
+        else:
+            # 兼容历史 backup 格式：根目录直接是数据内容
+            extracted_root = temp_root
+
+        if dry_run:
+            file_count = sum(1 for entry in extracted_root.rglob("*") if entry.is_file())
+            console.print(f"dry-run: 备份根目录 {extracted_root.name}，文件数 {file_count}")
+            return
+
+        if data_dir.exists():
+            shutil.rmtree(data_dir)
+        shutil.copytree(extracted_root, data_dir)
+        console.print(f"恢复完成: {data_dir}")
 
 
 @data.command()

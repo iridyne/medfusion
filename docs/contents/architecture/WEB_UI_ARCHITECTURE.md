@@ -397,10 +397,10 @@ web/stop-webui.sh                # 旧的停止脚本
 
 **待完成：**
 - [ ] 清理旧的 `web/backend/` 目录
-- [ ] 继续收敛和精简 Web 启动命令面（默认保持 `medfusion start`）
+- [x] 继续收敛和精简 Web 启动命令面（默认保持 `medfusion start`，`medfusion web start` 仅兼容）
 - [x] 添加版本检查（`medfusion version-check`）
 - [ ] 优化首次启动体验
-- [ ] 添加数据管理命令
+- [x] 添加数据管理命令（`medfusion data info/backup/restore/clean`）
 
 #### 6.1.1 模型数据库与高级模式 contract 路线（当前主线）
 
