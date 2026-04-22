@@ -43,6 +43,32 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 `medfusion start` 会把 Web UI 作为默认入口收口起来，更适合新用户和回归验证场景。
 
+你也可以先做预检，再启动服务：
+
+```bash
+# 只做资源与端口预检，不启动服务
+uv run medfusion start --check-only
+
+# 本地版本一致性检查（CLI / 本地 Web 资源）
+uv run medfusion version-check --skip-server --json
+
+# 运行中服务版本检查（默认检查 http://127.0.0.1:8000）
+uv run medfusion version-check
+```
+
+如果你在本机维护数据目录，当前也支持备份/恢复：
+
+```bash
+# 备份数据目录
+uv run medfusion data backup medfusion-data-backup
+
+# 预演恢复，不落盘
+uv run medfusion data restore medfusion-data-backup.tar.gz --dry-run
+
+# 覆盖恢复
+uv run medfusion data restore medfusion-data-backup.tar.gz --overwrite
+```
+
 当前默认第一页不再是假设你已经熟悉所有页面的工作台首页，而是 `Getting Started` 引导页。
 它的职责是：
 
