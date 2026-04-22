@@ -57,6 +57,7 @@ uv run medfusion start --host 0.0.0.0 --port 8080 --reload
 
 1. 先进入 `Run Wizard`，从问题定义出发拿到推荐骨架
    - 当前默认会先落到 ComfyUI 适配配置语义（仍在 MedFusion 主线内）
+   - 这里会直接显示模型数据库 contract 的 `recommended preset / compile boundary / compile notes / patch target hints`
 2. 继续到训练监控页启动一次带默认参数的推荐训练
 3. 训练完成后执行 `medfusion build-results`，再到模型库查看 artifact
 4. 如需理解高级边界，再进入 `/config/advanced` 查看组件注册表和连接约束

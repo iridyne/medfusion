@@ -438,6 +438,11 @@ export default function RunWizard() {
     selectedModelTemplate?.compute_profile
       ? `${selectedModelTemplate.compute_profile.gpu_vram_hint} · ${selectedModelTemplate.compute_profile.notes}`
       : "image + tabular / classification / quickstart";
+  const selectedTemplateContract = selectedModelTemplate?.advanced_builder_contract || null;
+  const selectedTemplateRecommendedPreset = selectedTemplateContract?.recommended_preset || null;
+  const selectedTemplateCompileBoundary = selectedTemplateContract?.compile_boundary || null;
+  const selectedTemplateCompileNotes = selectedTemplateContract?.compile_notes || [];
+  const selectedTemplatePatchHints = selectedTemplateContract?.patch_target_hints || [];
   const trainingPrefillQuery = useMemo(() => {
     return buildTrainingPrefillQuery({
       experimentName: spec.experimentName,
@@ -686,6 +691,33 @@ export default function RunWizard() {
           </Text>
           <Text>{selectedTemplateDescription}</Text>
           <Text type="secondary">算力建议：{selectedTemplateCompute}</Text>
+          {selectedTemplateRecommendedPreset ? (
+            <Space wrap size={[8, 8]}>
+              <Tag color="blue">recommended preset: {selectedTemplateRecommendedPreset}</Tag>
+              {selectedTemplateCompileBoundary ? (
+                <Tag color="geekblue">compile boundary: {selectedTemplateCompileBoundary}</Tag>
+              ) : null}
+            </Space>
+          ) : null}
+          {selectedTemplateCompileNotes.length ? (
+            <Space direction="vertical" size={2} style={{ width: "100%" }}>
+              {selectedTemplateCompileNotes.map((note) => (
+                <Text key={note} type="secondary">
+                  {note}
+                </Text>
+              ))}
+            </Space>
+          ) : null}
+          {selectedTemplatePatchHints.length ? (
+            <Space direction="vertical" size={2} style={{ width: "100%" }}>
+              <Text type="secondary">模板 patch target hints：</Text>
+              {selectedTemplatePatchHints.map((hint) => (
+                <Text key={`${hint.path}-${hint.mode}`} type="secondary">
+                  {hint.path} ({hint.mode}) - {hint.description}
+                </Text>
+              ))}
+            </Space>
+          ) : null}
           {officialModelTemplates.length ? (
             <Select
               value={selectedModelTemplateId}

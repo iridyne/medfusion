@@ -597,62 +597,6 @@ def _apply_component_to_spec(
     issues: list[dict[str, Any]],
 ) -> None:
     used_patch_contract = _apply_patch_contract_to_spec(spec, component_id)
-    prefill = _component_prefill_map().get(component_id)
-    if prefill and not used_patch_contract:
-        if "csvPath" in prefill:
-            spec["data"]["csvPath"] = prefill["csvPath"]
-        if "imageDir" in prefill:
-            spec["data"]["imageDir"] = prefill["imageDir"]
-        if "imagePathColumn" in prefill:
-            spec["data"]["imagePathColumn"] = prefill["imagePathColumn"]
-        if "targetColumn" in prefill:
-            spec["data"]["targetColumn"] = prefill["targetColumn"]
-        if "patientIdColumn" in prefill:
-            spec["data"]["patientIdColumn"] = prefill["patientIdColumn"]
-        if "numericalFeatures" in prefill:
-            spec["data"]["numericalFeatures"] = list(prefill["numericalFeatures"])
-        if "categoricalFeatures" in prefill:
-            spec["data"]["categoricalFeatures"] = list(prefill["categoricalFeatures"])
-        if "backbone" in prefill:
-            spec["model"]["vision"]["backbone"] = prefill["backbone"]
-        if "featureDim" in prefill:
-            spec["model"]["vision"]["featureDim"] = prefill["featureDim"]
-        if "attentionType" in prefill:
-            spec["model"]["vision"]["attentionType"] = prefill["attentionType"]
-        if "pretrained" in prefill:
-            spec["model"]["vision"]["pretrained"] = prefill["pretrained"]
-        if "freezeBackbone" in prefill:
-            spec["model"]["vision"]["freezeBackbone"] = prefill["freezeBackbone"]
-        if "tabularHiddenDims" in prefill:
-            spec["model"]["tabular"]["hiddenDims"] = list(prefill["tabularHiddenDims"])
-        if "tabularOutputDim" in prefill:
-            spec["model"]["tabular"]["outputDim"] = prefill["tabularOutputDim"]
-        if "tabularDropout" in prefill:
-            spec["model"]["tabular"]["dropout"] = prefill["tabularDropout"]
-        if "fusionType" in prefill:
-            spec["model"]["fusion"]["fusionType"] = prefill["fusionType"]
-        if "fusionHiddenDim" in prefill:
-            spec["model"]["fusion"]["hiddenDim"] = prefill["fusionHiddenDim"]
-        if "fusionDropout" in prefill:
-            spec["model"]["fusion"]["dropout"] = prefill["fusionDropout"]
-        if "fusionNumHeads" in prefill:
-            spec["model"]["fusion"]["numHeads"] = prefill["fusionNumHeads"]
-        if "numClasses" in prefill:
-            spec["model"]["numClasses"] = prefill["numClasses"]
-        if "useAuxiliaryHeads" in prefill:
-            spec["model"]["useAuxiliaryHeads"] = prefill["useAuxiliaryHeads"]
-        if "useAttentionSupervision" in prefill:
-            spec["training"]["useAttentionSupervision"] = prefill["useAttentionSupervision"]
-        if "useProgressiveTraining" in prefill:
-            spec["training"]["useProgressiveTraining"] = prefill["useProgressiveTraining"]
-        if "numEpochs" in prefill:
-            spec["training"]["numEpochs"] = prefill["numEpochs"]
-        if "stage1Epochs" in prefill:
-            spec["training"]["stage1Epochs"] = prefill["stage1Epochs"]
-        if "stage2Epochs" in prefill:
-            spec["training"]["stage2Epochs"] = prefill["stage2Epochs"]
-        if "stage3Epochs" in prefill:
-            spec["training"]["stage3Epochs"] = prefill["stage3Epochs"]
     for warning in _component_contract_map().get(component_id, {}).get(
         "warning_metadata",
         [],
@@ -666,7 +610,7 @@ def _apply_component_to_spec(
                 suggestion=warning.get("suggestion"),
             )
         )
-    if used_patch_contract or prefill:
+    if used_patch_contract:
         return
 
     issues.append(
@@ -787,16 +731,6 @@ def _projected_blueprints() -> tuple[AdvancedBuilderBlueprint, ...]:
         )
     return tuple(projected)
 
-
-def _component_prefill_map() -> dict[str, dict[str, Any]]:
-    catalog = export_model_catalog()
-    mapping: dict[str, dict[str, Any]] = {}
-    for unit in catalog["units"]:
-        advanced_component_id = unit.get("advanced_builder_component_id")
-        wizard_prefill = unit.get("wizard_prefill") or {}
-        if advanced_component_id and wizard_prefill:
-            mapping[str(advanced_component_id)] = dict(wizard_prefill)
-    return mapping
 
 def export_catalog() -> dict[str, Any]:
     components = _projected_components()
@@ -1093,6 +1027,17 @@ def compile_graph_to_runspec(
         component_id = chosen_components.get(family)
         if component_id:
             _apply_component_to_spec(spec, component_id, issues)
+
+    if any(issue["level"] == "error" for issue in issues):
+        return {
+            "preset": preset,
+            "run_spec": None,
+            "experiment_config": None,
+            "contract_validation": None,
+            "mainline_contract": None,
+            "issues": issues,
+            "chosen_components": chosen_components,
+        }
 
     contract_validation = _validate_compiled_run_spec(spec)
 

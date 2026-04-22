@@ -496,7 +496,7 @@ web/stop-webui.sh                # 旧的停止脚本
 - [x] 让 `/config/model`、`/config/advanced`、结果页来源说明共享同一套 rule metadata
 - [x] 把 patch target hints 收入模型数据库 contract
 - [x] 让 patch target hints 贯通到模型数据库页、高级模式画布和结果页
-- [ ] 把 contract 说明继续贯通到更多使用面与对外文档
+- [x] 把 contract 说明继续贯通到更多使用面与对外文档（已覆盖 Run Wizard + web-ui 文档）
 
 **Phase C：编译器变薄，但不空心化**  
 状态：已启动第一轮清理

@@ -364,10 +364,10 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "default_mainline",
         "compile_notes": [
             "当前最稳的正式版训练路径。",
+            "只会关闭 progressive training，不会覆盖上游组件已经开启的 attention supervision。",
         ],
         "patch_contract": [
             {"op": "set", "path": "training.useProgressiveTraining", "value": False},
-            {"op": "set", "path": "training.useAttentionSupervision", "value": False},
         ],
         "patch_target_hints": [
             {

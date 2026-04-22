@@ -139,6 +139,64 @@ async def test_advanced_builder_compile_infers_preset_from_catalog_contract(
     assert payload["run_spec"]["model"]["fusion"]["fusionType"] == "gated"
 
 
+async def test_advanced_builder_compile_keeps_attention_supervision_from_upstream_component(
+    api_client,
+) -> None:
+    graph = _quickstart_graph()
+    graph["nodes"][1]["data"]["componentId"] = "attention_backbone_bundle"
+    graph["nodes"][3]["data"]["componentId"] = "attention_fusion"
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=graph,
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["preset"] == "showcase"
+    assert payload["run_spec"]["training"]["useAttentionSupervision"] is True
+    assert any(issue.get("code") == "ABG-W001" for issue in payload["issues"])
+    assert any(issue.get("code") == "ABG-W002" for issue in payload["issues"])
+
+
+async def test_advanced_builder_compile_fails_when_patch_contract_is_missing(
+    monkeypatch,
+    api_client,
+) -> None:
+    from med_core.web.application import advanced_builder as advanced_builder_app
+
+    original_component_contract_map = advanced_builder_app._component_contract_map
+
+    def _missing_resnet_patch_contract():
+        payload = original_component_contract_map()
+        payload["resnet18_backbone"] = {
+            **payload["resnet18_backbone"],
+            "patch_contract": [],
+        }
+        return payload
+
+    monkeypatch.setattr(
+        advanced_builder_app,
+        "_component_contract_map",
+        _missing_resnet_patch_contract,
+    )
+
+    response = await api_client.post(
+        "/api/advanced-builder/compile",
+        json=_quickstart_graph(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["run_spec"] is None
+    assert payload["experiment_config"] is None
+    assert payload["contract_validation"] is None
+    unsupported_issue = next(
+        issue for issue in payload["issues"] if issue.get("code") == "ABG-E010"
+    )
+    assert unsupported_issue["context"]["component_id"] == "resnet18_backbone"
+
+
 async def test_advanced_builder_compile_rejects_missing_required_links(api_client) -> None:
     graph = _quickstart_graph()
     graph["edges"] = graph["edges"][:-1]

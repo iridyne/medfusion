@@ -188,6 +188,17 @@ async def test_web_basic_routes(api_client) -> None:
         attention_component["advanced_builder_contract"]["warning_metadata"][0]["code"]
         == "ABG-W001"
     )
+    stable_advanced_components = [
+        item
+        for item in model_catalog_payload["components"]
+        if item.get("advanced_builder_component_id")
+        and item.get("status") in {"compile_ready", "conditional"}
+    ]
+    assert stable_advanced_components
+    for component in stable_advanced_components:
+        patch_contract = component["advanced_builder_contract"].get("patch_contract")
+        assert isinstance(patch_contract, list)
+        assert patch_contract, f"missing patch_contract for {component['id']}"
     assert any(
         item["id"] == "resnet18_encoder_bundle"
         for item in model_catalog_payload["components"]
