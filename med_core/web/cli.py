@@ -58,7 +58,7 @@ def _mark_first_run_complete() -> None:
     marker.write_text("ok\n", encoding="utf-8")
 
 
-def initialize_web_server() -> bool:
+def initialize_web_server(*, record_first_run: bool = True) -> bool:
     """初始化 Web 服务器"""
     console.print("初始化数据目录...")
     settings.initialize_directories()
@@ -76,7 +76,7 @@ def initialize_web_server() -> bool:
     else:
         source_label = "内置资源" if location.source == "bundled" else "下载资源"
         console.print(f"前端资源就绪（{source_label}）")
-    if first_run:
+    if first_run and record_first_run:
         console.print("首次启动引导: 推荐从 /start 进入，再按 /config -> /training -> /models 主线体验。")
         _mark_first_run_complete()
     return first_run
@@ -102,6 +102,7 @@ def web() -> None:
 @click.option("--token", default=None, help="自定义 Token")
 @click.option("--no-browser", is_flag=True, help="不自动打开浏览器")
 @click.option("--reload", is_flag=True, help="开发模式（自动重载）")
+@click.option("--check-only", is_flag=True, help="仅做资源与端口预检，不启动服务")
 def start(
     ctx: click.Context,
     host: str,
@@ -110,6 +111,7 @@ def start(
     token: str | None,
     no_browser: bool,
     reload: bool,
+    check_only: bool,
 ) -> None:
     """启动 MedFusion Web UI"""
     # 初始化
@@ -119,13 +121,18 @@ def start(
     if hint:
         console.print(hint)
 
-    first_run = initialize_web_server()
+    first_run = initialize_web_server(record_first_run=not check_only)
 
     # 查找可用端口
     if port is None:
         port = find_free_port()
         if port != 8000:
             console.print(f"端口 8000 已被占用，使用端口 {port}")
+
+    if check_only:
+        console.print("预检完成: 资源与端口检查通过。")
+        console.print(f"可用访问地址: [link]http://{host}:{port}[/link]")
+        return
 
     # 认证配置
     if auth:

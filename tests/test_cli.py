@@ -251,6 +251,30 @@ def test_web_first_run_marker_helpers(tmp_path, monkeypatch) -> None:
     assert web_cli._is_first_run() is False
 
 
+def test_web_start_check_only_does_not_launch_uvicorn(monkeypatch) -> None:
+    from med_core.web import cli as web_cli
+
+    monkeypatch.setattr(
+        web_cli,
+        "initialize_web_server",
+        lambda record_first_run=True: False,
+    )
+    monkeypatch.setattr(web_cli, "find_free_port", lambda start_port=8000, max_attempts=100: 8123)
+
+    def _unexpected_run(*args, **kwargs):
+        raise AssertionError("uvicorn.run should not be called in --check-only mode")
+
+    monkeypatch.setattr(web_cli.uvicorn, "run", _unexpected_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        web_cli.start.main(
+            args=["--check-only", "--no-browser"],
+            prog_name="medfusion start",
+            standalone_mode=True,
+        )
+    assert exc_info.value.code == 0
+
+
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):
     from med_core.cli.uninstall import uninstall
 
