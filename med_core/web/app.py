@@ -7,13 +7,24 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request, status
+from fastapi import HTTPException as FastAPIHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from .api import advanced_builder, comfyui, datasets, evaluation, models, system, training
+from .api import (
+    advanced_builder,
+    auth,
+    comfyui,
+    datasets,
+    evaluation,
+    models,
+    system,
+    training,
+)
+from .auth import enforce_request_auth
 from .config import settings
 from .database import close_db, init_db
 from .routers import experiments, workflow_router
@@ -62,6 +73,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 初始化数据库
     init_db()
     logger.info("数据库初始化完成")
+    await training.startup_training_queue_dispatcher()
+    logger.info("训练队列调度器已启动")
 
     logger.info(f"MedFusion Web UI v{settings.version} 启动成功")
     logger.info(f"访问地址: http://{settings.host}:{settings.port}")
@@ -70,6 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 关闭时
     logger.info("正在关闭 MedFusion Web UI...")
+    await training.shutdown_training_queue_dispatcher()
     close_db()
     logger.info("MedFusion Web UI 已关闭")
 
@@ -90,6 +104,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next: Any) -> Response:
+    """Enforce auth/rbac for API routes when auth is enabled."""
+    try:
+        enforce_request_auth(request)
+    except FastAPIHTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    return await call_next(request)
 
 
 # 版本检查中间件
@@ -134,6 +159,7 @@ async def health_check() -> dict[str, Any]:
 
 
 # API 路由
+app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
 app.include_router(system.router, prefix="/api/system", tags=["系统"])
 app.include_router(training.router, prefix="/api/training", tags=["训练"])
 app.include_router(evaluation.router, prefix="/api/evaluation", tags=["评估"])

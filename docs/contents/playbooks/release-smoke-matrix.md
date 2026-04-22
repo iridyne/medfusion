@@ -69,6 +69,9 @@
 # 本机浏览器模式 + YAML 主链
 uv run python scripts/release_smoke.py --mode local
 
+# Docker 配置干跑检查（不依赖本机 Docker daemon）
+uv run python scripts/release_smoke.py --mode docker-dry-run
+
 # Docker 私有部署模式
 uv run python scripts/release_smoke.py --mode docker
 ```
@@ -151,10 +154,14 @@ bash test/smoke.sh
 
 ```bash
 uv run python scripts/release_smoke.py --mode local
+uv run python scripts/release_smoke.py --mode docker-dry-run
 uv run python scripts/release_smoke.py --mode docker
 ```
 
-它会把本机 Web 启动检查和主链 smoke 串起来，并补上 Docker 形态的最小可运行检查。
+其中：
+
+- `docker-dry-run`：只做 Dockerfile/Compose 结构与关键配置校验，不启动容器
+- `docker`：需要本机 Docker，可真实构建并启动容器做端点检查
 
 ### Shell smoke
 

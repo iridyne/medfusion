@@ -16,34 +16,55 @@ from sqlalchemy.orm import Session
 from ..application import TrainingJobApplicationService, TrainingJobRequestError
 from ..application.training_runtime import (
     TrainingRuntimeContext,
+)
+from ..application.training_runtime import (
     build_train_command as _build_train_command_impl,
+)
+from ..application.training_runtime import (
     extract_job_metadata as _extract_job_metadata_impl,
+)
+from ..application.training_runtime import (
     extract_result_handoff as _extract_result_handoff_impl,
+)
+from ..application.training_runtime import (
     get_job_or_404 as _get_job_or_404_impl,
+)
+from ..application.training_runtime import (
     history_path_for_job as _history_path_for_job_impl,
+)
+from ..application.training_runtime import (
     read_history_entries as _read_history_entries_impl,
+)
+from ..application.training_runtime import (
     run_real_training_job as _run_real_training_job_impl,
+)
+from ..application.training_runtime import (
     sync_job_from_history as _sync_job_from_history_impl,
 )
 from ..config import settings
 from ..database import SessionLocal, get_db_session
 from ..model_registry import import_model_run
 from ..models import TrainingJob
+from ..queue_dispatcher import (
+    LocalTrainingQueueDispatcher,
+    RedisTrainingQueueDispatcher,
+)
 from ..workers import local_training_worker_registry
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 _training_tasks: dict[str, asyncio.Task[None]] = {}
+_queue_dispatcher: LocalTrainingQueueDispatcher | RedisTrainingQueueDispatcher | None = None
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _TRAINING_PAUSE_SIGNAL = getattr(signal, "SIGSTOP", 19)
 _TRAINING_RESUME_SIGNAL = getattr(signal, "SIGCONT", 18)
 _TRAINING_TERMINATE_SIGNAL = getattr(signal, "SIGTERM", 15)
 if not hasattr(signal, "SIGSTOP"):
-    setattr(signal, "SIGSTOP", _TRAINING_PAUSE_SIGNAL)
+    signal.SIGSTOP = _TRAINING_PAUSE_SIGNAL  # type: ignore[attr-defined]
 if not hasattr(signal, "SIGCONT"):
-    setattr(signal, "SIGCONT", _TRAINING_RESUME_SIGNAL)
+    signal.SIGCONT = _TRAINING_RESUME_SIGNAL  # type: ignore[attr-defined]
 
 
 class TrainingConfig(BaseModel):
@@ -116,7 +137,54 @@ def _training_runtime_context() -> TrainingRuntimeContext:
 
 
 def _schedule_training_task(job_id: str) -> None:
+    _training_queue_dispatcher().enqueue(job_id)
+
+
+def _schedule_local_training_task(job_id: str) -> None:
     _training_tasks[job_id] = asyncio.create_task(_run_real_training_job(job_id))
+
+
+def _training_queue_dispatcher() -> LocalTrainingQueueDispatcher | RedisTrainingQueueDispatcher:
+    global _queue_dispatcher
+    if _queue_dispatcher is not None:
+        return _queue_dispatcher
+
+    backend = str(settings.training_queue_backend or "local").strip().lower()
+    if backend == "redis":
+        redis_url = settings.redis_url or "redis://127.0.0.1:6379/0"
+        try:
+            _queue_dispatcher = RedisTrainingQueueDispatcher(
+                redis_url=redis_url,
+                queue_name=settings.redis_queue_name,
+                on_job=_schedule_local_training_task,
+            )
+            logger.info(
+                "Training queue backend: redis (%s, queue=%s)",
+                redis_url,
+                settings.redis_queue_name,
+            )
+            return _queue_dispatcher
+        except Exception as exc:
+            logger.warning(
+                "Redis queue backend unavailable, fallback to local dispatcher: %s",
+                exc,
+            )
+
+    _queue_dispatcher = LocalTrainingQueueDispatcher(on_job=_schedule_local_training_task)
+    logger.info("Training queue backend: local")
+    return _queue_dispatcher
+
+
+async def startup_training_queue_dispatcher() -> None:
+    await _training_queue_dispatcher().start()
+
+
+async def shutdown_training_queue_dispatcher() -> None:
+    global _queue_dispatcher
+    if _queue_dispatcher is None:
+        return
+    await _queue_dispatcher.stop()
+    _queue_dispatcher = None
 
 
 def _training_job_service() -> TrainingJobApplicationService:

@@ -59,15 +59,88 @@ uv run medfusion version-check
 如果你在本机维护数据目录，当前也支持备份/恢复：
 
 ```bash
-# 备份数据目录
+# 备份数据目录（默认包含数据库元数据快照）
 uv run medfusion data backup medfusion-data-backup
+
+# 只备份文件目录（不导出数据库快照）
+uv run medfusion data backup medfusion-data-backup --without-db-snapshot
 
 # 预演恢复，不落盘
 uv run medfusion data restore medfusion-data-backup.tar.gz --dry-run
 
-# 覆盖恢复
+# 覆盖恢复（默认恢复文件 + 数据库元数据快照）
 uv run medfusion data restore medfusion-data-backup.tar.gz --overwrite
+
+# 仅恢复文件，跳过数据库快照
+uv run medfusion data restore medfusion-data-backup.tar.gz --overwrite --skip-db
 ```
+
+如果你在私有部署模式启用 PostgreSQL，建议在启动前先执行一次 schema 升级：
+
+```bash
+# 读取 MEDFUSION_DATABASE_URL 并升级到 head
+uv run medfusion db upgrade
+
+# 查看当前 revision
+uv run medfusion db current
+```
+
+数据库 URL 支持以下写法（会统一归一化到 `postgresql+psycopg://`）：
+
+- `MEDFUSION_DATABASE_URL=postgres://user:pass@host:5432/medfusion`
+- `MEDFUSION_DATABASE_URL=postgresql://user:pass@host:5432/medfusion`
+
+### 认证与权限（v0.4 主线）
+
+默认本机模式仍然是不开认证。需要对 API 上锁时：
+
+```bash
+# 启用认证并自动生成静态 Bearer token（适合单机/快速联调）
+uv run medfusion start --auth
+
+# 或显式指定静态 token
+uv run medfusion start --auth --token your-static-token
+```
+
+如果你希望使用 JWT 登录发 token：
+
+```bash
+set MEDFUSION_AUTH_ENABLED=true
+set MEDFUSION_AUTH_USERNAME=admin
+set MEDFUSION_AUTH_PASSWORD=change-me
+uv run medfusion start --no-browser
+```
+
+说明：JWT 发 token 依赖 `PyJWT`，建议直接安装 `medfusion[web]`。
+
+然后调用：
+
+```bash
+POST /api/auth/token
+{
+  "username": "admin",
+  "password": "change-me"
+}
+```
+
+RBAC 角色约束：
+
+- `viewer`: 只读 API
+- `operator`: 读写 API
+- `admin`: 全量读写（含静态 token 默认角色）
+
+### 训练队列后端（local / redis）
+
+默认队列后端是 `local`（进程内调度）。如果要切换为 Redis 队列：
+
+```bash
+set MEDFUSION_TRAINING_QUEUE_BACKEND=redis
+set MEDFUSION_REDIS_URL=redis://127.0.0.1:6379/0
+set MEDFUSION_REDIS_QUEUE_NAME=medfusion:training:jobs
+uv run medfusion start --no-browser
+```
+
+如果 Redis 不可用，服务会自动回退到本地调度并记录 warning，不会阻塞训练入口。
 
 当前默认第一页不再是假设你已经熟悉所有页面的工作台首页，而是 `Getting Started` 引导页。
 它的职责是：
@@ -92,7 +165,11 @@ uv run medfusion data restore medfusion-data-backup.tar.gz --overwrite
 如果你是发布前自检，建议直接跑统一脚本：
 
 ```bash
+# 本机主链 smoke
 uv run python scripts/release_smoke.py --mode local
+
+# Docker 配置 dry-run（不启动容器）
+uv run python scripts/release_smoke.py --mode docker-dry-run
 ```
 
 ### Web 入口与 YAML 主链的关系
@@ -513,5 +590,5 @@ npm install
 
 ---
 
-**最后更新**: 2026-02-20  
+**最后更新**: 2026-04-22  
 **版本**: 0.3.0

@@ -596,13 +596,13 @@ def info():
 - 提供 Docker 部署方案
 
 **计划功能：**
-- [ ] PostgreSQL 支持
-- [ ] Redis 任务队列
-- [ ] 用户认证系统（JWT）
-- [ ] 权限管理（RBAC）
-- [ ] Docker 镜像
-- [ ] docker-compose 配置
-- [ ] 数据备份和恢复
+- [x] PostgreSQL 支持（URL 归一化 + Alembic 迁移主线）
+- [x] Redis 任务队列（`local` 默认 + `redis` 可切换调度）
+- [x] 用户认证系统（JWT / 静态 token 双模式）
+- [x] 权限管理（RBAC：viewer/operator/admin）
+- [x] Docker 镜像（`docker/Dockerfile`）
+- [x] docker-compose 配置（`docker/docker-compose.yml`，含 PostgreSQL/Redis）
+- [x] 数据备份和恢复（`medfusion data backup/restore` + 数据库元数据快照）
 
 **技术实现：**
 ```yaml
@@ -610,29 +610,28 @@ def info():
 version: '3.8'
 
 services:
-  medfusion:
-    image: medfusion:0.4.0
+  medfusion-web:
+    image: medfusion/medfusion:0.4.0
     ports:
       - "8000:8000"
-    volumes:
-      - ./data:/data
-      - ./models:/models
     environment:
-      - DATABASE_URL=postgresql://user:pass@postgres:5432/medfusion
-      - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=${SECRET_KEY}
+      - MEDFUSION_DATABASE_URL=postgresql://medfusion:***@postgres:5432/medfusion
+      - MEDFUSION_REDIS_URL=redis://redis:6379/0
+      - MEDFUSION_TRAINING_QUEUE_BACKEND=redis
+      - MEDFUSION_AUTH_ENABLED=true
+      - MEDFUSION_AUTH_PASSWORD=***
     depends_on:
       - postgres
       - redis
 
   postgres:
-    image: postgres:15
+    image: postgres:16-alpine
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=medfusion
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
+      - POSTGRES_USER=medfusion
+      - POSTGRES_PASSWORD=***
 
   redis:
     image: redis:7-alpine
@@ -1612,10 +1611,12 @@ debugger;
 - [x] 文档完善（启动与部署口径、模型数据库主线、Web 目录治理同步）
 
 **v0.4.0（下一步）：**
-- [ ] Docker 支持
-- [ ] PostgreSQL 支持
-- [ ] 用户认证
-- [ ] 权限管理
+- [x] Docker 支持（镜像 + compose，已支持 dry-run smoke 校验）
+- [x] PostgreSQL 支持（`MEDFUSION_DATABASE_URL` + Alembic schema upgrade）
+- [x] Redis 任务队列（`MEDFUSION_TRAINING_QUEUE_BACKEND=redis`）
+- [x] 用户认证（`/api/auth/token` + `MEDFUSION_AUTH_*`）
+- [x] 权限管理（读写级 RBAC）
+- [x] 数据备份恢复（默认含数据库元数据快照，可 `--skip-db` 恢复文件）
 
 **v1.0.0（长期）：**
 - [ ] Kubernetes 部署

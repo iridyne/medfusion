@@ -9,8 +9,9 @@ import torch
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from ..config import settings
 from ..application.ui_preferences import UIPreferencesStore
+from ..auth import is_jwt_runtime_available
+from ..config import settings
 
 router = APIRouter()
 
@@ -108,6 +109,39 @@ async def get_feature_status() -> dict[str, Any]:
             "message": (
                 "ComfyUI bridge provides connectivity check and handoff guidance. "
                 "It does not replace MedFusion runtime as the execution source of truth."
+            ),
+        },
+        "auth": {
+            "enabled": settings.auth_enabled,
+            "jwt_runtime_available": is_jwt_runtime_available(),
+            "mode": (
+                "disabled"
+                if not settings.auth_enabled
+                else (
+                    "static_token"
+                    if settings.auth_token
+                    else "jwt_password"
+                    if settings.auth_password is not None and is_jwt_runtime_available()
+                    else "jwt_runtime_unavailable"
+                    if settings.auth_password is not None
+                    else "jwt_not_configured"
+                )
+            ),
+            "token_endpoint": "/api/auth/token",
+            "rbac_roles": ["viewer", "operator", "admin"],
+            "read_permission": "viewer+",
+            "write_permission": "operator+",
+        },
+        "training_queue": {
+            "backend": settings.training_queue_backend,
+            "redis_url_configured": settings.redis_url is not None,
+            "queue_name": settings.redis_queue_name,
+            "status": (
+                "local_default"
+                if str(settings.training_queue_backend).strip().lower() != "redis"
+                else "redis_configured"
+                if settings.redis_url is not None
+                else "redis_default_url"
             ),
         },
         "workflow": {

@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 import sys
+import tarfile
 import tempfile
 import tomllib
 from pathlib import Path
@@ -232,6 +233,37 @@ def test_web_data_commands_include_restore() -> None:
     assert "restore" in data.commands
 
 
+def test_web_db_commands_include_upgrade_and_current() -> None:
+    from med_core.web.cli import db
+
+    assert "upgrade" in db.commands
+    assert "current" in db.commands
+
+
+def test_main_dispatches_db_command(monkeypatch):
+    import med_core.cli as cli_module
+
+    captured = {}
+
+    def _fake_dispatch_web_command(command: str, args: list[str]) -> None:
+        captured["command"] = command
+        captured["args"] = list(args)
+
+    monkeypatch.setattr(cli_module, "_dispatch_web_command", _fake_dispatch_web_command)
+
+    original_argv = sys.argv[:]
+    try:
+        sys.argv = ["medfusion", "db", "upgrade", "--revision", "head"]
+        cli_module.main()
+    finally:
+        sys.argv = original_argv
+
+    assert captured == {
+        "command": "db",
+        "args": ["upgrade", "--revision", "head"],
+    }
+
+
 def test_start_entrypoint_hint_detects_legacy_web_start() -> None:
     from med_core.web.cli import _start_entrypoint_hint
 
@@ -275,8 +307,57 @@ def test_web_start_check_only_does_not_launch_uvicorn(monkeypatch) -> None:
     assert exc_info.value.code == 0
 
 
+def test_web_start_auth_generates_static_token_when_no_credentials(monkeypatch) -> None:
+    from med_core.web import cli as web_cli
+
+    snapshot = {
+        "auth_enabled": web_cli.settings.auth_enabled,
+        "auth_token": web_cli.settings.auth_token,
+        "auth_password": web_cli.settings.auth_password,
+    }
+
+    monkeypatch.setattr(
+        web_cli,
+        "initialize_web_server",
+        lambda record_first_run=True: False,
+    )
+    monkeypatch.setattr(
+        web_cli, "find_free_port", lambda start_port=8000, max_attempts=100: 8123
+    )
+
+    captured = {}
+
+    def _fake_run(*args, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(web_cli.uvicorn, "run", _fake_run)
+
+    web_cli.settings.auth_enabled = False
+    web_cli.settings.auth_token = None
+    web_cli.settings.auth_password = None
+
+    try:
+        with pytest.raises(SystemExit) as exc_info:
+            web_cli.start.main(
+                args=["--auth", "--no-browser"],
+                prog_name="medfusion start",
+                standalone_mode=True,
+            )
+        assert exc_info.value.code == 0
+        assert web_cli.settings.auth_enabled is True
+        assert isinstance(web_cli.settings.auth_token, str)
+        assert len(web_cli.settings.auth_token) >= 24
+        assert captured["host"] == "127.0.0.1"
+        assert captured["port"] == 8123
+    finally:
+        web_cli.settings.auth_enabled = snapshot["auth_enabled"]
+        web_cli.settings.auth_token = snapshot["auth_token"]
+        web_cli.settings.auth_password = snapshot["auth_password"]
+
+
 def test_data_restore_dry_run_does_not_write_data_dir(tmp_path, monkeypatch) -> None:
     from click.testing import CliRunner
+
     from med_core.web import cli as web_cli
 
     source_dir = tmp_path / "source-data"
@@ -305,6 +386,7 @@ def test_data_restore_dry_run_does_not_write_data_dir(tmp_path, monkeypatch) -> 
 
 def test_data_restore_overwrite_replaces_existing_data_dir(tmp_path, monkeypatch) -> None:
     from click.testing import CliRunner
+
     from med_core.web import cli as web_cli
 
     source_dir = tmp_path / "source-data"
@@ -332,6 +414,135 @@ def test_data_restore_overwrite_replaces_existing_data_dir(tmp_path, monkeypatch
     assert result.exit_code == 0, result.output
     assert (target_data_dir / "models" / "model.bin").exists()
     assert not (target_data_dir / "stale.txt").exists()
+
+
+def test_data_backup_without_db_snapshot_flag(tmp_path, monkeypatch) -> None:
+    from click.testing import CliRunner
+
+    from med_core.web import cli as web_cli
+
+    captured: dict[str, object] = {}
+
+    def _fake_create_backup_archive(output_path: Path, include_db_snapshot: bool = True):
+        captured["output_path"] = output_path
+        captured["include_db_snapshot"] = include_db_snapshot
+        return tmp_path / "backup.tar.gz"
+
+    monkeypatch.setattr(web_cli, "create_backup_archive", _fake_create_backup_archive)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        web_cli.data,
+        ["backup", str(tmp_path / "backup"), "--without-db-snapshot"],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["include_db_snapshot"] is False
+
+
+def _create_backup_with_db_snapshot(
+    tmp_path: Path,
+    *,
+    include_db_snapshot: bool = True,
+) -> Path:
+    payload = tmp_path / "payload"
+    (payload / "data" / "models").mkdir(parents=True)
+    (payload / "data" / "models" / "model.bin").write_text("ok", encoding="utf-8")
+
+    manifest = {
+        "schema_version": "1.0",
+        "data_root": "data",
+        "database": {
+            "snapshot_included": include_db_snapshot,
+            "snapshot_path": "db/snapshot.json" if include_db_snapshot else None,
+        },
+    }
+    (payload / "manifest.json").write_text(
+        json.dumps(manifest),
+        encoding="utf-8",
+    )
+    if include_db_snapshot:
+        (payload / "db").mkdir(parents=True)
+        (payload / "db" / "snapshot.json").write_text(
+            json.dumps({"tables": {}, "table_order": []}),
+            encoding="utf-8",
+        )
+
+    archive_path = tmp_path / "backup.tar.gz"
+    with tarfile.open(archive_path, "w:gz") as tar:
+        for entry in payload.iterdir():
+            tar.add(entry, arcname=entry.name)
+    return archive_path
+
+
+def test_data_restore_calls_db_snapshot_restore_when_present(tmp_path, monkeypatch) -> None:
+    from click.testing import CliRunner
+
+    from med_core.web import cli as web_cli
+    from med_core.web import database as web_database
+
+    archive_path = _create_backup_with_db_snapshot(tmp_path, include_db_snapshot=True)
+    target_data_dir = tmp_path / "target-data"
+    target_data_dir.mkdir(parents=True)
+    monkeypatch.setattr(web_cli.settings, "data_dir", target_data_dir)
+
+    called = {"upgrade": False, "restore_db": False}
+
+    def _fake_upgrade_schema(revision: str = "head") -> str:
+        called["upgrade"] = True
+        assert revision == "head"
+        return "migrated"
+
+    def _fake_restore_database_snapshot(snapshot, *, truncate_existing: bool = True):
+        called["restore_db"] = True
+        assert truncate_existing is True
+        assert snapshot == {"tables": {}, "table_order": []}
+        return {}
+
+    monkeypatch.setattr(web_database, "upgrade_schema", _fake_upgrade_schema)
+    monkeypatch.setattr(web_cli, "restore_database_snapshot", _fake_restore_database_snapshot)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        web_cli.data,
+        ["restore", str(archive_path), "--overwrite", "--yes"],
+    )
+    assert result.exit_code == 0, result.output
+    assert called == {"upgrade": True, "restore_db": True}
+    assert (target_data_dir / "models" / "model.bin").exists()
+
+
+def test_data_restore_skip_db_does_not_restore_snapshot(tmp_path, monkeypatch) -> None:
+    from click.testing import CliRunner
+
+    from med_core.web import cli as web_cli
+    from med_core.web import database as web_database
+
+    archive_path = _create_backup_with_db_snapshot(tmp_path, include_db_snapshot=True)
+    target_data_dir = tmp_path / "target-data"
+    target_data_dir.mkdir(parents=True)
+    monkeypatch.setattr(web_cli.settings, "data_dir", target_data_dir)
+
+    called = {"upgrade": False, "restore_db": False}
+
+    def _fake_upgrade_schema(revision: str = "head") -> str:
+        called["upgrade"] = True
+        return "migrated"
+
+    def _fake_restore_database_snapshot(snapshot, *, truncate_existing: bool = True):
+        called["restore_db"] = True
+        return {}
+
+    monkeypatch.setattr(web_database, "upgrade_schema", _fake_upgrade_schema)
+    monkeypatch.setattr(web_cli, "restore_database_snapshot", _fake_restore_database_snapshot)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        web_cli.data,
+        ["restore", str(archive_path), "--overwrite", "--skip-db", "--yes"],
+    )
+    assert result.exit_code == 0, result.output
+    assert called == {"upgrade": False, "restore_db": False}
+    assert (target_data_dir / "models" / "model.bin").exists()
 
 
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):

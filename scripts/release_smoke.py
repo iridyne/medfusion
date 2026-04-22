@@ -14,9 +14,12 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = "configs/public_datasets/breastmnist_quickstart.yaml"
@@ -320,13 +323,104 @@ def run_docker(*, port: int, image: str, timeout_seconds: int) -> None:
         )
 
 
+def _normalize_compose_environment(
+    raw_environment: object,
+) -> dict[str, str]:
+    if isinstance(raw_environment, Mapping):
+        return {str(k): str(v) for k, v in raw_environment.items()}
+
+    if isinstance(raw_environment, list):
+        normalized: dict[str, str] = {}
+        for item in raw_environment:
+            if not isinstance(item, str):
+                continue
+            if "=" in item:
+                key, value = item.split("=", 1)
+                normalized[key] = value
+            else:
+                normalized[item] = ""
+        return normalized
+
+    return {}
+
+
+def run_docker_dry_run() -> None:
+    """Validate Docker artifacts without requiring Docker daemon/runtime."""
+    _print_step("Docker dry-run: validate Dockerfile and compose contracts")
+
+    dockerfile_path = REPO_ROOT / "docker" / "Dockerfile"
+    compose_path = REPO_ROOT / "docker" / "docker-compose.yml"
+
+    if not dockerfile_path.exists():
+        raise RuntimeError(f"Missing Dockerfile: {dockerfile_path}")
+    if not compose_path.exists():
+        raise RuntimeError(f"Missing compose file: {compose_path}")
+
+    dockerfile_text = dockerfile_path.read_text(encoding="utf-8")
+    required_dockerfile_fragments = [
+        "FROM python:3.11-slim",
+        "uv pip install \".[web]\"",
+        "HEALTHCHECK",
+        "\"python\", \"-m\", \"med_core.cli\", \"start\"",
+    ]
+    for fragment in required_dockerfile_fragments:
+        if fragment not in dockerfile_text:
+            raise RuntimeError(f"Dockerfile missing required fragment: {fragment}")
+
+    compose_data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
+    if not isinstance(compose_data, dict):
+        raise RuntimeError("Compose file parse failed: top-level is not a mapping.")
+
+    services = compose_data.get("services")
+    if not isinstance(services, dict):
+        raise RuntimeError("Compose file parse failed: services section is missing.")
+
+    required_services = ("medfusion-web", "postgres", "redis")
+    for service_name in required_services:
+        if service_name not in services:
+            raise RuntimeError(f"Compose missing required service: {service_name}")
+
+    medfusion_web = services["medfusion-web"]
+    if not isinstance(medfusion_web, dict):
+        raise RuntimeError("Compose service medfusion-web is invalid.")
+
+    environment = _normalize_compose_environment(medfusion_web.get("environment"))
+    required_env_keys = (
+        "MEDFUSION_DATABASE_URL",
+        "MEDFUSION_REDIS_URL",
+        "MEDFUSION_TRAINING_QUEUE_BACKEND",
+    )
+    for key in required_env_keys:
+        if key not in environment:
+            raise RuntimeError(f"Compose medfusion-web missing env: {key}")
+
+    depends_on = medfusion_web.get("depends_on")
+    if not isinstance(depends_on, dict):
+        raise RuntimeError("Compose medfusion-web depends_on should be a mapping.")
+    for dependency in ("postgres", "redis"):
+        if dependency not in depends_on:
+            raise RuntimeError(f"Compose medfusion-web missing dependency: {dependency}")
+
+    for service_name in required_services:
+        service = services[service_name]
+        if not isinstance(service, dict):
+            raise RuntimeError(f"Compose service {service_name} is invalid.")
+        if "healthcheck" not in service:
+            raise RuntimeError(f"Compose service {service_name} missing healthcheck.")
+
+    print("Docker dry-run checks passed:")
+    print(f"- Dockerfile: {dockerfile_path}")
+    print(f"- Compose: {compose_path}")
+    print("- Required services/env/dependencies/healthchecks: OK")
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run MedFusion formal-release smoke paths (local and/or Docker)."
     )
     parser.add_argument(
         "--mode",
-        choices=["local", "docker", "all"],
+        choices=["local", "docker", "docker-dry-run", "all"],
         default="local",
         help="Smoke target to run.",
     )
@@ -386,6 +480,8 @@ def main(argv: list[str] | None = None) -> None:
             image=args.docker_image,
             timeout_seconds=args.web_timeout,
         )
+    if args.mode == "docker-dry-run":
+        run_docker_dry_run()
 
     _print_step("Smoke summary")
     print(f"Mode: {args.mode}")

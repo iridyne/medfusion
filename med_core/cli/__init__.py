@@ -61,6 +61,7 @@ def _print_help() -> None:
     print("  version-check  版本一致性检查（CLI / 本地 Web 资源 / 运行中服务）")
     print("  web         Web UI 管理命令")
     print("  data        Web UI 数据管理命令")
+    print("  db          Web 元数据数据库 schema 命令")
     print("")
     print("Global options:")
     print("  -h, --help     显示帮助")
@@ -103,13 +104,18 @@ def _print_help() -> None:
 
 def _dispatch_web_command(command: str, args: list[str]) -> None:
     try:
-        from med_core.web.cli import data, web
+        from med_core.web.cli import data, db, web
     except ImportError:
         print("❌ Web UI 依赖未安装")
         print("💡 请运行: pip install medfusion[web]")
         raise SystemExit(1) from None
 
-    target = web if command == "web" else data
+    if command == "web":
+        target = web
+    elif command == "data":
+        target = data
+    else:
+        target = db
     target.main(args=args, prog_name=f"medfusion {command}", standalone_mode=True)
 
 
@@ -196,7 +202,7 @@ def main() -> None:
         _run_legacy_command(version_check, args, "medfusion version-check")
         return
 
-    if command in {"web", "data"}:
+    if command in {"web", "data", "db"}:
         _dispatch_web_command(command, args)
         return
 

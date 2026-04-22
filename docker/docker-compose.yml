@@ -1,128 +1,84 @@
-# MedFusion Docker Compose 配置
-# 支持 Web UI 一体化部署（CPU/GPU）
-
 services:
-  # ============================================================================
-  # 主服务：MedFusion Web UI（GPU 版本）
-  # ============================================================================
   medfusion-web:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: medfusion/medfusion:latest
+    image: medfusion/medfusion:0.4.0
     container_name: medfusion-web
     ports:
       - "8000:8000"
-    volumes:
-      # 数据目录（只读）
-      - ../data:/app/data:ro
-      # 输出目录（读写）
-      - ../outputs:/app/outputs
-      # 日志目录（读写）
-      - ../logs:/app/logs
-      # 模型检查点目录（读写）
-      - ../checkpoints:/app/checkpoints
-      # 配置文件（只读）
-      - ../configs:/app/configs:ro
     environment:
-      # CUDA 配置
-      - CUDA_VISIBLE_DEVICES=0
-      # MedFusion 配置
-      - MEDFUSION_DATA_DIR=/app/data
-      - MEDFUSION_LOG_LEVEL=INFO
-      # Web UI 配置
-      - MEDFUSION_HOST=0.0.0.0
-      - MEDFUSION_PORT=8000
-    # 兼容 Docker Compose v2（非 swarm）GPU 配置
-    gpus: all
+      MEDFUSION_DATA_DIR: /app/data
+      MEDFUSION_LOG_LEVEL: ${MEDFUSION_LOG_LEVEL:-INFO}
+      MEDFUSION_DATABASE_URL: ${MEDFUSION_DATABASE_URL:-postgresql://medfusion:medfusion@postgres:5432/medfusion}
+      MEDFUSION_REDIS_URL: ${MEDFUSION_REDIS_URL:-redis://redis:6379/0}
+      MEDFUSION_TRAINING_QUEUE_BACKEND: ${MEDFUSION_TRAINING_QUEUE_BACKEND:-redis}
+      MEDFUSION_REDIS_QUEUE_NAME: ${MEDFUSION_REDIS_QUEUE_NAME:-medfusion:training:jobs}
+      MEDFUSION_AUTH_ENABLED: ${MEDFUSION_AUTH_ENABLED:-false}
+      MEDFUSION_AUTH_USERNAME: ${MEDFUSION_AUTH_USERNAME:-admin}
+      MEDFUSION_AUTH_PASSWORD: ${MEDFUSION_AUTH_PASSWORD:-}
+      MEDFUSION_AUTH_TOKEN: ${MEDFUSION_AUTH_TOKEN:-}
+      MEDFUSION_SECRET_KEY: ${MEDFUSION_SECRET_KEY:-change-this-in-production-please-use-32-plus-chars}
+    volumes:
+      - medfusion-data:/app/data
+      - medfusion-outputs:/app/outputs
+      - medfusion-checkpoints:/app/checkpoints
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 20s
 
-  # ============================================================================
-  # CPU 版本：MedFusion Web UI（无 GPU）
-  # 使用方式：docker-compose --profile cpu up
-  # ============================================================================
-  medfusion-web-cpu:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: medfusion/medfusion:latest
-    container_name: medfusion-web-cpu
-    ports:
-      - "8000:8000"
-    volumes:
-      - ../data:/app/data:ro
-      - ../outputs:/app/outputs
-      - ../logs:/app/logs
-      - ../checkpoints:/app/checkpoints
-      - ../configs:/app/configs:ro
+  postgres:
+    image: postgres:16-alpine
+    container_name: medfusion-postgres
     environment:
-      - MEDFUSION_DATA_DIR=/app/data
-      - MEDFUSION_LOG_LEVEL=INFO
-      - MEDFUSION_HOST=0.0.0.0
-      - MEDFUSION_PORT=8000
+      POSTGRES_DB: ${POSTGRES_DB:-medfusion}
+      POSTGRES_USER: ${POSTGRES_USER:-medfusion}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medfusion}
+    volumes:
+      - medfusion-postgres:/var/lib/postgresql/data
     restart: unless-stopped
-    profiles:
-      - cpu
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medfusion} -d ${POSTGRES_DB:-medfusion}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
       start_period: 10s
 
-  # ============================================================================
-  # 开发模式：交互式容器
-  # 使用方式：docker-compose --profile dev up -d medfusion-dev
-  #          docker exec -it medfusion-dev bash
-  # ============================================================================
-  medfusion-dev:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: medfusion/medfusion:latest
-    container_name: medfusion-dev
-    ports:
-      - "8000:8000"
+  redis:
+    image: redis:7-alpine
+    container_name: medfusion-redis
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      # 挂载整个项目目录（开发模式）
-      - ..:/app
-      # 排除虚拟环境
-      - /app/.venv
-      - /app/web/frontend/node_modules
-    environment:
-      - CUDA_VISIBLE_DEVICES=0
-      - MEDFUSION_LOG_LEVEL=DEBUG
-      - MEDFUSION_HOST=0.0.0.0
-      - MEDFUSION_PORT=8000
-    command: /bin/bash
-    stdin_open: true
-    tty: true
-    gpus: all
-    profiles:
-      - dev
+      - medfusion-redis:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
-# ============================================================================
-# 数据卷定义
-# ============================================================================
 volumes:
-  data:
+  medfusion-data:
     driver: local
-  outputs:
+  medfusion-outputs:
     driver: local
-  logs:
+  medfusion-checkpoints:
     driver: local
-  checkpoints:
+  medfusion-postgres:
+    driver: local
+  medfusion-redis:
     driver: local
 
-# ============================================================================
-# 网络配置
-# ============================================================================
 networks:
   default:
     name: medfusion-network

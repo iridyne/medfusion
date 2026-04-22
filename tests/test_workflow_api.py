@@ -49,6 +49,13 @@ async def test_system_features_report_workflow_as_preview(api_client) -> None:
     assert payload["advanced_builder"]["canvas_route"] == "/config/advanced/canvas"
     assert payload["advanced_builder"]["default_entry"] is False
     assert "fusion" in payload["advanced_builder"]["supported_families"]
+    assert payload["auth"]["enabled"] is False
+    assert payload["auth"]["mode"] == "disabled"
+    assert payload["auth"]["jwt_runtime_available"] in {True, False}
+    assert payload["auth"]["rbac_roles"] == ["viewer", "operator", "admin"]
+    assert payload["training_queue"]["backend"] == "local"
+    assert payload["training_queue"]["queue_name"] == "medfusion:training:jobs"
+    assert payload["training_queue"]["status"] == "local_default"
     assert payload["workflow"]["enabled"] is True
     assert payload["workflow"]["status"] == "preview"
     assert payload["workflow"]["ui_exposed"] is True
@@ -80,8 +87,8 @@ async def test_workflow_validate_reports_preview_scope_errors(api_client) -> Non
 async def test_workflow_execute_starts_real_training_job_preview(
     monkeypatch, api_client
 ) -> None:
-    from med_core.web.routers import workflow as workflow_router
     from med_core.web.api import training as training_api
+    from med_core.web.routers import workflow as workflow_router
 
     captured_payload: dict[str, object] = {}
 

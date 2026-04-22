@@ -9,6 +9,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from med_core.version import __version__
 
 
+def normalize_database_url(database_url: str) -> str:
+    """Normalize database URL so runtime and migration tooling use one dialect form."""
+    normalized = database_url.strip()
+    if normalized.startswith("postgres://"):
+        return f"postgresql+psycopg://{normalized.removeprefix('postgres://')}"
+    if normalized.startswith("postgresql://"):
+        return f"postgresql+psycopg://{normalized.removeprefix('postgresql://')}"
+    return normalized
+
+
 class Settings(BaseSettings):
     """Web 应用配置"""
 
@@ -34,11 +44,17 @@ class Settings(BaseSettings):
 
     # Redis 配置（可选）
     redis_url: str | None = None
+    training_queue_backend: str = "local"  # local / redis
+    redis_queue_name: str = "medfusion:training:jobs"
 
     # 认证配置
     auth_enabled: bool = False
     auth_token: str | None = None
-    secret_key: str = "change-this-in-production"
+    auth_username: str = "admin"
+    auth_password: str | None = None
+    auth_default_role: str = "admin"
+    auth_access_token_expire_minutes: int = 480
+    secret_key: str = "change-this-in-production-please-use-32-plus-chars"
 
     # 实验功能开关
     enable_experimental_workflow: bool = True
@@ -74,6 +90,7 @@ class Settings(BaseSettings):
         if self.database_url is None:
             db_path = self.data_dir / "medfusion.db"
             self.database_url = f"sqlite:///{db_path}"
+        self.database_url = normalize_database_url(self.database_url)
 
         # 设置默认日志文件
         if self.log_file is None:
