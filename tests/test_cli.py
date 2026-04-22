@@ -241,6 +241,16 @@ def test_start_entrypoint_hint_detects_legacy_web_start() -> None:
     assert "medfusion start" in hint
 
 
+def test_web_first_run_marker_helpers(tmp_path, monkeypatch) -> None:
+    from med_core.web import cli as web_cli
+
+    marker_path = tmp_path / ".web-first-run-complete"
+    monkeypatch.setattr(web_cli, "_first_run_marker_path", lambda: marker_path)
+    assert web_cli._is_first_run() is True
+    web_cli._mark_first_run_complete()
+    assert web_cli._is_first_run() is False
+
+
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):
     from med_core.cli.uninstall import uninstall
 

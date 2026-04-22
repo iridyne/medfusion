@@ -44,21 +44,42 @@ def check_web_ui_exists() -> bool:
     return get_web_ui_location() is not None
 
 
-def initialize_web_server() -> None:
+def _first_run_marker_path() -> Path:
+    return settings.data_dir / "settings" / ".web-first-run-complete"
+
+
+def _is_first_run() -> bool:
+    return not _first_run_marker_path().exists()
+
+
+def _mark_first_run_complete() -> None:
+    marker = _first_run_marker_path()
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("ok\n", encoding="utf-8")
+
+
+def initialize_web_server() -> bool:
     """初始化 Web 服务器"""
     console.print("初始化数据目录...")
     settings.initialize_directories()
     console.print("数据目录初始化完成")
+    first_run = _is_first_run()
 
     console.print("检查前端资源...")
     location = get_web_ui_location()
     if location is None:
         console.print("前端资源未安装")
-        console.print("首次运行时会自动下载前端资源（功能开发中）")
-        # TODO: 实现自动下载前端资源
+        console.print(
+            "若你是源码运行，请先执行: `cd web/frontend && node --run build`，"
+            "然后把 `dist/*` 同步到 `med_core/web/static/`。",
+        )
     else:
         source_label = "内置资源" if location.source == "bundled" else "下载资源"
         console.print(f"前端资源就绪（{source_label}）")
+    if first_run:
+        console.print("首次启动引导: 推荐从 /start 进入，再按 /config -> /training -> /models 主线体验。")
+        _mark_first_run_complete()
+    return first_run
 
 
 def _start_entrypoint_hint(command_path: str) -> str | None:
@@ -98,7 +119,7 @@ def start(
     if hint:
         console.print(hint)
 
-    initialize_web_server()
+    first_run = initialize_web_server()
 
     # 查找可用端口
     if port is None:
@@ -125,7 +146,8 @@ def start(
     # 自动打开浏览器
     if not no_browser and host == "127.0.0.1":
         with contextlib.suppress(Exception):
-            webbrowser.open(f"http://{host}:{port}")
+            landing = "/start" if first_run else ""
+            webbrowser.open(f"http://{host}:{port}{landing}")
 
     # 启动服务器
     try:
