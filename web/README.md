@@ -2,7 +2,7 @@
 
 这个目录现在只承担一件事：
 
-**存放 Web 前端源码与少量历史占位说明。**
+**存放 Web 前端源码。**
 
 如果你打开 `web/` 只是想知道“现在应该看哪里、改哪里、怎么启动”，这份 README 就是唯一推荐入口。
 
@@ -10,7 +10,6 @@
 
 - `web/frontend/`：前端源码工作区
 - `med_core/web/`：当前真实后端与生产静态资源承载位置
-- `web/backend/`：历史占位目录，不再承载当前后端实现
 
 换句话说：
 
@@ -27,8 +26,6 @@ web/
 │   ├── package.json       # 前端依赖与脚本
 │   ├── vite.config.ts     # Vite 开发与构建配置
 │   └── dist/              # 本地构建产物，不是源码
-├── backend/
-│   └── DEPRECATED.md      # 旧独立后端的历史占位说明
 ├── docker-compose.yml     # Web 相关容器编排参考
 └── README.md              # 本文档
 ```
@@ -62,11 +59,7 @@ npm run dev
 uv run uvicorn med_core.web.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-这里的重点是：
-
-- 后端源码不在 `web/backend/`
-- 当前后端实现已经在 `med_core/web/`
-- 当前推荐拓扑是 `React frontend -> FastAPI API/BFF -> Python worker`
+这里的重点是：当前后端实现已经在 `med_core/web/`，推荐拓扑是 `React frontend -> FastAPI API/BFF -> Python worker`。
 
 ## 当前部署形态
 
@@ -139,8 +132,7 @@ web/frontend/src/
 
 1. 新的用户说明尽量写到主文档站，而不是继续往 `web/` 下堆独立指南。
 2. `web/README.md` 保持为 `web/` 唯一总入口。
-3. `web/backend/` 只保留历史占位，不再新增真实后端代码。
-4. `dist/`、`node_modules/`、本地 `.env.local` 一律视为本地产物，不纳入目录治理叙事。
+3. `dist/`、`node_modules/`、本地 `.env.local` 一律视为本地产物，不纳入目录治理叙事。
 
 ## 相关文档
 

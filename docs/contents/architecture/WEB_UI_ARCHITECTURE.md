@@ -350,9 +350,6 @@ medfusion/
 │   │   ├── package.json
 │   │   ├── vite.config.ts
 │   │   └── tsconfig.json
-│   │
-│   └── backend/                 # 旧的独立后端（待清理）⚠️
-│       └── app/
 │
 ├── docs/                        # 文档站与架构文档
 │   ├── contents/getting-started/web-ui.md
@@ -367,7 +364,6 @@ medfusion/
 
 **待删除：**
 ```
-web/backend/                     # 旧的独立后端
 web/start-webui.sh               # 旧的启动脚本
 web/stop-webui.sh                # 旧的停止脚本
 ```
@@ -396,7 +392,7 @@ web/stop-webui.sh                # 旧的停止脚本
 - ✅ 基础文档
 
 **待完成：**
-- [ ] 清理旧的 `web/backend/` 目录
+- [x] 清理旧的 `web/backend/` 目录
 - [x] 继续收敛和精简 Web 启动命令面（默认保持 `medfusion start`，`medfusion web start` 仅兼容）
 - [x] 添加版本检查（`medfusion version-check`）
 - [x] 优化首次启动体验（首启标记 + `/start` 落地页 + 更明确的资源提示）

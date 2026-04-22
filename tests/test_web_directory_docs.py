@@ -34,12 +34,8 @@ def test_legacy_web_guides_are_removed() -> None:
         assert not Path(path).exists(), path
 
 
-def test_deprecated_backend_note_points_to_current_docs() -> None:
-    text = _read_text("web/backend/DEPRECATED.md")
-
-    assert "历史占位目录" in text
-    assert "docs/contents/getting-started/web-ui.md" in text
-    assert "web/README.md" in text
+def test_legacy_backend_directory_is_removed() -> None:
+    assert not Path("web/backend/DEPRECATED.md").exists()
 
 
 def test_beginner_web_guide_points_to_curated_web_readme() -> None:
@@ -55,3 +51,4 @@ def test_web_readme_points_to_real_test_entrypoints() -> None:
     assert "tests/test_web_api_minimal.py" in text
     assert "tests/test_web_training_controls.py" in text
     assert "tests/test_workflow_api.py" in text
+    assert "web/backend/" not in text
