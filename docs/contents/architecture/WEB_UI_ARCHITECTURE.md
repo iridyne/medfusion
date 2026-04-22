@@ -501,8 +501,8 @@ web/stop-webui.sh                # 旧的停止脚本
 **Phase C：编译器变薄，但不空心化**  
 状态：已启动第一轮清理
 
-- [ ] 编译器继续保留 Python 实现
-- [ ] 编译器只保留：
+- [x] 编译器继续保留 Python 实现
+- [x] 编译器只保留：
   - RunSpec patch 合并
   - 条件覆盖
   - preset 落地
@@ -511,7 +511,7 @@ web/stop-webui.sh                # 旧的停止脚本
 - [x] 清理后端对旧高级模式静态常量的直接依赖（例如 ComfyUI 适配档案）
 - [x] 清理剩余只为历史兼容保留的高级模式静态常量
 - [x] 为稳定组件引入有限 patch contract（仅 `set` / `derive_sum` 这类简单操作）
-- [ ] 继续把有限 patch contract 扩展到更多稳定字段，但不进入复杂冲突合并
+- [x] 继续把有限 patch contract 扩展到更多稳定字段，但不进入复杂冲突合并（例如 progressive training 的 `numEpochs` 由 stage 字段 `derive_sum`）
 
 **Phase D：有节制地逼近方案 2**  
 状态：后置，不是当前阻塞项

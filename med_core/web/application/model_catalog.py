@@ -383,13 +383,22 @@ MODEL_CATALOG_ADVANCED_COMPONENT_CONTRACTS: dict[str, dict[str, Any]] = {
         "compile_boundary": "conditional_stage_sum",
         "compile_notes": [
             "要求 stage1 + stage2 + stage3 == num_epochs。",
+            "编译时会由 stage1/2/3 自动派生 num_epochs，避免手工改动漂移。",
         ],
         "patch_contract": [
             {"op": "set", "path": "training.useProgressiveTraining", "value": True},
-            {"op": "set", "path": "training.numEpochs", "value": 18},
             {"op": "set", "path": "training.stage1Epochs", "value": 6},
             {"op": "set", "path": "training.stage2Epochs", "value": 8},
             {"op": "set", "path": "training.stage3Epochs", "value": 4},
+            {
+                "op": "derive_sum",
+                "path": "training.numEpochs",
+                "sources": [
+                    "training.stage1Epochs",
+                    "training.stage2Epochs",
+                    "training.stage3Epochs",
+                ],
+            },
         ],
         "patch_target_hints": [
             {

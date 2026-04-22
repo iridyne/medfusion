@@ -199,6 +199,14 @@ async def test_web_basic_routes(api_client) -> None:
         patch_contract = component["advanced_builder_contract"].get("patch_contract")
         assert isinstance(patch_contract, list)
         assert patch_contract, f"missing patch_contract for {component['id']}"
+    progressive_component = next(
+        item for item in model_catalog_payload["components"] if item["id"] == "progressive_training_bundle"
+    )
+    assert any(
+        operation["op"] == "derive_sum"
+        and operation["path"] == "training.numEpochs"
+        for operation in progressive_component["advanced_builder_contract"]["patch_contract"]
+    )
     assert any(
         item["id"] == "resnet18_encoder_bundle"
         for item in model_catalog_payload["components"]

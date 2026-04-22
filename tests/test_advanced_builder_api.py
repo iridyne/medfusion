@@ -137,6 +137,12 @@ async def test_advanced_builder_compile_infers_preset_from_catalog_contract(
     assert payload["preset"] == "clinical"
     assert payload["run_spec"]["model"]["vision"]["backbone"] == "efficientnet_b0"
     assert payload["run_spec"]["model"]["fusion"]["fusionType"] == "gated"
+    assert (
+        payload["run_spec"]["training"]["numEpochs"]
+        == payload["run_spec"]["training"]["stage1Epochs"]
+        + payload["run_spec"]["training"]["stage2Epochs"]
+        + payload["run_spec"]["training"]["stage3Epochs"]
+    )
 
 
 async def test_advanced_builder_compile_keeps_attention_supervision_from_upstream_component(
