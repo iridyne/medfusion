@@ -2,6 +2,7 @@
 
 import contextlib
 import socket
+import tarfile
 import tempfile
 import webbrowser
 from pathlib import Path
@@ -257,13 +258,36 @@ def restore(archive: str, overwrite: bool, dry_run: bool) -> None:
     with tempfile.TemporaryDirectory(prefix="medfusion-restore-") as temp_dir:
         temp_root = Path(temp_dir)
         try:
-            shutil.unpack_archive(str(archive_path), str(temp_root))
+            if archive_path.suffix.lower() in {".tgz", ".tar"} or archive_path.name.lower().endswith(".tar.gz"):
+                with tarfile.open(archive_path, "r:*") as tar:
+                    try:
+                        tar.extractall(path=temp_root, filter="data")
+                    except TypeError:
+                        tar.extractall(path=temp_root)
+            else:
+                shutil.unpack_archive(str(archive_path), str(temp_root))
         except Exception as exc:
             raise click.ClickException(f"备份解压失败: {exc}") from exc
 
         extracted_dirs = [item for item in temp_root.iterdir() if item.is_dir()]
         extracted_files = [item for item in temp_root.iterdir() if item.is_file()]
-        if len(extracted_dirs) == 1 and not extracted_files:
+        known_data_children = {
+            "models",
+            "experiments",
+            "datasets",
+            "logs",
+            "uploads",
+            "settings",
+            "web-ui",
+            "model-catalog",
+            "checkpoints",
+            "outputs",
+        }
+        if (
+            len(extracted_dirs) == 1
+            and not extracted_files
+            and extracted_dirs[0].name not in known_data_children
+        ):
             extracted_root = extracted_dirs[0]
         else:
             # 兼容历史 backup 格式：根目录直接是数据内容

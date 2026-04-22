@@ -275,6 +275,65 @@ def test_web_start_check_only_does_not_launch_uvicorn(monkeypatch) -> None:
     assert exc_info.value.code == 0
 
 
+def test_data_restore_dry_run_does_not_write_data_dir(tmp_path, monkeypatch) -> None:
+    from click.testing import CliRunner
+    from med_core.web import cli as web_cli
+
+    source_dir = tmp_path / "source-data"
+    (source_dir / "logs").mkdir(parents=True)
+    (source_dir / "logs" / "run.log").write_text("ok", encoding="utf-8")
+    archive_base = tmp_path / "backup"
+    archive_path = Path(
+        shutil.make_archive(
+            str(archive_base),
+            "gztar",
+            root_dir=source_dir,
+        )
+    )
+
+    target_data_dir = tmp_path / "target-data"
+    monkeypatch.setattr(web_cli.settings, "data_dir", target_data_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        web_cli.data,
+        ["restore", str(archive_path), "--dry-run", "--yes"],
+    )
+    assert result.exit_code == 0, result.output
+    assert not target_data_dir.exists()
+
+
+def test_data_restore_overwrite_replaces_existing_data_dir(tmp_path, monkeypatch) -> None:
+    from click.testing import CliRunner
+    from med_core.web import cli as web_cli
+
+    source_dir = tmp_path / "source-data"
+    (source_dir / "models").mkdir(parents=True)
+    (source_dir / "models" / "model.bin").write_text("new", encoding="utf-8")
+    archive_base = tmp_path / "backup"
+    archive_path = Path(
+        shutil.make_archive(
+            str(archive_base),
+            "gztar",
+            root_dir=source_dir,
+        )
+    )
+
+    target_data_dir = tmp_path / "target-data"
+    target_data_dir.mkdir(parents=True)
+    (target_data_dir / "stale.txt").write_text("stale", encoding="utf-8")
+    monkeypatch.setattr(web_cli.settings, "data_dir", target_data_dir)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        web_cli.data,
+        ["restore", str(archive_path), "--overwrite", "--yes"],
+    )
+    assert result.exit_code == 0, result.output
+    assert (target_data_dir / "models" / "model.bin").exists()
+    assert not (target_data_dir / "stale.txt").exists()
+
+
 def test_uninstall_cli_supports_keep_and_purge_modes(tmp_path, monkeypatch, capsys):
     from med_core.cli.uninstall import uninstall
 
