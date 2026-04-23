@@ -12,15 +12,16 @@ describe("GettingStarted", () => {
       </MemoryRouter>,
     );
 
-    expect(markup).toContain("先理解正式版组件");
-    expect(markup).toContain("开始问题向导");
-    expect(markup).toContain("正式版组件与集成入口");
-    expect(markup).toContain("问题向导");
-    expect(markup).toContain("结果后台");
-    expect(markup).toContain("高级模式");
-    expect(markup).toContain("ComfyUI 集成");
-    expect(markup).toContain("唯一主线（推荐）");
-    expect(markup).toContain("最短可复现实操指引");
-    expect(markup).toContain("默认配置适配层：ComfyUI（仍在同一主线）");
+    expect(markup).toContain("开始一次研究运行");
+    expect(markup).toContain("从数据检查开始");
+    expect(markup).toContain("直接进入问题向导");
+    expect(markup).toContain("推荐主线");
+    expect(markup).toContain("模型搭建入口");
+    expect(markup).toContain("官方模型库");
+    expect(markup).toContain("本机自定义模型");
+    expect(markup).toContain("ComfyUI 适配入口");
+    expect(markup).toContain("常用跳转");
+    expect(markup).toContain("启动推荐训练");
+    expect(markup).toContain("直接查看结果后台");
   });
 });

@@ -1,24 +1,97 @@
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, Space, Tag } from "antd";
+import { Button, Card, Space } from "antd";
 import {
+  ApartmentOutlined,
   ArrowRightOutlined,
   ControlOutlined,
+  DatabaseOutlined,
   FileSearchOutlined,
   LinkOutlined,
   PlayCircleOutlined,
+  RadarChartOutlined,
 } from "@ant-design/icons";
 
 import PageScaffold from "@/components/layout/PageScaffold";
-import { PRIMARY_ENTRY_COMMAND } from "@/config/navigation";
 import { QUICKSTART_TRAINING_PREFILL } from "@/config/quickstartRun";
 import {
   START_COMFYUI_DEFAULT_ADAPTER,
-  START_COMPONENTS,
-  START_MODE_POSITIONING,
-  START_PRIMARY_FLOW,
-  START_RECOMMENDED_WORKFLOW,
 } from "@/config/startExperience";
 import { buildTrainingPrefillQuery } from "@/utils/trainingPrefill";
+
+const PRIMARY_LAUNCH_STEPS = [
+  {
+    id: "datasets",
+    title: "数据检查",
+    description: "登记本机数据目录并确认可用性。",
+    route: "/datasets",
+    buttonLabel: "打开数据检查",
+    icon: <DatabaseOutlined />,
+  },
+  {
+    id: "preprocessing",
+    title: "预处理预检",
+    description: "先做训练前检查，再进入配置。",
+    route: "/preprocessing",
+    buttonLabel: "进入预处理",
+    icon: <ArrowRightOutlined />,
+  },
+  {
+    id: "config",
+    title: "问题向导",
+    description: "生成可运行配置并导向训练。",
+    route: "/config",
+    buttonLabel: "开始配置",
+    icon: <ControlOutlined />,
+  },
+  {
+    id: "training",
+    title: "训练执行",
+    description: "启动任务并查看进度。",
+    route: "/training",
+    buttonLabel: "进入训练",
+    icon: <PlayCircleOutlined />,
+  },
+  {
+    id: "models",
+    title: "结果后台",
+    description: "训练完成后查看结果产物。",
+    route: "/models",
+    buttonLabel: "查看结果",
+    icon: <FileSearchOutlined />,
+  },
+  {
+    id: "evaluation",
+    title: "独立评估",
+    description: "对已有 checkpoint 单独评估。",
+    route: "/evaluation",
+    buttonLabel: "打开评估",
+    icon: <RadarChartOutlined />,
+  },
+] as const;
+
+const MODEL_ENTRY_POINTS = [
+  {
+    title: "官方模型库",
+    description: "从官方模板起步。",
+    route: "/config/model",
+    icon: <RadarChartOutlined />,
+    buttonLabel: "进入官方模型库",
+  },
+  {
+    title: "本机自定义模型",
+    description: "基于官方单元组合本地模板。",
+    route: "/config/model/custom",
+    icon: <ApartmentOutlined />,
+    buttonLabel: "进入自定义模型",
+  },
+  {
+    title: "ComfyUI 适配入口",
+    description: "需要适配桥接时进入。",
+    route: "/config/comfyui",
+    icon: <LinkOutlined />,
+    buttonLabel: "打开 ComfyUI",
+  },
+] as const;
 
 export default function GettingStarted() {
   const navigate = useNavigate();
@@ -26,244 +99,135 @@ export default function GettingStarted() {
 
   return (
     <PageScaffold
-      eyebrow="Formal release entry"
-      title="先理解正式版组件，再开始定义你的模型问题"
-      description="正式版默认入口先介绍组件职责，再把你带到问题向导与模型搭建主链。GUI 是用户入口，runtime / CLI 仍然是执行真源；节点式编辑保留为高级模式，不直接替代默认首页。"
-      chips={[
-        { label: "GUI-first", tone: "amber" },
-        { label: "Runtime-backed", tone: "blue" },
-        { label: "Default before advanced", tone: "teal" },
-      ]}
+      eyebrow="Mainline launchpad"
+      title="开始一次研究运行"
+      description="先走主线，再按需进入模型模块和评估。"
       actions={
         <>
-          <Button
-            type="primary"
-            size="large"
-            icon={<ControlOutlined />}
-            onClick={() => navigate("/config")}
-          >
-            开始问题向导
+          <Button type="primary" icon={<DatabaseOutlined />} onClick={() => navigate("/datasets")}>
+            从数据检查开始
           </Button>
-          <Button
-            size="large"
-            icon={<PlayCircleOutlined />}
-            onClick={() => navigate("/training")}
-          >
-            进入训练监控
-          </Button>
-          <Button
-            size="large"
-            icon={<ArrowRightOutlined />}
-            onClick={() => navigate("/workbench")}
-          >
-            打开工作台总览
-          </Button>
-          <Button
-            size="large"
-            icon={<LinkOutlined />}
-            onClick={() => navigate("/config/comfyui")}
-          >
-            打开 ComfyUI 入口
+          <Button icon={<ControlOutlined />} onClick={() => navigate("/config")}>
+            直接进入问题向导
           </Button>
         </>
       }
-      aside={
-        <div className="hero-aside-panel">
-          <span className="hero-aside-panel__label">Primary entry</span>
-          <div className="hero-aside-panel__value">默认先走组件介绍与问题定义</div>
-          <div className="hero-aside-panel__copy">
-            目标不是先理解仓库结构，而是先知道有哪些组件、哪条路是主链、以及下一步该去哪里搭模型。
-          </div>
-          <pre className="command-block">{PRIMARY_ENTRY_COMMAND}</pre>
-          <div className="surface-note">
-            推荐下一步：
-            <strong> {START_PRIMARY_FLOW.join(" -> ")}</strong>
-          </div>
-        </div>
-      }
-      metrics={[
-        {
-          label: "Default mode",
-          value: "question -> skeleton -> parameter edit",
-          hint: START_MODE_POSITIONING.defaultMode,
-          tone: "amber",
-        },
-        {
-          label: "Execution source",
-          value: "runtime / CLI",
-          hint: "GUI explains and assembles, runtime executes and reproduces",
-          tone: "blue",
-        },
-        {
-          label: "Advanced mode",
-          value: "node editing",
-          hint: START_MODE_POSITIONING.advancedMode,
-          tone: "blue",
-        },
-      ]}
     >
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="唯一主线：配置 -> 训练 -> 结果"
-        description="正式版只有一条主线。当前在配置阶段默认使用 ComfyUI 适配配置，训练与结果仍由 MedFusion 主链执行。"
-      />
-      <Alert
-        type="success"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="ComfyUI 已有主页入口，不需要手动输入地址"
-        description={
-          <Space>
-            <span>可以直接从首页进入 ComfyUI 集成页，并把回流导入参数一键带到结果后台。</span>
-            <Button size="small" icon={<LinkOutlined />} onClick={() => navigate("/config/comfyui")}>
-              进入 ComfyUI 集成
-            </Button>
-          </Space>
-        }
-      />
+      <div className="surface-callout" style={{ marginBottom: 16 }}>
+        <div className="surface-callout__copy">
+          <strong>默认主线：数据检查 → 预处理预检 → 配置 → 训练</strong>
+          <span>流程跑通后再进入结果和评估。</span>
+        </div>
+        <Button type="primary" icon={<ArrowRightOutlined />} onClick={() => navigate("/datasets")}>
+          开始主线
+        </Button>
+      </div>
 
-      <div className="split-grid">
+      <div className="start-surface__grid">
         <Card className="surface-card surface-card--accent">
           <div className="section-heading">
             <div>
-              <div className="section-heading__eyebrow">Product shell</div>
-              <h2 className="section-heading__title">正式版组件与集成入口</h2>
-              <p className="section-heading__description">
-                入口页先把当前真正可用的组件讲清楚，避免用户误把实验页和历史页面当成默认主链。
-              </p>
+              <div className="section-heading__eyebrow">Primary lane</div>
+              <h2 className="section-heading__title">推荐主线</h2>
+              <p className="section-heading__description">按顺序执行即可。</p>
             </div>
-            <Tag color="processing">{START_COMPONENTS.length} components</Tag>
           </div>
 
-          <div className="workbench-flow">
-            {START_COMPONENTS.map((item, index) => (
-              <div key={item.key} className="flow-step">
-                <strong>
-                  {index + 1}. {item.title}
-                </strong>
-                <p>{item.description}</p>
-                <Button
-                  size="small"
-                  icon={<ArrowRightOutlined />}
-                  onClick={() => navigate(item.route)}
-                >
-                  打开组件
-                </Button>
+          <div className="start-lane">
+            {PRIMARY_LAUNCH_STEPS.map((step, index) => (
+              <div key={step.id} className="start-lane__step">
+                <div className="start-lane__step-index">0{index + 1}</div>
+                <div className="start-lane__step-body">
+                  <div className="start-lane__step-title">
+                    <span className="start-lane__step-icon">{step.icon}</span>
+                    <strong>{step.title}</strong>
+                  </div>
+                  <p>{step.description}</p>
+                  <Button
+                    type={index === 0 ? "primary" : "default"}
+                    icon={<ArrowRightOutlined />}
+                    onClick={() => navigate(step.route)}
+                  >
+                    {step.buttonLabel}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card className="surface-card surface-card--editorial">
-          <div className="section-heading">
-            <div>
-              <div className="section-heading__eyebrow">Primary flow</div>
-              <h2 className="section-heading__title">正式版默认怎么走</h2>
-              <p className="section-heading__description">
-                默认路径先降低认知负担，再把用户带入真实训练与结果回流；高级节点式编辑暂时不抢默认入口。
-              </p>
-            </div>
-          </div>
-
-          <div className="editorial-stack">
-            <div className="surface-note surface-note--dense">
-              <strong>1. 先看组件与能力</strong>
-              <p>明确问题向导、训练执行、结果后台和工作台各自负责什么，不再从空表单或空画布直接开始。</p>
-            </div>
-            <div className="surface-note surface-note--dense">
-              <strong>2. 先回答问题，再收敛骨架</strong>
-              <p>从问题定义出发，映射到当前 runtime 已支持的模板和参数编辑层，而不是先手写 YAML 字段。</p>
-            </div>
-            <div className="surface-note surface-note--dense">
-              <strong>3. 训练和结果继续复用主链</strong>
-              <p>训练执行、artifact 构建和结果回流仍然保持可预测、可审计、可回放的 CLI / runtime 语义。</p>
-            </div>
-            <div className="surface-note surface-note--dense">
-              <strong>4. 节点式编辑保留为高级模式</strong>
-              <p>当前阶段优先默认模式，节点图承担后续高级结构编辑，不直接取代向导式入口。</p>
+        <Space direction="vertical" size={16} style={{ width: "100%" }}>
+          <Card className="surface-card">
+            <div className="section-heading">
+              <div>
+                <div className="section-heading__eyebrow">Model building</div>
+                <h2 className="section-heading__title">模型搭建入口</h2>
+                <p className="section-heading__description">按需进入对应入口。</p>
+              </div>
             </div>
 
-            <Button
-              icon={<ControlOutlined />}
-              onClick={() => navigate("/config")}
-            >
-              进入问题向导
-            </Button>
-            <Button
-              icon={<FileSearchOutlined />}
-              onClick={() => navigate("/models")}
-            >
-              查看结果后台
-            </Button>
-            <Button
-              icon={<PlayCircleOutlined />}
-              onClick={() => navigate("/training")}
-            >
-              打开训练监控
-            </Button>
-          </div>
-        </Card>
+            <div className="start-utility-list">
+              {MODEL_ENTRY_POINTS.map((item) => (
+                <div key={item.route} className="surface-note surface-note--dense">
+                  <Space align="start" size={12}>
+                    <span className="start-utility-list__icon">{item.icon}</span>
+                    <div className="start-utility-list__body">
+                      <strong>{item.title}</strong>
+                      <p>{item.description}</p>
+                      <Button size="small" onClick={() => navigate(item.route)}>
+                        {item.buttonLabel}
+                      </Button>
+                    </div>
+                  </Space>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </Space>
       </div>
 
-      <Card className="surface-card" style={{ marginTop: 16 }} title="唯一主线（推荐）">
-        <div className="editorial-stack">
-          {START_RECOMMENDED_WORKFLOW.map((step) => (
-            <div key={step} className="surface-note surface-note--dense">
-              {step}
-            </div>
-          ))}
-          <Button
-            type="primary"
-            icon={<ControlOutlined />}
-            onClick={() => navigate("/config")}
-          >
-            按唯一主线开始
-          </Button>
-          <div className="surface-note surface-note--dense">
-            <strong>默认配置适配层：ComfyUI（仍在同一主线）</strong>
-            {START_COMFYUI_DEFAULT_ADAPTER.map((step) => (
-              <p key={step} style={{ marginBottom: 0 }}>
-                {step}
-              </p>
-            ))}
-            <Button
-              size="small"
-              icon={<LinkOutlined />}
-              onClick={() => navigate("/config/comfyui")}
-            >
-              打开 ComfyUI 适配模块
-            </Button>
+      <Card className="surface-card" style={{ marginTop: 16 }}>
+        <div className="section-heading">
+          <div>
+            <div className="section-heading__eyebrow">Quick actions</div>
+            <h2 className="section-heading__title">常用跳转</h2>
+            <p className="section-heading__description">
+              这里保留少量高频动作，避免用户在首页来回找入口。
+            </p>
           </div>
         </div>
-      </Card>
 
-      <Card className="surface-card" style={{ marginTop: 16 }} title="最短可复现实操指引">
-        <div className="editorial-stack">
-          <div className="surface-note surface-note--dense">
-            <strong>Step 1</strong>
-            <p>从问题向导生成一份可运行配置（默认 ComfyUI 适配语义，不改变主线）。</p>
-            <Button size="small" icon={<ControlOutlined />} onClick={() => navigate("/config")}>
-              打开问题向导
-            </Button>
-          </div>
-          <div className="surface-note surface-note--dense">
-            <strong>Step 2</strong>
-            <p>进入训练监控并带入推荐参数，启动一次真实训练任务。</p>
+        <div className="cta-grid">
+          <div className="cta-card">
+            <div className="cta-card__meta">
+              <strong>带推荐参数进入训练</strong>
+              <p>快速验证当前运行链路。</p>
+            </div>
             <Button
-              size="small"
               icon={<PlayCircleOutlined />}
               onClick={() => navigate(`/training?source=guided-start&${trainingPrefillQuery}`)}
             >
-              带推荐参数进入训练
+              启动推荐训练
             </Button>
           </div>
-          <div className="surface-note surface-note--dense">
-            <strong>Step 3</strong>
-            <p>训练完成后直接进入结果后台，确认 summary / metrics / report / artifacts。</p>
-            <Button size="small" icon={<FileSearchOutlined />} onClick={() => navigate("/models")}>
+
+          <div className="cta-card">
+            <div className="cta-card__meta">
+              <strong>直接查看结果后台</strong>
+              <p>训练后直接查看结果与产物。</p>
+            </div>
+            <Button icon={<FileSearchOutlined />} onClick={() => navigate("/models")}>
               打开结果后台
+            </Button>
+          </div>
+
+          <div className="cta-card">
+            <div className="cta-card__meta">
+              <strong>ComfyUI 辅助入口</strong>
+              <p>{START_COMFYUI_DEFAULT_ADAPTER[0] || "仅在需要桥接时使用。"}</p>
+            </div>
+            <Button icon={<LinkOutlined />} onClick={() => navigate("/config/comfyui")}>
+              打开 ComfyUI
             </Button>
           </div>
         </div>
