@@ -1,18 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Button, Drawer, Grid, Segmented, Space } from "antd";
+import { useEffect, useState, type ReactNode } from "react";
+import { Button, Drawer, Grid, Segmented } from "antd";
 import {
   DesktopOutlined,
   MenuOutlined,
   MoonOutlined,
-  RightOutlined,
   SunOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import Sidebar from "@/components/Sidebar";
 import {
-  NAVIGATION_ITEMS,
-  PRIMARY_ENTRY_COMMAND,
+  type NavigationMode,
   getCurrentNavigation,
 } from "@/config/navigation";
 import type { ThemeMode } from "@/theme/config";
@@ -20,6 +18,7 @@ import type { ThemeMode } from "@/theme/config";
 interface AppShellProps {
   children: ReactNode;
   currentPath: string;
+  navigationMode: NavigationMode;
   themeMode: ThemeMode;
   resolvedTheme: "light" | "dark";
   onThemeChange: (mode: ThemeMode) => void;
@@ -28,6 +27,7 @@ interface AppShellProps {
 export default function AppShell({
   children,
   currentPath,
+  navigationMode,
   themeMode,
   resolvedTheme,
   onThemeChange,
@@ -44,22 +44,11 @@ export default function AppShell({
     }
   }, [isDesktop, currentPath]);
 
-  const contextualNotes = useMemo(
-    () => [
-      t("shell.notes.viewCount", { count: NAVIGATION_ITEMS.length }),
-      resolvedTheme === "dark"
-        ? t("shell.notes.themeDark")
-        : t("shell.notes.themeLight"),
-      t("shell.notes.cliBridge"),
-    ],
-    [resolvedTheme, t],
-  );
-
-  const headerControls = (
-    <div className="app-shell__header-actions">
+  const topbarControls = (
+    <div className="app-topbar__actions">
       {!isDesktop ? (
         <Button
-          className="app-shell__menu-button"
+          className="app-topbar__menu-button"
           icon={<MenuOutlined />}
           onClick={() => setDrawerOpen(true)}
         >
@@ -67,13 +56,7 @@ export default function AppShell({
         </Button>
       ) : null}
 
-      <div className="app-shell__command-pill">
-        <span>{t("shell.entryCommandLabel")}</span>
-        <code>{PRIMARY_ENTRY_COMMAND}</code>
-      </div>
-
-      <div className="app-shell__theme-control">
-        <span>{t("shell.theme.label")}</span>
+      <div className="app-topbar__theme-control">
         <Segmented
           size="middle"
           value={themeMode}
@@ -114,71 +97,63 @@ export default function AppShell({
 
   return (
     <div className="app-shell">
-      {isDesktop ? (
-        <aside className="app-shell__sidebar">
-          <Sidebar />
-        </aside>
-      ) : (
-        <Drawer
-          open={drawerOpen}
-          placement="left"
-          onClose={() => setDrawerOpen(false)}
-          closable={false}
-          width={320}
-          rootClassName="surface-drawer surface-drawer--nav"
-        >
-          <Sidebar onNavigate={() => setDrawerOpen(false)} />
-        </Drawer>
-      )}
-
-      <main className="app-shell__main">
-        <header className="app-shell__header">
-          <div className="app-shell__masthead surface-frame">
-            <div className="app-shell__masthead-copy">
-              <span className="app-shell__eyebrow">{t("shell.masthead.kicker")}</span>
-              <div className="app-shell__page-title-row">
-                <strong>{currentPage.label}</strong>
-                <span className="app-shell__theme-state">
-                  {resolvedTheme === "dark"
-                    ? t("shell.themeState.dark")
-                    : t("shell.themeState.light")}
-                </span>
-              </div>
-              <p>{currentPage.description}</p>
+      <header className="app-topbar surface-frame">
+        <div className="app-topbar__left">
+          <div className="app-topbar__brand">
+            <div className="app-topbar__brand-mark" aria-hidden="true">
+              <span />
+              <span />
             </div>
-
-            <div className="app-shell__masthead-rail">
-              <div className="app-shell__masthead-path">
-                <span>{t("shell.masthead.pathPrefix")}</span>
-                <RightOutlined />
-                <strong>{currentPage.eyebrow}</strong>
-              </div>
-              <div className="app-shell__masthead-notes">
-                {contextualNotes.map((note) => (
-                  <span key={note} className="page-chip is-neutral">
-                    {note}
-                  </span>
-                ))}
-              </div>
+            <div className="app-topbar__brand-copy">
+              <strong>MedFusion</strong>
+              <span>Clinical Research Workspace</span>
             </div>
           </div>
 
-          <div className="app-shell__header-panel surface-frame">
-            <div className="app-shell__page-copy">
-              <span className="app-shell__eyebrow">{currentPage.eyebrow}</span>
-              <div className="app-shell__page-title-row">
-                <strong>{t("shell.header.title")}</strong>
-              </div>
-              <p>{t("shell.header.description")}</p>
+          <div className="app-topbar__page">
+            <div className="app-topbar__page-copy">
+              <strong>{currentPage.label}</strong>
             </div>
-            {headerControls}
           </div>
-        </header>
+        </div>
 
-        <section className="app-shell__content">
-          <div className="app-shell__viewport">{children}</div>
-        </section>
-      </main>
+        <div className="app-topbar__right">
+          <span className="app-topbar__runtime-state">
+            {resolvedTheme === "dark"
+              ? t("shell.themeState.dark")
+              : t("shell.themeState.light")}
+          </span>
+          {topbarControls}
+        </div>
+      </header>
+
+      <div className="app-shell__body">
+        {isDesktop ? (
+          <aside className="app-shell__sidebar">
+            <Sidebar navigationMode={navigationMode} />
+          </aside>
+        ) : (
+          <Drawer
+            open={drawerOpen}
+            placement="left"
+            onClose={() => setDrawerOpen(false)}
+            closable={false}
+            width={320}
+            rootClassName="surface-drawer surface-drawer--nav"
+          >
+            <Sidebar
+              navigationMode={navigationMode}
+              onNavigate={() => setDrawerOpen(false)}
+            />
+          </Drawer>
+        )}
+
+        <main className="app-shell__main">
+          <section className="app-shell__content">
+            <div className="app-shell__viewport">{children}</div>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

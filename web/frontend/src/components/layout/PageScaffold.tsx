@@ -23,46 +23,31 @@ interface PageScaffoldProps {
   children: ReactNode;
 }
 
-function toneClassName(tone?: PageChip["tone"]) {
-  return tone ? `is-${tone}` : "is-neutral";
-}
-
 export default function PageScaffold({
   eyebrow,
   title,
   description,
   actions,
   aside,
-  chips,
   metrics,
   children,
 }: PageScaffoldProps) {
   return (
     <div className="page-shell">
-      <section className="page-hero surface-frame">
-        <div className="page-hero__content">
-          <span className="page-hero__eyebrow">{eyebrow}</span>
-
-          {chips?.length ? (
-            <div className="page-hero__chips">
-              {chips.map((chip) => (
-                <span
-                  key={`${chip.label}-${chip.tone ?? "neutral"}`}
-                  className={`page-chip ${toneClassName(chip.tone)}`}
-                >
-                  {chip.label}
-                </span>
-              ))}
+      <section className={`page-header ${aside ? "page-header--with-aside" : ""}`}>
+        <div className="page-header__main surface-frame">
+          <div className="page-header__content">
+            <span className="page-header__eyebrow">{eyebrow}</span>
+            <div className="page-header__headline">
+              <h1 className="page-header__title">{title}</h1>
             </div>
-          ) : null}
+            <p className="page-header__description">{description}</p>
+          </div>
 
-          <h1 className="page-hero__title">{title}</h1>
-          <p className="page-hero__description">{description}</p>
-
-          {actions ? <div className="page-hero__actions">{actions}</div> : null}
+          {actions ? <div className="page-header__actions">{actions}</div> : null}
         </div>
 
-        {aside ? <aside className="page-hero__aside">{aside}</aside> : null}
+        {aside ? <aside className="page-header__aside">{aside}</aside> : null}
       </section>
 
       {metrics?.length ? (
@@ -70,7 +55,7 @@ export default function PageScaffold({
           {metrics.map((metric) => (
             <article
               key={metric.label}
-              className={`metric-card ${toneClassName(metric.tone)}`}
+              className="metric-card"
             >
               <span className="metric-card__label">{metric.label}</span>
               <strong className="metric-card__value">{metric.value}</strong>
